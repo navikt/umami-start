@@ -20,10 +20,10 @@ spec:
     timeout: 60
   resources:
     limits:
-      cpu: 100m
+      cpu: 50m
       memory: 32Mi
     requests:
-      cpu: 100m
+      cpu: 50m
       memory: 32Mi
   replicas:
     min: 1
