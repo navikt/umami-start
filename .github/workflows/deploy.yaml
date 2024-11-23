@@ -15,6 +15,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,11 +42,13 @@ jobs:
     name: Deploy to prod-gcp
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: nais/deploy/actions/deploy@v2
         env:
-         APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
-         CLUSTER: prod-gcp
-         RESOURCE: nais.yaml
-         VAR: image=${{ env.DOCKER_IMAGE }}
+          CLUSTER: prod-gcp
+          RESOURCE: nais.yaml
+          VAR: image=${{ env.DOCKER_IMAGE }}
