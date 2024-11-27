@@ -20,8 +20,8 @@ function TeamWebsites() {
 
     useEffect(() => {
         Promise.all([
-            fetch("https://reops-proxy.intern.nav.no/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites").then(response => response.json()),
-            fetch("https://reops-proxy.intern.nav.no/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites").then(response => response.json())
+            fetch("https://reops-proxy.ansatt.nav.no/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites").then(response => response.json()),
+            fetch("https://reops-proxy.ansatt.nav.no/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites").then(response => response.json())
         ])
             .then(([data1, data2]) => {
                 const combinedData = [...data1.data, ...data2.data];
