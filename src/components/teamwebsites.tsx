@@ -78,6 +78,7 @@ function TeamWebsites() {
                     size="small"
                 />
             </form>
+            <div style={{ overflowX: 'auto' }} >
             <Table zebraStripes={true}>
                 <Table.Header>
                     <Table.Row>
@@ -122,6 +123,7 @@ function TeamWebsites() {
                     ))}
                 </Table.Body>
             </Table>
+            </div>
             <SporingsModal ref={ref} selectedItem={selectedItem}/>
         </>
     );
