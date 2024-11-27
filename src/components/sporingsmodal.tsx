@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Modal, Button, Accordion } from "@navikt/ds-react";
+import {Modal, Button, Accordion, BodyShort, Link} from "@navikt/ds-react";
 
 interface SporingsModalProps {
     selectedItem: { name: string; id: string };
@@ -8,6 +8,10 @@ interface SporingsModalProps {
 const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selectedItem }, ref) => (
     <Modal ref={ref} header={{ heading: "Sporingskode: " + selectedItem.name }}>
         <Modal.Body>
+            <BodyShort spacing size="medium" style={{ marginTop: "10px",  marginBottom: "30px" }}>
+              Sporingskoden legges til i &lt;head&gt; på nettsiden.
+            </BodyShort>
+
             <Accordion>
                 <Accordion.Item defaultOpen>
                     <Accordion.Header>Standard Umami sporingskode</Accordion.Header>
