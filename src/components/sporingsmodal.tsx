@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import {Modal, Button, Accordion, BodyShort} from "@navikt/ds-react";
+import {Modal, Button, Accordion, BodyShort, Link, List} from "@navikt/ds-react";
 
 interface SporingsModalProps {
     selectedItem: { name: string; id: string };
@@ -9,12 +9,12 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
     <Modal ref={ref} header={{ heading: "Sporingskode: " + selectedItem.name }}>
         <Modal.Body>
             <BodyShort spacing size="medium" style={{ marginTop: "10px",  marginBottom: "30px" }}>
-              Sporingskoden legges til i &lt;head&gt; på nettsiden.
+              Sporingskoden legges til i &lt;head&gt;-delen på nettsiden.
             </BodyShort>
 
             <Accordion>
-                <Accordion.Item defaultOpen>
-                    <Accordion.Header>Standard Umami sporingskode</Accordion.Header>
+                <Accordion.Item>
+                    <Accordion.Header>Umami-sporingskode (standard)</Accordion.Header>
                     <Accordion.Content>
                         <pre style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>
                             <code>
@@ -26,19 +26,22 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
                 </Accordion.Item>
                 <Accordion.Item>
                     <Accordion.Header>
-                        Sporingskode for Astro.js apper
+                        Umami-sporingskode for Astro.js-apper
                     </Accordion.Header>
                     <Accordion.Content>
-                        <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                        <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', marginBottom: '15px'}}>
                             <code>
-                                &lt;script defer data-astro-rerun src="https://cdn.nav.no/team-researchops/sporing/sporing.js"
+                                &lt;script is:inline defer data-astro-rerun src="https://cdn.nav.no/team-researchops/sporing/sporing.js"
                                         data-host-url="https://umami.nav.no" data-website-id="{selectedItem.id}"&gt;&lt;/script&gt;
                             </code>
                         </pre>
+                        <Link target="_blank" href={`https://github.com/navikt/docs/blob/main/src/components/BaseHead.astro`}>
+                            Kodeeksempel for Astro.js-apper
+                        </Link>
                     </Accordion.Content>
                 </Accordion.Item>
                 <Accordion.Item>
-                    <Accordion.Header>Sporingskode for React Vite.js apper</Accordion.Header>
+                    <Accordion.Header>Umami-sporingskode for React med Vite.js</Accordion.Header>
                     <Accordion.Content>
                         <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
                             <code>
@@ -50,9 +53,23 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
                                 <br/>&lt;/Helmet&gt;
                             </code>
                         </pre>
+                        <Link target="_blank" href={`https://github.com/navikt/reops-felgen/blob/master/src/App.tsx`}>
+                            Kodeeksempel for React med Vite.js
+                        </Link>
                     </Accordion.Content>
                 </Accordion.Item>
             </Accordion>
+            <List as="ul" title="Verdt å vite" style={{ marginTop: "30px" }}>
+                <List.Item>
+                Vil du at sporingskoden kun skal kjøre på spesifikke domener, for eksempel ikke på localhost? Da kan du legge til <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>attributtet data-domains</Link>.
+                </List.Item>
+                <List.Item>
+                Umami sporer besøk (sidevisninger) ut av boksen. Ønsker du ikke dette? Da kan du legge til <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>attributtet data-auto-track="false"</Link>.
+                </List.Item>
+            </List>
+            <BodyShort spacing size="medium" style={{ marginTop: "30px" }}>
+                <strong>Nettside-ID:</strong> {selectedItem.id}
+            </BodyShort>
         </Modal.Body>
         <Modal.Footer>
             <Button type="button" onClick={() => (ref as React.RefObject<HTMLDialogElement>).current?.close()}>
