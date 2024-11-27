@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import {Modal, Button, Accordion, BodyShort, Link} from "@navikt/ds-react";
+import {Modal, Button, Accordion, BodyShort} from "@navikt/ds-react";
 
 interface SporingsModalProps {
     selectedItem: { name: string; id: string };
