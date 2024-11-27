@@ -6,7 +6,7 @@ interface SporingsModalProps {
 }
 
 const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selectedItem }, ref) => (
-    <Modal ref={ref} header={{ heading: "Sporingskode: " + selectedItem.name }}>
+    <Modal ref={ref} header={{ heading: "Sporingskode for " + selectedItem.name }}>
         <Modal.Body>
             <BodyShort spacing size="medium" style={{ marginTop: "10px",  marginBottom: "30px" }}>
               Sporingskoden legges til i &lt;head&gt;-delen på nettsiden.
