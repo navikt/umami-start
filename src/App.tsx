@@ -7,7 +7,7 @@ function App() {
     <>
         <Page>
             <InternalHeader>
-                <InternalHeader.Title as="h1">Umami</InternalHeader.Title>
+                <InternalHeader.Title as="h1">Start Umami</InternalHeader.Title>
             </InternalHeader>
             <Page.Block as="main" width="xl" gutters>
                 <Heading spacing={true} size="large" style={{ marginTop: "60px" }}>Nettsider</Heading>

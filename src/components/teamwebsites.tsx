@@ -17,13 +17,14 @@ function TeamWebsites() {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedItem, setSelectedItem] = useState<{ name: string; id: string }>({ name: '', id: '' });
     const ref = useRef<HTMLDialogElement>(null);
+    const baseUrl = window.location.hostname === 'localhost' ? 'https://reops-proxy.intern.nav.no' : 'https://reops-proxy.ansatt.nav.no';
 
     useEffect(() => {
         Promise.all([
-            fetch("https://reops-proxy.ansatt.nav.no/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites", {
+            fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
                 credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
             }).then(response => response.json()),
-            fetch("https://reops-proxy.ansatt.nav.no/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites", {
+            fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
                 credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
             }).then(response => response.json())
         ])
@@ -77,14 +78,14 @@ function TeamWebsites() {
                     size="small"
                 />
             </form>
-            <Table>
+            <Table zebraStripes={true}>
                 <Table.Header>
                     <Table.Row>
-                        <Table.HeaderCell scope="col">Prosjekt</Table.HeaderCell>
+                        <Table.HeaderCell scope="col">Nettside</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Miljø</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Domene</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Opprettet</Table.HeaderCell>
-                        <Table.HeaderCell scope="col">Handlinger</Table.HeaderCell>
+                        <Table.HeaderCell scope="col">Sporingskode</Table.HeaderCell>
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
