@@ -75,8 +75,8 @@ function Dashboard() {
 
             if (matchedWebsite) {
                 const umamiUrl = `https://umami.ansatt.nav.no/share/${matchedWebsite.shareId}/${domain}?url=${path}`;
-               /* window.location.href = umamiUrl; */
-                window.open(umamiUrl, '_blank');
+                window.location.href = umamiUrl;
+                // window.open(umamiUrl, '_blank');
             } else {
                 setAlertVisible(true);
             }
