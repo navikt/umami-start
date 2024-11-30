@@ -68,7 +68,7 @@ function TeamWebsites() {
 
     return (
         <>
-            <form role="search" style={{marginBottom: "25px", marginTop: "25px", width: "250px"}}>
+            <form role="search" style={{marginBottom: "20px", marginTop: "25px", width: "250px"}}>
                 <Search
                     label="Søk alle NAV sine sider"
                     variant="simple"
