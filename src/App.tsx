@@ -9,7 +9,7 @@ function App() {
             <InternalHeader>
                 <InternalHeader.Title as="h1">Start Umami</InternalHeader.Title>
             </InternalHeader>
-            <Page.Block as="main" width="xl" gutters>
+            <Page.Block as="main" width="xl" gutters style={{ marginBottom: "100px" }}>
                 <Router>
                     <Routes>
                         {routes.map(({ path, component }) => (
