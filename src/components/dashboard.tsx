@@ -100,7 +100,7 @@ function Dashboard() {
                 {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
                 <BodyShort style={{ marginTop: "20px" }}>
-                    <strong>Tips:</strong> Du kan lage dashboards for teamet ditt i <Link target="_blank" href={`https://metabase.ansatt.nav.no/`}>Metabase</Link> og <Link target="_blank" href={`https://grafana.nav.cloud.nais.io/`}>Grafana</Link>.
+                    <strong>Tips:</strong> Du kan lage egne dashboards for teamet ditt i <Link target="_blank" href={`https://metabase.ansatt.nav.no/`}>Metabase</Link> og <Link target="_blank" href={`https://grafana.nav.cloud.nais.io/`}>Grafana</Link>.
                 </BodyShort>
 {/*                    <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider støttes?">
                     <List as="ul">

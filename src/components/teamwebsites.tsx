@@ -82,7 +82,7 @@ function TeamWebsites() {
             <Table zebraStripes={true}>
                 <Table.Header>
                     <Table.Row>
-                        <Table.HeaderCell scope="col">Navn</Table.HeaderCell>
+                        <Table.HeaderCell scope="col">Nettside / app</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Miljø</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Domene</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Opprettet</Table.HeaderCell>
