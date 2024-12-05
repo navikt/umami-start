@@ -10,9 +10,9 @@ function Home() {
             <Dashboard/>
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Hvem bruker Umami?</Heading>
-                <BodyShort size="medium" style={{ marginBottom: "30px" }}>
-                    Kontakt <Link target="_blank" href={`https://teamkatalog.nav.no/team/26dba481-fd96-40a8-b47d-b1ad0002bc74`}>Team ResearchOps</Link> for å få sporingskode til din nettside / app.
-                </BodyShort>
+            <BodyShort size="medium" style={{ marginBottom: "30px" }}>
+                Få sporingskode til nettsiden/appen din ved å følge <Link href="/komigang">kom-i-gang-veiledningen</Link>.
+            </BodyShort>
             <TeamWebsites />
         </>
     )

@@ -1,10 +1,10 @@
 // src/routes.tsx
 import Home from './pages/Home.tsx';
-import Sok from './pages/Sok.tsx';
+import Komigang from './pages/Komigang.tsx';
 
 const routes = [
     { path: "/", component: <Home /> },
-    { path: "/sok", component: <Sok /> },
+    { path: "/komigang", component: <Komigang /> },
 ];
 
 export default routes;
