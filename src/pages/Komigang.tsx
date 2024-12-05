@@ -1,4 +1,4 @@
-import {Heading, Link, List} from "@navikt/ds-react";
+import {BodyShort, Heading, Link, List} from "@navikt/ds-react";
 
 function Komigang() {
     return (
@@ -17,11 +17,14 @@ function Komigang() {
                         <strong>PVK vurdering:</strong> <Link href={"https://navno.sharepoint.com/sites/intranett-personvern/SitePages/PVK.aspx"}>Vurder om det er behov for å gjennomføre PVK.</Link>
                     </List.Item>
                 </List>
+            <BodyShort>
+                For mer informasjon, <Link href={"https://navno.sharepoint.com/sites/intranett-utvikling/SitePages/Rutine-for-bruk-av-Umami.aspx"}>se retningslinjene for bruk av Umami.</Link>
+            </BodyShort>
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Måle</Heading>
             <List as="ol" title="Mål det som betyr noe">
                 <List.Item>
-                    <strong>Målesplan:</strong> Legg en plan for hva dere skal måle, hvorfor og hvordan.
+                    <strong>Måleplan:</strong> Legg en plan for hva dere skal måle, hvorfor og hvordan.
                 </List.Item>
                 <List.Item>
                     <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til din nettside/app.
