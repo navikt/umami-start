@@ -9,9 +9,17 @@ function Home() {
                 Umami</Heading>
             <Dashboard/>
 
-            <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Hvem bruker Umami?</Heading>
-            <BodyShort size="medium" style={{ marginBottom: "30px" }}>
-                Få sporingskode til nettsiden/appen din ved å følge <Link href="/komigang">kom-i-gang-veiledningen</Link>.
+            <Heading size={"medium"} style={{marginTop: "83px"}}>Et enklere analyseverktøy — med avanserte muligheter</Heading>
+            <BodyShort size="medium" style={{ marginTop: "20px", marginBottom: "20px", maxWidth: "600px" }}>
+                For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å gå på bekostning av brukervennlighet, datasikkerhet eller personvern.
+            </BodyShort>
+            <BodyShort size="medium" style={{ marginBottom: "60px", maxWidth: "600px" }}>
+                Derfor tilbyr vi Umami – en løsning som kombinerer ferdige dashboards med muligheten til å utføre produktanalyser i verktøy som Metabase og Grafana.
+            </BodyShort>
+
+            <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Klar for å sette i gang?</Heading>
+            <BodyShort size="large" style={{ marginBottom: "30px" }}>
+                Få sporingskode til nettsiden/appen din ved å følge <Link href="/komigang">kom-i-gang-guiden</Link>.
             </BodyShort>
             <TeamWebsites />
         </>

@@ -1,22 +1,22 @@
-import {Search, Alert, BodyShort, Link} from "@navikt/ds-react";
-import { useState } from "react";
+import {Search, Alert, BodyShort, Link, ReadMore, List} from "@navikt/ds-react";
+import { useState, useEffect } from "react";
 
-/*interface Website {
+interface Website {
     id: string;
     name: string;
     domain: string;
     shareId: string;
     teamId: string;
     createdAt: string;
-}*/
+}
 
 function Dashboard() {
     const baseUrl = window.location.hostname === 'localhost' ? 'https://reops-proxy.intern.nav.no' : 'https://reops-proxy.ansatt.nav.no';
-   // const [filteredData, setFilteredData] = useState<Website[] | null>(null);
+    const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
 
-/*    useEffect(() => {
+    useEffect(() => {
         Promise.all([
             fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
                 credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
@@ -32,7 +32,7 @@ function Dashboard() {
                 setFilteredData(combinedData.filter(item => item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'));
             })
             .catch(error => console.error("Error fetching data:", error));
-    }, []);*/
+    }, []);
 
     const handleSearchChange = (value: string) => {
         setSearchQuery(value);
@@ -76,7 +76,6 @@ function Dashboard() {
             if (matchedWebsite) {
                 const umamiUrl = `https://umami.ansatt.nav.no/share/${matchedWebsite.shareId}/${domain}?url=${path}`;
                 window.location.href = umamiUrl;
-                // window.open(umamiUrl, '_blank');
             } else {
                 setAlertVisible(true);
             }
@@ -84,6 +83,7 @@ function Dashboard() {
             console.error("Error fetching data:", error);
         }
     };
+
     return (
         <div>
             <form role="search" onSubmit={handleSubmit}>
@@ -97,12 +97,9 @@ function Dashboard() {
                         onChange={handleSearchChange}
                         onClear={() => setSearchQuery("")}
                     />
-                {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
+                    {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
-                <BodyShort style={{ marginTop: "20px" }}>
-                    <strong>Tips:</strong> Du kan lage egne dashboards for teamet ditt i <Link target="_blank" href={`https://metabase.ansatt.nav.no/`}>Metabase</Link> og <Link target="_blank" href={`https://grafana.nav.cloud.nais.io/`}>Grafana</Link>.
-                </BodyShort>
-{/*                    <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider støttes?">
+                <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider/apper støttes?">
                     <List as="ul">
                         {filteredData && filteredData.map(item => (
                             <List.Item key={item.id}>
@@ -110,7 +107,10 @@ function Dashboard() {
                             </List.Item>
                         ))}
                     </List>
-                </ReadMore>*/}
+                    <BodyShort>
+                        Savner du en nettside eller app? <Link href="/komigang">Følg kom-i-gang-guiden!</Link>
+                    </BodyShort>
+                </ReadMore>
             </form>
         </div>
     );
