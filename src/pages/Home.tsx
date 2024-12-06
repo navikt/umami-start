@@ -22,6 +22,11 @@ function Home() {
                 Få sporingskode til nettsiden/appen din ved å følge <Link href="/komigang">kom-i-gang-guiden</Link>.
             </BodyShort>
             <TeamWebsites />
+
+            <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Du har nådd bunnen!</Heading>
+            <BodyShort size="large" style={{ marginBottom: "83px" }}>
+                Team ResearchOps hjelper deg gjerne opp igjen – kontakt oss på Slack i <Link href="https://nav-it.slack.com/archives/C02UGFS2J4B">#researchops</Link>.
+            </BodyShort>
         </>
     )
 }
