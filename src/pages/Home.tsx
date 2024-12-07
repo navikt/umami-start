@@ -19,7 +19,7 @@ function Home() {
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Klar for å sette i gang?</Heading>
             <BodyShort size="large" style={{ marginBottom: "30px" }}>
-                Få sporingskode til nettsiden/appen din ved å følge <Link href="/komigang">kom-i-gang-guiden</Link>.
+                Få sporingskode til nettsiden / appen din ved å følge <Link href="/komigang">kom-i-gang-guiden</Link>.
             </BodyShort>
             <TeamWebsites />
 
