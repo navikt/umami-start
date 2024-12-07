@@ -24,7 +24,7 @@ function Komigang() {
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Måle</Heading>
             <List as="ol" title="Mål det som betyr noe">
                 <List.Item>
-                    <strong>Måleplan:</strong> Legg en plan for hva dere skal måle, hvorfor og hvordan.
+                    <strong>Måleplan:</strong> Start med hvorfor, og lag deretter en plan for hva og hvordan dere skal måle.
                 </List.Item>
                 <List.Item>
                     <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til din nettside/app.
