@@ -9,12 +9,12 @@ function Home() {
                 Umami</Heading>
             <Dashboard/>
 
-            <Heading size={"medium"} style={{marginTop: "83px"}}>Et enklere analyseverktøy — med avanserte muligheter</Heading>
+            <Heading size={"medium"} style={{marginTop: "83px"}}>Brukeradferd gjort forståelig – med Umami</Heading>
             <BodyShort size="medium" style={{ marginTop: "20px", marginBottom: "20px", maxWidth: "600px" }}>
                 For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å gå på bekostning av brukervennlighet, datasikkerhet eller personvern.
             </BodyShort>
             <BodyShort size="medium" style={{ marginBottom: "60px", maxWidth: "600px" }}>
-                Derfor tilbyr vi Umami – en løsning som kombinerer ferdige dashboards med muligheten til å utføre produktanalyser i verktøy som Metabase og Grafana.
+                Derfor tilbyr vi Umami – en løsning som kombinerer ferdige dashboards for rask innsikt, med mulighet for dypere produktanalyser i verktøy som Metabase, Grafana og Jupyter Notebook.
             </BodyShort>
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Klar for å sette i gang?</Heading>
