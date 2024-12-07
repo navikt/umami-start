@@ -14,7 +14,7 @@ function Home() {
                 For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å gå på bekostning av brukervennlighet, datasikkerhet eller personvern.
             </BodyShort>
             <BodyShort size="medium" style={{ marginBottom: "60px", maxWidth: "600px" }}>
-                Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdige dashboards for rask innsikt, med mulighet for dypere produktanalyser i verktøy som Metabase, Grafana og Jupyter Notebook.
+                Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde dashboards, med mulighet for dypere produktanalyser i verktøy som Metabase, Grafana og Jupyter Notebook.
             </BodyShort>
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "83px"}}>Klar for å sette i gang?</Heading>
