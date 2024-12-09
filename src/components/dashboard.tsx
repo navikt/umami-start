@@ -99,7 +99,7 @@ function Dashboard() {
                     />
                     {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
-                <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider/apper støttes?">
+                <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider / apper støttes?">
                     <List as="ul">
                         {filteredData && filteredData.map(item => (
                             <List.Item key={item.id}>
