@@ -27,7 +27,7 @@ function Komigang() {
                     <strong>Måleplan:</strong> Start med hvorfor, og lag deretter en plan for hva og hvordan dere skal måle.
                 </List.Item>
                 <List.Item>
-                    <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til nettsiden eller appen din.
+                    <strong>Sporingskode:</strong> <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Kontakt Team ResearchOps</Link> for å få sporingskode til nettsiden eller appen din.
                     .
                 </List.Item>
                 <List.Item>
@@ -39,7 +39,7 @@ function Komigang() {
                 </BodyShort>*/}
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Analysere</Heading>
-            <List as="ul" title="Her finner du data:">
+            <List as="ul" title="Her finner du data">
                 <List.Item>
                     <strong><Link href={"./"}>Umami Dashboard:</Link></strong> Grunnleggende dashboard med data fra Umami.
                 </List.Item>
@@ -48,6 +48,16 @@ function Komigang() {
                 </List.Item>
                 <List.Item>
                     <strong><Link href={"https://github.com/navikt/reops-proxy"}>Umami API:</Link></strong> Mulighet for å få data i JSON format, og bruke dem i egne apper.
+                </List.Item>
+            </List>
+
+            <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Dele og lære</Heading>
+            <List as="ul" title="Bli med på kaffeprat? ☕">
+                <List.Item>
+                    <strong>Slack:</strong> Bli med i kanalen <Link href={"https://nav-it.slack.com/archives/C070BPKR830"}>#produktanalyse</Link> og <Link href={"https://nav-it.slack.com/archives/C02UGFS2J4B"}>#researchops</Link> for å få hjelp og dele erfaringer.
+                </List.Item>
+                <List.Item>
+                    <strong>Samtale:</strong> <Link href={"https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/"}>Book en prat 1:1 eller workshop</Link> for å lære mer om Umami og produktanalyse.
                 </List.Item>
             </List>
 
