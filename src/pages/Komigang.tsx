@@ -27,10 +27,11 @@ function Komigang() {
                     <strong>Måleplan:</strong> Start med hvorfor, og lag deretter en plan for hva og hvordan dere skal måle.
                 </List.Item>
                 <List.Item>
-                    <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til din nettside / app.
+                    <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til nettsiden eller appen din.
+                    .
                 </List.Item>
                 <List.Item>
-                    <strong>Målesjekk:</strong> Sjekk at dataene blir samlet inn riktig. Gjør en målesjekk på nettsiden / appen din.
+                    <strong>Målesjekk:</strong> Sjekk at dataene blir samlet inn riktig. Gjør en målesjekk på nettsiden eller appen din.
                 </List.Item>
             </List>
 {/*            <BodyShort size="medium" style={{ marginBottom: "30px" }}>
