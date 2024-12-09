@@ -27,10 +27,10 @@ function Komigang() {
                     <strong>Måleplan:</strong> Start med hvorfor, og lag deretter en plan for hva og hvordan dere skal måle.
                 </List.Item>
                 <List.Item>
-                    <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til din nettside/app.
+                    <strong>Sporingskode:</strong> Kontakt <Link target="_blank" href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Team ResearchOps</Link> for å få sporingskode til din nettside / app.
                 </List.Item>
                 <List.Item>
-                    <strong>Målesjekk:</strong> Sjekk at dataene blir samlet inn riktig. Gjør en målesjekk på nettsiden/appen din.
+                    <strong>Målesjekk:</strong> Sjekk at dataene blir samlet inn riktig. Gjør en målesjekk på nettsiden / appen din.
                 </List.Item>
             </List>
 {/*            <BodyShort size="medium" style={{ marginBottom: "30px" }}>
@@ -43,7 +43,7 @@ function Komigang() {
                     <strong><Link href={"./"}>Umami Dashboard:</Link></strong> Grunnleggende dashboard med data fra Umami.
                 </List.Item>
                 <List.Item>
-                    <strong><Link href={"https://data.ansatt.nav.no/dataproduct/236d4d8f-7904-47c0-ac2f-9a3e8d06f1ee/Umami"}>Datamarkedsplassen:</Link></strong> Mulighet for å analysere i Metabase, Grafana og lignende verktøy.
+                    <strong><Link href={"https://data.ansatt.nav.no/dataproduct/236d4d8f-7904-47c0-ac2f-9a3e8d06f1ee/Umami"}>Datamarkedsplassen:</Link></strong> Mulighet for å analysere i Metabase, Grafana, Jupyter Notebook og lignende verktøy.
                 </List.Item>
                 <List.Item>
                     <strong><Link href={"https://github.com/navikt/reops-proxy"}>Umami API:</Link></strong> Mulighet for å få data i JSON format, og bruke dem i egne apper.
