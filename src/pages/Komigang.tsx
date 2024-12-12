@@ -35,7 +35,7 @@ function Komigang() {
                 </List.Item>
             </List>
              <BodyShort>
-                For teknisk dokumentasjon <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>se Umamis ofisielle dokumentasjonsside</Link>.
+                For teknisk dokumentasjon, <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>se Umami sin offisielle dokumentasjonsside</Link>.
              </BodyShort>
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Analysere</Heading>
