@@ -34,9 +34,9 @@ function Komigang() {
                     <strong>Målesjekk:</strong> Sjekk at dataene blir samlet inn riktig. Gjør en målesjekk på nettsiden eller appen din.
                 </List.Item>
             </List>
-{/*            <BodyShort size="medium" style={{ marginBottom: "30px" }}>
-                    Kontakt <Link target="_blank" href={`https://teamkatalog.nav.no/team/26dba481-fd96-40a8-b47d-b1ad0002bc74`}>Team ResearchOps</Link> for å få sporingskode til din nettside / app.
-                </BodyShort>*/}
+             <BodyShort>
+                For teknisk dokumentasjon <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>se Umamis ofisielle dokumentasjonsside</Link>.
+             </BodyShort>
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Analysere</Heading>
             <List as="ul" title="Her finner du data">
