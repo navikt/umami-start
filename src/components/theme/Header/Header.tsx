@@ -52,7 +52,7 @@ export default function Header() {
                 className="no-underline"
               >
                 <BookIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Kom i gang med Umami</span>
+                <span className="whitespace-nowrap">Kom i gang guide</span>
               </Dropdown.Menu.List.Item>
             </Dropdown.Menu.List>
           </Dropdown.Menu>
@@ -73,7 +73,7 @@ export default function Header() {
               className={linkButton}
             >
               <BookIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Kom i gang med Umami</span>
+              <span className="whitespace-nowrap">Kom i gang guide</span>
             </Link>
           </div>
         </div>
