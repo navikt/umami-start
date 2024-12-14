@@ -58,10 +58,29 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
                         </Link>
                     </Accordion.Content>
                 </Accordion.Item>
+                <Accordion.Item>
+                    <Accordion.Header>Umami-sporingskode for Google Tag Manager (GTM)</Accordion.Header>
+                    <Accordion.Content>
+                        <pre style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>
+                          <code>
+                            &lt;script&gt;
+                                (function () &#123;
+                                      var el = document.createElement('script');
+                                      el.setAttribute('src', 'https://cdn.nav.no/team-researchops/sporing/sporing.js');
+                                      el.setAttribute('data-host-url', 'https://umami.nav.no');
+                                      el.setAttribute('data-website-id', '{selectedItem.id}');
+                                      document.body.appendChild(el);
+                                &#125;)();
+                            &lt;/script&gt;
+                          </code>
+                        </pre>
+                    </Accordion.Content>
+                </Accordion.Item>
             </Accordion>
-            <List as="ul" title="Verdt å vite" style={{ marginTop: "30px" }}>
+            <List as="ul" title="Verdt å vite" style={{marginTop: "30px"}}>
                 <List.Item>
-                Vil du at sporingskoden kun skal kjøre på spesifikke domener, for eksempel ikke på localhost? Da kan du legge til <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>attributtet data-domains</Link>.
+                    Vil du at sporingskoden kun skal kjøre på spesifikke domener, for eksempel ikke på localhost? Da kan
+                    du legge til <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>attributtet data-domains</Link>.
                 </List.Item>
                 <List.Item>
                 Umami sporer besøk (sidevisninger) ut av boksen. Ønsker du ikke dette? Da kan du legge til <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>attributtet data-auto-track="false"</Link>.
