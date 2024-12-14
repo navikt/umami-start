@@ -1,6 +1,7 @@
 import {Page, InternalHeader} from "@navikt/ds-react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import routes from './routes';
+import Footer from "./components/theme/Footer/Footer.tsx";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
                 </Router>
             </Page.Block>
         </Page>
+        <Footer />
     </>
   )
 }
