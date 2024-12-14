@@ -5,6 +5,7 @@ import {
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
+import '../../../tailwind.css';
 
 export default function Header() {
   const [isMobile, setIsMobile] = useState(false);
@@ -18,24 +19,16 @@ export default function Header() {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
-
-  const hostname = window.location.hostname;
-
-  let headerText = 'Felgen'; // Default text
-  if (hostname === 'skup.ansatt.nav.no') {
-    headerText = 'Skup';
-  } else if (hostname === 'felgen.ansatt.nav.no') {
-    headerText = 'Felgen';
-  }
   
   const linkButton =
     "flex no-underline items-center bg-transparent hover:underline hover:bg-transparent navds-button navds-button--primary navds-button--medium  text-white hover:text-white";
   return (
-    <header className="flex py-1 z-10 items-center md:w-5/6 max-w-[80rem] m-auto justify-between">
+    <div style={{ background: "rgba(19,17,54)" }}>
+    <header className="flex py-1 z-10 items-center max-w-[76.5rem] m-auto justify-between">
       <div className="flex items-stretch">
         <Link className={linkButton} href="/">
           <span className="text-2xl whitespace-nowrap text-white">
-            {headerText}
+            Start Umami
           </span>
         </Link>
       </div>
@@ -87,5 +80,6 @@ export default function Header() {
         </div>
       )}
     </header>
+    </div>
   );
 }

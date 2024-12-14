@@ -1,16 +1,16 @@
-import {Page, InternalHeader} from "@navikt/ds-react";
+import {Page} from "@navikt/ds-react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import routes from './routes';
 import Footer from "./components/theme/Footer/Footer.tsx";
+import ScrollToTop from "./components/theme/ScrollToTop/ScrollToTop.tsx";
+import Header from "./components/theme/Header/Header.tsx";
 
 function App() {
   return (
     <>
         <Page>
-            <InternalHeader>
-                <InternalHeader.Title as="h1">Start Umami</InternalHeader.Title>
-            </InternalHeader>
-            <Page.Block as="main" width="xl" gutters style={{ marginBottom: "100px" }}>
+            <Header />
+            <Page.Block as="main" width="xl" gutters>
                 <Router>
                     <Routes>
                         {routes.map(({ path, component }) => (
@@ -21,6 +21,7 @@ function App() {
             </Page.Block>
         </Page>
         <Footer />
+        <ScrollToTop />
     </>
   )
 }
