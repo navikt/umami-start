@@ -13,9 +13,9 @@ function Komigang() {
                     <List.Item>
                         <strong>Behandlingskatalogen:</strong> <Link href="https://behandlingskatalog.ansatt.nav.no/system/UMAMI">Nevn at dere bruker Umami i katalogen.</Link>
                     </List.Item>
-                    <List.Item>
+{/*                    <List.Item>
                         <strong>PVK vurdering:</strong> <Link href={"https://navno.sharepoint.com/sites/intranett-personvern/SitePages/PVK.aspx"}>Vurder om det er behov for å gjennomføre PVK.</Link>
-                    </List.Item>
+                    </List.Item>*/}
                 </List>
             <BodyShort>
                 For mer informasjon, <Link href={"https://navno.sharepoint.com/sites/intranett-utvikling/SitePages/Rutine-for-bruk-av-Umami.aspx"}>se retningslinjene for bruk av Umami.</Link>
