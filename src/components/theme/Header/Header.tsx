@@ -1,7 +1,6 @@
 import {
   MenuHamburgerIcon,
-  MenuGridIcon,
-  PlusIcon
+  BookIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
@@ -39,21 +38,21 @@ export default function Header() {
           </Button>
           <Dropdown.Menu className="w-auto">
             <Dropdown.Menu.List>
-              <Dropdown.Menu.List.Item
+{/*              <Dropdown.Menu.List.Item
                   as={Link}
                   href="/utvidelser"
                   className="no-underline"
               >
                 <MenuGridIcon aria-hidden fontSize="1.5rem" />
                 <span className="whitespace-nowrap">Utvidelser</span>
-              </Dropdown.Menu.List.Item>
+              </Dropdown.Menu.List.Item>*/}
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="https://forms.office.com/r/UyFMJsLfKM?lang=nb-NO"
+                href="/komigang"
                 className="no-underline"
               >
-                <PlusIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Legg til ny snarvei</span>
+                <BookIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Kom i gang med Umami</span>
               </Dropdown.Menu.List.Item>
             </Dropdown.Menu.List>
           </Dropdown.Menu>
@@ -62,19 +61,19 @@ export default function Header() {
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center w-full"></div>
           <div className="flex flex-grow">
-            <Link
+{/*            <Link
                 href="/utvidelser"
                 className={linkButton}
             >
               <MenuGridIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Utvidelser</span>
-            </Link>
+            </Link>*/}
             <Link
-              href="https://forms.office.com/r/UyFMJsLfKM?lang=nb-NO"
+              href="/komigang"
               className={linkButton}
             >
-              <PlusIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Legg til ny snarvei</span>
+              <BookIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Kom i gang med Umami</span>
             </Link>
           </div>
         </div>
