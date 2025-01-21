@@ -6,13 +6,6 @@ metadata:
   labels:
     team: team-researchops
 spec:
-  accessPolicy:
-    inbound:
-      rules:
-        - application: reops-proxy
-    outbound:
-      rules:
-        - application: reops-proxy
   image: {{ image }}
   port: 8080
   liveness:
