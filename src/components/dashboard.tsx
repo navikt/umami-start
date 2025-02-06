@@ -64,11 +64,12 @@ function Dashboard() {
         if (!inputUrl.startsWith('http://') && !inputUrl.startsWith('https://')) {
             inputUrl = 'https://' + inputUrl;
         }
-        const url = new URL(inputUrl);
-        const domain = url.hostname;
-        const path = encodeURIComponent(url.pathname);
 
         try {
+            const url = new URL(inputUrl);
+            const domain = url.hostname;
+            const path = url.pathname;
+
             const [data1, data2] = await Promise.all([
                 fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
                     credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
@@ -78,10 +79,15 @@ function Dashboard() {
                 }).then(response => response.json())
             ]);
 
-            const team1Data = data1.data.filter(item => 
+            // Type guard to ensure data has the correct structure
+            if (!data1?.data || !data2?.data || !Array.isArray(data1.data) || !Array.isArray(data2.data)) {
+                throw new Error('Invalid data structure received from API');
+            }
+
+            const team1Data = data1.data.filter((item: Website) => 
                 item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
             );
-            const team2Data = data2.data.filter(item => 
+            const team2Data = data2.data.filter((item: Website) => 
                 item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
                 item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
             );
@@ -96,13 +102,16 @@ function Dashboard() {
             );
 
             if (matchedWebsite) {
-                const umamiUrl = `https://umami.ansatt.nav.no/share/${matchedWebsite.shareId}/${matchedWebsite.domain}?url=${path}`;
+                const umamiUrl = `https://umami.ansatt.nav.no/share/${matchedWebsite.shareId}/${matchedWebsite.domain}?url=${encodeURIComponent(path)}`;
                 window.location.href = umamiUrl;
             } else {
                 setAlertVisible(true);
             }
         } catch (error) {
-            console.error("Error fetching data:", error);
+            if (error instanceof Error) {
+                setSearchError("Ugyldig URL-format");
+            }
+            console.error("Error:", error);
         }
     };
 
