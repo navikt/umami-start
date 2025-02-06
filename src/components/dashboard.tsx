@@ -30,10 +30,10 @@ function Dashboard() {
             }).then(response => response.json())
         ])
             .then(([data1, data2]) => {
-                const team1Data = data1.data.filter(item => 
+                const team1Data = data1.data.filter((item: Website) => 
                     item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
                 );
-                const team2Data = data2.data.filter(item => 
+                const team2Data = data2.data.filter((item: Website) => 
                     item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
                     item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
                 );
