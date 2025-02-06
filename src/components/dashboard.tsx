@@ -16,6 +16,10 @@ function Dashboard() {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
 
+    const normalizeDomain = (domain: string) => {
+        return domain.replace(/^www\./, '');
+    };
+
     useEffect(() => {
         Promise.all([
             fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
@@ -26,10 +30,17 @@ function Dashboard() {
             }).then(response => response.json())
         ])
             .then(([data1, data2]) => {
-                const combinedData = [...data1.data, ...data2.data];
+                const team1Data = data1.data.filter(item => 
+                    item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
+                );
+                const team2Data = data2.data.filter(item => 
+                    item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
+                    item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
+                );
+                
+                const combinedData = [...team1Data, ...team2Data];
                 combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
-
-                setFilteredData(combinedData.filter(item => item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'));
+                setFilteredData(combinedData);
             })
             .catch(error => console.error("Error fetching data:", error));
     }, []);
@@ -67,14 +78,25 @@ function Dashboard() {
                 }).then(response => response.json())
             ]);
 
-            const combinedData = [...data1.data, ...data2.data];
+            const team1Data = data1.data.filter(item => 
+                item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
+            );
+            const team2Data = data2.data.filter(item => 
+                item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
+                item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
+            );
+            
+            const combinedData = [...team1Data, ...team2Data];
             combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
 
-            const filteredData = combinedData.filter(item => item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b');
-            const matchedWebsite = filteredData.find(item => item.domain === domain);
+            const normalizedInputDomain = normalizeDomain(domain);
+            const matchedWebsite = combinedData.find(item => 
+                normalizeDomain(item.domain) === normalizedInputDomain ||
+                normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
+            );
 
             if (matchedWebsite) {
-                const umamiUrl = `https://umami.ansatt.nav.no/share/${matchedWebsite.shareId}/${domain}?url=${path}`;
+                const umamiUrl = `https://umami.ansatt.nav.no/share/${matchedWebsite.shareId}/${matchedWebsite.domain}?url=${path}`;
                 window.location.href = umamiUrl;
             } else {
                 setAlertVisible(true);
