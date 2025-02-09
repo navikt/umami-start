@@ -112,7 +112,7 @@ function TeamWebsites() {
                     checked={showDevApps}
                     onChange={(e) => setShowDevApps(e.target.checked)}
                 >
-                    Vis apper i dev
+                    Vis dev-sider
                 </Switch>
             </div>
             <div style={{ overflowX: 'auto' }} >
