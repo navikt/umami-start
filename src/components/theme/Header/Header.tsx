@@ -1,6 +1,7 @@
 import {
   MenuHamburgerIcon,
   BookIcon,
+  CodeIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
@@ -39,13 +40,21 @@ export default function Header() {
           </Button>
           <Dropdown.Menu className="w-auto">
             <Dropdown.Menu.List>
-            <Dropdown.Menu.List.Item
+              <Dropdown.Menu.List.Item
                 as={Link}
                 href="https://metabase.ansatt.nav.no/"
                 className="no-underline"
               >
                 <BarChartIcon aria-hidden fontSize="1.5rem" />
                 <span className="whitespace-nowrap">Metabase</span>
+              </Dropdown.Menu.List.Item>
+              <Dropdown.Menu.List.Item
+                as={Link}
+                href="https://umami.is/docs"
+                className="no-underline"
+              >
+                <CodeIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Dokumentasjon</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -68,6 +77,13 @@ export default function Header() {
             >
               <BarChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Metabase</span>
+            </Link>
+            <Link
+              href="https://umami.is/docs"
+              className={linkButton}
+            >
+              <CodeIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Dokumentasjon</span>
             </Link>
             <Link
               href="/komigang"
