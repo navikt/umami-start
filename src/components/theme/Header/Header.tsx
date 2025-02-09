@@ -1,6 +1,7 @@
 import {
   MenuHamburgerIcon,
-  BookIcon
+  BookIcon,
+  BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
@@ -38,14 +39,14 @@ export default function Header() {
           </Button>
           <Dropdown.Menu className="w-auto">
             <Dropdown.Menu.List>
-{/*              <Dropdown.Menu.List.Item
-                  as={Link}
-                  href="/utvidelser"
-                  className="no-underline"
+            <Dropdown.Menu.List.Item
+                as={Link}
+                href="https://metabase.ansatt.nav.no/"
+                className="no-underline"
               >
-                <MenuGridIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Utvidelser</span>
-              </Dropdown.Menu.List.Item>*/}
+                <BarChartIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Metabase</span>
+              </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
                 href="/komigang"
@@ -61,13 +62,13 @@ export default function Header() {
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center w-full"></div>
           <div className="flex flex-grow">
-{/*            <Link
-                href="/utvidelser"
-                className={linkButton}
+          <Link
+              href="https://metabase.ansatt.nav.no/"
+              className={linkButton}
             >
-              <MenuGridIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Utvidelser</span>
-            </Link>*/}
+              <BarChartIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Metabase</span>
+            </Link>
             <Link
               href="/komigang"
               className={linkButton}
