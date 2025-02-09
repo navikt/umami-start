@@ -64,20 +64,27 @@ function TeamWebsites() {
     useEffect(() => {
         if (data) {
             const filtered = data.filter((website) => {
-                // First filter by environment (prod/dev)
+                // Check if search query exactly matches ID - show regardless of environment
+                if (searchQuery !== "") {
+                    const searchLower = searchQuery.toLowerCase();
+                    if (website.id.toLowerCase() === searchLower) {
+                        return true;
+                    }
+                }
+
+                // Regular environment filtering
                 const envMatch = showDevApps 
                     ? website.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30'
                     : website.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b';
 
-                // Then filter by search query if it exists
+                // Then apply other search criteria if there's a search query
                 if (searchQuery === "") {
                     return envMatch;
                 } else {
                     const searchLower = searchQuery.toLowerCase();
                     const nameMatches = website.name.toLowerCase().includes(searchLower);
                     const domainMatches = website.domain.toLowerCase().includes(searchLower);
-                    const idMatches = website.id.toLowerCase().includes(searchLower);
-                    return envMatch && (nameMatches || domainMatches || idMatches);
+                    return envMatch && (nameMatches || domainMatches);
                 }
             });
             setFilteredData(filtered);
