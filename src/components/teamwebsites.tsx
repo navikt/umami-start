@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Table, Link, Button, Tag, Search } from "@navikt/ds-react";
+import { Table, Link, Button, Tag, Search, Switch } from "@navikt/ds-react";
 import SporingsModal from "./sporingsmodal";
 
 interface Website {
@@ -16,6 +16,7 @@ function TeamWebsites() {
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedItem, setSelectedItem] = useState<{ name: string; id: string }>({ name: '', id: '' });
+    const [showDevApps, setShowDevApps] = useState<boolean>(false);
     const ref = useRef<HTMLDialogElement>(null);
     const baseUrl = window.location.hostname === 'localhost' ? 'https://reops-proxy.intern.nav.no' : 'https://reops-proxy.ansatt.nav.no';
 
@@ -45,19 +46,25 @@ function TeamWebsites() {
     useEffect(() => {
         if (data) {
             const filtered = data.filter((website) => {
+                // First filter by environment (prod/dev)
+                const envMatch = showDevApps 
+                    ? website.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30'
+                    : website.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b';
+
+                // Then filter by search query if it exists
                 if (searchQuery === "") {
-                    return true; // Show all websites if no search query
+                    return envMatch;
                 } else {
                     const searchLower = searchQuery.toLowerCase();
                     const nameMatches = website.name.toLowerCase().includes(searchLower);
                     const domainMatches = website.domain.toLowerCase().includes(searchLower);
                     const idMatches = website.id.toLowerCase().includes(searchLower);
-                    return nameMatches || domainMatches || idMatches;
+                    return envMatch && (nameMatches || domainMatches || idMatches);
                 }
             });
             setFilteredData(filtered);
         }
-    }, [searchQuery, data]);
+    }, [searchQuery, data, showDevApps]);
 
     const handleButtonClick = (name: string, id: string) => {
         setSelectedItem({ name, id });
@@ -70,16 +77,26 @@ function TeamWebsites() {
 
     return (
         <>
-            <form role="search" style={{marginBottom: "20px", marginTop: "25px", width: "250px"}}>
-                <Search
-                    label="Søk alle NAV sine sider"
-                    variant="simple"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onClear={() => setSearchQuery("")}
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', marginBottom: "20px", marginTop: "25px" }}>
+                <form role="search" style={{ width: "250px" }}>
+                    <Search
+                        label="Søk alle NAV sine sider"
+                        variant="simple"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        onClear={() => setSearchQuery("")}
+                        size="small"
+                    />
+                </form>
+                <Switch 
                     size="small"
-                />
-            </form>
+                    position="right"
+                    checked={showDevApps}
+                    onChange={(e) => setShowDevApps(e.target.checked)}
+                >
+                    Vis apper i dev
+                </Switch>
+            </div>
             <div style={{ overflowX: 'auto' }} >
             <Table zebraStripes={true}>
                 <Table.Header>
