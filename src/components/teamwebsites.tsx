@@ -48,9 +48,11 @@ function TeamWebsites() {
                 if (searchQuery === "") {
                     return true; // Show all websites if no search query
                 } else {
-                    const nameMatches = website.name.toLowerCase().includes(searchQuery.toLowerCase());
-                    const domainMatches = website.domain.toLowerCase().includes(searchQuery.toLowerCase());
-                    return nameMatches || domainMatches;
+                    const searchLower = searchQuery.toLowerCase();
+                    const nameMatches = website.name.toLowerCase().includes(searchLower);
+                    const domainMatches = website.domain.toLowerCase().includes(searchLower);
+                    const idMatches = website.id.toLowerCase().includes(searchLower);
+                    return nameMatches || domainMatches || idMatches;
                 }
             });
             setFilteredData(filtered);
