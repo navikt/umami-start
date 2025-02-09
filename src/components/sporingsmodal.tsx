@@ -8,7 +8,10 @@ interface SporingsModalProps {
 const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selectedItem }, ref) => (
     <Modal ref={ref} header={{ heading: "Sporingskode for " + selectedItem.name }}>
         <Modal.Body>
-            <BodyShort spacing size="medium" style={{ marginTop: "10px",  marginBottom: "30px" }}>
+            <BodyShort spacing size="medium" style={{ marginTop: "15px" }}>
+                <strong>Nettside-ID:</strong> {selectedItem.id}
+            </BodyShort>
+            <BodyShort spacing size="medium" style={{ marginTop: "30px",  marginBottom: "30px" }}>
               Sporingskoden legges til i &lt;head&gt;-delen på nettsiden.
             </BodyShort>
 
@@ -86,9 +89,6 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
                 Umami sporer besøk (sidevisninger) ut av boksen. Ønsker du ikke dette? Da kan du legge til <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>attributtet data-auto-track="false"</Link>.
                 </List.Item>
             </List>
-            <BodyShort spacing size="medium" style={{ marginTop: "30px" }}>
-                <strong>Nettside-ID:</strong> {selectedItem.id}
-            </BodyShort>
         </Modal.Body>
         <Modal.Footer>
             <Button type="button" onClick={() => (ref as React.RefObject<HTMLDialogElement>).current?.close()}>
