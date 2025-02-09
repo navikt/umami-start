@@ -2,6 +2,24 @@ import { useEffect, useState, useRef } from "react";
 import { Table, Link, Button, Tag, Search, Switch } from "@navikt/ds-react";
 import SporingsModal from "./sporingsmodal";
 
+// Add styles at the top of the file
+const styles = {
+    container: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '20px',
+        marginBottom: "20px",
+        marginTop: "25px"
+    },
+    searchForm: {
+        width: '250px',
+        '@media (max-width: 768px)': {
+            width: '100%',
+            flexBasis: '100%'
+        }
+    }
+} as const;
+
 interface Website {
     id: string;
     name: string;
@@ -77,8 +95,8 @@ function TeamWebsites() {
 
     return (
         <>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', marginBottom: "20px", marginTop: "25px" }}>
-                <form role="search" style={{ width: "250px" }}>
+            <div className="search-controls" style={styles.container}>
+                <form role="search" style={{ width: '250px' }}>
                     <Search
                         label="Søk alle NAV sine sider"
                         variant="simple"
