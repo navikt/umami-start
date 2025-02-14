@@ -7,7 +7,8 @@ import {
   HGrid,
   Radio,
   RadioGroup,
-  UNSAFE_Combobox
+  UNSAFE_Combobox,
+  Alert // Add this to imports at top
 } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
 
@@ -40,6 +41,7 @@ const SQLGeneratorForm = () => {
   const [dataKeys, setDataKeys] = useState<string[]>([]);
   const [newDataKey, setNewDataKey] = useState<string>('');
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
+  const [error, setError] = useState<string | null>(null); // Add error state
   
   // All possible base columns
   const allBaseColumns: BaseColumns = {
@@ -70,10 +72,6 @@ const SQLGeneratorForm = () => {
     city: false
   };
 
-  const [baseColumns, setBaseColumns] = useState<BaseColumns>(allBaseColumns);
-  const [generatedSQL, setGeneratedSQL] = useState<string>('');
-  const [copySuccess, setCopySuccess] = useState<boolean>(false);
-
   // Preset column configurations
   const presets: Presets = {
     minimum: {
@@ -82,6 +80,14 @@ const SQLGeneratorForm = () => {
     },
     alle: Object.keys(allBaseColumns).reduce((acc, key) => ({...acc, [key]: true}), {})
   };
+
+  // Updated initial state with minimum preset
+  const [baseColumns, setBaseColumns] = useState<BaseColumns>({
+    ...allBaseColumns,
+    ...presets.minimum
+  });
+  const [generatedSQL, setGeneratedSQL] = useState<string>('');
+  const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
   const applyPreset = (presetName: PresetType): void => {
     const preset = presets[presetName];
@@ -123,10 +129,22 @@ const SQLGeneratorForm = () => {
   };
 
   const generateSQL = (): void => {
+    setError(null); // Clear any previous errors
     console.log('Selected website:', selectedWebsite);
 
+    if (!selectedWebsite) {
+      setError('Du må velge en nettside');
+      return;
+    }
+
     if (queryType === 'custom' && !eventName) {
-      alert('Please enter an event name');
+      setError('Du må skrive inn et event-navn som vi kan kombinere parmeterenne for');
+      return;
+    }
+
+    const hasSelectedColumns = Object.values(baseColumns).some(isSelected => isSelected);
+    if (!hasSelectedColumns) {
+      setError('Du må minst velge en av de tilgjengelige kolonnene');
       return;
     }
 
@@ -260,14 +278,20 @@ const SQLGeneratorForm = () => {
       </Heading>
 
       <div className="space-y-6">
+        {error && (
+          <Alert variant="error" closeButton onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        
         {/* Query Type Selection */}
         <RadioGroup 
-          legend="Velg type spørring"
+          legend="Velg type event du ønsker å kombinere data for"
           value={queryType}
           onChange={(value: EventQueryType) => setQueryType(value)}
         >
-          <Radio value="custom">Egendefinerte eventer</Radio>
-          <Radio value="pageview">Sidevisninger</Radio>
+          <Radio value="custom">Egendefinert event</Radio>
+          <Radio value="pageview">Umami besøk-eventet</Radio>
         </RadioGroup>
 
         {/* Updated Combobox implementation */}
@@ -293,7 +317,7 @@ const SQLGeneratorForm = () => {
         {/* Event Name Input - Only show for custom events */}
         {queryType === 'custom' && (
           <TextField
-            label="event_name"
+            label="Event navn"
             value={eventName}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
             placeholder="e.g., download"
@@ -304,7 +328,7 @@ const SQLGeneratorForm = () => {
         <div>
           <div className="flex gap-2 items-end">
             <TextField
-              label="data_keys"
+              label="Parametere tilhørende eventet"
               value={newDataKey}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
               placeholder="e.g. file_name"
@@ -320,7 +344,7 @@ const SQLGeneratorForm = () => {
             onClick={addDataKey} 
             style={{ height: '50px' }}
             >
-            Legg til data_keys
+            Legg til parameter
             </Button>
           </div>
 
@@ -387,7 +411,7 @@ const SQLGeneratorForm = () => {
           <div>
             <div className="flex justify-between items-center mb-2">
               <Heading level="2" size="small">
-                Lag SQL
+                SQL-kode til Metabase-modell
               </Heading>
               <Button
                 variant="secondary"
