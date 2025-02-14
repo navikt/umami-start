@@ -133,7 +133,7 @@ const SQLGeneratorForm = () => {
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';
     sql += '    e.*,\n';
-    sql += '    w.domain as website_domain,\n';
+    sql += `    '${selectedWebsite?.domain}' as website_domain,\n`;
     sql += '    CONCAT(\n';
     sql += '      e.url_path,\n';
     sql += '      CASE\n';
@@ -142,20 +142,15 @@ const SQLGeneratorForm = () => {
     sql += '        ELSE \'\'\n';
     sql += '      END\n';
     sql += '    ) AS url_fullpath,\n';
-    sql += '    CASE\n';
-    sql += '      WHEN w.domain IS NOT NULL AND w.domain != \'\'\n';
-    sql += '      THEN CONCAT(\n';
-    sql += '        \'https://\',\n';
-    sql += '        w.domain,\n';
-    sql += '        e.url_path,\n';
-    sql += '        CASE\n';
-    sql += '          WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
-    sql += '          THEN CONCAT(\'?\', e.url_query)\n';
-    sql += '          ELSE \'\'\n';
-    sql += '        END\n';
-    sql += '      )\n';
-    sql += '      ELSE NULL\n';
-    sql += '    END AS url_fullurl,\n';
+    sql += '    CONCAT(\n';
+    sql += `      'https://${selectedWebsite?.domain}',\n`;
+    sql += '      e.url_path,\n';
+    sql += '      CASE\n';
+    sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
+    sql += '        THEN CONCAT(\'?\', e.url_query)\n';
+    sql += '        ELSE \'\'\n';
+    sql += '      END\n';
+    sql += '    ) AS url_fullurl,\n';
     sql += '    CONCAT(\n';
     sql += '      e.referrer_path,\n';
     sql += '      CASE\n';
@@ -187,12 +182,10 @@ const SQLGeneratorForm = () => {
     sql += '    s.subdivision1,\n';
     sql += '    s.city\n';
     sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event` e\n';
-    sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_website` w\n';
-    sql += '    ON e.website_id = w.website_id\n';
     sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
     sql += '    ON e.session_id = s.session_id\n';
     
-    // Modified WHERE clause based on query type
+    // Modified WHERE clause based on query type and website_id
     if (queryType === 'custom') {
       sql += '  WHERE e.event_name = \'' + eventName + '\'\n';
     } else {
@@ -200,7 +193,7 @@ const SQLGeneratorForm = () => {
     }
     
     if (selectedWebsite) {
-      sql += `  AND w.name = '${selectedWebsite.name}'\n`;
+      sql += `  AND e.website_id = '${selectedWebsite.id}'\n`;
     }
     
     sql += ')\n\n';
@@ -294,7 +287,6 @@ const SQLGeneratorForm = () => {
               setSelectedWebsite(null);
             }
           }}
-          shouldAutocomplete
           clearButton
         />
 
