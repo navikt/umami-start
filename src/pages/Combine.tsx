@@ -203,7 +203,7 @@ const SQLGeneratorForm = () => {
                     size="small"
                     onClick={() => removeDataKey(key)}
                   >
-                    Remove
+                    Fjern
                   </Button>
                 </div>
               </div>
@@ -255,7 +255,7 @@ const SQLGeneratorForm = () => {
           <div>
             <div className="flex justify-between items-center mb-2">
               <Heading level="2" size="small">
-                Generated SQL
+                Lag SQL
               </Heading>
               <Button
                 variant="secondary"
@@ -263,7 +263,7 @@ const SQLGeneratorForm = () => {
                 onClick={handleCopySQL}
                 icon={<Copy aria-hidden />}
               >
-                {copySuccess ? 'Copied!' : 'Copy SQL'}
+                {copySuccess ? 'kopiert!' : 'Kopi SQL'}
               </Button>
             </div>
             <div className="border border-gray-400 p-4">

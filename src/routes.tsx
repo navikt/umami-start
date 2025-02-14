@@ -10,7 +10,7 @@ const routes = [
     { path: "/komigang", component: <Komigang /> },
     { path: "/personvern", component: <Personvern /> },
     { path: "/tilgjengelighet", component: <Tilgjengelighet /> },
-    { path: "/combine", component: <Combine /> }
+    { path: "/kombinator", component: <Combine /> }
 ];
 
 export default routes;
