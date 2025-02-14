@@ -5,6 +5,8 @@ import {
   Checkbox,
   Heading,
   HGrid,
+  Radio,
+  RadioGroup
 } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
 
@@ -20,11 +22,14 @@ type Presets = {
   };
 };
 
+type EventQueryType = 'custom' | 'pageview';
+
 const SQLGeneratorForm = () => {
   const [eventName, setEventName] = useState<string>('');
   const [websiteName, setWebsiteName] = useState<string>('');
   const [dataKeys, setDataKeys] = useState<string[]>([]);
   const [newDataKey, setNewDataKey] = useState<string>('');
+  const [queryType, setQueryType] = useState<EventQueryType>('custom');
   
   // All possible base columns
   const allBaseColumns: BaseColumns = {
@@ -108,7 +113,7 @@ const SQLGeneratorForm = () => {
   };
 
   const generateSQL = (): void => {
-    if (!eventName) {
+    if (queryType === 'custom' && !eventName) {
       alert('Please enter an event name');
       return;
     }
@@ -174,7 +179,13 @@ const SQLGeneratorForm = () => {
     sql += '    ON e.website_id = w.website_id\n';
     sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
     sql += '    ON e.session_id = s.session_id\n';
-    sql += '  WHERE e.event_name = \'' + eventName + '\'\n';
+    
+    // Modified WHERE clause based on query type
+    if (queryType === 'custom') {
+      sql += '  WHERE e.event_name = \'' + eventName + '\'\n';
+    } else {
+      sql += '  WHERE e.event_type = 1\n'; // pageview type
+    }
     
     if (websiteName) {
       sql += '  AND w.name = \'' + websiteName + '\'\n';
@@ -216,6 +227,16 @@ const SQLGeneratorForm = () => {
       </Heading>
 
       <div className="space-y-6">
+        {/* Query Type Selection */}
+        <RadioGroup 
+          legend="Velg type spørring"
+          value={queryType}
+          onChange={(value: EventQueryType) => setQueryType(value)}
+        >
+          <Radio value="custom">Egendefinerte eventer</Radio>
+          <Radio value="pageview">Sidevisninger</Radio>
+        </RadioGroup>
+
         {/* Website Name Input */}
         <TextField
           label="website_name"
@@ -224,13 +245,15 @@ const SQLGeneratorForm = () => {
           placeholder="e.g., aksel.nav.no"
         />
 
-        {/* Event Name Input */}
-        <TextField
-          label="event_name"
-          value={eventName}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
-          placeholder="e.g., download"
-        />
+        {/* Event Name Input - Only show for custom events */}
+        {queryType === 'custom' && (
+          <TextField
+            label="event_name"
+            value={eventName}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
+            placeholder="e.g., download"
+          />
+        )}
 
         {/* Data Keys Input */}
         <div>
