@@ -109,27 +109,81 @@ const SQLGeneratorForm = () => {
     }
 
     let sql = 'WITH base_query AS (\n';
-    sql += '  SELECT *\n';
-    sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event`\n';
-    sql += '  WHERE event_name = \'' + eventName + '\'\n';
+    sql += '  SELECT\n';
+    sql += '    e.*,\n';
+    sql += '    w.domain as website_domain,\n';
+    sql += '    CONCAT(\n';
+    sql += '      e.url_path,\n';
+    sql += '      CASE\n';
+    sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
+    sql += '        THEN CONCAT(\'?\', e.url_query)\n';
+    sql += '        ELSE \'\'\n';
+    sql += '      END\n';
+    sql += '    ) AS url_fullpath,\n';
+    sql += '    CASE\n';
+    sql += '      WHEN w.domain IS NOT NULL AND w.domain != \'\'\n';
+    sql += '      THEN CONCAT(\n';
+    sql += '        \'https://\',\n';
+    sql += '        w.domain,\n';
+    sql += '        e.url_path,\n';
+    sql += '        CASE\n';
+    sql += '          WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
+    sql += '          THEN CONCAT(\'?\', e.url_query)\n';
+    sql += '          ELSE \'\'\n';
+    sql += '        END\n';
+    sql += '      )\n';
+    sql += '      ELSE NULL\n';
+    sql += '    END AS url_fullurl,\n';
+    sql += '    CONCAT(\n';
+    sql += '      e.referrer_path,\n';
+    sql += '      CASE\n';
+    sql += '        WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
+    sql += '        THEN CONCAT(\'?\', e.referrer_query)\n';
+    sql += '        ELSE \'\'\n';
+    sql += '      END\n';
+    sql += '    ) AS referrer_fullpath,\n';
+    sql += '    CASE\n';
+    sql += '      WHEN e.referrer_domain IS NOT NULL AND e.referrer_domain != \'\'\n';
+    sql += '      THEN CONCAT(\n';
+    sql += '        \'https://\',\n';
+    sql += '        e.referrer_domain,\n';
+    sql += '        e.referrer_path,\n';
+    sql += '        CASE\n';
+    sql += '          WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
+    sql += '          THEN CONCAT(\'?\', e.referrer_query)\n';
+    sql += '          ELSE \'\'\n';
+    sql += '        END\n';
+    sql += '      )\n';
+    sql += '      ELSE NULL\n';
+    sql += '    END AS referrer_fullurl,\n';
+    sql += '    s.browser,\n';
+    sql += '    s.os,\n';
+    sql += '    s.device,\n';
+    sql += '    s.screen,\n';
+    sql += '    s.language,\n';
+    sql += '    s.country,\n';
+    sql += '    s.subdivision1,\n';
+    sql += '    s.city\n';
+    sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event` e\n';
+    sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_website` w\n';
+    sql += '    ON e.website_id = w.website_id\n';
+    sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
+    sql += '    ON e.session_id = s.session_id\n';
+    sql += '  WHERE e.event_name = \'' + eventName + '\'\n';
     
     if (websiteName) {
-      sql += '  AND website_id IN (\n';
-      sql += '    SELECT website_id\n';
-      sql += '    FROM `team-researchops-prod-01d6.umami.public_website`\n';
-      sql += '    WHERE name = \'' + websiteName + '\'\n';
-      sql += '  )\n';
+      sql += '  AND w.name = \'' + websiteName + '\'\n';
     }
     
     sql += ')\n\n';
     sql += 'SELECT\n';
     
-    // Add base columns
+    // Add base columns with correct table reference
     const selectedBaseColumns = Object.entries(baseColumns)
       .filter(([_, isSelected]) => isSelected)
-      .map(([column]) => `  base_query.${column} AS ${column}`);
+      .map(([column]) => `  base_query.${column}`);
     
-    // Add data key columns - now all added keys are included
+    // Add data key columns
     const dataKeyColumns = dataKeys.map(key => 
       `  MAX(CASE WHEN event_data.data_key = '${key}' THEN event_data.string_value END) AS data_key_${sanitizeColumnName(key)}`
     );
@@ -144,7 +198,7 @@ const SQLGeneratorForm = () => {
 
     // Add GROUP BY if we have any data key columns
     if (dataKeyColumns.length > 0) {
-      sql += 'GROUP BY\n  ' + selectedBaseColumns.map(col => col.split(' AS ')[0]).join(',\n  ');
+      sql += 'GROUP BY\n  ' + selectedBaseColumns.join(',\n  ');
     }
 
     setGeneratedSQL(sql);
