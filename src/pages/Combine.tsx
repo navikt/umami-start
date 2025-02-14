@@ -35,7 +35,7 @@ type EventQueryType = 'custom' | 'pageview';
 
 const SQLGeneratorForm = () => {
   const [eventName, setEventName] = useState<string>('');
-  const [websiteName, setWebsiteName] = useState<string>('');
+  const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [dataKeys, setDataKeys] = useState<string[]>([]);
   const [newDataKey, setNewDataKey] = useState<string>('');
@@ -123,6 +123,8 @@ const SQLGeneratorForm = () => {
   };
 
   const generateSQL = (): void => {
+    console.log('Selected website:', selectedWebsite);
+
     if (queryType === 'custom' && !eventName) {
       alert('Please enter an event name');
       return;
@@ -197,8 +199,8 @@ const SQLGeneratorForm = () => {
       sql += '  WHERE e.event_type = 1\n'; // pageview type
     }
     
-    if (websiteName) {
-      sql += '  AND w.name = \'' + websiteName + '\'\n';
+    if (selectedWebsite) {
+      sql += `  AND w.name = '${selectedWebsite.name}'\n`;
     }
     
     sql += ')\n\n';
@@ -275,15 +277,23 @@ const SQLGeneratorForm = () => {
           <Radio value="pageview">Sidevisninger</Radio>
         </RadioGroup>
 
-        {/* Replace TextField with Combobox for website selection */}
+        {/* Updated Combobox implementation */}
         <UNSAFE_Combobox
           label="Velg nettsted"
-          value={websiteName}
-          onChange={setWebsiteName}
-          options={websites.map(site => ({
-            label: `${site.name}`,
-            value: site.name
+          options={websites.map(website => ({
+            label: website.name,
+            value: website.name,
+            website: website
           }))}
+          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+          onToggleSelected={(option, isSelected) => {
+            if (isSelected) {
+              const website = websites.find(w => w.name === option);
+              setSelectedWebsite(website || null);
+            } else {
+              setSelectedWebsite(null);
+            }
+          }}
           shouldAutocomplete
           clearButton
         />
