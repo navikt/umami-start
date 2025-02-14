@@ -97,6 +97,11 @@ const SQLGeneratorForm = () => {
     }
   };
 
+  // Add this new helper function
+  const sanitizeColumnName = (key: string): string => {
+    return key.replace(/\./g, '_');
+  };
+
   const generateSQL = (): void => {
     if (!eventName) {
       alert('Please enter an event name');
@@ -126,7 +131,7 @@ const SQLGeneratorForm = () => {
     
     // Add data key columns - now all added keys are included
     const dataKeyColumns = dataKeys.map(key => 
-      `  MAX(CASE WHEN event_data.data_key = '${key}' THEN event_data.string_value END) AS data_key_${key}`
+      `  MAX(CASE WHEN event_data.data_key = '${key}' THEN event_data.string_value END) AS data_key_${sanitizeColumnName(key)}`
     );
     
     const allColumns = [...selectedBaseColumns, ...dataKeyColumns];
