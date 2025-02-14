@@ -99,7 +99,12 @@ const SQLGeneratorForm = () => {
 
   // Add this new helper function
   const sanitizeColumnName = (key: string): string => {
-    return key.replace(/\./g, '_');
+    return key
+      .replace(/\./g, '_')
+      .replace(/æ/gi, 'ae')
+      .replace(/ø/gi, 'oe')
+      .replace(/å/gi, 'aa')
+      .replace(/[^a-z0-9_]/gi, '_'); // Replace any other special characters with underscore
   };
 
   const generateSQL = (): void => {
