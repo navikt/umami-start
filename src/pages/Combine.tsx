@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent, ChangeEvent } from 'react';
+import { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
 import {
   Button,
   TextField,
@@ -6,9 +6,18 @@ import {
   Heading,
   HGrid,
   Radio,
-  RadioGroup
+  RadioGroup,
+  UNSAFE_Combobox
 } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
+
+// Add Website interface
+interface Website {
+  id: string;
+  name: string;
+  domain: string;
+  teamId: string;
+}
 
 type BaseColumns = {
   [key: string]: boolean;
@@ -27,6 +36,7 @@ type EventQueryType = 'custom' | 'pageview';
 const SQLGeneratorForm = () => {
   const [eventName, setEventName] = useState<string>('');
   const [websiteName, setWebsiteName] = useState<string>('');
+  const [websites, setWebsites] = useState<Website[]>([]);
   const [dataKeys, setDataKeys] = useState<string[]>([]);
   const [newDataKey, setNewDataKey] = useState<string>('');
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
@@ -220,6 +230,34 @@ const SQLGeneratorForm = () => {
     setGeneratedSQL(sql);
   };
 
+  // Add API fetch for websites
+  useEffect(() => {
+    const baseUrl = window.location.hostname === 'localhost' 
+      ? 'https://reops-proxy.intern.nav.no' 
+      : 'https://reops-proxy.ansatt.nav.no';
+
+    Promise.all([
+      fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
+        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+      }).then(response => response.json()),
+      fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
+        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+      }).then(response => response.json())
+    ])
+      .then(([data1, data2]) => {
+        const combinedData = [...data1.data, ...data2.data];
+        // Sort by environment first (prod first), then alphabetically by name
+        combinedData.sort((a, b) => {
+          if (a.teamId === b.teamId) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? -1 : 1;
+        });
+        setWebsites(combinedData);
+      })
+      .catch(error => console.error("Error fetching websites:", error));
+  }, []);
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-6 pb-4">
@@ -237,12 +275,17 @@ const SQLGeneratorForm = () => {
           <Radio value="pageview">Sidevisninger</Radio>
         </RadioGroup>
 
-        {/* Website Name Input */}
-        <TextField
-          label="website_name"
+        {/* Replace TextField with Combobox for website selection */}
+        <UNSAFE_Combobox
+          label="Velg nettsted"
           value={websiteName}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setWebsiteName(e.target.value)}
-          placeholder="e.g., aksel.nav.no"
+          onChange={setWebsiteName}
+          options={websites.map(site => ({
+            label: `${site.name}`,
+            value: site.name
+          }))}
+          shouldAutocomplete
+          clearButton
         />
 
         {/* Event Name Input - Only show for custom events */}
