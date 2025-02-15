@@ -37,40 +37,64 @@ const SQLGeneratorForm = () => {
   const [parameterSQLCopySuccess, setParameterSQLCopySuccess] = useState<boolean>(false);
   const [eventSQLCopySuccess, setEventSQLCopySuccess] = useState<boolean>(false);
 
-  // All possible base columns
-  const allBaseColumns: BaseColumns = {
-    event_id: false,
-    created_at: false,
-    event_name: false,
-    website_id: false,
-    page_title: false,
-    website_domain: false,
-    url_path: false,
-    url_query: false,
-    url_fullpath: false,
-    url_fullurl: false,
-    referrer_domain: false,
-    referrer_path: false,
-    referrer_query: false,
-    referrer_fullpath: false,
-    referrer_fullurl: false,
-    visit_id: false,
-    session_id: false,
-    browser: false,
-    os: false,
-    device: false,
-    screen: false,
-    language: false,
-    country: false,
-    subdivision1: false,
-    city: false
+  // Update the allBaseColumns organization into groups
+  const columnGroups = {
+    eventBasics: {
+      label: 'Basisdetaljer (anbefalt)',
+      columns: {
+        event_id: false,
+        created_at: false,
+        event_name: false,
+        website_id: false,
+        website_domain: false,
+      }
+    },
+    pageDetails: {
+      label: 'Hendelsesdetaljer',
+      columns: {
+        page_title: false,
+        // URL details
+        url_path: false,
+        url_query: false,
+        url_fullpath: false,
+        url_fullurl: false,
+        // Referrer details
+        referrer_domain: false,
+        referrer_path: false,
+        referrer_query: false,
+        referrer_fullpath: false,
+        referrer_fullurl: false,
+      }
+    },
+    visitorDetails: {
+      label: 'Brukerdetaljer',
+      columns: {
+        visit_id: false,
+        session_id: false,
+        browser: false,
+        os: false,
+        device: false,
+        screen: false,
+        language: false,
+        country: false,
+        subdivision1: false,
+        city: false,
+      }
+    }
   };
+
+  // Replace allBaseColumns with flattened version of groups
+  const allBaseColumns: BaseColumns = Object.values(columnGroups)
+    .reduce((acc, group) => ({ ...acc, ...group.columns }), {});
 
   // Updated initial state with minimum preset
   const [baseColumns, setBaseColumns] = useState<BaseColumns>({
     ...allBaseColumns,
     event_id: true,
     created_at: true,
+    event_name: true,
+    website_id: true,
+    website_domain: true
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -305,21 +329,25 @@ ORDER BY count DESC`;
       .catch(error => console.error("Error fetching websites:", error));
   }, []);
 
-  // Add these helper functions
-  const selectAllColumns = () => {
-    setBaseColumns(
-      Object.keys(allBaseColumns).reduce((acc, key) => ({
-        ...acc,
-        [key]: true
-      }), {})
-    );
-  };
-
-  const deselectAllColumns = () => {
-    setBaseColumns({
-      ...allBaseColumns,
-      event_id: true, // Keep these selected
-      created_at: true, // Keep these selected
+  // Add function to toggle all columns in a group
+  const toggleGroupColumns = (groupKey: string, value: boolean) => {
+    setBaseColumns(prev => {
+      const newState = { ...prev }
+      // @ts-ignore
+      Object.keys(columnGroups[groupKey].columns).forEach(column => {
+        newState[column] = value;
+      });
+      if (!value) {
+        // Keep recommended columns selected even when deselecting all
+        if (groupKey === 'eventDetails') {
+          newState.event_id = true;
+          newState.created_at = true;
+          newState.event_name = true;
+          newState.website_id = true;
+          newState.website_domain = true;
+        }
+      }
+      return newState;
     });
   };
 
@@ -497,40 +525,50 @@ ORDER BY count DESC`;
           </Heading>
 
           <div className="mt-4 p-4 bg-gray-50 rounded">
-            <div className="flex justify-end gap-2 mb-4">
-              <Button
-                variant="secondary" 
-                size="small"
-                onClick={selectAllColumns}
-              >
-                Velg alle
-              </Button>
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={deselectAllColumns}
-              >
-                Fjern alle
-              </Button>
-            </div>
-
-            <HGrid>
-              {Object.entries(baseColumns).map(([column, isSelected]) => (
-                <div key={column}>
-                  <Checkbox
-                    checked={isSelected}
-                    onChange={(e) =>
-                      setBaseColumns((prev) => ({
-                        ...prev,
-                        [column]: e.target.checked,
-                      }))
-                    }
-                  >
-                    {column}{['event_id', 'created_at'].includes(column) ? ' (anbefalt)' : ''}
-                  </Checkbox>
+            <div className="space-y-6">
+              {Object.entries(columnGroups).map(([groupKey, group]) => (
+                <div key={groupKey} className="border rounded p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <Heading level="3" size="xsmall">
+                      {group.label}
+                    </Heading>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="xsmall"
+                        onClick={() => toggleGroupColumns(groupKey, true)}
+                      >
+                        Velg alle
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="xsmall"
+                        onClick={() => toggleGroupColumns(groupKey, false)}
+                      >
+                        Fjern alle
+                      </Button>
+                    </div>
+                  </div>
+                  <HGrid>
+                    {Object.entries(group.columns).map(([column, _]) => (
+                      <div key={column}>
+                        <Checkbox
+                          checked={baseColumns[column]}
+                          onChange={(e) =>
+                            setBaseColumns((prev) => ({
+                              ...prev,
+                              [column]: e.target.checked,
+                            }))
+                          }
+                        >
+                          {column}
+                        </Checkbox>
+                      </div>
+                    ))}
+                  </HGrid>
                 </div>
               ))}
-            </HGrid>
+            </div>
           </div>
         </div>
 
