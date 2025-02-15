@@ -24,14 +24,6 @@ type BaseColumns = {
   [key: string]: boolean;
 };
 
-type PresetType = 'minimum' | 'alle';
-
-type Presets = {
-  [K in PresetType]: {
-    [key: string]: boolean;
-  };
-};
-
 type EventQueryType = 'custom' | 'pageview';
 
 const SQLGeneratorForm = () => {
@@ -42,7 +34,7 @@ const SQLGeneratorForm = () => {
   const [newDataKey, setNewDataKey] = useState<string>('');
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
   const [error, setError] = useState<string | null>(null); // Add error state
-  
+
   // All possible base columns
   const allBaseColumns: BaseColumns = {
     event_id: false,
@@ -72,30 +64,14 @@ const SQLGeneratorForm = () => {
     city: false
   };
 
-  // Preset column configurations
-  const presets: Presets = {
-    minimum: {
-      event_id: true,
-      created_at: true,
-    },
-    alle: Object.keys(allBaseColumns).reduce((acc, key) => ({...acc, [key]: true}), {})
-  };
-
   // Updated initial state with minimum preset
   const [baseColumns, setBaseColumns] = useState<BaseColumns>({
     ...allBaseColumns,
-    ...presets.minimum
+    event_id: true,
+    created_at: true,
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
-
-  const applyPreset = (presetName: PresetType): void => {
-    const preset = presets[presetName];
-    setBaseColumns({
-      ...allBaseColumns,
-      ...preset
-    });
-  };
 
   const addDataKey = (): void => {
     if (newDataKey && !dataKeys.includes(newDataKey)) {
@@ -137,9 +113,15 @@ const SQLGeneratorForm = () => {
       return;
     }
 
-    if (queryType === 'custom' && !eventName) {
-      setError('Du må skrive inn et event-navn som vi kan kombinere parmeterenne for');
-      return;
+    if (queryType === 'custom') {
+      if (!eventName) {
+        setError('Du må skrive inn et event-navn som vi kan kombinere parmeterenne for');
+        return;
+      }
+      if (dataKeys.length === 0) {
+        setError('Du må legge til minst ett parameter');
+        return;
+      }
     }
 
     const hasSelectedColumns = Object.values(baseColumns).some(isSelected => isSelected);
@@ -271,6 +253,24 @@ const SQLGeneratorForm = () => {
       .catch(error => console.error("Error fetching websites:", error));
   }, []);
 
+  // Add these helper functions
+  const selectAllColumns = () => {
+    setBaseColumns(
+      Object.keys(allBaseColumns).reduce((acc, key) => ({
+        ...acc,
+        [key]: true
+      }), {})
+    );
+  };
+
+  const deselectAllColumns = () => {
+    setBaseColumns({
+      ...allBaseColumns,
+      event_id: true, // Keep these selected
+      created_at: true, // Keep these selected
+    });
+  };
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-6 pb-4">
@@ -278,15 +278,9 @@ const SQLGeneratorForm = () => {
       </Heading>
 
       <div className="space-y-6">
-        {error && (
-          <Alert variant="error" closeButton onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-        
         {/* Query Type Selection */}
         <RadioGroup 
-          legend="Velg type event du ønsker å kombinere data for"
+          legend="Type event du ønsker å kombinere data for"
           value={queryType}
           onChange={(value: EventQueryType) => setQueryType(value)}
         >
@@ -296,7 +290,7 @@ const SQLGeneratorForm = () => {
 
         {/* Updated Combobox implementation */}
         <UNSAFE_Combobox
-          label="Velg nettsted"
+          label="Nettside / app"
           options={websites.map(website => ({
             label: website.name,
             value: website.name,
@@ -317,7 +311,7 @@ const SQLGeneratorForm = () => {
         {/* Event Name Input - Only show for custom events */}
         {queryType === 'custom' && (
           <TextField
-            label="Event navn"
+            label="Event-navn"
             value={eventName}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
             placeholder="e.g., download"
@@ -328,7 +322,7 @@ const SQLGeneratorForm = () => {
         <div>
           <div className="flex gap-2 items-end">
             <TextField
-              label="Parametere tilhørende eventet"
+              label="Parametere (tilhørende eventet)"
               value={newDataKey}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
               placeholder="e.g. file_name"
@@ -367,47 +361,60 @@ const SQLGeneratorForm = () => {
           </HGrid>
         </div>
 
-        {/* Base Columns with Presets */}
         <div>
-          <div className="flex gap-2 mb-4">
-            {Object.keys(presets).map((preset) => (
-              <Button 
-                key={preset}
-                variant="secondary" 
-                onClick={() => applyPreset(preset as PresetType)}
-              >
-                {preset.charAt(0).toUpperCase() + preset.slice(1)} kolonner
-              </Button>
-            ))}
-          </div>
-
           <Heading spacing level="2" size="small">
-            Tilgjengelige kolonner
+            Kolonner du ønsker å inkludere i Metabase-modellen
           </Heading>
-          <HGrid>
-            {Object.entries(baseColumns).map(([column, isSelected]) => (
-              <div key={column}>
-                <Checkbox
-                  checked={isSelected}
-                  onChange={(e) =>
-                    setBaseColumns((prev) => ({
-                      ...prev,
-                      [column]: e.target.checked,
-                    }))
-                  }
-                >
-                  {column}
-                </Checkbox>
-              </div>
-            ))}
-          </HGrid>
+
+          <div className="mt-4 p-4 bg-gray-50 rounded">
+            <div className="flex justify-end gap-2 mb-4">
+              <Button
+                variant="secondary" 
+                size="small"
+                onClick={selectAllColumns}
+              >
+                Velg alle
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={deselectAllColumns}
+              >
+                Fjern alle
+              </Button>
+            </div>
+
+            <HGrid>
+              {Object.entries(baseColumns).map(([column, isSelected]) => (
+                <div key={column}>
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={(e) =>
+                      setBaseColumns((prev) => ({
+                        ...prev,
+                        [column]: e.target.checked,
+                      }))
+                    }
+                  >
+                    {column}{['event_id', 'created_at'].includes(column) ? ' (anbefalt)' : ''}
+                  </Checkbox>
+                </div>
+              ))}
+            </HGrid>
+          </div>
         </div>
 
         <Button variant="primary" onClick={generateSQL}>
           Generer SQL-kode til Metabase-modell
         </Button>
 
-        {generatedSQL && (
+        {error && (
+          <Alert variant="error" closeButton onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {generatedSQL && !error && (
           <div>
             <div className="flex justify-between items-center mb-2">
               <Heading level="2" size="small">
@@ -419,7 +426,7 @@ const SQLGeneratorForm = () => {
                 onClick={handleCopySQL}
                 icon={<Copy aria-hidden />}
               >
-                {copySuccess ? 'kopiert!' : 'Kopi SQL'}
+                {copySuccess ? 'Kopiert!' : 'Kopier kode'}
               </Button>
             </div>
             <div className="border border-gray-400 p-4">
