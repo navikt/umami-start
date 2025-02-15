@@ -152,6 +152,11 @@ const SQLGeneratorForm = () => {
       return;
     }
 
+    // Check if any "Brukerdetaljer" columns are selected
+    const hasVisitorDetails = Object.keys(columnGroups.visitorDetails.columns).some(
+      column => baseColumns[column]
+    );
+
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';
     sql += '    e.*,\n';
@@ -194,18 +199,27 @@ const SQLGeneratorForm = () => {
     sql += '        END\n';
     sql += '      )\n';
     sql += '      ELSE NULL\n';
-    sql += '    END AS referrer_fullurl,\n';
-    sql += '    s.browser,\n';
-    sql += '    s.os,\n';
-    sql += '    s.device,\n';
-    sql += '    s.screen,\n';
-    sql += '    s.language,\n';
-    sql += '    s.country,\n';
-    sql += '    s.subdivision1,\n';
-    sql += '    s.city\n';
+    sql += '    END AS referrer_fullurl';
+
+    // Conditionally include session columns
+    if (hasVisitorDetails) {
+      sql += ',\n    s.browser,\n';
+      sql += '    s.os,\n';
+      sql += '    s.device,\n';
+      sql += '    s.screen,\n';
+      sql += '    s.language,\n';
+      sql += '    s.country,\n';
+      sql += '    s.subdivision1,\n';
+      sql += '    s.city\n';
+    }
+
     sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event` e\n';
-    sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
-    sql += '    ON e.session_id = s.session_id\n';
+    
+    // Conditionally join the public_session table
+    if (hasVisitorDetails) {
+      sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
+      sql += '    ON e.session_id = s.session_id\n';
+    }
     
     // Modified WHERE clause based on query type and website_id
     if (queryType === 'custom') {
