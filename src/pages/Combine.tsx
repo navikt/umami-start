@@ -8,6 +8,7 @@ import {
   Radio,
   RadioGroup,
   UNSAFE_Combobox,
+  Textarea,
   Alert // Add this to imports at top
 } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
@@ -103,9 +104,18 @@ const SQLGeneratorForm = () => {
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
+  // Update the addDataKey function
   const addDataKey = (): void => {
-    if (newDataKey && !dataKeys.includes(newDataKey)) {
-      setDataKeys([...dataKeys, newDataKey]);
+    if (!newDataKey.trim()) return;
+    
+    // Split the input by newlines and commas
+    const keys = newDataKey
+      .split(/[\n,]/)
+      .map(key => key.trim())
+      .filter(key => key && !dataKeys.includes(key));
+    
+    if (keys.length) {
+      setDataKeys(prev => [...prev, ...keys]);
       setNewDataKey('');
     }
   };
@@ -438,9 +448,20 @@ ORDER BY count DESC`;
               <div className="mt-2 p-3 bg-gray-50 rounded border">
                 <div className="flex flex-col gap-3">
                   {!selectedWebsite ? (
-                    <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
-                      {getEventLookupSQL()}
-                    </pre>
+                    <>
+                      <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+                        {getEventLookupSQL()}
+                      </pre>
+                      <div className="flex justify-end space-x-2 border-t pt-2">
+                        <Button
+                          variant="secondary"
+                          size="xsmall"
+                          onClick={handleCloseEventSQL}
+                        >
+                          Lukk
+                        </Button>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <span className="text-gray-600">
@@ -480,26 +501,29 @@ ORDER BY count DESC`;
         <div>
           <div className="space-y-2">
             <div className="flex gap-2 items-end">
-              <TextField
+              <Textarea 
                 label="Event-metadetaljer"
-                description="Eksempel: skjemanavn (legg til flere én og én)"
+                description="Eksempel: skjemanavn, skjemasteg (eller én per linje)"
                 value={newDataKey}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
-                onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === 'Enter') {
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNewDataKey(e.target.value)}
+                onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                     e.preventDefault();
                     addDataKey();
                   }
                 }}
+               
               />
               <Button 
                 variant="secondary" 
-                onClick={addDataKey} 
+                onClick={addDataKey}
                 style={{ height: '50px' }}
               >
-                Legg til metadetalj
+                Legg til metadetaljer
               </Button>
             </div>
+
+            {/* Rest of the details section */}
             <details 
               className="text-sm"
               open={parameterSQLDetailsOpen}
@@ -511,9 +535,20 @@ ORDER BY count DESC`;
               <div className="mt-2 p-3 bg-gray-50 rounded border">
                 <div className="flex flex-col gap-3">
                   {(!queryType || (queryType === 'custom' && !eventName) || !selectedWebsite) ? (
-                    <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
-                      {getParameterLookupSQL()}
-                    </pre>
+                    <>
+                      <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+                        {getParameterLookupSQL()}
+                      </pre>
+                      <div className="flex justify-end space-x-2 border-t pt-2">
+                        <Button
+                          variant="secondary"
+                          size="xsmall"
+                          onClick={handleCloseParameterSQL}
+                        >
+                          Lukk
+                        </Button>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <span className="text-gray-600">
