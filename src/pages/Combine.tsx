@@ -11,7 +11,7 @@ import {
   Textarea,
   Alert // Add this to imports at top
 } from '@navikt/ds-react';
-import { Copy } from 'lucide-react';
+import { Copy, MoveUp, MoveDown } from 'lucide-react';
 
 // Add Website interface
 interface Website {
@@ -470,6 +470,17 @@ ORDER BY data_key;`;
     }
   };
 
+  // Add move key functions
+  const moveKey = (index: number, direction: 'up' | 'down') => {
+    const newKeys = [...dataKeys];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (newIndex >= 0 && newIndex < newKeys.length) {
+      [newKeys[index], newKeys[newIndex]] = [newKeys[newIndex], newKeys[index]];
+      setDataKeys(newKeys);
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
@@ -716,19 +727,41 @@ ORDER BY data_key;`;
             </details>
           </div>
 
-          {/* Display added data keys */}
+          {/* Display added data keys with sorting */}
           <HGrid className="mt-4">
-            {dataKeys.map((key) => (
+            {dataKeys.map((key, index) => (
               <div key={key}>
                 <div className="flex items-center justify-between p-2 my-2 bg-gray-100 rounded">
                   <span>{key}</span>
-                  <Button
-                    variant="danger"
-                    size="small"
-                    onClick={() => removeDataKey(key)}
-                  >
-                    Fjern
-                  </Button>
+                  <div className="flex gap-2">
+                  <div className="flex gap-1">
+                    {index > 0 && (
+                        <Button
+                        variant="secondary"
+                        size="small"
+                        icon={<MoveUp size={16} />}
+                        onClick={() => moveKey(index, 'up')}
+                        aria-label="Flytt opp"
+                        />
+                    )}
+                    {index < dataKeys.length - 1 && (
+                        <Button
+                        variant="secondary"
+                        size="small"
+                        icon={<MoveDown size={16} />}
+                        onClick={() => moveKey(index, 'down')}
+                        aria-label="Flytt ned"
+                        />
+                    )}
+                    </div>
+                    <Button
+                      variant="danger"
+                      size="small"
+                      onClick={() => removeDataKey(key)}
+                    >
+                      Fjern
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -737,7 +770,7 @@ ORDER BY data_key;`;
 
         <div>
           <Heading spacing level="2" size="small">
-            Supplerende kolonner du kan legge til i modellen
+            Supplerende kolonner
           </Heading>
 
           <div className="mt-4 p-4 bg-gray-50 rounded">
