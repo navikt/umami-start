@@ -36,6 +36,8 @@ const SQLGeneratorForm = () => {
   const [error, setError] = useState<string | null>(null); // Add error state
   const [parameterSQLCopySuccess, setParameterSQLCopySuccess] = useState<boolean>(false);
   const [eventSQLCopySuccess, setEventSQLCopySuccess] = useState<boolean>(false);
+  const [eventSQLDetailsOpen, setEventSQLDetailsOpen] = useState<boolean>(false);
+  const [parameterSQLDetailsOpen, setParameterSQLDetailsOpen] = useState<boolean>(false);
 
   // Update the allBaseColumns organization into groups
   const columnGroups = {
@@ -47,6 +49,7 @@ const SQLGeneratorForm = () => {
         event_name: false,
         website_id: false,
         website_domain: false,
+        website_name: false,
       }
     },
     pageDetails: {
@@ -94,7 +97,8 @@ const SQLGeneratorForm = () => {
     created_at: true,
     event_name: true,
     website_id: true,
-    website_domain: true
+    website_domain: true,
+    website_name: true
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -161,6 +165,7 @@ const SQLGeneratorForm = () => {
     sql += '  SELECT\n';
     sql += '    e.*,\n';
     sql += `    '${selectedWebsite?.domain}' as website_domain,\n`;
+    sql += `    '${selectedWebsite?.name}' as website_name,\n`;
     sql += '    CONCAT(\n';
     sql += '      e.url_path,\n';
     sql += '      CASE\n';
@@ -263,10 +268,10 @@ const SQLGeneratorForm = () => {
 
   const getParameterLookupSQL = (): string => {
     if (!selectedWebsite) {
-      return '-- Velg en nettside først for å se SQL-koden';
+      return '⚠️ Velg en nettside først for å se SQL-koden';
     }
     if (queryType === 'custom' && !eventName) {
-      return '-- Skriv inn event-navn først for å se SQL-koden';
+      return '⚠️ Skriv inn event-navn først for å se SQL-koden';
     }
     return `SELECT DISTINCT data_key
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
@@ -292,7 +297,7 @@ ORDER BY data_key`;
 
   const getEventLookupSQL = (): string => {
     if (!selectedWebsite) {
-      return '-- Velg en nettside først for å se SQL-kode';
+      return '⚠️ Velg en nettside først for å se SQL-kode';
     }
     return `SELECT DISTINCT event_name, COUNT(*) as count
 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
@@ -313,6 +318,14 @@ ORDER BY count DESC`;
     } catch (err) {
       console.error('Failed to copy event SQL:', err);
     }
+  };
+
+  const handleCloseEventSQL = () => {
+    setEventSQLDetailsOpen(false);
+  };
+
+  const handleCloseParameterSQL = () => {
+    setParameterSQLDetailsOpen(false);
   };
 
   // Add API fetch for websites
@@ -407,114 +420,132 @@ ORDER BY count DESC`;
 
         {/* Event Name Input - Only show for custom events */}
         {queryType === 'custom' && (
-          <TextField
-            label="Event-navn"
-            description={
-              <div className="mt-2">
-                <details className="text-sm">
-                  <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
-                    Vis SQL-kode for å finne tilgjengelige eventer i Metabase
-                  </summary>
-                  <div className="mt-2 p-3 bg-gray-50 rounded border">
-                    <div className="flex flex-col gap-3">
-                      {!selectedWebsite ? (
-                        <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+          <div className="space-y-2">
+            <TextField
+              label="Event-navn"
+              description="Eksempel: skjema startet"
+              value={eventName}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
+            />
+            <details 
+              className="text-sm"
+              open={eventSQLDetailsOpen}
+              onToggle={(e) => setEventSQLDetailsOpen(e.currentTarget.open)}
+            >
+              <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
+                Vis SQL-kode for å finne tilgjengelige eventer i Metabase
+              </summary>
+              <div className="mt-2 p-3 bg-gray-50 rounded border">
+                <div className="flex flex-col gap-3">
+                  {!selectedWebsite ? (
+                    <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+                      {getEventLookupSQL()}
+                    </pre>
+                  ) : (
+                    <>
+                      <span className="text-gray-600">
+                        Kjør denne spørringen i Metabase for å se tilgjengelige events:
+                      </span>
+                      <div className="bg-white p-3 rounded border">
+                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
                           {getEventLookupSQL()}
                         </pre>
-                      ) : (
-                        <>
-                          <span className="text-gray-600">
-                            Kjør denne spørringen i Metabase for å se tilgjengelige events:
-                          </span>
-                          <div className="bg-white p-3 rounded border">
-                            <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
-                              {getEventLookupSQL()}
-                            </pre>
-                            <div className="flex justify-end border-t pt-2">
-                              <Button
-                                variant="secondary"
-                                size="xsmall"
-                                onClick={handleCopyEventSQL}
-                                icon={<Copy aria-hidden />}
-                              >
-                                {eventSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
-                              </Button>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </details>
+                        <div className="flex justify-end space-x-2 border-t pt-2">
+                          <Button
+                            variant="secondary"
+                            size="xsmall"
+                            onClick={handleCopyEventSQL}
+                            icon={<Copy aria-hidden />}
+                          >
+                            {eventSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="xsmall"
+                            onClick={handleCloseEventSQL}
+                          >
+                            Lukk
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            }
-            value={eventName}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
-            placeholder="e.g., download"
-          />
+            </details>
+          </div>
         )}
 
         {/* Data Keys Input */}
         <div>
-          <div className="flex gap-2 items-end">
-            <TextField
-              label="Event-metadetaljer"
-              description={
-                <div className="mt-2">
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
-                      Vis SQL-kode for å finne tilgjengelige metadetaljer i Metabase
-                    </summary>
-                    <div className="mt-2 p-3 bg-gray-50 rounded border">
-                      <div className="flex flex-col gap-3">
-                        {(!queryType || (queryType === 'custom' && !eventName) || !selectedWebsite) ? (
-                          <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
-                            {getParameterLookupSQL()}
-                          </pre>
-                        ) : (
-                          <>
-                            <span className="text-gray-600">
-                              Kjør denne spørringen i Metabase for å se tilgjengelige metadetaljer:
-                            </span>
-                            <div className="bg-white p-3 rounded border">
-                              <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
-                                {getParameterLookupSQL()}
-                              </pre>
-                              <div className="flex justify-end border-t pt-2">
-                                <Button
-                                  variant="secondary"
-                                  size="xsmall"
-                                  onClick={handleCopyParameterSQL}
-                                  icon={<Copy aria-hidden />}
-                                >
-                                  {parameterSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
-                                </Button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </details>
-                </div>
-              }
-              value={newDataKey}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
-              placeholder="e.g. file_name"
-              onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addDataKey();
-                }
-              }}
-            />
-            <Button 
-            variant="secondary" 
-            onClick={addDataKey} 
-            style={{ height: '50px' }}
+          <div className="space-y-2">
+            <div className="flex gap-2 items-end">
+              <TextField
+                label="Event-metadetaljer"
+                description="Eksempel: skjemanavn (legg til flere én og én)"
+                value={newDataKey}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
+                onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addDataKey();
+                  }
+                }}
+              />
+              <Button 
+                variant="secondary" 
+                onClick={addDataKey} 
+                style={{ height: '50px' }}
+              >
+                Legg til metadetalj
+              </Button>
+            </div>
+            <details 
+              className="text-sm"
+              open={parameterSQLDetailsOpen}
+              onToggle={(e) => setParameterSQLDetailsOpen(e.currentTarget.open)}
             >
-            Legg til metadetaljer
-            </Button>
+              <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
+                Vis SQL-kode for å finne tilgjengelige metadetaljer i Metabase
+              </summary>
+              <div className="mt-2 p-3 bg-gray-50 rounded border">
+                <div className="flex flex-col gap-3">
+                  {(!queryType || (queryType === 'custom' && !eventName) || !selectedWebsite) ? (
+                    <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+                      {getParameterLookupSQL()}
+                    </pre>
+                  ) : (
+                    <>
+                      <span className="text-gray-600">
+                        Kjør denne spørringen i Metabase for å se tilgjengelige metadetaljer:
+                      </span>
+                      <div className="bg-white p-3 rounded border">
+                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
+                          {getParameterLookupSQL()}
+                        </pre>
+                        <div className="flex justify-end space-x-2 border-t pt-2">
+                          <Button
+                            variant="secondary"
+                            size="xsmall"
+                            onClick={handleCopyParameterSQL}
+                            icon={<Copy aria-hidden />}
+                          >
+                            {parameterSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="xsmall"
+                            onClick={handleCloseParameterSQL}
+                          >
+                            Lukk
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </details>
           </div>
 
           {/* Display added data keys */}
@@ -538,7 +569,7 @@ ORDER BY count DESC`;
 
         <div>
           <Heading spacing level="2" size="small">
-            Kolonner du ønsker å inkludere i modellen
+            Supplerende kolonner du kan legge til i modellen
           </Heading>
 
           <div className="mt-4 p-4 bg-gray-50 rounded">
