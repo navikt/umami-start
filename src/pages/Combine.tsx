@@ -28,7 +28,8 @@ type BaseColumns = {
 type EventQueryType = 'custom' | 'pageview';
 
 const SQLGeneratorForm = () => {
-  const [eventName, setEventName] = useState<string>('');
+  const [eventNames, setEventNames] = useState<string[]>([]); // New state for multiple events
+  const [newEventName, setNewEventName] = useState<string>(''); // New state for event input
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
   const [websites, setWebsites] = useState<Website[]>([]);
   const [dataKeys, setDataKeys] = useState<string[]>([]);
@@ -146,6 +147,26 @@ const SQLGeneratorForm = () => {
       .replace(/[^a-z0-9_]/gi, '_'); // Replace any other special characters with underscore
   };
 
+  // Add new function to handle multiple events
+  const addEventName = (): void => {
+    if (!newEventName.trim()) return;
+    
+    // Split the input by newlines and commas
+    const events = newEventName
+      .split(/[\n,]/)
+      .map(event => event.trim())
+      .filter(event => event && !eventNames.includes(event));
+    
+    if (events.length) {
+      setEventNames(prev => [...prev, ...events]);
+      setNewEventName('');
+    }
+  };
+
+  const removeEventName = (eventToRemove: string): void => {
+    setEventNames(eventNames.filter(event => event !== eventToRemove));
+  };
+
   const generateSQL = (): void => {
     setError(null);
     console.log('Selected website:', selectedWebsite);
@@ -156,8 +177,8 @@ const SQLGeneratorForm = () => {
     }
 
     if (queryType === 'custom') {
-      if (!eventName) {
-        setError('Du må skrive inn et event-navn');
+      if (eventNames.length === 0) {
+        setError('Du må legge til minst ett event-navn');
         return;
       }
     }
@@ -240,7 +261,7 @@ const SQLGeneratorForm = () => {
     
     // Modified WHERE clause based on query type and website_id
     if (queryType === 'custom') {
-      sql += '  WHERE e.event_name = \'' + eventName + '\'\n';
+      sql += '  WHERE e.event_name IN (\'' + eventNames.join('\', \'') + '\')\n';
     } else {
       sql += '  WHERE e.event_type = 1\n'; // pageview type
     }
@@ -282,8 +303,8 @@ const getParameterLookupSQL = (): string => {
   if (!selectedWebsite) {
     return '⚠️ Velg en nettside først for å se SQL-koden';
   }
-  if (queryType === 'custom' && !eventName) {
-    return '⚠️ Skriv inn event-navn først for å se SQL-koden';
+  if (queryType === 'custom' && eventNames.length === 0) {
+    return '⚠️ Legg til event-navn først for å se SQL-koden';
   }
   return `-- Velg en av spørringene under:
 
@@ -293,7 +314,7 @@ FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
   ON ed.website_event_id = e.event_id
 WHERE e.website_id = '${selectedWebsite.id}'
-  ${eventName ? `AND e.event_name = '${eventName}'` : ''};
+  ${eventNames.length > 0 ? `AND e.event_name IN ('${eventNames.join("', '")}')` : ''};
 
 -- 2. Liste med én verdi per rad (lettere å lese):
 SELECT DISTINCT data_key
@@ -301,7 +322,7 @@ FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
   ON ed.website_event_id = e.event_id
 WHERE e.website_id = '${selectedWebsite.id}'
-  ${eventName ? `AND e.event_name = '${eventName}'` : ''}
+  ${eventNames.length > 0 ? `AND e.event_name IN ('${eventNames.join("', '")}')` : ''}
 ORDER BY data_key;`;
 };
 
@@ -404,26 +425,26 @@ ORDER BY count DESC`;
   // Split the parameter lookup SQL into two functions
   const getParameterLookupSQL1 = (): string => {
     if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
-    if (queryType === 'custom' && !eventName) return '⚠️ Skriv inn event-navn først for å se SQL-koden';
+    if (queryType === 'custom' && eventNames.length === 0) return '⚠️ Legg til event-navn først for å se SQL-koden';
     
     return `SELECT STRING_AGG(DISTINCT data_key, ',')
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
   ON ed.website_event_id = e.event_id
 WHERE e.website_id = '${selectedWebsite.id}'
-  ${eventName ? `AND e.event_name = '${eventName}'` : ''};`;
+  ${eventNames.length > 0 ? `AND e.event_name IN ('${eventNames.join("', '")}')` : ''};`;
   };
 
   const getParameterLookupSQL2 = (): string => {
     if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
-    if (queryType === 'custom' && !eventName) return '⚠️ Skriv inn event-navn først for å se SQL-koden';
+    if (queryType === 'custom' && eventNames.length === 0) return '⚠️ Legg til event-navn først for å se SQL-koden';
     
     return `SELECT DISTINCT data_key
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
   ON ed.website_event_id = e.event_id
 WHERE e.website_id = '${selectedWebsite.id}'
-  ${eventName ? `AND e.event_name = '${eventName}'` : ''}
+  ${eventNames.length > 0 ? `AND e.event_name IN ('${eventNames.join("', '")}')` : ''}
 ORDER BY data_key;`;
   };
 
@@ -492,12 +513,41 @@ ORDER BY data_key;`;
         {/* Event Name Input - Only show for custom events */}
         {queryType === 'custom' && (
           <div className="space-y-2">
-            <TextField
-              label="Event-navn"
-              description="Eksempel: skjema startet"
-              value={eventName}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
-            />
+            <div className="flex gap-2 items-end">
+              <TextField
+                label="Event-navn"
+                description="Eksempel: skjema startet (legg til flere med komma)"
+                value={newEventName}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewEventName(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              <Button 
+                variant="secondary" 
+                onClick={addEventName}
+                style={{ height: '50px' }}
+              >
+                Legg til event-navn
+              </Button>
+            </div>
+
+            {/* Display added event names */}
+            <HGrid className="mt-4">
+              {eventNames.map((event) => (
+                <div key={event}>
+                  <div className="flex items-center justify-between p-2 my-2 bg-gray-100 rounded">
+                    <span>{event}</span>
+                    <Button
+                      variant="danger"
+                      size="small"
+                      onClick={() => removeEventName(event)}
+                    >
+                      Fjern
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </HGrid>
+
             <details 
               className="text-sm"
               open={eventSQLDetailsOpen}
@@ -589,7 +639,7 @@ ORDER BY data_key;`;
               </summary>
               <div className="mt-2 p-3 bg-gray-50 rounded border">
                 <div className="flex flex-col gap-4">
-                  {(!queryType || (queryType === 'custom' && !eventName) || !selectedWebsite) ? (
+                  {(!queryType || (queryType === 'custom' && eventNames.length === 0) || !selectedWebsite) ? (
                     <>
                       <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
                         {getParameterLookupSQL()}
