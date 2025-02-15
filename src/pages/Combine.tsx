@@ -34,6 +34,8 @@ const SQLGeneratorForm = () => {
   const [newDataKey, setNewDataKey] = useState<string>('');
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
   const [error, setError] = useState<string | null>(null); // Add error state
+  const [parameterSQLCopySuccess, setParameterSQLCopySuccess] = useState<boolean>(false);
+  const [eventSQLCopySuccess, setEventSQLCopySuccess] = useState<boolean>(false);
 
   // All possible base columns
   const allBaseColumns: BaseColumns = {
@@ -105,28 +107,24 @@ const SQLGeneratorForm = () => {
   };
 
   const generateSQL = (): void => {
-    setError(null); // Clear any previous errors
+    setError(null);
     console.log('Selected website:', selectedWebsite);
 
     if (!selectedWebsite) {
-      setError('Du må velge en nettside');
+      setError('Du må velge en nettside først');
       return;
     }
 
     if (queryType === 'custom') {
       if (!eventName) {
-        setError('Du må skrive inn et event-navn som vi kan kombinere parmeterenne for');
-        return;
-      }
-      if (dataKeys.length === 0) {
-        setError('Du må legge til minst ett parameter');
+        setError('Du må skrive inn et event-navn');
         return;
       }
     }
 
     const hasSelectedColumns = Object.values(baseColumns).some(isSelected => isSelected);
     if (!hasSelectedColumns) {
-      setError('Du må minst velge en av de tilgjengelige kolonnene');
+      setError('Du må velge minst én kolonne');
       return;
     }
 
@@ -225,6 +223,60 @@ const SQLGeneratorForm = () => {
     setGeneratedSQL(sql);
   };
 
+  const getParameterLookupSQL = (): string => {
+    if (!selectedWebsite) {
+      return '-- Velg en nettside først for å se SQL-kode';
+    }
+    if (queryType === 'custom' && !eventName) {
+      return '-- Skriv inn event-navn først for å se SQL-kode';
+    }
+    return `SELECT DISTINCT data_key
+FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
+JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
+  ON ed.website_event_id = e.event_id
+WHERE e.website_id = '${selectedWebsite.id}'
+  ${eventName ? `AND e.event_name = '${eventName}'` : ''}
+ORDER BY data_key`;
+  };
+
+  const handleCopyParameterSQL = async (): Promise<void> => {
+    if (!selectedWebsite) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(getParameterLookupSQL());
+      setParameterSQLCopySuccess(true);
+      setTimeout(() => setParameterSQLCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy parameter SQL:', err);
+    }
+  };
+
+  const getEventLookupSQL = (): string => {
+    if (!selectedWebsite) {
+      return '-- Velg en nettside først for å se SQL-kode';
+    }
+    return `SELECT DISTINCT event_name, COUNT(*) as count
+FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+WHERE website_id = '${selectedWebsite.id}'
+  AND event_type = 2
+GROUP BY event_name
+ORDER BY count DESC`;
+  };
+
+  const handleCopyEventSQL = async (): Promise<void> => {
+    if (!selectedWebsite) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(getEventLookupSQL());
+      setEventSQLCopySuccess(true);
+      setTimeout(() => setEventSQLCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy event SQL:', err);
+    }
+  };
+
   // Add API fetch for websites
   useEffect(() => {
     const baseUrl = window.location.hostname === 'localhost' 
@@ -312,6 +364,45 @@ const SQLGeneratorForm = () => {
         {queryType === 'custom' && (
           <TextField
             label="Event-navn"
+            description={
+              <div className="mt-2">
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
+                    Vis SQL-kode for å finne tilgjengelige events i Metabase
+                  </summary>
+                  <div className="mt-2 p-3 bg-gray-50 rounded border">
+                    <div className="flex flex-col gap-3">
+                      {!selectedWebsite ? (
+                        <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+                          {getEventLookupSQL()}
+                        </pre>
+                      ) : (
+                        <>
+                          <span className="text-gray-600">
+                            Kjør denne spørringen i Metabase for å se tilgjengelige events:
+                          </span>
+                          <div className="bg-white p-3 rounded border">
+                            <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
+                              {getEventLookupSQL()}
+                            </pre>
+                            <div className="flex justify-end border-t pt-2">
+                              <Button
+                                variant="secondary"
+                                size="xsmall"
+                                onClick={handleCopyEventSQL}
+                                icon={<Copy aria-hidden />}
+                              >
+                                {eventSQLCopySuccess ? 'Kopiert!' : 'Kopier SQL'}
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </details>
+              </div>
+            }
             value={eventName}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEventName(e.target.value)}
             placeholder="e.g., download"
@@ -323,6 +414,45 @@ const SQLGeneratorForm = () => {
           <div className="flex gap-2 items-end">
             <TextField
               label="Parametere (tilhørende eventet)"
+              description={
+                <div className="mt-2">
+                  <details className="text-sm">
+                    <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
+                      Vis SQL-kode for å finne tilgjengelige parametere i Metabase
+                    </summary>
+                    <div className="mt-2 p-3 bg-gray-50 rounded border">
+                      <div className="flex flex-col gap-3">
+                        {(!queryType || (queryType === 'custom' && !eventName) || !selectedWebsite) ? (
+                          <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
+                            {getParameterLookupSQL()}
+                          </pre>
+                        ) : (
+                          <>
+                            <span className="text-gray-600">
+                              Kjør denne spørringen i Metabase for å se tilgjengelige parametere:
+                            </span>
+                            <div className="bg-white p-3 rounded border">
+                              <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
+                                {getParameterLookupSQL()}
+                              </pre>
+                              <div className="flex justify-end border-t pt-2">
+                                <Button
+                                  variant="secondary"
+                                  size="xsmall"
+                                  onClick={handleCopyParameterSQL}
+                                  icon={<Copy aria-hidden />}
+                                >
+                                  {parameterSQLCopySuccess ? 'Kopiert!' : 'Kopier SQL'}
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              }
               value={newDataKey}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
               placeholder="e.g. file_name"
