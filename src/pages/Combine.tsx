@@ -42,6 +42,8 @@ const SQLGeneratorForm = () => {
   const [parameterSQLDetailsOpen, setParameterSQLDetailsOpen] = useState<boolean>(false);
   const [parameterSQLCopySuccess1, setParameterSQLCopySuccess1] = useState<boolean>(false);
   const [parameterSQLCopySuccess2, setParameterSQLCopySuccess2] = useState<boolean>(false);
+  const [eventSQLCopySuccess1, setEventSQLCopySuccess1] = useState<boolean>(false);
+  const [eventSQLCopySuccess2, setEventSQLCopySuccess2] = useState<boolean>(false);
 
   // Update the allBaseColumns organization into groups
   const columnGroups = {
@@ -278,9 +280,16 @@ const SQLGeneratorForm = () => {
       .filter(([_, isSelected]) => isSelected)
       .map(([column]) => `  base_query.${column}`);
     
-    // Add data key columns
+    // Modified data key columns to use array_agg instead of MAX
     const dataKeyColumns = dataKeys.map(key => 
-      `  MAX(CASE WHEN event_data.data_key = '${key}' THEN event_data.string_value END) AS data_key_${sanitizeColumnName(key)}`
+      `  STRING_AGG(
+        CASE 
+          WHEN event_data.data_key = '${key}' 
+          THEN event_data.string_value 
+        END, 
+        ',' 
+        ORDER BY base_query.created_at
+      ) AS data_key_${sanitizeColumnName(key)}`
     );
     
     const allColumns = [...selectedBaseColumns, ...dataKeyColumns];
@@ -291,10 +300,8 @@ const SQLGeneratorForm = () => {
     sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
     sql += '  ON base_query.event_id = event_data.website_event_id\n';
 
-    // Add GROUP BY if we have any data key columns
-    if (dataKeyColumns.length > 0) {
-      sql += 'GROUP BY\n  ' + selectedBaseColumns.join(',\n  ');
-    }
+    // Always add GROUP BY since we're using STRING_AGG
+    sql += 'GROUP BY\n  ' + selectedBaseColumns.join(',\n  ');
 
     setGeneratedSQL(sql);
   };
@@ -496,7 +503,49 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
       action();
     }
   };
+
+  // Split the event lookup SQL into two functions
+const getEventLookupSQL1 = (): string => {
+  if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
   
+  return `SELECT STRING_AGG(DISTINCT event_name, ',')
+FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+WHERE website_id = '${selectedWebsite.id}'
+  AND event_type = 2;`;
+};
+
+const getEventLookupSQL2 = (): string => {
+  if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
+  
+  return `SELECT DISTINCT event_name, COUNT(*) as count
+FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+WHERE website_id = '${selectedWebsite.id}'
+  AND event_type = 2
+GROUP BY event_name
+ORDER BY count DESC;`;
+};
+
+const handleCopyEventSQL1 = async (): Promise<void> => {
+  if (!selectedWebsite) return;
+  try {
+    await navigator.clipboard.writeText(getEventLookupSQL1());
+    setEventSQLCopySuccess1(true);
+    setTimeout(() => setEventSQLCopySuccess1(false), 2000);
+  } catch (err) {
+    console.error('Failed to copy event SQL:', err);
+  }
+};
+
+const handleCopyEventSQL2 = async (): Promise<void> => {
+  if (!selectedWebsite) return;
+  try {
+    await navigator.clipboard.writeText(getEventLookupSQL2());
+    setEventSQLCopySuccess2(true);
+    setTimeout(() => setEventSQLCopySuccess2(false), 2000);
+  } catch (err) {
+    console.error('Failed to copy event SQL:', err);
+  }
+};
 
   return (
     <div className="w-full max-w-2xl">
@@ -586,11 +635,11 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
                 Vis SQL-kode for å finne tilgjengelige eventer i Metabase
               </summary>
               <div className="mt-2 p-3 bg-gray-50 rounded border">
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {!selectedWebsite ? (
                     <>
                       <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
-                        {getEventLookupSQL()}
+                        ⚠️ Velg en nettside først for å se SQL-koden
                       </pre>
                       <div className="flex justify-end space-x-2 border-t pt-2">
                         <Button
@@ -604,30 +653,58 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
                     </>
                   ) : (
                     <>
-                      <span className="text-gray-600">
-                        Kjør denne spørringen i Metabase for å se tilgjengelige events:
+                      <span className="text-gray-600 mb-2">
+                        Kjør en av disse spørringene i Metabase for å finne tilgjengelige events:
                       </span>
+
                       <div className="bg-white p-3 rounded border">
-                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
-                          {getEventLookupSQL()}
+                        <div className="mb-3">
+                          <strong className="text-sm text-gray-900">Spørring 1: Lett å lese i Metabase</strong>
+                          <p className="text-sm text-gray-600">Viser alle events med antall på separate linjer.</p>
+                        </div>
+                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2 bg-gray-50 p-2 rounded">
+                          {getEventLookupSQL2()}
                         </pre>
                         <div className="flex justify-end space-x-2 border-t pt-2">
                           <Button
                             variant="secondary"
                             size="xsmall"
-                            onClick={handleCopyEventSQL}
+                            onClick={handleCopyEventSQL2}
                             icon={<Copy aria-hidden />}
                           >
-                            {eventSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
+                            {eventSQLCopySuccess2 ? 'Kopiert!' : 'Kopier'}
                           </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded border">
+                        <div className="mb-3">
+                          <strong className="text-sm text-gray-900">Spørring 2: Lett å kopiere rett inn i tekstfeltet</strong>
+                          <p className="text-sm text-gray-600">Returnerer alle events som en kommaseparert liste.</p>
+                        </div>
+                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2 bg-gray-50 p-2 rounded">
+                          {getEventLookupSQL1()}
+                        </pre>
+                        <div className="flex justify-end space-x-2 border-t pt-2">
                           <Button
                             variant="secondary"
                             size="xsmall"
-                            onClick={handleCloseEventSQL}
+                            onClick={handleCopyEventSQL1}
+                            icon={<Copy aria-hidden />}
                           >
-                            Lukk
+                            {eventSQLCopySuccess1 ? 'Kopiert!' : 'Kopier'}
                           </Button>
                         </div>
+                      </div>
+
+                      <div className="flex justify-end border-t pt-2">
+                        <Button
+                          variant="secondary"
+                          size="xsmall"
+                          onClick={handleCloseEventSQL}
+                        >
+                          Lukk
+                        </Button>
                       </div>
                     </>
                   )}
@@ -657,6 +734,46 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
                 Legg til metadetaljer
               </Button>
             </div>
+
+             {/* Display added data keys with sorting */}
+            <HGrid className="mt-4">
+                {dataKeys.map((key, index) => (
+                <div key={key}>
+                    <div className="flex items-center justify-between p-2 my-2 bg-gray-100 rounded">
+                    <span>{key}</span>
+                    <div className="flex gap-2">
+                    <div className="flex gap-1">
+                        {index > 0 && (
+                            <Button
+                            variant="secondary"
+                            size="small"
+                            icon={<MoveUp size={16} />}
+                            onClick={() => moveKey(index, 'up')}
+                            aria-label="Flytt opp"
+                            />
+                        )}
+                        {index < dataKeys.length - 1 && (
+                            <Button
+                            variant="secondary"
+                            size="small"
+                            icon={<MoveDown size={16} />}
+                            onClick={() => moveKey(index, 'down')}
+                            aria-label="Flytt ned"
+                            />
+                        )}
+                        </div>
+                        <Button
+                        variant="danger"
+                        size="small"
+                        onClick={() => removeDataKey(key)}
+                        >
+                        Fjern
+                        </Button>
+                    </div>
+                    </div>
+                </div>
+                ))}
+            </HGrid>
 
             {/* Rest of the details section */}
             <details 
@@ -745,46 +862,6 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
               </div>
             </details>
           </div>
-
-          {/* Display added data keys with sorting */}
-          <HGrid className="mt-4">
-            {dataKeys.map((key, index) => (
-              <div key={key}>
-                <div className="flex items-center justify-between p-2 my-2 bg-gray-100 rounded">
-                  <span>{key}</span>
-                  <div className="flex gap-2">
-                  <div className="flex gap-1">
-                    {index > 0 && (
-                        <Button
-                        variant="secondary"
-                        size="small"
-                        icon={<MoveUp size={16} />}
-                        onClick={() => moveKey(index, 'up')}
-                        aria-label="Flytt opp"
-                        />
-                    )}
-                    {index < dataKeys.length - 1 && (
-                        <Button
-                        variant="secondary"
-                        size="small"
-                        icon={<MoveDown size={16} />}
-                        onClick={() => moveKey(index, 'down')}
-                        aria-label="Flytt ned"
-                        />
-                    )}
-                    </div>
-                    <Button
-                      variant="danger"
-                      size="small"
-                      onClick={() => removeDataKey(key)}
-                    >
-                      Fjern
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </HGrid>
         </div>
 
         <div>
