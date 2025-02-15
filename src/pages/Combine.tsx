@@ -39,6 +39,8 @@ const SQLGeneratorForm = () => {
   const [eventSQLCopySuccess, setEventSQLCopySuccess] = useState<boolean>(false);
   const [eventSQLDetailsOpen, setEventSQLDetailsOpen] = useState<boolean>(false);
   const [parameterSQLDetailsOpen, setParameterSQLDetailsOpen] = useState<boolean>(false);
+  const [parameterSQLCopySuccess1, setParameterSQLCopySuccess1] = useState<boolean>(false);
+  const [parameterSQLCopySuccess2, setParameterSQLCopySuccess2] = useState<boolean>(false);
 
   // Update the allBaseColumns organization into groups
   const columnGroups = {
@@ -276,21 +278,32 @@ const SQLGeneratorForm = () => {
     setGeneratedSQL(sql);
   };
 
-  const getParameterLookupSQL = (): string => {
-    if (!selectedWebsite) {
-      return '⚠️ Velg en nettside først for å se SQL-koden';
-    }
-    if (queryType === 'custom' && !eventName) {
-      return '⚠️ Skriv inn event-navn først for å se SQL-koden';
-    }
-    return `SELECT DISTINCT data_key
+const getParameterLookupSQL = (): string => {
+  if (!selectedWebsite) {
+    return '⚠️ Velg en nettside først for å se SQL-koden';
+  }
+  if (queryType === 'custom' && !eventName) {
+    return '⚠️ Skriv inn event-navn først for å se SQL-koden';
+  }
+  return `-- Velg en av spørringene under:
+
+-- 1. Liste med kommaseparerte verdier (enkel å kopiere):
+SELECT STRING_AGG(DISTINCT data_key, ',')
+FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
+JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
+  ON ed.website_event_id = e.event_id
+WHERE e.website_id = '${selectedWebsite.id}'
+  ${eventName ? `AND e.event_name = '${eventName}'` : ''};
+
+-- 2. Liste med én verdi per rad (lettere å lese):
+SELECT DISTINCT data_key
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
   ON ed.website_event_id = e.event_id
 WHERE e.website_id = '${selectedWebsite.id}'
   ${eventName ? `AND e.event_name = '${eventName}'` : ''}
-ORDER BY data_key`;
-  };
+ORDER BY data_key;`;
+};
 
   const handleCopyParameterSQL = async (): Promise<void> => {
     if (!selectedWebsite) {
@@ -386,6 +399,54 @@ ORDER BY count DESC`;
       }
       return newState;
     });
+  };
+
+  // Split the parameter lookup SQL into two functions
+  const getParameterLookupSQL1 = (): string => {
+    if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
+    if (queryType === 'custom' && !eventName) return '⚠️ Skriv inn event-navn først for å se SQL-koden';
+    
+    return `SELECT STRING_AGG(DISTINCT data_key, ',')
+FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
+JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
+  ON ed.website_event_id = e.event_id
+WHERE e.website_id = '${selectedWebsite.id}'
+  ${eventName ? `AND e.event_name = '${eventName}'` : ''};`;
+  };
+
+  const getParameterLookupSQL2 = (): string => {
+    if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
+    if (queryType === 'custom' && !eventName) return '⚠️ Skriv inn event-navn først for å se SQL-koden';
+    
+    return `SELECT DISTINCT data_key
+FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
+JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
+  ON ed.website_event_id = e.event_id
+WHERE e.website_id = '${selectedWebsite.id}'
+  ${eventName ? `AND e.event_name = '${eventName}'` : ''}
+ORDER BY data_key;`;
+  };
+
+  const handleCopyParameterSQL1 = async (): Promise<void> => {
+    if (!selectedWebsite) return;
+    try {
+      await navigator.clipboard.writeText(getParameterLookupSQL1());
+      setParameterSQLCopySuccess1(true);
+      setTimeout(() => setParameterSQLCopySuccess1(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy parameter SQL:', err);
+    }
+  };
+
+  const handleCopyParameterSQL2 = async (): Promise<void> => {
+    if (!selectedWebsite) return;
+    try {
+      await navigator.clipboard.writeText(getParameterLookupSQL2());
+      setParameterSQLCopySuccess2(true);
+      setTimeout(() => setParameterSQLCopySuccess2(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy parameter SQL:', err);
+    }
   };
 
   return (
@@ -501,18 +562,12 @@ ORDER BY count DESC`;
         <div>
           <div className="space-y-2">
             <div className="flex gap-2 items-end">
-              <Textarea 
+              <TextField 
                 label="Event-metadetaljer"
-                description="Eksempel: skjemanavn, skjemasteg (eller én per linje)"
+                description="Eksempel: skjemanavn (legg til flere med komma)"
                 value={newDataKey}
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNewDataKey(e.target.value)}
-                onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    addDataKey();
-                  }
-                }}
-               
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
+                style={{ width: '100%' }}
               />
               <Button 
                 variant="secondary" 
@@ -533,7 +588,7 @@ ORDER BY count DESC`;
                 Vis SQL-kode for å finne tilgjengelige metadetaljer i Metabase
               </summary>
               <div className="mt-2 p-3 bg-gray-50 rounded border">
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {(!queryType || (queryType === 'custom' && !eventName) || !selectedWebsite) ? (
                     <>
                       <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
@@ -551,30 +606,58 @@ ORDER BY count DESC`;
                     </>
                   ) : (
                     <>
-                      <span className="text-gray-600">
-                        Kjør denne spørringen i Metabase for å se tilgjengelige metadetaljer:
+                      <span className="text-gray-600 mb-2">
+                        Kjør en av disse spørringene i Metabase for å finne tilgjengelige metadetaljer:
                       </span>
-                      <div className="bg-white p-3 rounded border">
-                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
-                          {getParameterLookupSQL()}
+
+                    <div className="bg-white p-3 rounded border">
+                        <div className="mb-3">
+                          <strong className="text-sm text-gray-900">Spørring 1: Lett å lese i Metabase</strong>
+                          <p className="text-sm text-gray-600">Viser alle metadetaljer på separate linjer.</p>
+                        </div>
+                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2 bg-gray-50 p-2 rounded">
+                          {getParameterLookupSQL2()}
                         </pre>
                         <div className="flex justify-end space-x-2 border-t pt-2">
                           <Button
                             variant="secondary"
                             size="xsmall"
-                            onClick={handleCopyParameterSQL}
+                            onClick={handleCopyParameterSQL2}
                             icon={<Copy aria-hidden />}
                           >
-                            {parameterSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
+                            {parameterSQLCopySuccess2 ? 'Kopiert!' : 'Kopier'}
                           </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded border">
+                        <div className="mb-3">
+                          <strong className="text-sm text-gray-900">Spørring 2: Lett å kopiere rett inn i tekstfeltet</strong>
+                          <p className="text-sm text-gray-600">Returnerer alle metadetaljer som en kommaseparert liste.</p>
+                        </div>
+                        <pre className="overflow-x-auto whitespace-pre-wrap mb-2 bg-gray-50 p-2 rounded">
+                          {getParameterLookupSQL1()}
+                        </pre>
+                        <div className="flex justify-end space-x-2 border-t pt-2">
                           <Button
                             variant="secondary"
                             size="xsmall"
-                            onClick={handleCloseParameterSQL}
+                            onClick={handleCopyParameterSQL1}
+                            icon={<Copy aria-hidden />}
                           >
-                            Lukk
+                            {parameterSQLCopySuccess1 ? 'Kopiert!' : 'Kopier'}
                           </Button>
                         </div>
+                      </div>
+
+                      <div className="flex justify-end border-t pt-2">
+                        <Button
+                          variant="secondary"
+                          size="xsmall"
+                          onClick={handleCloseParameterSQL}
+                        >
+                          Lukk
+                        </Button>
                       </div>
                     </>
                   )}
