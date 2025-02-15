@@ -263,10 +263,10 @@ const SQLGeneratorForm = () => {
 
   const getParameterLookupSQL = (): string => {
     if (!selectedWebsite) {
-      return '-- Velg en nettside først for å se SQL-kode';
+      return '-- Velg en nettside først for å se SQL-koden';
     }
     if (queryType === 'custom' && !eventName) {
-      return '-- Skriv inn event-navn først for å se SQL-kode';
+      return '-- Skriv inn event-navn først for å se SQL-koden';
     }
     return `SELECT DISTINCT data_key
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
@@ -367,24 +367,16 @@ ORDER BY count DESC`;
 
   return (
     <div className="w-full max-w-2xl">
-      <Heading spacing level="1" size="medium" className="pt-6 pb-4">
-        Umami Metabase eventrad kombinator
+      <Heading spacing level="1" size="medium" className="pt-12 pb-6">
+        Bygg en Metabase-modell med kombinerte Umami-data
       </Heading>
 
       <div className="space-y-6">
-        {/* Query Type Selection */}
-        <RadioGroup 
-          legend="Type event du ønsker å kombinere data for"
-          value={queryType}
-          onChange={(value: EventQueryType) => setQueryType(value)}
-        >
-          <Radio value="custom">Egendefinert event</Radio>
-          <Radio value="pageview">Umami besøk-eventet</Radio>
-        </RadioGroup>
 
         {/* Updated Combobox implementation */}
         <UNSAFE_Combobox
           label="Nettside / app"
+          className="mb-8"
           options={websites.map(website => ({
             label: website.name,
             value: website.name,
@@ -402,6 +394,17 @@ ORDER BY count DESC`;
           clearButton
         />
 
+        {/* Query Type Selection */}
+        <RadioGroup 
+          legend="Event-type du ønsker å kombinere data for"
+          value={queryType}
+          className="-mb-8"
+          onChange={(value: EventQueryType) => setQueryType(value)}
+        >
+          <Radio value="custom">Egendefinert event</Radio>
+          <Radio value="pageview">Umami besøk-eventet</Radio>
+        </RadioGroup>
+
         {/* Event Name Input - Only show for custom events */}
         {queryType === 'custom' && (
           <TextField
@@ -410,7 +413,7 @@ ORDER BY count DESC`;
               <div className="mt-2">
                 <details className="text-sm">
                   <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
-                    Vis SQL-kode for å finne tilgjengelige events i Metabase
+                    Vis SQL-kode for å finne tilgjengelige eventer i Metabase
                   </summary>
                   <div className="mt-2 p-3 bg-gray-50 rounded border">
                     <div className="flex flex-col gap-3">
@@ -434,7 +437,7 @@ ORDER BY count DESC`;
                                 onClick={handleCopyEventSQL}
                                 icon={<Copy aria-hidden />}
                               >
-                                {eventSQLCopySuccess ? 'Kopiert!' : 'Kopier SQL'}
+                                {eventSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
                               </Button>
                             </div>
                           </div>
@@ -455,12 +458,12 @@ ORDER BY count DESC`;
         <div>
           <div className="flex gap-2 items-end">
             <TextField
-              label="Parametere (tilhørende eventet)"
+              label="Event-metadetaljer"
               description={
                 <div className="mt-2">
                   <details className="text-sm">
                     <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
-                      Vis SQL-kode for å finne tilgjengelige parametere i Metabase
+                      Vis SQL-kode for å finne tilgjengelige metadetaljer i Metabase
                     </summary>
                     <div className="mt-2 p-3 bg-gray-50 rounded border">
                       <div className="flex flex-col gap-3">
@@ -471,7 +474,7 @@ ORDER BY count DESC`;
                         ) : (
                           <>
                             <span className="text-gray-600">
-                              Kjør denne spørringen i Metabase for å se tilgjengelige parametere:
+                              Kjør denne spørringen i Metabase for å se tilgjengelige metadetaljer:
                             </span>
                             <div className="bg-white p-3 rounded border">
                               <pre className="overflow-x-auto whitespace-pre-wrap mb-2">
@@ -484,7 +487,7 @@ ORDER BY count DESC`;
                                   onClick={handleCopyParameterSQL}
                                   icon={<Copy aria-hidden />}
                                 >
-                                  {parameterSQLCopySuccess ? 'Kopiert!' : 'Kopier SQL'}
+                                  {parameterSQLCopySuccess ? 'Kopiert!' : 'Kopier'}
                                 </Button>
                               </div>
                             </div>
@@ -510,7 +513,7 @@ ORDER BY count DESC`;
             onClick={addDataKey} 
             style={{ height: '50px' }}
             >
-            Legg til parameter
+            Legg til metadetaljer
             </Button>
           </div>
 
@@ -535,7 +538,7 @@ ORDER BY count DESC`;
 
         <div>
           <Heading spacing level="2" size="small">
-            Kolonner du ønsker å inkludere i Metabase-modellen
+            Kolonner du ønsker å inkludere i modellen
           </Heading>
 
           <div className="mt-4 p-4 bg-gray-50 rounded">
@@ -587,7 +590,7 @@ ORDER BY count DESC`;
         </div>
 
         <Button variant="primary" onClick={generateSQL}>
-          Generer SQL-kode til Metabase-modell
+        Generer SQL-kode for Metabase-modell
         </Button>
 
         {error && (
@@ -600,7 +603,7 @@ ORDER BY count DESC`;
           <div>
             <div className="flex justify-between items-center mb-2">
               <Heading level="2" size="small">
-                SQL-kode til Metabase-modell
+                SQL-kode for Metabase-modell
               </Heading>
               <Button
                 variant="secondary"
@@ -608,7 +611,7 @@ ORDER BY count DESC`;
                 onClick={handleCopySQL}
                 icon={<Copy aria-hidden />}
               >
-                {copySuccess ? 'Kopiert!' : 'Kopier kode'}
+                {copySuccess ? 'Kopiert!' : 'Kopier'}
               </Button>
             </div>
             <div className="border border-gray-400 p-4">
@@ -616,6 +619,15 @@ ORDER BY count DESC`;
                 {generatedSQL}
               </pre>
             </div>
+            <Button
+                variant="secondary"
+                size="small"
+                className="mt-2"
+                onClick={handleCopySQL}
+                icon={<Copy aria-hidden />}
+              >
+                {copySuccess ? 'Kopiert!' : 'Kopier'}
+              </Button>
           </div>
         )}
       </div>
