@@ -481,6 +481,23 @@ ORDER BY data_key;`;
     }
   };
 
+  // Add this function before the return statement
+const handleAddDataKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      action();
+    }
+  };
+
+    // Add this function before the return statement
+const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      action();
+    }
+  };
+  
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
@@ -530,6 +547,7 @@ ORDER BY data_key;`;
                 description="Eksempel: skjema startet (legg til flere med komma)"
                 value={newEventName}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setNewEventName(e.target.value)}
+                onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => handleAddEventKeyPres(e, addEventName)}
                 style={{ width: '100%' }}
               />
               <Button 
@@ -628,6 +646,7 @@ ORDER BY data_key;`;
                 description="Eksempel: skjemanavn (legg til flere med komma)"
                 value={newDataKey}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setNewDataKey(e.target.value)}
+                onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => handleAddDataKeyPres(e, addDataKey)}
                 style={{ width: '100%' }}
               />
               <Button 
