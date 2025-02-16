@@ -8,7 +8,6 @@ import {
   Radio,
   RadioGroup,
   UNSAFE_Combobox,
-  Textarea,
   Alert // Add this to imports at top
 } from '@navikt/ds-react';
 import { Copy, MoveUp, MoveDown } from 'lucide-react';
@@ -36,8 +35,6 @@ const SQLGeneratorForm = () => {
   const [newDataKey, setNewDataKey] = useState<string>('');
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
   const [error, setError] = useState<string | null>(null); // Add error state
-  const [parameterSQLCopySuccess, setParameterSQLCopySuccess] = useState<boolean>(false);
-  const [eventSQLCopySuccess, setEventSQLCopySuccess] = useState<boolean>(false);
   const [eventSQLDetailsOpen, setEventSQLDetailsOpen] = useState<boolean>(false);
   const [parameterSQLDetailsOpen, setParameterSQLDetailsOpen] = useState<boolean>(false);
   const [parameterSQLCopySuccess1, setParameterSQLCopySuccess1] = useState<boolean>(false);
@@ -332,44 +329,6 @@ WHERE e.website_id = '${selectedWebsite.id}'
   ${eventNames.length > 0 ? `AND e.event_name IN ('${eventNames.join("', '")}')` : ''}
 ORDER BY data_key;`;
 };
-
-  const handleCopyParameterSQL = async (): Promise<void> => {
-    if (!selectedWebsite) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(getParameterLookupSQL());
-      setParameterSQLCopySuccess(true);
-      setTimeout(() => setParameterSQLCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy parameter SQL:', err);
-    }
-  };
-
-  const getEventLookupSQL = (): string => {
-    if (!selectedWebsite) {
-      return '⚠️ Velg en nettside først for å se SQL-kode';
-    }
-    return `SELECT DISTINCT event_name, COUNT(*) as count
-FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-WHERE website_id = '${selectedWebsite.id}'
-  AND event_type = 2
-GROUP BY event_name
-ORDER BY count DESC`;
-  };
-
-  const handleCopyEventSQL = async (): Promise<void> => {
-    if (!selectedWebsite) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(getEventLookupSQL());
-      setEventSQLCopySuccess(true);
-      setTimeout(() => setEventSQLCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy event SQL:', err);
-    }
-  };
 
   const handleCloseEventSQL = () => {
     setEventSQLDetailsOpen(false);
