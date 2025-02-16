@@ -2,6 +2,7 @@ import {
   MenuHamburgerIcon,
   BookIcon,
   CodeIcon,
+  PackageIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
@@ -50,6 +51,14 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
+                href="/kombinator"
+                className="no-underline"
+              >
+                <PackageIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Bygg modell</span>
+              </Dropdown.Menu.List.Item>
+              <Dropdown.Menu.List.Item
+                as={Link}
                 href="https://umami.is/docs"
                 className="no-underline"
               >
@@ -77,6 +86,13 @@ export default function Header() {
             >
               <BarChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Metabase</span>
+            </Link>
+            <Link
+              href="/kombinator"
+              className={linkButton}
+            >
+              <PackageIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Bygg modell</span>
             </Link>
             <Link
               href="https://umami.is/docs"
