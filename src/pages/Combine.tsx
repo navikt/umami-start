@@ -41,6 +41,7 @@ const SQLGeneratorForm = () => {
   const [parameterSQLCopySuccess2, setParameterSQLCopySuccess2] = useState<boolean>(false);
   const [eventSQLCopySuccess1, setEventSQLCopySuccess1] = useState<boolean>(false);
   const [eventSQLCopySuccess2, setEventSQLCopySuccess2] = useState<boolean>(false);
+  const [showInitialGenerateButton, setShowInitialGenerateButton] = useState(true);
 
   // Update the allBaseColumns organization into groups
   const columnGroups = {
@@ -506,6 +507,26 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
   }
 };
 
+  // Add useEffect to auto-update SQL when any relevant state changes
+  useEffect(() => {
+    if (!showInitialGenerateButton) {
+      generateSQL();
+    }
+  }, [
+    selectedWebsite,
+    eventNames,
+    queryType,
+    baseColumns,
+    dataKeys,
+    showInitialGenerateButton
+  ]);
+
+  // Modify generateSQL to handle first click
+  const handleInitialGenerate = () => {
+    setShowInitialGenerateButton(false);
+    generateSQL();
+  };
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
@@ -876,9 +897,20 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
           </div>
         </div>
 
-        <Button variant="primary" onClick={generateSQL}>
-        Generer SQL-kode for Metabase-modell
-        </Button>
+        {showInitialGenerateButton ? (
+          <Button variant="primary" onClick={handleInitialGenerate}>
+            Generer SQL-kode for Metabase-modell
+          </Button>
+        ) : (
+          <div className="space-y-2 py-4">
+            <Heading level="2" size="large">
+              SQL-kode for Metabase-modell
+            </Heading>
+            <p className="text-sm text-gray-600">
+              🔄 SQL-koden oppdateres automatisk når du gjør endringer over.
+            </p>
+          </div>
+        )}
 
         {error && (
           <Alert variant="error" closeButton onClose={() => setError(null)}>
@@ -889,9 +921,6 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
         {generatedSQL && !error && (
           <div>
             <div className="flex justify-between items-center mb-2">
-              <Heading level="2" size="small">
-                SQL-kode for Metabase-modell
-              </Heading>
               <Button
                 variant="secondary"
                 size="small"
