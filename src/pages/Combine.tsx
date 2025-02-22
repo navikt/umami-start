@@ -569,7 +569,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
-        Bygg en Metabase-modell med kombinerte Umami-data
+        Bygg en Metabase-modell med Umami-data
       </Heading>
 
       <div className="space-y-6">
@@ -597,14 +597,14 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
 
         {/* Query Type Selection */}
         <RadioGroup 
-          legend="Event-type du ønsker å kombinere data for"
+          legend="Event-typer du ønsker med i modellen"
           value={queryType}
           className="-mb-8"
           onChange={(value: EventQueryType) => setQueryType(value)}
         >
-          <Radio value="custom">Egendefinert event</Radio>
-          <Radio value="pageview">Umami besøk-eventet</Radio>
-          <Radio value="combined">Kombinert (både egendefinert og besøk)</Radio>
+          <Radio value="custom">Egendefinert eventer</Radio>
+          <Radio value="pageview">Besøk-eventet</Radio>
+          <Radio value="combined">Alle event-typer (både egendefinert og besøk)</Radio>
         </RadioGroup>
 
         {/* Event Name Input - Only show for custom events */}
