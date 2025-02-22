@@ -51,6 +51,7 @@ const SQLGeneratorForm = () => {
       columns: {
         event_id: false,
         created_at: false,
+        event_type: false,
         event_name: false,
         website_id: false,
         website_domain: false,
@@ -100,6 +101,7 @@ const SQLGeneratorForm = () => {
     ...allBaseColumns,
     event_id: true,
     created_at: true,
+    event_type: true,
     event_name: true,
     website_id: true,
     website_domain: true,
