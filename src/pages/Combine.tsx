@@ -24,7 +24,8 @@ type BaseColumns = {
   [key: string]: boolean;
 };
 
-type EventQueryType = 'custom' | 'pageview';
+// Update the EventQueryType to include the new combined option
+type EventQueryType = 'custom' | 'pageview' | 'combined';
 
 const SQLGeneratorForm = () => {
   const [eventNames, setEventNames] = useState<string[]>([]); // New state for multiple events
@@ -167,6 +168,7 @@ const SQLGeneratorForm = () => {
     setEventNames(eventNames.filter(event => event !== eventToRemove));
   };
 
+  // Update the generateSQL function to handle the combined case
   const generateSQL = (): void => {
     setError(null);
     console.log('Selected website:', selectedWebsite);
@@ -176,11 +178,9 @@ const SQLGeneratorForm = () => {
       return;
     }
 
-    if (queryType === 'custom') {
-      if (eventNames.length === 0) {
-        setError('Du må legge til minst ett event-navn');
-        return;
-      }
+    if (queryType === 'custom' && eventNames.length === 0) {
+      setError('Du må legge til minst ett event-navn');
+      return;
     }
 
     const hasSelectedColumns = Object.values(baseColumns).some(isSelected => isSelected);
@@ -262,8 +262,11 @@ const SQLGeneratorForm = () => {
     // Modified WHERE clause based on query type and website_id
     if (queryType === 'custom') {
       sql += '  WHERE e.event_name IN (\'' + eventNames.join('\', \'') + '\')\n';
-    } else {
+    } else if (queryType === 'pageview') {
       sql += '  WHERE e.event_type = 1\n'; // pageview type
+    } else if (queryType === 'combined') {
+      sql += '  WHERE (e.event_type = 1' + // pageview type
+             (eventNames.length > 0 ? ' OR e.event_name IN (\'' + eventNames.join('\', \'') + '\')' : '') + ')\n';
     }
     
     if (selectedWebsite) {
@@ -468,21 +471,55 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
 const getEventLookupSQL1 = (): string => {
   if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
   
-  return `SELECT STRING_AGG(DISTINCT event_name, ',')
+  let sql = `SELECT STRING_AGG(DISTINCT`;
+  if (queryType === 'combined') {
+    sql += ` CASE 
+      WHEN event_type = 1 THEN 'pageview'
+      ELSE event_name 
+    END`;
+  } else {
+    sql += ` event_name`;
+  }
+  sql += `, ',')
 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-WHERE website_id = '${selectedWebsite.id}'
-  AND event_type = 2;`;
+WHERE website_id = '${selectedWebsite.id}'`;
+  
+  if (queryType === 'custom') {
+    sql += `\n  AND event_type = 2`;
+  } else if (queryType === 'pageview') {
+    sql += `\n  AND event_type = 1`;
+  }
+  
+  sql += ';';
+  return sql;
 };
 
 const getEventLookupSQL2 = (): string => {
   if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
   
-  return `SELECT DISTINCT event_name, COUNT(*) as count
+  let sql = `SELECT DISTINCT`;
+  if (queryType === 'combined') {
+    sql += ` CASE 
+      WHEN event_type = 1 THEN 'pageview'
+      ELSE event_name 
+    END as event_name`;
+  } else {
+    sql += ` event_name`;
+  }
+  sql += `, COUNT(*) as count
 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-WHERE website_id = '${selectedWebsite.id}'
-  AND event_type = 2
-GROUP BY event_name
+WHERE website_id = '${selectedWebsite.id}'`;
+  
+  if (queryType === 'custom') {
+    sql += `\n  AND event_type = 2`;
+  } else if (queryType === 'pageview') {
+    sql += `\n  AND event_type = 1`;
+  }
+  
+  sql += `
+GROUP BY ${queryType === 'combined' ? '1' : 'event_name'}
 ORDER BY count DESC;`;
+  return sql;
 };
 
 const handleCopyEventSQL1 = async (): Promise<void> => {
@@ -565,10 +602,11 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
         >
           <Radio value="custom">Egendefinert event</Radio>
           <Radio value="pageview">Umami besøk-eventet</Radio>
+          <Radio value="combined">Kombinert (både egendefinert og besøk)</Radio>
         </RadioGroup>
 
         {/* Event Name Input - Only show for custom events */}
-        {queryType === 'custom' && (
+        {(queryType === 'custom' || queryType === 'combined') && (
           <div className="space-y-2">
             <div className="flex gap-2 items-end">
               <TextField
