@@ -571,6 +571,9 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
         Bygg en Metabase-modell med Umami-data
       </Heading>
+          <p className="text-gray-600 mb-10">
+        For å bygge brukervennlige dashbord i Metabase trenger du først en modell. Her kan du generere SQL-kode som gir deg tilgang til dine Umami-data med ønskede eventer og metadetaljer. Denne SQL-koden gir deg et godt utgangspunkt for videre analyse.
+      </p>
 
       <div className="space-y-6">
 
