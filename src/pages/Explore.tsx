@@ -93,7 +93,7 @@ SELECT
   MIN(e.created_at) as first_seen,
   MAX(e.created_at) as last_seen,
   COUNT(DISTINCT ed.data_key) as number_of_parameters,
-  STRING_AGG(DISTINCT ed.data_key, ', ' ORDER BY ed.data_key LIMIT 5) as parameter_examples
+  STRING_AGG(DISTINCT ed.data_key, ', ' ORDER BY ed.data_key) as parameters
 FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
 LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` ed
   ON e.event_id = ed.website_event_id
@@ -300,20 +300,7 @@ ORDER BY
               </div>
             )}
           </div>
-        ) : (<>    
-            {/*
-            <Box padding="8" background="surface-subtle" className="text-center">
-              <Heading spacing level="2" size="small">
-                Velg en nettside for å starte utforskningen
-              </Heading>
-              <p className="text-gray-600">
-                Når du har valgt en nettside, vil du få tilgang til spørringer 
-                som hjelper deg å utforske strukturen til dataene trinn for trinn i Metabase.
-              </p>
-            </Box>
-            */}
-          </>
-        )}
+        ) : null}
       </div>
     </div>
   );
