@@ -170,7 +170,7 @@ ORDER BY
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
-        Utforsk Umami-data i Metabase
+        Utforsk strukturen til Umami-data i Metabase
       </Heading>
 
       <div className="space-y-8">
@@ -306,7 +306,7 @@ ORDER BY
             </Heading>
             <p className="text-gray-600">
               Når du har valgt en nettside, vil du få tilgang til spørringer 
-              som hjelper deg å utforske dataene trinn for trinn i Metabase.
+              som hjelper deg å utforske strukturen til dataene trinn for trinn i Metabase.
             </p>
           </Box>
         )}
