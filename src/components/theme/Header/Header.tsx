@@ -56,7 +56,7 @@ export default function Header() {
                 className="no-underline"
               >
                 <DatabaseIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Data-utforsker</span>
+                <span className="whitespace-nowrap">Datastruktur</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -101,7 +101,7 @@ export default function Header() {
               className={linkButton}
             >
               <DatabaseIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Data-utforsker</span>
+              <span className="whitespace-nowrap">Datastruktur</span>
             </Link>
             <Link
               href="/kombinator"

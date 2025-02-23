@@ -7,8 +7,7 @@ import {
   RadioGroup,
   Radio,
   CopyButton,
-  HGrid,
-  Box,
+  HGrid
 } from '@navikt/ds-react';
 
 interface Website {
@@ -172,6 +171,10 @@ ORDER BY
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
         Utforsk strukturen til Umami-data i Metabase
       </Heading>
+      <p className="text-gray-600 mb-10">
+        Ønsker du å vite hvilke eventer som er tilgjengelige for din nettside eller app? Eller vil du se hvilke parametere som er knyttet til et spesifikt event? 
+        Her finner du spørringer som hjelper deg med å utforske strukturen til Umami-data trinn for trinn i Metabase.
+      </p>
 
       <div className="space-y-8">
         <UNSAFE_Combobox
@@ -233,9 +236,6 @@ ORDER BY
 
             {(queryType === 'custom' || queryType === 'combined') && (
               <div>
-                <Heading level="2" size="small" spacing>
-                  Velg event å utforske
-                </Heading>
                 <div className="flex gap-2 items-end mb-4">
                   <TextField
                     label="Event-navn"
@@ -299,16 +299,19 @@ ORDER BY
               </div>
             )}
           </div>
-        ) : (
-          <Box padding="8" background="surface-subtle" className="text-center">
-            <Heading spacing level="2" size="small">
-              Velg en nettside for å starte utforskningen
-            </Heading>
-            <p className="text-gray-600">
-              Når du har valgt en nettside, vil du få tilgang til spørringer 
-              som hjelper deg å utforske strukturen til dataene trinn for trinn i Metabase.
-            </p>
-          </Box>
+        ) : (<>    
+            {/*
+            <Box padding="8" background="surface-subtle" className="text-center">
+              <Heading spacing level="2" size="small">
+                Velg en nettside for å starte utforskningen
+              </Heading>
+              <p className="text-gray-600">
+                Når du har valgt en nettside, vil du få tilgang til spørringer 
+                som hjelper deg å utforske strukturen til dataene trinn for trinn i Metabase.
+              </p>
+            </Box>
+            */}
+          </>
         )}
       </div>
     </div>
