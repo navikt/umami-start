@@ -603,7 +603,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
           onChange={(value: EventQueryType) => setQueryType(value)}
         >
           <Radio value="custom">Egendefinert eventer</Radio>
-          <Radio value="pageview">Besøk-eventet</Radio>
+          <Radio value="pageview">Umami besøk-eventet</Radio>
           <Radio value="combined">Alle event-typer (både egendefinert og besøk)</Radio>
         </RadioGroup>
 
@@ -676,6 +676,11 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                       <span className="text-gray-600 mb-2">
                         Kjør en av disse spørringene i Metabase for å finne tilgjengelige events:
                       </span>
+                      <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
+                        <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                        <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
+                        <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
+                      </ol>
 
                       <div className="bg-white p-3 rounded border">
                         <div className="mb-3">
@@ -826,6 +831,11 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                       <span className="text-gray-600 mb-2">
                         Kjør en av disse spørringene i Metabase for å finne tilgjengelige metadetaljer:
                       </span>
+                      <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
+                        <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                        <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
+                        <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
+                      </ol>
 
                     <div className="bg-white p-3 rounded border">
                         <div className="mb-3">
@@ -960,6 +970,12 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
 
         {generatedSQL && !error && (
           <div>
+                      <ol className="list-decimal list-inside text-sm text-gray-600 mb-10">
+                        <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                        <li>Velg "Modell / Model" fra menyen som vises.</li>
+                        <li>Velg "Bruk lolal spørring / Use a native query" fra menyen som vises.</li>
+                        <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
+                      </ol>
             <div className="flex justify-between items-center mb-2">
               <Button
                 variant="secondary"

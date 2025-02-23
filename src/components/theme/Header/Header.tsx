@@ -3,6 +3,7 @@ import {
   BookIcon,
   CodeIcon,
   PackageIcon,
+  DatabaseIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
@@ -51,6 +52,14 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
+                href="/utforsk"
+                className="no-underline"
+              >
+                <DatabaseIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Data-utforsker</span>
+              </Dropdown.Menu.List.Item>
+              <Dropdown.Menu.List.Item
+                as={Link}
                 href="/kombinator"
                 className="no-underline"
               >
@@ -63,7 +72,7 @@ export default function Header() {
                 className="no-underline"
               >
                 <CodeIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Dokumentasjon</span>
+                <span className="whitespace-nowrap">Doks</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -71,7 +80,7 @@ export default function Header() {
                 className="no-underline"
               >
                 <BookIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Kom i gang guide</span>
+                <span className="whitespace-nowrap">Guide</span>
               </Dropdown.Menu.List.Item>
             </Dropdown.Menu.List>
           </Dropdown.Menu>
@@ -88,6 +97,13 @@ export default function Header() {
               <span className="whitespace-nowrap">Metabase</span>
             </Link>
             <Link
+              href="/utforsk"
+              className={linkButton}
+            >
+              <DatabaseIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Data-utforsker</span>
+            </Link>
+            <Link
               href="/kombinator"
               className={linkButton}
             >
@@ -99,14 +115,14 @@ export default function Header() {
               className={linkButton}
             >
               <CodeIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Dokumentasjon</span>
+              <span className="whitespace-nowrap">Doks</span>
             </Link>
             <Link
               href="/komigang"
               className={linkButton}
             >
               <BookIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Kom i gang guide</span>
+              <span className="whitespace-nowrap">Guide</span>
             </Link>
           </div>
         </div>
