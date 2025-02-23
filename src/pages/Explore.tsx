@@ -1,6 +1,7 @@
 import { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
 import {
   Button,
+  Link,
   TextField,
   Heading,
   UNSAFE_Combobox,
@@ -203,7 +204,7 @@ ORDER BY
                 Utforsk tilgjengelige eventer
               </Heading>
               <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
                 <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
                 <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
               </ol>
@@ -279,7 +280,7 @@ ORDER BY
                   Utforsk parametere
                 </Heading>
                 <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                    <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                    <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
                     <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
                     <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
                 </ol>

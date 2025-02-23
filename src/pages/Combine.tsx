@@ -1,6 +1,7 @@
 import { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
 import {
   Button,
+  Link,
   TextField,
   Checkbox,
   Heading,
@@ -680,7 +681,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                         Kjør en av disse spørringene i Metabase for å finne tilgjengelige events:
                       </span>
                       <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                        <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                        <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
                         <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
                         <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
                       </ol>
@@ -835,7 +836,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                         Kjør en av disse spørringene i Metabase for å finne tilgjengelige metadetaljer:
                       </span>
                       <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                        <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                        <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
                         <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
                         <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
                       </ol>
@@ -974,7 +975,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
         {generatedSQL && !error && (
           <div>
                       <ol className="list-decimal list-inside text-sm text-gray-600 mb-10">
-                        <li>Åpne Metabase og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+                        <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
                         <li>Velg "Modell / Model" fra menyen som vises.</li>
                         <li>Velg "Bruk lolal spørring / Use a native query" fra menyen som vises.</li>
                         <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
