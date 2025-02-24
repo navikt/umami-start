@@ -10,6 +10,7 @@ import {
   CopyButton,
   HGrid
 } from '@navikt/ds-react';
+import Kontaktboks from '../components/kontaktboks';
 
 interface Website {
   id: string;
@@ -301,6 +302,7 @@ ORDER BY
             )}
           </div>
         ) : null}
+        <Kontaktboks />
       </div>
     </div>
   );
