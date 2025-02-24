@@ -4,7 +4,7 @@ import '../../../tailwind.css';
 
 const Footer = () => {
     return (
-        <div className="bg-deepblue-800 w-full">
+        <div className="bg-deepblue-800 w-full pb-10">
         <footer
             id="aksel-footer"
             data-theme="dark"
