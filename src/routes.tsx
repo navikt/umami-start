@@ -11,8 +11,8 @@ const routes = [
     { path: "/komigang", component: <Komigang /> },
     { path: "/personvern", component: <Personvern /> },
     { path: "/tilgjengelighet", component: <Tilgjengelighet /> },
-    { path: "/kombinator", component: <Combine /> },
-    { path: "/utforsk", component: <Explore /> }
+    { path: "/modellbygger", component: <Combine /> },
+    { path: "/datastruktur", component: <Explore /> }
 ];
 
 export default routes;
