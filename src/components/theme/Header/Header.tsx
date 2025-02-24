@@ -52,7 +52,7 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/utforsk"
+                href="/datastruktur"
                 className="no-underline"
               >
                 <DatabaseIcon aria-hidden fontSize="1.5rem" />
@@ -60,7 +60,7 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/kombinator"
+                href="/modellbygger"
                 className="no-underline"
               >
                 <PackageIcon aria-hidden fontSize="1.5rem" />
@@ -97,14 +97,14 @@ export default function Header() {
               <span className="whitespace-nowrap">Metabase</span>
             </Link>
             <Link
-              href="/utforsk"
+              href="/datastruktur"
               className={linkButton}
             >
               <DatabaseIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Datastruktur</span>
             </Link>
             <Link
-              href="/kombinator"
+              href="/modellbygger"
               className={linkButton}
             >
               <PackageIcon aria-hidden fontSize="1.5rem" />
