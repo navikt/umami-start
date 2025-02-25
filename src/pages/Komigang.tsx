@@ -66,7 +66,7 @@ function Komigang() {
 
             <Heading spacing={true} as="h3" size="medium"
                      style={{marginTop: "60px", marginBottom: "30px"}}>Analysere</Heading>
-            <List as="ul" title="Her finner du data">
+            <List as="ul" title="Her finner du Umami-data">
                 <List.Item>
                     <strong><Link href={"./"}>Umami Dashboard:</Link></strong> Grunnleggende dashboard med data fra
                     Umami.
@@ -79,6 +79,19 @@ function Komigang() {
                 <List.Item>
                     <strong><Link href={"https://github.com/navikt/reops-proxy"}>Umami API:</Link></strong> Mulighet for
                     å få data i JSON format, og bruke dem i egne apper.
+                </List.Item>
+            </List>
+
+            <List as="ul" title="Lykkes med Umami i Metabase" className="pt-4">
+                <List.Item>
+                    <strong><Link href={"https://metabase.ansatt.nav.no/"}>Snarvei til Metabase</Link></strong>
+                </List.Item>
+                <List.Item>
+                    <strong><Link
+                        href={"/datastruktur"}>Datastruktur-utforsker:</Link></strong> Utforsk struktur til Umami-data i Metabase.
+                </List.Item>
+                <List.Item>
+                    <strong><Link href={"https://github.com/navikt/reops-proxy"}>Modelbygger:</Link></strong> Bygg en Metabase-modell med Umami-data
                 </List.Item>
             </List>
 
