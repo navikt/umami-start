@@ -6,8 +6,17 @@ function Komigang() {
             <Heading spacing={true} as="h2" size="large" style={{marginTop: "60px", marginBottom: "30px"}}>Kom i gang:
                 Mål brukeradferd med Umami</Heading>
 
+
+                <Heading spacing={true} as="h3" size="medium"
+                     style={{marginTop: "60px", marginBottom: "30px"}}>Start med å teste Umami i dev-miljø</Heading>
+                <BodyShort  style={{marginTop: "20px"}}>
+                <Link
+                href={"https://nav-it.slack.com/archives/C02UGFS2J4B"}>Kontakt ResearchOps for å få sporingskode.</Link>
+            </BodyShort>
+
+
             <Heading spacing={true} as="h3" size="medium"
-                     style={{marginTop: "60px", marginBottom: "30px"}}>Klarsignal</Heading>
+                     style={{marginTop: "60px", marginBottom: "30px"}}>Få klarsignal for Umami i produksjon</Heading>
 
     <BodyShort>
         <strong>Etterlevelse:</strong> <Link
