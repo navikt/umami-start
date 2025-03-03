@@ -286,8 +286,8 @@ const SQLGeneratorForm = () => {
       .map(([column]) => `  base_query.${column}`);
     
       const dataKeyColumns = dataKeys.map(key => [
-        // String value column
-        `  STRING_AGG(
+        // String value column - only if not empty
+        `  NULLIF(STRING_AGG(
           CASE 
             WHEN event_data.data_key = '${key}' 
             AND event_data.data_type != 2
@@ -295,8 +295,8 @@ const SQLGeneratorForm = () => {
           END,
           ',' 
           ORDER BY base_query.created_at
-        ) AS data_key_${sanitizeColumnName(key)}`,
-        // Numeric value column - use MAX for numbers to keep them as NUMERIC
+        ), '') AS data_key_${sanitizeColumnName(key)}`,
+        // Numeric value column - only if not null
         `  MAX(
           CASE 
             WHEN event_data.data_key = '${key}' 
@@ -305,7 +305,7 @@ const SQLGeneratorForm = () => {
           END
         ) AS data_key_${sanitizeColumnName(key)}_number`
       ]).flat();
-    
+      
     const allColumns = [...selectedBaseColumns, ...dataKeyColumns];
     
     sql += allColumns.join(',\n');
