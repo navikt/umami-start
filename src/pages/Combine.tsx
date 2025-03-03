@@ -285,20 +285,26 @@ const SQLGeneratorForm = () => {
       .filter(([_, isSelected]) => isSelected)
       .map(([column]) => `  base_query.${column}`);
     
-    // Modified data key columns to use array_agg instead of MAX
-    const dataKeyColumns = dataKeys.map(key => 
-      `  STRING_AGG(
-        CASE 
-          WHEN event_data.data_key = '${key}' THEN
-            CASE
-              WHEN event_data.data_type = 2 THEN CAST(event_data.number_value AS STRING)
-              ELSE event_data.string_value
-            END
-        END, 
-        ',' 
-        ORDER BY base_query.created_at
-      ) AS data_key_${sanitizeColumnName(key)}`
-    );
+      const dataKeyColumns = dataKeys.map(key => [
+        // String value column
+        `  STRING_AGG(
+          CASE 
+            WHEN event_data.data_key = '${key}' 
+            AND event_data.data_type != 2
+            THEN event_data.string_value 
+          END,
+          ',' 
+          ORDER BY base_query.created_at
+        ) AS data_key_${sanitizeColumnName(key)}`,
+        // Numeric value column - use MAX for numbers to keep them as NUMERIC
+        `  MAX(
+          CASE 
+            WHEN event_data.data_key = '${key}' 
+            AND event_data.data_type = 2
+            THEN CAST(event_data.number_value AS NUMERIC)
+          END
+        ) AS data_key_${sanitizeColumnName(key)}_number`
+      ]).flat();
     
     const allColumns = [...selectedBaseColumns, ...dataKeyColumns];
     
