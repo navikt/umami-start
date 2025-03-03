@@ -289,8 +289,11 @@ const SQLGeneratorForm = () => {
     const dataKeyColumns = dataKeys.map(key => 
       `  STRING_AGG(
         CASE 
-          WHEN event_data.data_key = '${key}' 
-          THEN event_data.string_value 
+          WHEN event_data.data_key = '${key}' THEN
+            CASE
+              WHEN event_data.data_type = 2 THEN CAST(event_data.number_value AS STRING)
+              ELSE event_data.string_value
+            END
         END, 
         ',' 
         ORDER BY base_query.created_at
