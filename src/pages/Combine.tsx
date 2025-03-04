@@ -8,6 +8,7 @@ import {
   HGrid,
   Radio,
   RadioGroup,
+  Select,
   UNSAFE_Combobox,
   Alert // Add this to imports at top
 } from '@navikt/ds-react';
@@ -22,11 +23,16 @@ interface Website {
   teamId: string;
 }
 
+// Update DataKeyConfig interface
+interface DataKeyConfig {
+  key: string;
+  type: 'string' | 'number';
+}
+
 type BaseColumns = {
   [key: string]: boolean;
 };
 
-// Update the EventQueryType to include the new combined option
 type EventQueryType = 'custom' | 'pageview' | 'combined';
 
 const SQLGeneratorForm = () => {
@@ -34,7 +40,7 @@ const SQLGeneratorForm = () => {
   const [newEventName, setNewEventName] = useState<string>(''); // New state for event input
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
   const [websites, setWebsites] = useState<Website[]>([]);
-  const [dataKeys, setDataKeys] = useState<string[]>([]);
+  const [dataKeys, setDataKeys] = useState<DataKeyConfig[]>([]);
   const [newDataKey, setNewDataKey] = useState<string>('');
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
   const [error, setError] = useState<string | null>(null); // Add error state
@@ -120,16 +126,19 @@ const SQLGeneratorForm = () => {
     const keys = newDataKey
       .split(/[\n,]/)
       .map(key => key.trim())
-      .filter(key => key && !dataKeys.includes(key));
+      .filter(key => key && !dataKeys.some(dk => dk.key === key));
     
     if (keys.length) {
-      setDataKeys(prev => [...prev, ...keys]);
+      setDataKeys(prev => [
+        ...prev,
+        ...keys.map(key => ({ key, type: 'string' as 'string' }))
+      ]);
       setNewDataKey('');
     }
   };
 
   const removeDataKey = (keyToRemove: string): void => {
-    setDataKeys(dataKeys.filter(key => key !== keyToRemove));
+    setDataKeys(dataKeys.filter(dk => dk.key !== keyToRemove));
   };
 
   const handleCopySQL = async (): Promise<void> => {
@@ -285,9 +294,9 @@ const SQLGeneratorForm = () => {
       .filter(([_, isSelected]) => isSelected)
       .map(([column]) => `  base_query.${column}`);
     
-      const dataKeyColumns = dataKeys.map(key => [
-        // String value column - only if not empty
-        `  NULLIF(STRING_AGG(
+      const dataKeyColumns = dataKeys.map(({ key, type }) => 
+    type === 'string' 
+      ? `  NULLIF(STRING_AGG(
           CASE 
             WHEN event_data.data_key = '${key}' 
             AND event_data.data_type != 2
@@ -295,16 +304,15 @@ const SQLGeneratorForm = () => {
           END,
           ',' 
           ORDER BY base_query.created_at
-        ), '') AS data_key_${sanitizeColumnName(key)}`,
-        // Numeric value column - only if not null
-        `  MAX(
+        ), '') AS data_key_${sanitizeColumnName(key)}`
+      : `  MAX(
           CASE 
             WHEN event_data.data_key = '${key}' 
             AND event_data.data_type = 2
             THEN CAST(event_data.number_value AS NUMERIC)
           END
-        ) AS data_key_${sanitizeColumnName(key)}_number`
-      ]).flat();
+        ) AS data_key_${sanitizeColumnName(key)}`
+  );
       
     const allColumns = [...selectedBaseColumns, ...dataKeyColumns];
     
@@ -577,6 +585,15 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
     generateSQL();
   };
 
+  // Add function to toggle key type
+  const toggleKeyType = (key: string) => {
+    setDataKeys(prev => prev.map(dk => 
+      dk.key === key 
+        ? { ...dk, type: dk.type === 'string' ? 'number' : 'string' }
+        : dk
+    ));
+  };
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
@@ -774,44 +791,57 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
               </Button>
             </div>
 
-             {/* Display added data keys with sorting */}
+            {/* Display added data keys with sorting */}
             <HGrid className="mt-4">
-                {dataKeys.map((key, index) => (
-                <div key={key}>
-                    <div className="flex items-center justify-between p-2 my-2 bg-gray-100 rounded">
-                    <span>{key}</span>
+              {dataKeys.map((config, index) => (
+                <div key={config.key}>
+                  <div className="flex items-center justify-between p-2 my-2 bg-gray-100 rounded">
+                    <span className="flex items-center gap-2">
+                      <span>{config.key}</span>
+                    </span>
                     <div className="flex gap-2">
-                    <div className="flex gap-1">
+                      <div className="flex gap-1">
                         {index > 0 && (
-                            <Button
+                          <Button
                             variant="secondary"
                             size="small"
                             icon={<MoveUp size={16} />}
                             onClick={() => moveKey(index, 'up')}
                             aria-label="Flytt opp"
-                            />
+                          />
                         )}
                         {index < dataKeys.length - 1 && (
-                            <Button
+                          <Button
                             variant="secondary"
                             size="small"
                             icon={<MoveDown size={16} />}
                             onClick={() => moveKey(index, 'down')}
                             aria-label="Flytt ned"
-                            />
+                          />
                         )}
-                        </div>
-                        <Button
+                      </div>
+                      <Select 
+                        label=""
+                        size="small"
+                        value={config.type}
+                        className="!w-auto min-w-[120px] -mt-2"
+                        onChange={(e) => toggleKeyType(config.key)}
+                      >
+                        <option value="string">📝 Tekst</option>
+                        <option value="number">🔢 Tall</option>
+                      </Select>
+
+                      <Button
                         variant="danger"
                         size="small"
-                        onClick={() => removeDataKey(key)}
-                        >
+                        onClick={() => removeDataKey(config.key)}
+                      >
                         Fjern
-                        </Button>
+                      </Button>
                     </div>
-                    </div>
+                  </div>
                 </div>
-                ))}
+              ))}
             </HGrid>
 
             {/* Rest of the details section */}
@@ -828,7 +858,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                   {(!queryType || (queryType === 'custom' && eventNames.length === 0) || !selectedWebsite) ? (
                     <>
                       <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
-                        {getParameterLookupSQL()}
+                      {getParameterLookupSQL()}
                       </pre>
                       <div className="flex justify-end space-x-2 border-t pt-2">
                         <Button
@@ -851,7 +881,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                         <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
                       </ol>
 
-                    <div className="bg-white p-3 rounded border">
+                      <div className="bg-white p-3 rounded border">
                         <div className="mb-3">
                           <strong className="text-sm text-gray-900">Spørring 1: Lett å lese i Metabase</strong>
                           <p className="text-sm text-gray-600">Viser alle metadetaljer på separate linjer.</p>
@@ -912,7 +942,6 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
           <Heading spacing level="2" size="small">
             Supplerende kolonner
           </Heading>
-
           <div className="mt-4 p-4 bg-gray-50 rounded">
             <div className="space-y-6">
               {Object.entries(columnGroups).map(([groupKey, group]) => (
@@ -941,7 +970,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                   <HGrid>
                     {Object.entries(group.columns).map(([column, _]) => (
                       <div key={column}>
-                        <Checkbox
+                        <Checkbox 
                           checked={baseColumns[column]}
                           onChange={(e) =>
                             setBaseColumns((prev) => ({
@@ -984,12 +1013,12 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
 
         {generatedSQL && !error && (
           <div>
-                      <ol className="list-decimal list-inside text-sm text-gray-600 mb-10">
-                        <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
-                        <li>Velg "Modell / Model" fra menyen som vises.</li>
-                        <li>Velg "Bruk lolal spørring / Use a native query" fra menyen som vises.</li>
-                        <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
-                      </ol>
+            <ol className="list-decimal list-inside text-sm text-gray-600 mb-10">
+              <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
+              <li>Velg "Modell / Model" fra menyen som vises.</li>
+              <li>Velg "Bruk lolal spørring / Use a native query" fra menyen som vises.</li>
+              <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
+            </ol>
             <div className="flex justify-between items-center mb-2">
               <Button
                 variant="secondary"
@@ -1005,7 +1034,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                 {generatedSQL}
               </pre>
             </div>
-            <Button
+                        <Button
                 variant="secondary"
                 size="small"
                 className="mt-2"
