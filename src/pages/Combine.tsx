@@ -825,7 +825,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                         size="small"
                         value={config.type}
                         className="!w-auto min-w-[120px] -mt-2"
-                        onChange={(e) => toggleKeyType(config.key)}
+                        onChange={() => toggleKeyType(config.key)}
                       >
                         <option value="string">📝 Tekst</option>
                         <option value="number">🔢 Tall</option>
