@@ -69,7 +69,7 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/bygger"
+                href="/bygg"
                 className="no-underline"
               >
                 <AreaChartIcon aria-hidden fontSize="1.5rem" />
