@@ -5,6 +5,9 @@ import Personvern from "./pages/Personvern.tsx";
 import Tilgjengelighet from "./pages/Tilgjengelighet.tsx";
 import Combine from "./pages/Combine.tsx";
 import Explore from "./pages/Explore.tsx";
+import Copilot from "./pages/Copilot.tsx";
+import Validator from "./pages/Validator.tsx";
+import Charts from "./pages/Charts.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -12,7 +15,10 @@ const routes = [
     { path: "/personvern", component: <Personvern /> },
     { path: "/tilgjengelighet", component: <Tilgjengelighet /> },
     { path: "/modellbygger", component: <Combine /> },
-    { path: "/datastruktur", component: <Explore /> }
+    { path: "/datastruktur", component: <Explore /> },
+    { path: "/copilot", component: <Copilot /> },
+    { path: "/validator", component: <Validator /> },
+    { path: "/bygg", component: <Charts /> }
 ];
 
 export default routes;

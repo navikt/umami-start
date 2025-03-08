@@ -4,6 +4,8 @@ import {
   CodeIcon,
   PackageIcon,
   DatabaseIcon,
+  LineGraphDotIcon,
+  AreaChartIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
@@ -68,6 +70,14 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
+                href="/bygger"
+                className="no-underline"
+              >
+                <AreaChartIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Bygg graf</span>
+              </Dropdown.Menu.List.Item>
+              <Dropdown.Menu.List.Item
+                as={Link}
                 href="https://umami.is/docs"
                 className="no-underline"
               >
@@ -109,6 +119,13 @@ export default function Header() {
             >
               <PackageIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Bygg modell</span>
+            </Link>
+            <Link
+              href="/bygg"
+              className={linkButton}
+            >
+              <AreaChartIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Bygg graf</span>
             </Link>
             <Link
               href="https://umami.is/docs"

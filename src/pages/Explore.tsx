@@ -224,6 +224,12 @@ ORDER BY
               </div>
             </div>
 
+            <div className="py-6"><hr /></div>
+
+            <Heading spacing level="2" size="medium" className="">
+              Utforsk parametere knyttet til bestemte eventer
+            </Heading>
+
             <RadioGroup 
               legend="Hvilke event-typer vil du utforske parametere for?"
               value={queryType}
@@ -302,6 +308,7 @@ ORDER BY
             )}
           </div>
         ) : null}
+        <div className="py-6"><hr /></div>
         <Kontaktboks />
       </div>
     </div>
