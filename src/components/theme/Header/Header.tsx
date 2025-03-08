@@ -4,7 +4,6 @@ import {
   CodeIcon,
   PackageIcon,
   DatabaseIcon,
-  LineGraphDotIcon,
   AreaChartIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
