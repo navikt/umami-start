@@ -109,7 +109,6 @@ const Summarize = ({
                 size="small"
                 onClick={() => removeMetric(index)}
                 className="mb-1"
-                disabled={metrics.length <= 1}
               >
                 Fjern
               </Button>
