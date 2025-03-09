@@ -123,10 +123,13 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
   const baseColumns: Record<string, Array<{label: string, value: string}>> = {
     count: [],
     distinct: [
+      { label: 'Event ID', value: 'event_id' },
       { label: 'Session ID', value: 'session_id' },
       { label: 'Visit ID', value: 'visit_id' },
       { label: 'Browser', value: 'browser' },
       { label: 'URL Path', value: 'url_path' },
+      // Add more columns from COLUMN_GROUPS
+      ...Object.values(COLUMN_GROUPS).flatMap(group => group.columns)
     ],
     sum: [
       { label: 'Event Data (numeric)', value: 'event_data' },

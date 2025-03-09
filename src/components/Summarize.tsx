@@ -88,11 +88,24 @@ const Summarize = ({
                   size="small"
                 >
                   <option value="">Velg kolonne</option>
-                  {getMetricColumns(parameters, metric.function).map(col => (
-                    <option key={col.value} value={col.value}>
-                      {col.label}
-                    </option>
+                  {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                    <optgroup key={groupKey} label={group.label}>
+                      {group.columns.map(col => (
+                        <option key={col.value} value={col.value}>
+                          {col.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
+                  {parameters.length > 0 && (
+                    <optgroup label="Egendefinerte parametere">
+                      {parameters.map(param => (
+                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                          {param.key}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </Select>
               )}
               
