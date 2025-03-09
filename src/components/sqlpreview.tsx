@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Heading, Link, CopyButton, Button, Alert } from '@navikt/ds-react';
-import { CheckCircle, ChevronDown, ChevronUp, Copy, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink } from 'lucide-react';
 
 interface SQLPreviewProps {
   sql: string;
@@ -75,7 +75,7 @@ const SQLPreview = ({ sql }: SQLPreviewProps) => {
                   </Button>
                 ) : (
                   <Alert variant="success" className="w-fit p-2 flex items-center">
-                    <CheckCircle size={16} className="mr-2" /> Spørringen er kopiert!
+                    Spørringen er kopiert!
                   </Alert>
                 )}
               </div>

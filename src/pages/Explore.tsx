@@ -1,16 +1,18 @@
-import { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
+import { useState, KeyboardEvent, ChangeEvent } from 'react';
 import {
   Button,
   Link,
   TextField,
   Heading,
-  UNSAFE_Combobox,
   RadioGroup,
   Radio,
   CopyButton,
-  HGrid
+  HGrid,
+  Alert
 } from '@navikt/ds-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink } from 'lucide-react';
 import Kontaktboks from '../components/kontaktboks';
+import WebsitePicker from '../components/WebsitePicker';
 
 interface Website {
   id: string;
@@ -23,37 +25,13 @@ type EventQueryType = 'custom' | 'pageview' | 'combined';
 
 const ExploreQueries = () => {
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-  const [websites, setWebsites] = useState<Website[]>([]);
   const [queryType, setQueryType] = useState<EventQueryType>('custom');
   const [eventNames, setEventNames] = useState<string[]>([]);
   const [newEventName, setNewEventName] = useState<string>('');
-
-  // Fetch websites
-  useEffect(() => {
-    const baseUrl = window.location.hostname === 'localhost' 
-      ? 'https://reops-proxy.intern.nav.no' 
-      : 'https://reops-proxy.ansatt.nav.no';
-
-    Promise.all([
-      fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      }).then(response => response.json()),
-      fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      }).then(response => response.json())
-    ])
-      .then(([data1, data2]) => {
-        const combinedData = [...data1.data, ...data2.data];
-        combinedData.sort((a, b) => {
-          if (a.teamId === b.teamId) {
-            return a.name.localeCompare(b.name);
-          }
-          return a.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? -1 : 1;
-        });
-        setWebsites(combinedData);
-      })
-      .catch(error => console.error("Error fetching websites:", error));
-  }, []);
+  const [showEventOverviewSQL, setShowEventOverviewSQL] = useState(false);
+  const [showEventParamsSQL, setShowEventParamsSQL] = useState(false);
+  const [eventOverviewCopied, setEventOverviewCopied] = useState(false);
+  const [eventParamsCopied, setEventParamsCopied] = useState(false);
 
   const addEventName = (): void => {
     if (!newEventName.trim()) return;
@@ -168,147 +146,330 @@ ORDER BY
   occurrences DESC;`;
   };
 
+  const handleCopyEventOverview = () => {
+    navigator.clipboard.writeText(getEventOverviewSQL());
+    setEventOverviewCopied(true);
+    setTimeout(() => setEventOverviewCopied(false), 3000);
+  };
+
+  const handleCopyEventParams = () => {
+    navigator.clipboard.writeText(getEventParamsSQL());
+    setEventParamsCopied(true);
+    setTimeout(() => setEventParamsCopied(false), 3000);
+  };
+
   return (
     <div className="w-full max-w-2xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
-        Utforsk strukturen til Umami-data i Metabase
+        Utforsk data-strukturen for ditt nettsted
       </Heading>
       <p className="text-gray-600 mb-10">
-        Ønsker du å vite hvilke eventer som er tilgjengelige for din nettside eller app? Eller vil du se hvilke parametere som er knyttet til et spesifikt event? 
-        Her finner du spørringer som hjelper deg med å utforske strukturen til Umami-data trinn for trinn i Metabase.
+        Dette verktøyet hjelper deg å utforske hvilke data som er tilgjengelige fra ditt nettsted i Metabase.
+        Du kan se hvilke hendelser som er registrert og hvilke ekstra parametere som er knyttet til hver hendelse.
       </p>
 
       <div className="space-y-8">
-        <UNSAFE_Combobox
-          label="Velg nettside / app"
-          options={websites.map(website => ({
-            label: website.name,
-            value: website.name,
-            website: website
-          }))}
-          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
-          onToggleSelected={(option, isSelected) => {
-            if (isSelected) {
-              const website = websites.find(w => w.name === option);
-              setSelectedWebsite(website || null);
-            } else {
-              setSelectedWebsite(null);
-            }
-          }}
-          clearButton
-        />
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <WebsitePicker
+            selectedWebsite={selectedWebsite}
+            onWebsiteChange={setSelectedWebsite}
+          />
+        </div>
 
-        {selectedWebsite ? (
+        {selectedWebsite && (
           <div className="space-y-8">
-            <div>
-              <Heading level="2" size="small" spacing>
-                Utforsk tilgjengelige eventer
-              </Heading>
-              <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
-                <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
-                <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
-              </ol>
-              <div className="relative">
-                <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
-                  {getEventOverviewSQL()}
-                </pre>
-                <div className="absolute top-2 right-2">
-                  <CopyButton
-                    copyText={getEventOverviewSQL()}
-                    text="Kopier SQL"
-                    activeText="Kopiert!"
-                    size="small"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="py-6"><hr /></div>
-
-            <Heading spacing level="2" size="medium" className="">
-              Utforsk parametere knyttet til bestemte eventer
-            </Heading>
-
-            <RadioGroup 
-              legend="Hvilke event-typer vil du utforske parametere for?"
-              value={queryType}
-              onChange={(value: EventQueryType) => {
-                setQueryType(value);
-                if (value === 'pageview') setEventNames([]);
-              }}
-            >
-              <Radio value="custom">Egendefinerte eventer</Radio>
-              <Radio value="pageview">Umami besøk-eventet</Radio>
-            </RadioGroup>
-
-            {(queryType === 'custom' || queryType === 'combined') && (
-              <div>
-                <div className="flex gap-2 items-end mb-4">
-                  <TextField
-                    label="Event-navn"
-                    description="Eksempel: skjema startet (legg til flere med komma)"
-                    value={newEventName}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setNewEventName(e.target.value)}
-                    onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => handleKeyPress(e, addEventName)}
-                    style={{ width: '100%' }}
-                  />
-                  <Button 
-                    variant="secondary" 
-                    onClick={addEventName}
-                    style={{ height: '48px' }}
-                  >
-                    Legg til
-                  </Button>
-                </div>
-
-                {eventNames.length > 0 && (
-                  <HGrid gap="4">
-                    {eventNames.map((event) => (
-                      <div key={event} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span>{event}</span>
-                        <Button
-                          variant="danger"
-                          size="small"
-                          onClick={() => removeEventName(event)}
-                        >
-                          Fjern
-                        </Button>
-                      </div>
-                    ))}
-                  </HGrid>
-                )}
-              </div>
-            )}
-
-            {((queryType === 'pageview') || (queryType === 'custom' && eventNames.length > 0)) && (
-              <div>
-                <Heading level="2" size="small" spacing>
-                  Utforsk parametere
+            {/* Event Overview Section */}
+            <div className="bg-white p-6 rounded-lg border shadow-sm">
+              <div className="space-y-2 mb-4">
+                <Heading level="2" size="small">
+                  Steg 1: Se hvilke hendelser som finnes
                 </Heading>
-                <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                    <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
-                    <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
-                    <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
-                </ol>
-                <div className="relative">
-                  <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
-                    {getEventParamsSQL()}
-                  </pre>
-                  <div className="absolute top-2 right-2">
-                    <CopyButton
-                      copyText={getEventParamsSQL()}
-                      text="Kopier SQL"
-                      activeText="Kopiert!"
-                      size="small"
-                    />
+                <p className="text-sm text-gray-600">
+                  Finn ut hvilke hendelser som er registrert for {selectedWebsite.name} og hvor ofte de forekommer.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      1
+                    </div>
+                    <div>
+                      <p className="font-medium">Åpne Metabase</p>
+                      <Link 
+                        href="https://metabase.ansatt.nav.no/dashboard/484" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 mt-1"
+                      >
+                        Klikk her for å gå til Metabase <ExternalLink size={14} />
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      2
+                    </div>
+                    <div>
+                      <p className="font-medium">Klikk på "New / Ny"-knappen i toppmenyen</p>
+                      <p className="text-sm text-gray-600 mt-1">Velg deretter "SQL query / SQL-spørring"</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      3
+                    </div>
+                    <div className="flex-grow">
+                      <p className="font-medium">Kopier oversikt-spørringen</p>
+                      <div className="mt-2">
+                        {!eventOverviewCopied ? (
+                          <Button 
+                            variant="primary" 
+                            onClick={handleCopyEventOverview} 
+                            icon={<Copy size={18} />}
+                            className="w-full md:w-auto"
+                          >
+                            Kopier oversikt-spørring
+                          </Button>
+                        ) : (
+                          <Alert variant="success" className="w-fit p-2 flex items-center">
+                            Spørringen er kopiert!
+                          </Alert>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      4
+                    </div>
+                    <div>
+                      <p className="font-medium">Trykk på ▶️ "kjør spørring"-knappen</p>
+                      <p className="text-sm text-gray-600 mt-1">Du vil nå se alle hendelser og deres forekomster</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
+
+              <div className="mt-4">
+                <Button 
+                  variant="tertiary"
+                  size="small"
+                  onClick={() => setShowEventOverviewSQL(!showEventOverviewSQL)}
+                  icon={showEventOverviewSQL ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  className="mb-2"
+                >
+                  {showEventOverviewSQL ? "Skjul SQL-kode" : "Vis SQL-kode"}
+                </Button>
+
+                {showEventOverviewSQL && (
+                  <div className="relative">
+                    <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
+                      {getEventOverviewSQL()}
+                    </pre>
+                    <div className="absolute top-2 right-2">
+                      <CopyButton
+                        copyText={getEventOverviewSQL()}
+                        text="Kopier"
+                        activeText="Kopiert!"
+                        size="small"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-100">
+                <p>
+                  <strong>Tips:</strong> Bruk denne spørringen for å få en oversikt over alle hendelser som er 
+                  registrert for ditt nettsted. Resultatene vil vise hvilke eventer du kan utforske nærmere i steg 2.
+                </p>
+              </div>
+            </div>
+
+            {/* Event Parameters Section */}
+            <div className="bg-white p-6 rounded-lg border shadow-sm">
+              <div className="space-y-2 mb-4">
+                <Heading level="2" size="small">
+                  Steg 2: Utforsk parametere for hendelser
+                </Heading>
+                <p className="text-sm text-gray-600">
+                  Velg hvilke hendelser du vil utforske parametere for.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-md border mb-6">
+                <RadioGroup 
+                  legend="Hvilke hendelser vil du utforske parameterene til?"
+                  value={queryType}
+                  onChange={(value: EventQueryType) => {
+                    setQueryType(value);
+                    if (value === 'pageview') setEventNames([]);
+                  }}
+                >
+                  <Radio value="custom">Egendefinerte hendelser</Radio>
+                  <Radio value="pageview">Automatisk registrerte sidevisninger</Radio>
+                </RadioGroup>
+
+                {(queryType === 'custom' || queryType === 'combined') && (
+                  <div className="mt-4">
+                    <div className="flex gap-2 items-end mb-4">
+                      <TextField
+                        label="Navn på hendelser"
+                        description="Eksempel: skjema startet (legg til flere med komma)"
+                        value={newEventName}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setNewEventName(e.target.value)}
+                        onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => handleKeyPress(e, addEventName)}
+                        style={{ width: '100%' }}
+                      />
+                      <Button 
+                        variant="secondary" 
+                        onClick={addEventName}
+                        style={{ 
+                          height: '48px',
+                          whiteSpace: 'nowrap',
+                          minWidth: 'fit-content'
+                        }}
+                      >
+                        Legg til
+                      </Button>
+                    </div>
+
+                    {eventNames.length > 0 && (
+                      <div className="bg-blue-50 p-3 rounded-md mt-2 mb-4">
+                        <p className="font-medium mb-2">Valgte hendelser:</p>
+                        <HGrid gap="4">
+                          {eventNames.map((event) => (
+                            <div key={event} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <span>{event}</span>
+                              <Button
+                                variant="tertiary-neutral"
+                                size="small"
+                                onClick={() => removeEventName(event)}
+                              >
+                                Fjern
+                              </Button>
+                            </div>
+                          ))}
+                        </HGrid>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {((queryType === 'pageview') || (queryType === 'custom' && eventNames.length > 0)) && (
+                <>
+                  <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          1
+                        </div>
+                        <div>
+                          <p className="font-medium">Åpne Metabase</p>
+                          <Link 
+                            href="https://metabase.ansatt.nav.no/dashboard/484" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 mt-1"
+                          >
+                            Klikk her for å gå til Metabase <ExternalLink size={14} />
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          2
+                        </div>
+                        <div>
+                          <p className="font-medium">Klikk på "New / Ny"-knappen i toppmenyen</p>
+                          <p className="text-sm text-gray-600 mt-1">Velg deretter "SQL query / SQL-spørring"</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          3
+                        </div>
+                        <div className="flex-grow">
+                          <p className="font-medium">Kopier parameter-spørringen</p>
+                          <div className="mt-2">
+                            {!eventParamsCopied ? (
+                              <Button 
+                                variant="primary" 
+                                onClick={handleCopyEventParams} 
+                                icon={<Copy size={18} />}
+                                className="w-full md:w-auto"
+                              >
+                                Kopier parameter-spørring
+                              </Button>
+                            ) : (
+                              <Alert variant="success" className="w-fit p-2 flex items-center">
+                                Spørringen er kopiert!
+                              </Alert>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          4
+                        </div>
+                        <div>
+                          <p className="font-medium">Trykk på ▶️ "kjør spørring"-knappen</p>
+                          <p className="text-sm text-gray-600 mt-1">Du vil nå se alle tilgjengelige parametere for de valgte hendelsene</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <Button 
+                      variant="tertiary"
+                      size="small"
+                      onClick={() => setShowEventParamsSQL(!showEventParamsSQL)}
+                      icon={showEventParamsSQL ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      className="mb-2"
+                    >
+                      {showEventParamsSQL ? "Skjul SQL-kode" : "Vis SQL-kode"}
+                    </Button>
+
+                    {showEventParamsSQL && (
+                      <div className="relative">
+                        <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
+                          {getEventParamsSQL()}
+                        </pre>
+                        <div className="absolute top-2 right-2">
+                          <CopyButton
+                            copyText={getEventParamsSQL()}
+                            text="Kopier"
+                            activeText="Kopiert!"
+                            size="small"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-100">
+                    <p>
+                      <strong>Tips:</strong> Parameterne du finner her kan brukes i Grafbyggeren 
+                      under "Egendefinerte parametere" for å lage mer avanserte visualiseringer.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        ) : null}
-        <div className="py-12"><Kontaktboks /></div>
+        )}
+        <div className="pt-8"><Kontaktboks /></div>
       </div>
     </div>
   );
