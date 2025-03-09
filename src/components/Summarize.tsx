@@ -41,7 +41,6 @@ const Summarize = ({
   METRICS,
   DATE_FORMATS,
   COLUMN_GROUPS,
-  getMetricColumns,
   sanitizeColumnName,
   updateMetric,
   removeMetric,

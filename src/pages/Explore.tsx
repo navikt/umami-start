@@ -187,13 +187,6 @@ const ExploreEvents = () => {
     document.body.removeChild(link);
   };
 
-  // Generate a comma-separated list of parameters
-  const copyParams = (event: EventItem) => {
-    const params = event.parameters.map(param => param.name);
-    const uniqueParams = Array.from(new Set(params)).join(', ');
-    navigator.clipboard.writeText(uniqueParams);
-  };
-
   return (
     <div className="w-full max-w-5xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
