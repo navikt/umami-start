@@ -1,5 +1,5 @@
 import { KeyboardEvent, useState, useEffect } from 'react';
-import { Button, TextField, Label, Link, Select, Chips } from '@navikt/ds-react';
+import { Button, TextField, Label, Select, Chips } from '@navikt/ds-react';
 import { Parameter } from '../types/chart';
 
 interface CustomParametersProps {

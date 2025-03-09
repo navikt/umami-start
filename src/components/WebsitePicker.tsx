@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UNSAFE_Combobox, Loader } from '@navikt/ds-react';
+import { UNSAFE_Combobox } from '@navikt/ds-react';
 
 interface Website {
   id: string;
@@ -22,7 +22,6 @@ interface EventProperty {
 
 const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,10 +53,8 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   // Fetch events when a website is selected
   useEffect(() => {
     if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
-      setIsLoading(true);
       fetchEventNames(selectedWebsite.id)
         .finally(() => {
-          setIsLoading(false);
           setLoadedWebsiteId(selectedWebsite.id);
         });
     }

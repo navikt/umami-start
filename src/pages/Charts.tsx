@@ -4,7 +4,6 @@ import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
 import SQLPreview from '../components/sqlpreview';
 import ChartFilters from '../components/ChartFilters';
-import CustomParameters from '../components/CustomParameters';
 import Summarize from '../components/Summarize';
 import { 
   Parameter, 
@@ -185,8 +184,6 @@ const ChartsPage = () => {
   const [filters, setFilters] = useState<Filter[]>([]);
   const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
-  const [newParameter, setNewParameter] = useState<string>('');
-  const [suggestedEvents, setSuggestedEvents] = useState<string[]>([]);
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -669,8 +666,7 @@ const ChartsPage = () => {
   };
 
   // Update handleEventsLoad to match the WebsitePicker's onEventsLoad type
-  const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
-    setSuggestedEvents(events);
+  const handleEventsLoad = (_events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
     if (autoParameters) {
       setParameters(autoParameters); // Only set parameters if they're provided
     }
