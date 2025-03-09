@@ -9,10 +9,10 @@ const SQLPreview = ({ sql }: SQLPreviewProps) => {
     <div className="space-y-4">
       <div className="space-y-2 py-4 pt-6">
         <Heading level="2" size="small">
-          SQL-kode for Metabase
+          SQL-spørring for Metabase
         </Heading>
         <p className="text-sm text-gray-600">
-          🔄 SQL-koden oppdateres automatisk når du gjør endringer.
+          🔄 SQL-spørringen oppdateres automatisk når du gjør endringer.
         </p>
       </div>
 
@@ -20,10 +20,10 @@ const SQLPreview = ({ sql }: SQLPreviewProps) => {
         <li>
           <Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">
             Åpne Metabase
-          </Link> og klikk på den blå "Ny / New" knappen i toppmenyen.
+          </Link> og klikk på den blå "New / Ny" knappen i toppmenyen.
         </li>
-        <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
-        <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
+        <li>Velg "SQL query / SQL-spørring " fra menyen som vises.</li>
+        <li>Kopier, lim inn og kjør SQL-spørringen.</li>
       </ol>
 
       {sql && (
