@@ -5,6 +5,7 @@ import Personvern from "./pages/Personvern.tsx";
 import Tilgjengelighet from "./pages/Tilgjengelighet.tsx";
 import Combine from "./pages/Combine.tsx";
 import Explore from "./pages/Explore.tsx";
+import ExoloreManual from "./pages/ExploreManual.tsx";
 import Copilot from "./pages/Copilot.tsx";
 import Validator from "./pages/Validator.tsx";
 import Charts from "./pages/Charts.tsx";
@@ -18,6 +19,7 @@ const routes = [
     { path: "/datastruktur", component: <Explore /> },
     { path: "/copilot", component: <Copilot /> },
     { path: "/validator", component: <Validator /> },
+    { path: "/datastruktur-manuell", component: <ExoloreManual /> },
     { path: "/grafbygger", component: <Charts /> }
 ];
 

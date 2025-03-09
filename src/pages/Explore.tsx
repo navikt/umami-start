@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   Heading,
   Search,
-  Tabs,
   BodyShort,
   Panel,
   Accordion,
@@ -11,10 +10,10 @@ import {
   Button,
   Alert,
   VStack,
-  HStack,
   TextField,
+  CopyButton
 } from '@navikt/ds-react';
-import { Download, Filter, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Download } from 'lucide-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
 
@@ -45,11 +44,10 @@ const ExploreEvents = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [showContent, setShowContent] = useState<'data' | 'charts'>('data');
   const [error, setError] = useState<string | null>(null);
-  const [expandedTimeRange, setExpandedTimeRange] = useState(false);
   const [daysToShow, setDaysToShow] = useState<number>(7);
   const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
+  const [tempDaysToShow, setTempDaysToShow] = useState<number>(7);
   
   // Fetch event data when website is selected
   useEffect(() => {
@@ -138,15 +136,8 @@ const ExploreEvents = () => {
     fetchEventData();
   }, [selectedWebsite?.id, daysToShow]);
 
-  const handleDaysChange = (value: string) => {
-    const days = parseInt(value, 10);
-    if (isNaN(days) || days < 1) {
-      setDaysToShow(1);
-    } else if (days > maxDaysAvailable) {
-      setDaysToShow(maxDaysAvailable);
-    } else {
-      setDaysToShow(days);
-    }
+  const handleDaysChange = () => {
+    setDaysToShow(tempDaysToShow);
   };
 
   // Filter events based on search term with null check
@@ -159,7 +150,7 @@ const ExploreEvents = () => {
       event.parameters?.some(param => param?.name?.toLowerCase().includes(searchLower))
     );
   });
-  
+
   // Generate a simple CSV of events and parameters
   const downloadCSV = () => {
     if (events.length === 0) return;
@@ -196,16 +187,40 @@ const ExploreEvents = () => {
     document.body.removeChild(link);
   };
 
+  // Generate a comma-separated list of parameters
+  const copyParams = (event: EventItem) => {
+    const params = event.parameters.map(param => param.name);
+    const uniqueParams = Array.from(new Set(params)).join(', ');
+    navigator.clipboard.writeText(uniqueParams);
+  };
+
   return (
     <div className="w-full max-w-5xl">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
         Utforsk hendelser og parametere
       </Heading>
-      <p className="text-gray-600 mb-10 prose max-w-none">
-        Dette verktøyet gir deg en enkel oversikt over alle hendelser som er registrert på nettsiden din,
-        inkludert hvilke ekstra parametere som er tilgjengelige for hver hendelse og hvor ofte de brukes.
-        Dette er nyttig når du skal lage grafer og tabeller og trenger å vite hvilke data som er tilgjengelige.
-      </p>
+      
+      <div className="bg-blue-50 p-4 rounded-md mb-6">
+        <Heading size="xsmall" level="2" spacing>
+          Om verktøyet
+        </Heading>
+        <p className="text-gray-600 mb-4">
+        Dette verktøyet viser alle hendelser på nettsiden / appen din med tilhørende parametere og bruksfrekvens.
+        </p>
+        <div className="bg-white p-4 rounded-md border">
+          <BodyShort spacing>
+            Slik bruker du dataene:
+          </BodyShort>
+          <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+            <li>Utforsk hendelsene og parameterne under</li>
+            <li>Gå til <a href="/grafbygger" className="text-blue-600 hover:underline">grafbyggeren</a> og velg samme nettside</li>
+            <li>Legg til filtre og grupperinger basert på hendelsene du finner her</li>
+          </ol>
+          <div className="mt-3 text-sm text-gray-600">
+            💡 Grafbyggeren vil automatisk foreslå tilgjengelige hendelser og parametere når du lager en ny graf.
+          </div>
+        </div>
+      </div>
 
       <div className="bg-white p-6 rounded-lg border shadow-sm mb-6">
         <WebsitePicker
@@ -269,18 +284,24 @@ const ExploreEvents = () => {
                             * Viser data for de siste {daysToShow} dagene {maxDaysAvailable > 0 && `(maks ${maxDaysAvailable} dager tilgjengelig)`}
                           </BodyShort>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-end gap-2">
                           <TextField
                             label="Antall dager"
                             type="number"
                             size="small"
-                            value={daysToShow}
-                            onChange={(e) => handleDaysChange(e.target.value)}
+                            value={tempDaysToShow}
+                            onChange={(e) => setTempDaysToShow(parseInt(e.target.value, 10))}
                             min={1}
                             max={maxDaysAvailable}
                             className="w-24"
-                            icon={<Calendar aria-hidden />}
                           />
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={handleDaysChange}
+                          >
+                            Endre
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -292,7 +313,7 @@ const ExploreEvents = () => {
                             <div className="flex justify-between items-center w-full pr-4">
                               <span className="font-medium">{event.name}</span>
                               <div className="flex items-center gap-2">
-                                <Tag size="small" variant="info">
+                                <Tag size="small" variant="info" className="ml-4">
                                   {event.parameters.length} {event.parameters.length === 1 ? 'parameter' : 'parametere'}
                                 </Tag>
                                 <Tag size="small" variant="success">
@@ -304,8 +325,8 @@ const ExploreEvents = () => {
                           <Accordion.Content>
                             {event.parameters.length > 0 ? (
                               <div className="space-y-3">
-                                <BodyShort>Tilgjengelige parametere for denne hendelsen:</BodyShort>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <BodyShort className="mt-3">Tilgjengelige parametere for denne hendelsen:</BodyShort>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                                   {event.parameters
                                     .sort((a, b) => b.count - a.count)
                                     .map((param) => (
@@ -320,32 +341,20 @@ const ExploreEvents = () => {
                                       </div>
                                     ))}
                                 </div>
+                                <CopyButton
+                                  variant="neutral"
+                                  size="small"
+                                  className="pt-3 pb-6"
+                                  copyText={Array.from(new Set(event.parameters.map(param => param.name))).join(', ')}
+                                  text="Kopier parametere (komma-separert)"
+                                  activeText="Parametere kopiert!"
+                                />
                               </div>
                             ) : (
                               <Panel>
                                 Denne hendelsen har ingen ytterligere parametere.
                               </Panel>
                             )}
-                            
-                            <div className="mt-4 border-t pt-4">
-                              <BodyShort>
-                                Du kan bruke disse verdiene i grafbyggeren ved å:
-                              </BodyShort>
-                              <ol className="list-decimal list-inside mt-2 text-sm text-gray-700 space-y-1">
-                                <li>Filtrere på <code>event_name = '{event.name}'</code></li>
-                                {event.parameters.length > 0 && (
-                                  <li>
-                                    Legge til parametere som egendefinerte parametere (
-                                    {event.parameters.map((p, i) => (
-                                      <span key={p.name}>
-                                        {i > 0 && ", "}<code>{p.name}</code>
-                                      </span>
-                                    ))}
-                                    )
-                                  </li>
-                                )}
-                              </ol>
-                            </div>
                           </Accordion.Content>
                         </Accordion.Item>
                       ))}
