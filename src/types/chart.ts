@@ -15,3 +15,15 @@ export interface Parameter {
   key: string;
   type: 'string' | 'number';
 }
+
+export interface Metric {
+  function: string;
+  column?: string;
+  alias?: string;
+}
+
+export interface DateFormat {
+  label: string;
+  value: string;
+  format: string;
+}

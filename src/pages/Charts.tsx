@@ -1,18 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Button,
   Heading,
-  Select,
   VStack,
-  Label,
-  TextField,
 } from '@navikt/ds-react';
-import { MoveUp, MoveDown } from 'lucide-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/websitepicker';
 import SQLPreview from '../components/sqlpreview';
 import ChartFilters from '../components/ChartFilters';
 import CustomParameters from '../components/CustomParameters';
+import Summarize from '../components/Summarize';
 
 // Update ChartConfig interface to support multiple metrics
 interface ChartConfig {
@@ -656,8 +652,6 @@ const ChartsPage = () => {
     } else if (config.groupByFields.length > 0) {
       sql += 'ORDER BY 1 DESC\n';
     }
-    
-    sql += 'LIMIT 1000;';
 
     return sql;
   }, []);
@@ -796,7 +790,7 @@ const ChartsPage = () => {
 
               {config.website && (
                 <>
-                  {/* Custom Parameters section - Replace old code with new component */}
+                  {/* Custom Parameters section */}
                   <section>
                     <Heading level="2" size="small" spacing>
                       Egendefinert
@@ -818,293 +812,35 @@ const ChartsPage = () => {
                     setDynamicFilters={setDynamicFilters}
                   />
 
-                  {/* Summarize section */}
+                  {/* Replace Summarize section with new component */}
                   <section>
                     <Heading level="2" size="small" spacing>
                       Oppsummering
                     </Heading>
-                    
-                    <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
-                      {/* Metrics section */}
-                      <div>
-                        <Heading level="3" size="xsmall" spacing>
-                          Beregninger
-                        </Heading>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Velg hvilke beregninger som skal vises i resultatet.
-                        </p>
-                        
-                        <div className="space-y-4">
-                          {config.metrics.map((metric, index) => (
-                            <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-                              <Select
-                                label="Funksjon"
-                                value={metric.function}
-                                onChange={(e) => updateMetric(index, { function: e.target.value })}
-                                size="small"
-                              >
-                                {METRICS.map(m => (
-                                  <option key={m.value} value={m.value}>
-                                    {m.label}
-                                  </option>
-                                ))}
-                              </Select>
-                              
-                              {metric.function !== 'count' && (
-                                <Select
-                                  label="Kolonne"
-                                  value={metric.column || ''}
-                                  onChange={(e) => updateMetric(index, { column: e.target.value })}
-                                  size="small"
-                                >
-                                  <option value="">Velg kolonne</option>
-                                  {getMetricColumns(parameters, metric.function).map(col => (
-                                    <option key={col.value} value={col.value}>
-                                      {col.label}
-                                    </option>
-                                  ))}
-                                </Select>
-                              )}
-                              
-                              <TextField
-                                label="Alias (valgfritt)"
-                                value={metric.alias || ''}
-                                onChange={(e) => updateMetric(index, { alias: e.target.value })}
-                                placeholder={`metric_${index + 1}`}
-                                size="small"
-                              />
-                              
-                              <Button
-                                variant="tertiary-neutral"
-                                size="small"
-                                onClick={() => removeMetric(index)}
-                                className="mb-1"
-                                disabled={config.metrics.length <= 1}
-                              >
-                                Fjern
-                              </Button>
-                            </div>
-                          ))}
-                          
-                          <Button
-                            variant="secondary"
-                            onClick={addMetric}
-                            size="small"
-                          >
-                            Legg til flere beregninger
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Group By section */}
-                      <div className="border-t pt-4">
-                        <Heading level="3" size="xsmall" spacing>
-                          Gruppering
-                        </Heading>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Velg hvordan dataene skal grupperes og vises. For eksempel kan du gruppere etter dato for å se endringer over tid, eller etter land for å sammenligne bruk på tvers av regioner.
-                        </p>
-                        
-                        <div className="space-y-4">
-                          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-                            <Select
-                              label="Legg til gruppering"
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  addGroupByField(e.target.value);
-                                  (e.target as HTMLSelectElement).value = ''; // Type assertion for reset
-                                }
-                              }}
-                              size="small"
-                              className="flex-grow"
-                            >
-                              <option value="">Velg felt...</option>
-                              {/* Regular columns */}
-                              {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                                <optgroup key={groupKey} label={group.label}>
-                                  {group.columns
-                                    .filter(col => !config.groupByFields.includes(col.value))
-                                    .map(col => (
-                                      <option key={col.value} value={col.value}>
-                                        {col.label}
-                                      </option>
-                                    ))}
-                                </optgroup>
-                              ))}
-                              
-                              {/* Add custom parameters group */}
-                              {parameters.length > 0 && (
-                                <optgroup label="Egendefinerte parametere">
-                                  {parameters
-                                    .filter(param => !config.groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
-                                    .map(param => (
-                                      <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                                        {param.key}
-                                      </option>
-                                    ))}
-                                </optgroup>
-                              )}
-                            </Select>
-                          </div>
-
-                          {config.groupByFields.length > 0 && (
-                            <div className="space-y-2">
-                              <Label as="p" size="small">
-                                Valgte grupperinger (sorter med pilene):
-                              </Label>
-                              <div className="flex flex-col gap-2">
-                                {config.groupByFields.map((field, index) => {
-                                  // Try to find in regular columns first
-                                  const column = Object.values(COLUMN_GROUPS)
-                                    .flatMap(group => group.columns)
-                                    .find(col => col.value === field);
-                                  
-                                  // If not found in regular columns, check if it's a parameter
-                                  const paramName = field.startsWith('param_') ? parameters.find(
-                                    p => `param_${sanitizeColumnName(p.key)}` === field
-                                  )?.key : undefined;
-                                  
-                                  return (
-                                    <div 
-                                      key={field} 
-                                      className="flex items-center justify-between bg-white px-4 py-3 rounded-md border group hover:border-blue-200"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <span className="text-sm text-gray-500">
-                                          {index + 1}.
-                                        </span>
-                                        <span className="font-medium">
-                                          {paramName || column?.label || field}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {/* Date format selector if the field is created_at */}
-                                        {field === 'created_at' && (
-                                          <Select
-                                            label=""
-                                            value={config.dateFormat || 'day'}
-                                            onChange={(e) => setConfig(prev => ({
-                                              ...prev,
-                                              dateFormat: e.target.value as DateFormat['value']
-                                            }))}
-                                            size="small"
-                                            className="!w-auto min-w-[120px]"
-                                          >
-                                            {DATE_FORMATS.map(format => (
-                                              <option key={format.value} value={format.value}>
-                                                {format.label}
-                                              </option>
-                                            ))}
-                                          </Select>
-                                        )}
-                                        
-                                        {/* Move buttons */}
-                                        <div className="flex gap-1">
-                                          {index > 0 && (
-                                            <Button
-                                              variant="tertiary"
-                                              size="small"
-                                              icon={<MoveUp size={16} />}
-                                              onClick={() => moveGroupField(index, 'up')}
-                                              title="Flytt opp"
-                                            />
-                                          )}
-                                          {index < config.groupByFields.length - 1 && (
-                                            <Button
-                                              variant="tertiary"
-                                              size="small"
-                                              icon={<MoveDown size={16} />}
-                                              onClick={() => moveGroupField(index, 'down')}
-                                              title="Flytt ned"
-                                            />
-                                          )}
-                                        </div>
-                                        
-                                        <Button
-                                          variant="tertiary-neutral"
-                                          size="small"
-                                          onClick={() => removeGroupByField(field)}
-                                        >
-                                          Fjern
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Order By section */}
-                      <div className="border-t pt-4">
-                        <Heading level="3" size="xsmall" spacing>
-                          Sortering
-                        </Heading>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Velg hvordan resultatene skal sorteres.
-                        </p>
-                        
-                        <div className="space-y-4">
-                          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-                            <Select
-                              label="Sorter etter"
-                              value={config.orderBy?.column || ""}
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  setOrderBy(e.target.value, 'DESC');
-                                } else {
-                                  clearOrderBy();
-                                }
-                              }}
-                              size="small"
-                              className="flex-grow"
-                            >
-                              <option value="">Standard sortering</option>
-                              <optgroup label="Grupperinger">
-                                {config.groupByFields.map((field) => {
-                                  const column = Object.values(COLUMN_GROUPS)
-                                    .flatMap(group => group.columns)
-                                    .find(col => col.value === field);
-                                  
-                                  return (
-                                    <option key={field} value={field === 'created_at' ? 'dato' : field}>
-                                      {field === "created_at" ? "Dato" : column?.label || field}
-                                    </option>
-                                  );
-                                })}
-                              </optgroup>
-                              <optgroup label="Metrikker">
-                                {config.metrics.map((metric, index) => (
-                                  <option 
-                                    key={`metric_${index}`} 
-                                    value={metric.alias || `metric_${index + 1}`} // Use same format as SQL
-                                  >
-                                    {metric.alias || `metric_${index + 1}`} {/* Show same format in UI */}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            </Select>
-
-                            {config.orderBy && (
-                              <Select
-                                label="Retning"
-                                value={config.orderBy.direction}
-                                onChange={(e) => setOrderBy(
-                                  config.orderBy?.column || "", 
-                                  e.target.value as 'ASC' | 'DESC'
-                                )}
-                                size="small"
-                              >
-                                <option value="ASC">Stigende (A-Å, 0-9)</option>
-                                <option value="DESC">Synkende (Å-A, 9-0)</option>
-                              </Select>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <Summarize
+                      metrics={config.metrics}
+                      groupByFields={config.groupByFields}
+                      parameters={parameters}
+                      dateFormat={config.dateFormat}
+                      orderBy={config.orderBy}
+                      METRICS={METRICS}
+                      DATE_FORMATS={DATE_FORMATS}
+                      COLUMN_GROUPS={COLUMN_GROUPS}
+                      getMetricColumns={getMetricColumns}
+                      sanitizeColumnName={sanitizeColumnName}
+                      updateMetric={(index, updates) => updateMetric(index, updates)}
+                      removeMetric={removeMetric}
+                      addMetric={addMetric}
+                      addGroupByField={addGroupByField}
+                      removeGroupByField={removeGroupByField}
+                      moveGroupField={moveGroupField}
+                      setOrderBy={setOrderBy}
+                      clearOrderBy={clearOrderBy}
+                      setDateFormat={(format) => setConfig(prev => ({
+                        ...prev,
+                        dateFormat: format as DateFormat['value']
+                      }))}
+                    />
                   </section>
                 </>
               )}
