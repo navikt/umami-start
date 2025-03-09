@@ -3,7 +3,6 @@ import {
   Button,
   Heading,
   Select,
-  UNSAFE_Combobox,
   VStack,
   CopyButton,
   Label,
@@ -11,7 +10,8 @@ import {
   TextField,
 } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
-import { MoveUp, MoveDown } from 'lucide-react'; // Add this import
+import { MoveUp, MoveDown } from 'lucide-react';
+import WebsitePicker from '../components/WebsitePicker'; // Import the new component
 
 // Update ChartConfig interface to support multiple metrics
 interface ChartConfig {
@@ -316,8 +316,6 @@ const COLUMN_GROUPS: {
 };
 
 const ChartsPage = () => {
-  const [websites, setWebsites] = useState<Website[]>([]);
-  // Update initial state to support multiple metrics and groupings
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
     filters: [],
@@ -335,33 +333,6 @@ const ChartsPage = () => {
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
 
-  useEffect(() => {
-    const baseUrl = window.location.hostname === 'localhost' 
-      ? 'https://reops-proxy.intern.nav.no' 
-      : 'https://reops-proxy.ansatt.nav.no';
-
-    Promise.all([
-      fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      }).then(response => response.json()),
-      fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      }).then(response => response.json())
-    ])
-      .then(([data1, data2]) => {
-        const combinedData = [...data1.data, ...data2.data];
-        combinedData.sort((a, b) => {
-          if (a.teamId === b.teamId) {
-            return a.name.localeCompare(b.name);
-          }
-          return a.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? -1 : 1;
-        });
-        setWebsites(combinedData);
-      })
-      .catch(error => console.error("Error fetching websites:", error));
-  }, []);
-
-  // Add useEffect to auto-update SQL when any relevant state changes
   useEffect(() => {
     if (debouncedConfig.website) {
       generateSQL();
@@ -926,23 +897,9 @@ const ChartsPage = () => {
           <VStack gap="8">
             {/* Data section - Website picker */}
             <section>
-              <UNSAFE_Combobox
-                label="Velg nettside / app"
-                options={websites.map(website => ({
-                  label: website.name,
-                  value: website.name,
-                  website: website
-                }))}
-                selectedOptions={config.website ? [config.website.name] : []}
-                onToggleSelected={(option, isSelected) => {
-                  if (isSelected) {
-                    const website = websites.find(w => w.name === option);
-                    setConfig(prev => ({ ...prev, website: website || null }));
-                  } else {
-                    setConfig(prev => ({ ...prev, website: null }));
-                  }
-                }}
-                clearButton
+              <WebsitePicker
+                selectedWebsite={config.website}
+                onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
               />
             </section>
 
@@ -1576,7 +1533,7 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => {
       clearTimeout(handler);
     };
-  }, [value, delay]);
+  });
 
   return debouncedValue;
 }
