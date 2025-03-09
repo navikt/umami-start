@@ -61,14 +61,6 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/modellbygger"
-                className="no-underline"
-              >
-                <PackageIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Bygg modell</span>
-              </Dropdown.Menu.List.Item>
-              <Dropdown.Menu.List.Item
-                as={Link}
                 href="/grafbygger"
                 className="no-underline"
               >
@@ -111,13 +103,6 @@ export default function Header() {
             >
               <DatabaseIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Datastruktur</span>
-            </Link>
-            <Link
-              href="/modellbygger"
-              className={linkButton}
-            >
-              <PackageIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Bygg modell</span>
             </Link>
             <Link
               href="/grafbygger"
