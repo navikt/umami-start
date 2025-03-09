@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Heading, VStack } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
-import WebsitePicker from '../components/websitepicker';
+import WebsitePicker from '../components/WebsitePicker';
 import SQLPreview from '../components/sqlpreview';
 import ChartFilters from '../components/ChartFilters';
 import CustomParameters from '../components/CustomParameters';
