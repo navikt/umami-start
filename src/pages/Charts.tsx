@@ -395,71 +395,42 @@ const ChartsPage = () => {
     
     // Now build the main query
     sql += 'SELECT\n';
-    
-    // Generate select clause with all metrics and group by fields
-    const selectClauses = new Set<string>(); // Use Set to prevent duplicates
-    
-    // Add group by fields to select with date formatting
+    const selectClauses = new Set<string>();
+
+    // First add group by fields
     config.groupByFields.forEach(field => {
       if (field === 'created_at') {
         const format = DATE_FORMATS.find(f => f.value === config.dateFormat)?.format || '%Y-%m-%d';
         selectClauses.add(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
       } else if (field.startsWith('param_')) {
-        // Skip parameters here - they'll be handled in a unified way below
-      } else {
-        const tablePrefix = 'base_query';
-        selectClauses.add(`${tablePrefix}.${field}`);
-      }
-    });
-    
-    // Add metrics to select
-    config.metrics.forEach((metric, index) => {
-      selectClauses.add(getMetricSQL(metric, index));
-    });
-
-    // Add ALL parameters to select - both from groupBy and metrics - in a unified way
-    const usedParams = new Set<string>();
-    
-    // Collect parameters from groupBy fields
-    config.groupByFields
-      .filter(field => field.startsWith('param_'))
-      .forEach(field => {
         const paramKey = field.replace('param_', '');
-        usedParams.add(paramKey);
-      });
-    
-    // Collect parameters from metrics
-    config.metrics
-      .filter(metric => metric.column?.startsWith('param_'))
-      .forEach(metric => {
-        const paramKey = metric.column!.replace('param_', '');
-        usedParams.add(paramKey);
-      });
-    
-    // Add all used parameters to select clause
-    Array.from(usedParams).forEach(paramKey => {
-      const param = parameters.find(p => sanitizeColumnName(p.key) === paramKey);
-      if (param) {
-        selectClauses.add(
-          param.type === 'string'
-            ? `  NULLIF(STRING_AGG(
-                CASE 
+        const param = parameters.find(p => sanitizeColumnName(p.key) === paramKey);
+        if (param) {
+          selectClauses.add(
+            param.type === 'string'
+              ? `  MAX(CASE 
                   WHEN event_data.data_key = '${param.key}' 
                   THEN event_data.string_value 
-                END,
-                ',' 
-                ORDER BY base_query.created_at
-              ), '') AS param_${sanitizeColumnName(param.key)}`
-            : `  MAX(
+                END) AS param_${sanitizeColumnName(param.key)}`
+              : `  MAX(
                 CASE 
                   WHEN event_data.data_key = '${param.key}'
                   THEN CAST(event_data.number_value AS NUMERIC)
                 END
               ) AS param_${sanitizeColumnName(param.key)}`
-        );
+          );
+        }
+      } else {
+        const tablePrefix = 'base_query';
+        selectClauses.add(`${tablePrefix}.${field}`);
       }
     });
-    
+
+    // Then add metrics
+    config.metrics.forEach((metric, index) => {
+      selectClauses.add(getMetricSQL(metric, index));
+    });
+
     sql += '  ' + Array.from(selectClauses).join(',\n  ');
 
     // Add FROM clause
@@ -543,32 +514,46 @@ const ChartsPage = () => {
 
     // GROUP BY
     if (config.groupByFields.length > 0 || parameters.length > 0) {
-      sql += 'GROUP BY\n  ';
       const groupByCols: string[] = [];
       
-      // Add regular columns
+      // Add regular columns and parameter columns to GROUP BY
       config.groupByFields.forEach(field => {
         if (field === 'created_at') {
-          groupByCols.push('dato'); // Use the alias we created
-        } else if (!field.startsWith('param_')) { // Skip parameters in GROUP BY
+          groupByCols.push('dato');
+        } else if (field.startsWith('param_')) {
+          // For parameters, we group by the CASE expression
+          const paramKey = field.replace('param_', '');
+          const param = parameters.find(p => sanitizeColumnName(p.key) === paramKey);
+          if (param) {
+            groupByCols.push(`CASE 
+              WHEN event_data.data_key = '${param.key}' 
+              THEN ${param.type === 'string' ? 'event_data.string_value' : 'CAST(event_data.number_value AS NUMERIC)'}
+            END`);
+          }
+        } else {
           groupByCols.push(`base_query.${field}`);
         }
       });
-    
-      sql += groupByCols.join(',\n  ');
-      sql += '\n';
+
+      // Only add GROUP BY clause if we have columns to group by
+      if (groupByCols.length > 0) {
+        sql += 'GROUP BY\n  ';
+        sql += groupByCols.join(',\n  ');
+        sql += '\n';
+      }
     }
     
     // ORDER BY - Modified to handle date ordering correctly
     if (config.orderBy) {
-      // If ordering by created_at, use the formatted 'dato' alias instead
       const orderColumn = config.orderBy.column === 'created_at' ? 'dato' : config.orderBy.column;
       sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
-    } else if (config.groupByFields.includes('created_at')) {
-      // Default date ordering uses the 'dato' alias
-      sql += 'ORDER BY dato DESC\n';
     } else if (config.groupByFields.length > 0) {
-      sql += 'ORDER BY 1 DESC\n';
+      // Default ordering
+      if (config.groupByFields.includes('created_at')) {
+        sql += 'ORDER BY dato DESC\n';
+      } else {
+        sql += 'ORDER BY 1 DESC\n';
+      }
     }
 
     return sql;
