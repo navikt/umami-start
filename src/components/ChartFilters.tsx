@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
-import { Filter, DynamicFilterOption, Parameter } from '../types/chart';
+import { Filter, Parameter } from '../types/chart';
 import { DYNAMIC_FILTER_OPTIONS, FILTER_COLUMNS, OPERATORS } from '../lib/constants';
 import { sanitizeColumnName } from '../lib/utils';
 

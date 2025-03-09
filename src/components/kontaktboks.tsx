@@ -1,5 +1,4 @@
 import {List, Link} from "@navikt/ds-react";
-import { Target } from "lucide-react";
 
 export default function Kontaktboks() {
     return (
