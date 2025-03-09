@@ -308,8 +308,7 @@ ORDER BY
             )}
           </div>
         ) : null}
-        <div className="py-6"><hr /></div>
-        <Kontaktboks />
+        <div className="py-12"><Kontaktboks /></div>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ const routes = [
     { path: "/datastruktur", component: <Explore /> },
     { path: "/copilot", component: <Copilot /> },
     { path: "/validator", component: <Validator /> },
-    { path: "/bygg", component: <Charts /> }
+    { path: "/grafbygger", component: <Charts /> }
 ];
 
 export default routes;

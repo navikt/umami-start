@@ -914,6 +914,11 @@ const ChartsPage = () => {
     <Heading spacing level="1" size="medium" className="pt-12 pb-6">
       Bygg grafer og tabeller for Metabase
     </Heading>
+    <p className="text-gray-600 mb-10 prose">
+       Med grafbyggeren kan du lage grafer og tabeller som kan legges til i Metabase. 
+       For eksempel en graf som viser andelen besøkende som har trykket på en knapp,
+       eller hvor mange som har besøkt en spesifikk side.
+      </p>
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-8">
         {/* Left column - Form controls */}
@@ -946,23 +951,18 @@ const ChartsPage = () => {
                 {/* Custom Parameters section - MOVED UP */}
                 <section>
                   <Heading level="2" size="small" spacing>
-                    Egendefinerte parametere
+                    Egendefinert
                   </Heading>
                   
-                  <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
-                    <p className="text-sm text-gray-600 mb-4">
-                      Legg til parametere som er knyttet til eventene, for eksempel knappetekster eller andre attributter.
-                      Disse vil være tilgjengelige for filtrering, gruppering og beregninger.
-                    </p>
-                    
+                  <div className="space-y-6 bg-gray-50 p-5 rounded-md border">  
                     <div className="space-y-4">
                       <div className="flex gap-2 items-end">
                         <TextField
-                          label="Parametere"
+                          label="Egendefinerte event-parametere"
                           description="Eksempel: skjemanavn (legg til flere med komma)"
                           value={newParameter}
                           onChange={(e) => setNewParameter(e.target.value)}
-                          onKeyPress={(e) => handleParameterKeyPress(e, addParameter)}
+                          onKeyUp={(e) => handleParameterKeyPress(e, addParameter)}
                           style={{ width: '100%' }}
                         />
                         <Button 
@@ -970,7 +970,7 @@ const ChartsPage = () => {
                           onClick={addParameter}
                           style={{ height: '50px' }}
                         >
-                          Legg til parameter
+                          Legg til
                         </Button>
                       </div>
 
@@ -1015,7 +1015,7 @@ const ChartsPage = () => {
                       
                       <div className="mt-2 text-sm italic text-gray-600">
                         <p>
-                          For å finne tilgjengelige parametere, bruk <Link href="/explore">Utforsk-verktøyet</Link> til å se hvilke parametere som er knyttet til eventene.
+                          For å finne tilgjengelige parametere for din nettside / app, bruk <Link href="/datastruktur" target='_blank'>Datastruktur-verktøyet</Link>.
                         </p>
                       </div>
                     </div>
@@ -1032,7 +1032,7 @@ const ChartsPage = () => {
                     {/* Dynamic Filters - Improved UI */}
                     <div>
                       <Heading level="3" size="xsmall" spacing>
-                        Dynamiske filtre
+                        Dynamiske filtre for dashboard
                       </Heading>
                       <p className="text-sm text-gray-600 mb-4">
                         Legg til filtre som kan endres direkte i Metabase-dashboardet.
@@ -1107,7 +1107,7 @@ const ChartsPage = () => {
                         Statiske filtre
                       </Heading>
                       <p className="text-sm text-gray-600 mb-4">
-                        Legg til faste filtre som vil være låst i spørringen.
+                        Legg til faste filtre som vil være låst i grafen/tabellen.
                       </p>
 
                       {filters.length > 0 && (
@@ -1296,7 +1296,7 @@ const ChartsPage = () => {
                           onClick={addMetric}
                           size="small"
                         >
-                          Legg til beregning
+                          Legg til flere beregninger
                         </Button>
                       </div>
                     </div>

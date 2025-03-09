@@ -69,11 +69,11 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/bygg"
+                href="/grafbygger"
                 className="no-underline"
               >
                 <AreaChartIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Bygg graf</span>
+                <span className="whitespace-nowrap">Bygg grafer</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -120,11 +120,11 @@ export default function Header() {
               <span className="whitespace-nowrap">Bygg modell</span>
             </Link>
             <Link
-              href="/bygg"
+              href="/grafbygger"
               className={linkButton}
             >
               <AreaChartIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Bygg graf</span>
+              <span className="whitespace-nowrap">Bygg grafer</span>
             </Link>
             <Link
               href="https://umami.is/docs"
