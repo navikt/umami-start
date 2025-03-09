@@ -511,24 +511,15 @@ const ChartsPage = () => {
     }
 
     // GROUP BY
-    if (config.groupByFields.length > 0 || parameters.length > 0) {
+    if (config.groupByFields.length > 0) {
       const groupByCols: string[] = [];
       
-      // Add regular columns and parameter columns to GROUP BY
+      // Add regular columns to GROUP BY, but handle parameters differently
       config.groupByFields.forEach(field => {
         if (field === 'created_at') {
           groupByCols.push('dato');
-        } else if (field.startsWith('param_')) {
-          // For parameters, we group by the CASE expression
-          const paramKey = field.replace('param_', '');
-          const param = parameters.find(p => sanitizeColumnName(p.key) === paramKey);
-          if (param) {
-            groupByCols.push(`CASE 
-              WHEN event_data.data_key = '${param.key}' 
-              THEN ${param.type === 'string' ? 'event_data.string_value' : 'CAST(event_data.number_value AS NUMERIC)'}
-            END`);
-          }
-        } else {
+        } else if (!field.startsWith('param_')) {
+          // Only add non-parameter fields to GROUP BY
           groupByCols.push(`base_query.${field}`);
         }
       });
