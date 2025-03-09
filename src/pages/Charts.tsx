@@ -196,27 +196,68 @@ const DYNAMIC_FILTER_OPTIONS: DynamicFilterOption[] = [
   { label: 'Event type', value: 'event_type', template: '[[AND event_type = {{event_type}}]]' },
 ];
 
-// Add available metrics for different functions
-const METRIC_COLUMNS = {
-  count: [],
-  distinct: [
-    { label: 'Session ID', value: 'session_id' },
-    { label: 'Visit ID', value: 'visit_id' },
-    { label: 'Browser', value: 'browser' },
-    { label: 'URL Path', value: 'url_path' },
-  ],
-  sum: [
-    { label: 'Event Data (numeric)', value: 'event_data' },
-  ],
-  average: [
-    { label: 'Event Data (numeric)', value: 'event_data' },
-  ],
-  min: [
-    { label: 'Created At', value: 'created_at' },
-  ],
-  max: [
-    { label: 'Created At', value: 'created_at' },
-  ],
+// Add the sanitizeColumnName helper function BEFORE it's used
+const sanitizeColumnName = (key: string): string => {
+  return key
+    .replace(/\./g, '_')
+    .replace(/æ/gi, 'ae')
+    .replace(/ø/gi, 'oe')
+    .replace(/å/gi, 'aa')
+    .replace(/[^a-z0-9_]/gi, '_'); // Replace any other special characters with underscore
+};
+
+// Now define getMetricColumns which uses sanitizeColumnName
+const getMetricColumns = (parameters: Parameter[], metric: string) => {
+  // Define the base columns structure with proper typing
+  const baseColumns: Record<string, Array<{label: string, value: string}>> = {
+    count: [],
+    distinct: [
+      { label: 'Session ID', value: 'session_id' },
+      { label: 'Visit ID', value: 'visit_id' },
+      { label: 'Browser', value: 'browser' },
+      { label: 'URL Path', value: 'url_path' },
+    ],
+    sum: [
+      { label: 'Event Data (numeric)', value: 'event_data' },
+    ],
+    average: [
+      { label: 'Event Data (numeric)', value: 'event_data' },
+    ],
+    median: [],
+    min: [
+      { label: 'Created At', value: 'created_at' },
+    ],
+    max: [
+      { label: 'Created At', value: 'created_at' },
+    ]
+  };
+
+  // Create a new array from the base columns (or empty array if metric not found)
+  const cols = [...(baseColumns[metric] || [])];
+
+  // Add numeric parameters to sum, average and median
+  if (metric === 'sum' || metric === 'average' || metric === 'median') {
+    parameters
+      .filter(param => param.type === 'number')
+      .forEach(param => {
+        cols.push({
+          label: param.key,
+          value: `param_${sanitizeColumnName(param.key)}`
+        });
+      });
+  }
+
+  // Add all parameters to distinct, min, and max
+  if (metric === 'distinct' || metric === 'min' || metric === 'max') {
+    parameters.forEach(param => {
+      cols.push({
+        label: param.key,
+        value: `param_${sanitizeColumnName(param.key)}`
+      });
+    });
+  }
+
+  return cols;
 };
 
 // Fix the columnGroups structure
@@ -701,6 +742,32 @@ const ChartsPage = () => {
 
   // Helper function to generate the actual SQL
   const getMetricSQLByType = (func: string, column?: string, alias: string = 'metric'): string => {
+    // If it's a custom parameter metric
+    if (column?.startsWith('param_')) {
+      const paramKey = column.replace('param_', '');
+      
+      switch (func) {
+        case 'distinct':
+          return `COUNT(DISTINCT CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${alias}`;
+        case 'sum':
+        case 'average':
+        case 'median':
+          return `${func === 'average' ? 'AVG' : func.toUpperCase()}(
+            CASE 
+              WHEN event_data.data_key = '${paramKey}'
+              THEN CAST(event_data.number_value AS NUMERIC)
+            END
+          ) as ${alias}`;
+        case 'min':
+          return `MIN(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${alias}`;
+        case 'max':
+          return `MAX(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${alias}`;
+        default:
+          return `COUNT(*) as ${alias}`;
+      }
+    }
+  
+    // For regular columns
     switch (func) {
       case 'count':
         return `COUNT(*) as ${alias}`;
@@ -816,16 +883,6 @@ const ChartsPage = () => {
       e.preventDefault();
       action();
     }
-  };
-
-  // Add a sanitizeColumnName helper function
-  const sanitizeColumnName = (key: string): string => {
-    return key
-      .replace(/\./g, '_')
-      .replace(/æ/gi, 'ae')
-      .replace(/ø/gi, 'oe')
-      .replace(/å/gi, 'aa')
-      .replace(/[^a-z0-9_]/gi, '_'); // Replace any other special characters with underscore
   };
 
   return (
@@ -1183,7 +1240,7 @@ const ChartsPage = () => {
                                 size="small"
                               >
                                 <option value="">Velg kolonne</option>
-                                {METRIC_COLUMNS[metric.function as keyof typeof METRIC_COLUMNS]?.map(col => (
+                                {getMetricColumns(parameters, metric.function).map(col => (
                                   <option key={col.value} value={col.value}>
                                     {col.label}
                                   </option>
