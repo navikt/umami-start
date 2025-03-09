@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UNSAFE_Combobox } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Loader } from '@navikt/ds-react';
 
 interface Website {
   id: string;
@@ -11,10 +11,19 @@ interface Website {
 interface WebsitePickerProps {
   selectedWebsite: Website | null;
   onWebsiteChange: (website: Website | null) => void;
+  onEventsLoad?: (events: string[], autoParameters?: { key: string; type: 'string' }[]) => void;
 }
 
-const WebsitePicker = ({ selectedWebsite, onWebsiteChange }: WebsitePickerProps) => {
+interface EventProperty {
+  eventName: string;
+  propertyName: string;
+  total: number;
+}
+
+const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
 
   useEffect(() => {
     const baseUrl = window.location.hostname === 'localhost' 
@@ -41,6 +50,58 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange }: WebsitePickerProps)
       })
       .catch(error => console.error("Error fetching websites:", error));
   }, []);
+
+  // Fetch events when a website is selected
+  useEffect(() => {
+    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
+      setIsLoading(true);
+      fetchEventNames(selectedWebsite.id)
+        .finally(() => {
+          setIsLoading(false);
+          setLoadedWebsiteId(selectedWebsite.id);
+        });
+    }
+  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad]);
+
+  const fetchEventNames = async (websiteId: string) => {
+    try {
+      const baseUrl = window.location.hostname === 'localhost' 
+        ? 'https://reops-proxy.intern.nav.no' 
+        : 'https://reops-proxy.ansatt.nav.no';
+
+      // Step 1: Fetch the date range
+      const dateRangeResponse = await fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
+        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+      });
+      const dateRange = await dateRangeResponse.json();
+      
+      // Step 2: Convert ISO dates to milliseconds
+      const startAt = new Date(dateRange.mindate).getTime();
+      const endAt = new Date(dateRange.maxdate).getTime();
+      
+      // Step 3: Fetch event properties
+      const propertiesResponse = await fetch(
+        `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
+        {
+          credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+        }
+      );
+      const properties: EventProperty[] = await propertiesResponse.json();
+      
+      // Extract unique property names and create parameters
+      const uniqueProperties = Array.from(new Set(properties.map(prop => prop.propertyName)));
+      
+      if (onEventsLoad && uniqueProperties.length > 0) {
+        const autoParameters = uniqueProperties.map(prop => ({
+          key: prop,
+          type: 'string' as const
+        }));
+        onEventsLoad(uniqueProperties, autoParameters);
+      }
+    } catch (error) {
+      console.error("Error fetching event properties:", error);
+    }
+  };
 
   return (
     <UNSAFE_Combobox

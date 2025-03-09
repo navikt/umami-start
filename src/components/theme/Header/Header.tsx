@@ -2,7 +2,6 @@ import {
   MenuHamburgerIcon,
   BookIcon,
   CodeIcon,
-  PackageIcon,
   DatabaseIcon,
   AreaChartIcon,
   BarChartIcon

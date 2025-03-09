@@ -1,5 +1,5 @@
-import { KeyboardEvent, useState, useEffect } from 'react';
-import { Button, TextField, Label, Link, Select, Chips } from '@navikt/ds-react';
+import { KeyboardEvent } from 'react';
+import { Button, TextField, Label, Link, Select } from '@navikt/ds-react';
 import { Parameter } from '../types/chart';
 
 interface CustomParametersProps {
@@ -7,25 +7,14 @@ interface CustomParametersProps {
   newParameter: string;
   setNewParameter: (value: string) => void;
   setParameters: (parameters: Parameter[]) => void;
-  suggestedEvents?: string[];
 }
 
 const CustomParameters = ({
   parameters,
   newParameter,
   setNewParameter,
-  setParameters,
-  suggestedEvents = []
+  setParameters
 }: CustomParametersProps) => {
-  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
-  
-  // Show suggestions if we have them and no parameters yet
-  useEffect(() => {
-    if (suggestedEvents.length > 0 && parameters.length === 0) {
-      setShowSuggestions(true);
-    }
-  }, [suggestedEvents, parameters.length]);
-
   const addParameter = (): void => {
     if (!newParameter.trim()) return;
     
@@ -40,15 +29,6 @@ const CustomParameters = ({
         ...params.map(param => ({ key: param, type: 'string' as 'string' }))
       ]);
       setNewParameter('');
-    }
-  };
-
-  const addSuggestedEvent = (event: string): void => {
-    if (!parameters.some(p => p.key === event)) {
-      setParameters([
-        ...parameters,
-        { key: event, type: 'string' }
-      ]);
     }
   };
   
@@ -93,39 +73,6 @@ const CustomParameters = ({
           </Button>
         </div>
 
-        {/* Suggested events section */}
-        {suggestedEvents.length > 0 && (
-          <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
-            <div className="flex justify-between items-center mb-2">
-              <Label as="p" size="small">
-                Oppdagede events på nettsiden:
-              </Label>
-              <Button 
-                variant="tertiary" 
-                size="small" 
-                onClick={() => setShowSuggestions(!showSuggestions)}
-              >
-                {showSuggestions ? 'Skjul' : 'Vis'} ({suggestedEvents.length})
-              </Button>
-            </div>
-            
-            {showSuggestions && (
-              <Chips className="flex-wrap gap-2">
-                {suggestedEvents.map(event => (
-                  <Chips.Toggle 
-                    key={event} 
-                    variant="action" 
-                    onClick={() => addSuggestedEvent(event)}
-                    checkmark={parameters.some(p => p.key === event)}
-                  >
-                    {event}
-                  </Chips.Toggle>
-                ))}
-              </Chips>
-            )}
-          </div>
-        )}
-
         {parameters.length > 0 && (
           <div className="space-y-2">
             <Label as="p" size="small">
@@ -164,7 +111,12 @@ const CustomParameters = ({
             </div>
           </div>
         )}
-      
+        
+        <div className="mt-2 text-sm italic text-gray-600">
+          <p>
+            For å finne tilgjengelige parametere for din nettside / app, bruk <Link href="/datastruktur" target='_blank'>Datastruktur-verktøyet</Link>.
+          </p>
+        </div>
       </div>
     </div>
   );

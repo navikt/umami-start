@@ -186,6 +186,7 @@ const ChartsPage = () => {
   const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [newParameter, setNewParameter] = useState<string>('');
+  const [suggestedEvents, setSuggestedEvents] = useState<string[]>([]);
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -682,6 +683,14 @@ const ChartsPage = () => {
     return tables;
   };
 
+  // Update handleEventsLoad to match the WebsitePicker's onEventsLoad type
+  const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
+    setSuggestedEvents(events);
+    if (autoParameters) {
+      setParameters(autoParameters); // Only set parameters if they're provided
+    }
+  };
+
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
@@ -702,24 +711,12 @@ const ChartsPage = () => {
                 <WebsitePicker
                   selectedWebsite={config.website as Website | null}
                   onWebsiteChange={(website: Website | null) => setConfig(prev => ({ ...prev, website }))}
+                  onEventsLoad={handleEventsLoad}
                 />
               </section>
 
               {config.website && (
                 <>
-                  {/* Custom Parameters section */}
-                  <section>
-                    <Heading level="2" size="small" spacing>
-                      Egendefinert
-                    </Heading>
-                    <CustomParameters
-                      parameters={parameters}
-                      newParameter={newParameter}
-                      setNewParameter={setNewParameter}
-                      setParameters={setParameters}
-                    />
-                  </section>
-
                   {/* Replace the Filter section with the new component */}
                   <ChartFilters
                     filters={filters}
