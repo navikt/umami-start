@@ -173,7 +173,7 @@ const DYNAMIC_FILTER_OPTIONS: DynamicFilterOption[] = [
   { label: 'Dato', value: 'created_at', template: '{{created_at}}' },
   
   // Page/URL filters
-  { label: 'Side', value: 'url_path', template: '[[AND url_path = {{path}}]]' },
+  { label: 'Sidesti (URL-sti)', value: 'url_path', template: '[[AND url_path = {{path}}]]' },
   { label: 'Sidetittel', value: 'page_title', template: '[[AND page_title = {{page_title}}]]' },
   { label: 'URL søkeparametere', value: 'url_query', template: '[[AND url_query = {{url_query}}]]' },
   
