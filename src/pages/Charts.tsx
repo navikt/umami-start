@@ -4,14 +4,14 @@ import {
   Heading,
   Select,
   VStack,
-  CopyButton,
   Label,
   Link,
   TextField,
 } from '@navikt/ds-react';
-import Kontaktboks from '../components/kontaktboks';
 import { MoveUp, MoveDown } from 'lucide-react';
-import WebsitePicker from '../components/WebsitePicker'; // Import the new component
+import Kontaktboks from '../components/kontaktboks';
+import WebsitePicker from '../components/websitepicker';
+import SQLPreview from '../components/sqlpreview';
 
 // Update ChartConfig interface to support multiple metrics
 interface ChartConfig {
@@ -880,644 +880,610 @@ const ChartsPage = () => {
   };
 
   return (
-    // Update layout to side-by-side on large screens
     <div className="w-full max-w-[1600px]">
-    <Heading spacing level="1" size="medium" className="pt-12 pb-6">
-      Bygg grafer og tabeller for Metabase
-    </Heading>
-    <p className="text-gray-600 mb-10 prose">
-       Med grafbyggeren kan du lage grafer og tabeller som kan legges til i Metabase. 
-       For eksempel en graf som viser andelen besøkende som har trykket på en knapp,
-       eller hvor mange som har besøkt en spesifikk side.
-      </p>
+      <Heading spacing level="1" size="medium" className="pt-12 pb-6">
+        Bygg grafer og tabeller for Metabase
+      </Heading>
+      <p className="text-gray-600 mb-10 prose">
+         Med grafbyggeren kan du lage grafer og tabeller som kan legges til i Metabase. 
+         For eksempel en graf som viser andelen besøkende som har trykket på en knapp,
+         eller hvor mange som har besøkt en spesifikk side.
+        </p>
 
-      <div className="lg:grid lg:grid-cols-2 lg:gap-8">
-        {/* Left column - Form controls */}
-        <div className="space-y-8">
-          <VStack gap="8">
-            {/* Data section - Website picker */}
-            <section>
-              <WebsitePicker
-                selectedWebsite={config.website}
-                onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
-              />
-            </section>
+        <div className="lg:grid lg:grid-cols-2 lg:gap-8">
+          {/* Left column - Form controls */}
+          <div className="space-y-8">
+            <VStack gap="8">
+              {/* Data section - Website picker */}
+              <section>
+                <WebsitePicker
+                  selectedWebsite={config.website}
+                  onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
+                />
+              </section>
 
-            {config.website && (
-              <>
-                {/* Custom Parameters section - MOVED UP */}
-                <section>
-                  <Heading level="2" size="small" spacing>
-                    Egendefinert
-                  </Heading>
-                  
-                  <div className="space-y-6 bg-gray-50 p-5 rounded-md border">  
-                    <div className="space-y-4">
-                      <div className="flex gap-2 items-end">
-                        <TextField
-                          label="Egendefinerte event-parametere"
-                          description="Eksempel: skjemanavn (legg til flere med komma)"
-                          value={newParameter}
-                          onChange={(e) => setNewParameter(e.target.value)}
-                          onKeyUp={(e) => handleParameterKeyPress(e, addParameter)}
-                          style={{ width: '100%' }}
-                        />
-                        <Button 
-                          variant="secondary" 
-                          onClick={addParameter}
-                          style={{ height: '50px' }}
-                        >
-                          Legg til
-                        </Button>
-                      </div>
-
-                      {parameters.length > 0 && (
-                        <div className="space-y-2">
-                          <Label as="p" size="small">
-                            Valgte parametere:
-                          </Label>
-                          <div className="flex flex-col gap-2">
-                            {parameters.map((param) => (
-                              <div 
-                                key={param.key} 
-                                className="flex items-center justify-between bg-white px-4 py-3 rounded-md border"
-                              >
-                                <span className="font-medium">
-                                  {param.key}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <Select 
-                                    label=""
-                                    size="small"
-                                    value={param.type}
-                                    className="!w-auto min-w-[120px]"
-                                    onChange={() => toggleParameterType(param.key)}
-                                  >
-                                    <option value="string">📝 Tekst</option>
-                                    <option value="number">🔢 Tall</option>
-                                  </Select>
-                                  <Button
-                                    variant="tertiary-neutral"
-                                    size="small"
-                                    onClick={() => removeParameter(param.key)}
-                                  >
-                                    Fjern
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="mt-2 text-sm italic text-gray-600">
-                        <p>
-                          For å finne tilgjengelige parametere for din nettside / app, bruk <Link href="/datastruktur" target='_blank'>Datastruktur-verktøyet</Link>.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Filter section - Improved UI */}
-                <section>
-                  <Heading level="2" size="small" spacing>
-                    Filtre
-                  </Heading>
-
-                  <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
-                    {/* Dynamic Filters - Improved UI */}
-                    <div>
-                      <Heading level="3" size="xsmall" spacing>
-                        Dynamiske filtre for dashboard
-                      </Heading>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Legg til filtre som kan endres direkte i Metabase-dashboardet.
-                      </p>
-
-                      <div className="flex flex-col gap-4">
-                        {/* Filter selector - Better styling */}
-                        <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-                          <Select
-                            label="Legg til dynamisk filter"
-                            onChange={(e) => {
-                              if (e.target.value && !dynamicFilters.includes(e.target.value)) {
-                                setDynamicFilters([...dynamicFilters, e.target.value]);
-                              }
-                            }}
-                            value=""
-                            size="small"
-                            className="flex-grow"
+              {config.website && (
+                <>
+                  {/* Custom Parameters section - MOVED UP */}
+                  <section>
+                    <Heading level="2" size="small" spacing>
+                      Egendefinert
+                    </Heading>
+                    
+                    <div className="space-y-6 bg-gray-50 p-5 rounded-md border">  
+                      <div className="space-y-4">
+                        <div className="flex gap-2 items-end">
+                          <TextField
+                            label="Egendefinerte event-parametere"
+                            description="Eksempel: skjemanavn (legg til flere med komma)"
+                            value={newParameter}
+                            onChange={(e) => setNewParameter(e.target.value)}
+                            onKeyUp={(e) => handleParameterKeyPress(e, addParameter)}
+                            style={{ width: '100%' }}
+                          />
+                          <Button 
+                            variant="secondary" 
+                            onClick={addParameter}
+                            style={{ height: '50px' }}
                           >
-                            <option value="">Velg filter...</option>
-                            {DYNAMIC_FILTER_OPTIONS
-                              .filter(option => !dynamicFilters.includes(option.value))
-                              .map(option => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                          </Select>
+                            Legg til
+                          </Button>
                         </div>
 
-                        {/* Selected filters - Better styling */}
-                        {dynamicFilters.length > 0 && (
-                          <div className="space-y-2 pl-1">
-                            <Label as="p" size="small">Valgte dynamiske filtre:</Label>
-                            <div className="space-y-2">
-                              {dynamicFilters.map((filterValue) => {
-                                const filter = DYNAMIC_FILTER_OPTIONS.find(f => f.value === filterValue);
-                                if (!filter) return null;
-                                
-                                return (
-                                  <div key={filter.value} className="flex items-center justify-between bg-white p-3 rounded-md border">
-                                    <div>
-                                      <span className="font-medium">{filter.label}</span>
-                                      <div className="text-xs text-gray-600 mt-1">
-                                        <code className="bg-gray-100 px-1 rounded">
-                                          {filter.template}
-                                        </code>
-                                      </div>
-                                    </div>
+                        {parameters.length > 0 && (
+                          <div className="space-y-2">
+                            <Label as="p" size="small">
+                              Valgte parametere:
+                            </Label>
+                            <div className="flex flex-col gap-2">
+                              {parameters.map((param) => (
+                                <div 
+                                  key={param.key} 
+                                  className="flex items-center justify-between bg-white px-4 py-3 rounded-md border"
+                                >
+                                  <span className="font-medium">
+                                    {param.key}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <Select 
+                                      label=""
+                                      size="small"
+                                      value={param.type}
+                                      className="!w-auto min-w-[120px]"
+                                      onChange={() => toggleParameterType(param.key)}
+                                    >
+                                      <option value="string">📝 Tekst</option>
+                                      <option value="number">🔢 Tall</option>
+                                    </Select>
                                     <Button
                                       variant="tertiary-neutral"
                                       size="small"
-                                      onClick={() => {
-                                        setDynamicFilters(dynamicFilters.filter(f => f !== filter.value));
-                                      }}
-                                      className="ml-2"
+                                      onClick={() => removeParameter(param.key)}
                                     >
                                       Fjern
                                     </Button>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
+                        
+                        <div className="mt-2 text-sm italic text-gray-600">
+                          <p>
+                            For å finne tilgjengelige parametere for din nettside / app, bruk <Link href="/datastruktur" target='_blank'>Datastruktur-verktøyet</Link>.
+                          </p>
+                        </div>
                       </div>
                     </div>
+                  </section>
 
-                    {/* Static Filters - Improved UI */}
-                    <div className="border-t pt-4">
-                      <Heading level="3" size="xsmall" spacing>
-                        Statiske filtre
-                      </Heading>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Legg til faste filtre som vil være låst i grafen/tabellen.
-                      </p>
+                  {/* Filter section - Improved UI */}
+                  <section>
+                    <Heading level="2" size="small" spacing>
+                      Filtre
+                    </Heading>
 
-                      {filters.length > 0 && (
-                        <div className="space-y-3 mb-4">
-                          {filters.map((filter, index) => (
-                            <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-                              <Select
-                                label="Kolonne"
-                                value={filter.column}
-                                onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })} // Reset value when changing column
-                                size="small"
-                              >
-                                {/* Regular columns */}
-                                {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                                  <optgroup key={groupKey} label={group.label}>
-                                    {group.columns.map(col => (
-                                      <option key={col.value} value={col.value}>
-                                        {col.label}
-                                      </option>
-                                    ))}
-                                  </optgroup>
+                    <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
+                      {/* Dynamic Filters - Improved UI */}
+                      <div>
+                        <Heading level="3" size="xsmall" spacing>
+                          Dynamiske filtre for dashboard
+                        </Heading>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Legg til filtre som kan endres direkte i Metabase-dashboardet.
+                        </p>
+
+                        <div className="flex flex-col gap-4">
+                          {/* Filter selector - Better styling */}
+                          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+                            <Select
+                              label="Legg til dynamisk filter"
+                              onChange={(e) => {
+                                if (e.target.value && !dynamicFilters.includes(e.target.value)) {
+                                  setDynamicFilters([...dynamicFilters, e.target.value]);
+                                }
+                              }}
+                              value=""
+                              size="small"
+                              className="flex-grow"
+                            >
+                              <option value="">Velg filter...</option>
+                              {DYNAMIC_FILTER_OPTIONS
+                                .filter(option => !dynamicFilters.includes(option.value))
+                                .map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
                                 ))}
-                                
-                                {/* Add custom parameters as filter options */}
-                                {parameters.length > 0 && (
-                                  <optgroup label="Egendefinerte parametere">
-                                    {parameters.map(param => (
-                                      <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                                        {param.key}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                              </Select>
+                            </Select>
+                          </div>
 
-                              {filter.column === 'custom_column' ? (
-                                <>
-                                  <TextField
-                                    label="Filternavn"
-                                    value={filter.customColumn || ''} // Add new property for custom column name
-                                    onChange={(e) => updateFilter(index, { customColumn: e.target.value })}
-                                    size="small"
-                                  />
-                                  <Select
-                                    label="Operator"
-                                    value={filter.operator}
-                                    onChange={(e) => updateFilter(index, { operator: e.target.value })}
-                                    size="small"
-                                  >
-                                    {OPERATORS
-                                      .filter(op => !['IS NULL', 'IS NOT NULL'].includes(op.value))
-                                      .map(op => (
-                                        <option key={op.value} value={op.value}>
-                                          {op.label}
+                          {/* Selected filters - Better styling */}
+                          {dynamicFilters.length > 0 && (
+                            <div className="space-y-2 pl-1">
+                              <Label as="p" size="small">Valgte dynamiske filtre:</Label>
+                              <div className="space-y-2">
+                                {dynamicFilters.map((filterValue) => {
+                                  const filter = DYNAMIC_FILTER_OPTIONS.find(f => f.value === filterValue);
+                                  if (!filter) return null;
+                                  
+                                  return (
+                                    <div key={filter.value} className="flex items-center justify-between bg-white p-3 rounded-md border">
+                                      <div>
+                                        <span className="font-medium">{filter.label}</span>
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          <code className="bg-gray-100 px-1 rounded">
+                                            {filter.template}
+                                          </code>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="tertiary-neutral"
+                                        size="small"
+                                        onClick={() => {
+                                          setDynamicFilters(dynamicFilters.filter(f => f !== filter.value));
+                                        }}
+                                        className="ml-2"
+                                      >
+                                        Fjern
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Static Filters - Improved UI */}
+                      <div className="border-t pt-4">
+                        <Heading level="3" size="xsmall" spacing>
+                          Statiske filtre
+                        </Heading>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Legg til faste filtre som vil være låst i grafen/tabellen.
+                        </p>
+
+                        {filters.length > 0 && (
+                          <div className="space-y-3 mb-4">
+                            {filters.map((filter, index) => (
+                              <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
+                                <Select
+                                  label="Kolonne"
+                                  value={filter.column}
+                                  onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })} // Reset value when changing column
+                                  size="small"
+                                >
+                                  {/* Regular columns */}
+                                  {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                                    <optgroup key={groupKey} label={group.label}>
+                                      {group.columns.map(col => (
+                                        <option key={col.value} value={col.value}>
+                                          {col.label}
                                         </option>
                                       ))}
-                                  </Select>
-                                  <TextField
-                                    label="Verdi"
-                                    value={filter.value}
-                                    onChange={(e) => updateFilter(index, { value: e.target.value })}
-                                    size="small"
-                                  />
-                                </>
-                              ) : (
-                                <>
-                                  <Select
-                                    label="Operator"
-                                    value={filter.operator}
-                                    onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
-                                    size="small"
-                                  >
-                                    {OPERATORS.map(op => (
-                                      <option key={op.value} value={op.value}>
-                                        {op.label}
-                                      </option>
-                                    ))}
-                                  </Select>
+                                    </optgroup>
+                                  ))}
+                                  
+                                  {/* Add custom parameters as filter options */}
+                                  {parameters.length > 0 && (
+                                    <optgroup label="Egendefinerte parametere">
+                                      {parameters.map(param => (
+                                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                          {param.key}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                </Select>
 
-                                  {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
+                                {filter.column === 'custom_column' ? (
+                                  <>
+                                    <TextField
+                                      label="Filternavn"
+                                      value={filter.customColumn || ''} // Add new property for custom column name
+                                      onChange={(e) => updateFilter(index, { customColumn: e.target.value })}
+                                      size="small"
+                                    />
+                                    <Select
+                                      label="Operator"
+                                      value={filter.operator}
+                                      onChange={(e) => updateFilter(index, { operator: e.target.value })}
+                                      size="small"
+                                    >
+                                      {OPERATORS
+                                        .filter(op => !['IS NULL', 'IS NOT NULL'].includes(op.value))
+                                        .map(op => (
+                                          <option key={op.value} value={op.value}>
+                                            {op.label}
+                                          </option>
+                                        ))}
+                                    </Select>
                                     <TextField
                                       label="Verdi"
                                       value={filter.value}
                                       onChange={(e) => updateFilter(index, { value: e.target.value })}
                                       size="small"
                                     />
-                                  )}
-                                </>
-                              )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Select
+                                      label="Operator"
+                                      value={filter.operator}
+                                      onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
+                                      size="small"
+                                    >
+                                      {OPERATORS.map(op => (
+                                        <option key={op.value} value={op.value}>
+                                          {op.label}
+                                        </option>
+                                      ))}
+                                    </Select>
 
+                                    {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
+                                      <TextField
+                                        label="Verdi"
+                                        value={filter.value}
+                                        onChange={(e) => updateFilter(index, { value: e.target.value })}
+                                        size="small"
+                                      />
+                                    )}
+                                  </>
+                                )}
+
+                                <Button
+                                  variant="tertiary-neutral"
+                                  size="small"
+                                  onClick={() => removeFilter(index)}
+                                  className="mb-1"
+                                >
+                                  Fjern
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <Button
+                          variant="secondary"
+                          onClick={addFilter}
+                          size="small"
+                          className="mb-2"
+                        >
+                          Legg til statisk filter
+                        </Button>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Summarize section - Improved UI */}
+                  <section>
+                    <Heading level="2" size="small" spacing>
+                      Oppsummering
+                    </Heading>
+                    
+                    <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
+                      {/* Metrics section */}
+                      <div>
+                        <Heading level="3" size="xsmall" spacing>
+                          Beregninger
+                        </Heading>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Velg hvilke beregninger som skal vises i resultatet.
+                        </p>
+                        
+                        <div className="space-y-4">
+                          {config.metrics.map((metric, index) => (
+                            <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
+                              <Select
+                                label="Funksjon"
+                                value={metric.function}
+                                onChange={(e) => updateMetric(index, { function: e.target.value })}
+                                size="small"
+                              >
+                                {METRICS.map(m => (
+                                  <option key={m.value} value={m.value}>
+                                    {m.label}
+                                  </option>
+                                ))}
+                              </Select>
+                              
+                              {metric.function !== 'count' && (
+                                <Select
+                                  label="Kolonne"
+                                  value={metric.column || ''}
+                                  onChange={(e) => updateMetric(index, { column: e.target.value })}
+                                  size="small"
+                                >
+                                  <option value="">Velg kolonne</option>
+                                  {getMetricColumns(parameters, metric.function).map(col => (
+                                    <option key={col.value} value={col.value}>
+                                      {col.label}
+                                    </option>
+                                  ))}
+                                </Select>
+                              )}
+                              
+                              <TextField
+                                label="Alias (valgfritt)"
+                                value={metric.alias || ''}
+                                onChange={(e) => updateMetric(index, { alias: e.target.value })}
+                                placeholder={`metric_${index + 1}`}
+                                size="small"
+                              />
+                              
                               <Button
                                 variant="tertiary-neutral"
                                 size="small"
-                                onClick={() => removeFilter(index)}
+                                onClick={() => removeMetric(index)}
                                 className="mb-1"
+                                disabled={config.metrics.length <= 1}
                               >
                                 Fjern
                               </Button>
                             </div>
                           ))}
+                          
+                          <Button
+                            variant="secondary"
+                            onClick={addMetric}
+                            size="small"
+                          >
+                            Legg til flere beregninger
+                          </Button>
                         </div>
-                      )}
-
-                      <Button
-                        variant="secondary"
-                        onClick={addFilter}
-                        size="small"
-                        className="mb-2"
-                      >
-                        Legg til statisk filter
-                      </Button>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Summarize section - Improved UI */}
-                <section>
-                  <Heading level="2" size="small" spacing>
-                    Oppsummering
-                  </Heading>
-                  
-                  <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
-                    {/* Metrics section */}
-                    <div>
-                      <Heading level="3" size="xsmall" spacing>
-                        Beregninger
-                      </Heading>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Velg hvilke beregninger som skal vises i resultatet.
-                      </p>
+                      </div>
                       
-                      <div className="space-y-4">
-                        {config.metrics.map((metric, index) => (
-                          <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-                            <Select
-                              label="Funksjon"
-                              value={metric.function}
-                              onChange={(e) => updateMetric(index, { function: e.target.value })}
-                              size="small"
-                            >
-                              {METRICS.map(m => (
-                                <option key={m.value} value={m.value}>
-                                  {m.label}
-                                </option>
-                              ))}
-                            </Select>
-                            
-                            {metric.function !== 'count' && (
-                              <Select
-                                label="Kolonne"
-                                value={metric.column || ''}
-                                onChange={(e) => updateMetric(index, { column: e.target.value })}
-                                size="small"
-                              >
-                                <option value="">Velg kolonne</option>
-                                {getMetricColumns(parameters, metric.function).map(col => (
-                                  <option key={col.value} value={col.value}>
-                                    {col.label}
-                                  </option>
-                                ))}
-                              </Select>
-                            )}
-                            
-                            <TextField
-                              label="Alias (valgfritt)"
-                              value={metric.alias || ''}
-                              onChange={(e) => updateMetric(index, { alias: e.target.value })}
-                              placeholder={`metric_${index + 1}`}
-                              size="small"
-                            />
-                            
-                            <Button
-                              variant="tertiary-neutral"
-                              size="small"
-                              onClick={() => removeMetric(index)}
-                              className="mb-1"
-                              disabled={config.metrics.length <= 1}
-                            >
-                              Fjern
-                            </Button>
-                          </div>
-                        ))}
+                      {/* Group By section */}
+                      <div className="border-t pt-4">
+                        <Heading level="3" size="xsmall" spacing>
+                          Gruppering
+                        </Heading>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Velg hvordan dataene skal grupperes og vises. For eksempel kan du gruppere etter dato for å se endringer over tid, eller etter land for å sammenligne bruk på tvers av regioner.
+                        </p>
                         
-                        <Button
-                          variant="secondary"
-                          onClick={addMetric}
-                          size="small"
-                        >
-                          Legg til flere beregninger
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Group By section */}
-                    <div className="border-t pt-4">
-                      <Heading level="3" size="xsmall" spacing>
-                        Gruppering
-                      </Heading>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Velg hvordan dataene skal grupperes og vises. For eksempel kan du gruppere etter dato for å se endringer over tid, eller etter land for å sammenligne bruk på tvers av regioner.
-                      </p>
-                      
-                      <div className="space-y-4">
-                        <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-                          <Select
-                            label="Legg til gruppering"
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                addGroupByField(e.target.value);
-                                (e.target as HTMLSelectElement).value = ''; // Type assertion for reset
-                              }
-                            }}
-                            size="small"
-                            className="flex-grow"
-                          >
-                            <option value="">Velg felt...</option>
-                            {/* Regular columns */}
-                            {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                              <optgroup key={groupKey} label={group.label}>
-                                {group.columns
-                                  .filter(col => !config.groupByFields.includes(col.value))
-                                  .map(col => (
-                                    <option key={col.value} value={col.value}>
-                                      {col.label}
-                                    </option>
-                                  ))}
-                              </optgroup>
-                            ))}
-                            
-                            {/* Add custom parameters group */}
-                            {parameters.length > 0 && (
-                              <optgroup label="Egendefinerte parametere">
-                                {parameters
-                                  .filter(param => !config.groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
-                                  .map(param => (
-                                    <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                                      {param.key}
-                                    </option>
-                                  ))}
-                              </optgroup>
-                            )}
-                          </Select>
-                        </div>
-
-                        {config.groupByFields.length > 0 && (
-                          <div className="space-y-2">
-                            <Label as="p" size="small">
-                              Valgte grupperinger (sorter med pilene):
-                            </Label>
-                            <div className="flex flex-col gap-2">
-                              {config.groupByFields.map((field, index) => {
-                                // Try to find in regular columns first
-                                const column = Object.values(COLUMN_GROUPS)
-                                  .flatMap(group => group.columns)
-                                  .find(col => col.value === field);
-                                
-                                // If not found in regular columns, check if it's a parameter
-                                const paramName = field.startsWith('param_') ? parameters.find(
-                                  p => `param_${sanitizeColumnName(p.key)}` === field
-                                )?.key : undefined;
-                                
-                                return (
-                                  <div 
-                                    key={field} 
-                                    className="flex items-center justify-between bg-white px-4 py-3 rounded-md border group hover:border-blue-200"
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-sm text-gray-500">
-                                        {index + 1}.
-                                      </span>
-                                      <span className="font-medium">
-                                        {paramName || column?.label || field}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {/* Date format selector if the field is created_at */}
-                                      {field === 'created_at' && (
-                                        <Select
-                                          label=""
-                                          value={config.dateFormat || 'day'}
-                                          onChange={(e) => setConfig(prev => ({
-                                            ...prev,
-                                            dateFormat: e.target.value as DateFormat['value']
-                                          }))}
-                                          size="small"
-                                          className="!w-auto min-w-[120px]"
-                                        >
-                                          {DATE_FORMATS.map(format => (
-                                            <option key={format.value} value={format.value}>
-                                              {format.label}
-                                            </option>
-                                          ))}
-                                        </Select>
-                                      )}
-                                      
-                                      {/* Move buttons */}
-                                      <div className="flex gap-1">
-                                        {index > 0 && (
-                                          <Button
-                                            variant="tertiary"
-                                            size="small"
-                                            icon={<MoveUp size={16} />}
-                                            onClick={() => moveGroupField(index, 'up')}
-                                            title="Flytt opp"
-                                          />
-                                        )}
-                                        {index < config.groupByFields.length - 1 && (
-                                          <Button
-                                            variant="tertiary"
-                                            size="small"
-                                            icon={<MoveDown size={16} />}
-                                            onClick={() => moveGroupField(index, 'down')}
-                                            title="Flytt ned"
-                                          />
-                                        )}
-                                      </div>
-                                      
-                                      <Button
-                                        variant="tertiary-neutral"
-                                        size="small"
-                                        onClick={() => removeGroupByField(field)}
-                                      >
-                                        Fjern
-                                      </Button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Order By section */}
-                    <div className="border-t pt-4">
-                      <Heading level="3" size="xsmall" spacing>
-                        Sortering
-                      </Heading>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Velg hvordan resultatene skal sorteres.
-                      </p>
-                      
-                      <div className="space-y-4">
-                        <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-                          <Select
-                            label="Sorter etter"
-                            value={config.orderBy?.column || ""}
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                setOrderBy(e.target.value, 'DESC');
-                              } else {
-                                clearOrderBy();
-                              }
-                            }}
-                            size="small"
-                            className="flex-grow"
-                          >
-                            <option value="">Standard sortering</option>
-                            <optgroup label="Grupperinger">
-                              {config.groupByFields.map((field) => {
-                                const column = Object.values(COLUMN_GROUPS)
-                                  .flatMap(group => group.columns)
-                                  .find(col => col.value === field);
-                                
-                                return (
-                                  <option key={field} value={field === 'created_at' ? 'dato' : field}>
-                                    {field === "created_at" ? "Dato" : column?.label || field}
-                                  </option>
-                                );
-                              })}
-                            </optgroup>
-                            <optgroup label="Metrikker">
-                              {config.metrics.map((metric, index) => (
-                                <option 
-                                  key={`metric_${index}`} 
-                                  value={metric.alias || `metric_${index + 1}`} // Use same format as SQL
-                                >
-                                  {metric.alias || `metric_${index + 1}`} {/* Show same format in UI */}
-                                </option>
-                              ))}
-                            </optgroup>
-                          </Select>
-
-                          {config.orderBy && (
+                        <div className="space-y-4">
+                          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
                             <Select
-                              label="Retning"
-                              value={config.orderBy.direction}
-                              onChange={(e) => setOrderBy(
-                                config.orderBy?.column || "", 
-                                e.target.value as 'ASC' | 'DESC'
-                              )}
+                              label="Legg til gruppering"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  addGroupByField(e.target.value);
+                                  (e.target as HTMLSelectElement).value = ''; // Type assertion for reset
+                                }
+                              }}
                               size="small"
+                              className="flex-grow"
                             >
-                              <option value="ASC">Stigende (A-Å, 0-9)</option>
-                              <option value="DESC">Synkende (Å-A, 9-0)</option>
+                              <option value="">Velg felt...</option>
+                              {/* Regular columns */}
+                              {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                                <optgroup key={groupKey} label={group.label}>
+                                  {group.columns
+                                    .filter(col => !config.groupByFields.includes(col.value))
+                                    .map(col => (
+                                      <option key={col.value} value={col.value}>
+                                        {col.label}
+                                      </option>
+                                    ))}
+                                </optgroup>
+                              ))}
+                              
+                              {/* Add custom parameters group */}
+                              {parameters.length > 0 && (
+                                <optgroup label="Egendefinerte parametere">
+                                  {parameters
+                                    .filter(param => !config.groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
+                                    .map(param => (
+                                      <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                        {param.key}
+                                      </option>
+                                    ))}
+                                </optgroup>
+                              )}
                             </Select>
+                          </div>
+
+                          {config.groupByFields.length > 0 && (
+                            <div className="space-y-2">
+                              <Label as="p" size="small">
+                                Valgte grupperinger (sorter med pilene):
+                              </Label>
+                              <div className="flex flex-col gap-2">
+                                {config.groupByFields.map((field, index) => {
+                                  // Try to find in regular columns first
+                                  const column = Object.values(COLUMN_GROUPS)
+                                    .flatMap(group => group.columns)
+                                    .find(col => col.value === field);
+                                  
+                                  // If not found in regular columns, check if it's a parameter
+                                  const paramName = field.startsWith('param_') ? parameters.find(
+                                    p => `param_${sanitizeColumnName(p.key)}` === field
+                                  )?.key : undefined;
+                                  
+                                  return (
+                                    <div 
+                                      key={field} 
+                                      className="flex items-center justify-between bg-white px-4 py-3 rounded-md border group hover:border-blue-200"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-sm text-gray-500">
+                                          {index + 1}.
+                                        </span>
+                                        <span className="font-medium">
+                                          {paramName || column?.label || field}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {/* Date format selector if the field is created_at */}
+                                        {field === 'created_at' && (
+                                          <Select
+                                            label=""
+                                            value={config.dateFormat || 'day'}
+                                            onChange={(e) => setConfig(prev => ({
+                                              ...prev,
+                                              dateFormat: e.target.value as DateFormat['value']
+                                            }))}
+                                            size="small"
+                                            className="!w-auto min-w-[120px]"
+                                          >
+                                            {DATE_FORMATS.map(format => (
+                                              <option key={format.value} value={format.value}>
+                                                {format.label}
+                                              </option>
+                                            ))}
+                                          </Select>
+                                        )}
+                                        
+                                        {/* Move buttons */}
+                                        <div className="flex gap-1">
+                                          {index > 0 && (
+                                            <Button
+                                              variant="tertiary"
+                                              size="small"
+                                              icon={<MoveUp size={16} />}
+                                              onClick={() => moveGroupField(index, 'up')}
+                                              title="Flytt opp"
+                                            />
+                                          )}
+                                          {index < config.groupByFields.length - 1 && (
+                                            <Button
+                                              variant="tertiary"
+                                              size="small"
+                                              icon={<MoveDown size={16} />}
+                                              onClick={() => moveGroupField(index, 'down')}
+                                              title="Flytt ned"
+                                            />
+                                          )}
+                                        </div>
+                                        
+                                        <Button
+                                          variant="tertiary-neutral"
+                                          size="small"
+                                          onClick={() => removeGroupByField(field)}
+                                        >
+                                          Fjern
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
+
+                      {/* Order By section */}
+                      <div className="border-t pt-4">
+                        <Heading level="3" size="xsmall" spacing>
+                          Sortering
+                        </Heading>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Velg hvordan resultatene skal sorteres.
+                        </p>
+                        
+                        <div className="space-y-4">
+                          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+                            <Select
+                              label="Sorter etter"
+                              value={config.orderBy?.column || ""}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setOrderBy(e.target.value, 'DESC');
+                                } else {
+                                  clearOrderBy();
+                                }
+                              }}
+                              size="small"
+                              className="flex-grow"
+                            >
+                              <option value="">Standard sortering</option>
+                              <optgroup label="Grupperinger">
+                                {config.groupByFields.map((field) => {
+                                  const column = Object.values(COLUMN_GROUPS)
+                                    .flatMap(group => group.columns)
+                                    .find(col => col.value === field);
+                                  
+                                  return (
+                                    <option key={field} value={field === 'created_at' ? 'dato' : field}>
+                                      {field === "created_at" ? "Dato" : column?.label || field}
+                                    </option>
+                                  );
+                                })}
+                              </optgroup>
+                              <optgroup label="Metrikker">
+                                {config.metrics.map((metric, index) => (
+                                  <option 
+                                    key={`metric_${index}`} 
+                                    value={metric.alias || `metric_${index + 1}`} // Use same format as SQL
+                                  >
+                                    {metric.alias || `metric_${index + 1}`} {/* Show same format in UI */}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </Select>
+
+                            {config.orderBy && (
+                              <Select
+                                label="Retning"
+                                value={config.orderBy.direction}
+                                onChange={(e) => setOrderBy(
+                                  config.orderBy?.column || "", 
+                                  e.target.value as 'ASC' | 'DESC'
+                                )}
+                                size="small"
+                              >
+                                <option value="ASC">Stigende (A-Å, 0-9)</option>
+                                <option value="DESC">Synkende (Å-A, 9-0)</option>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </section>
-              </>
-            )}
-          </VStack>
-        </div>
-
-        {/* Right column - SQL preview */}
-        <div className="space-y-4 lg:sticky lg:top-4">
-          {config.website ? (
-            <>
-              <div className="space-y-2 py-4 pt-6">
-                <Heading level="2" size="small">
-                  SQL-kode for Metabase
-                </Heading>
-                <p className="text-sm text-gray-600">
-                  🔄 SQL-koden oppdateres automatisk når du gjør endringer.
-                </p>
-              </div>
-
-              <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
-                    <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank" rel="noopener noreferrer">Åpne Metabase</Link> og klikk på den blå "Ny / New" knappen i toppmenyen.</li>
-                    <li>Velg "SQL-spørring / SQL query" fra menyen som vises.</li>
-                    <li>Kopier og kjør SQL-koden nedenfor og lim den inn i spørringseditoren.</li>
-                </ol>
-
-              {generatedSQL && (
-                <div className="relative">
-                  <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-200px)] overflow-y-auto">
-                    {generatedSQL}
-                  </pre>
-                  <div className="absolute top-2 right-2">
-                    <CopyButton
-                      copyText={generatedSQL}
-                      text="Kopier SQL"
-                      activeText="Kopiert!"
-                      size="small"
-                    />
-                  </div>
-                </div>
+                  </section>
+                </>
               )}
-            </>
-          ) : (
-            <></>
-          )}
+            </VStack>
+          </div>
+
+          {/* Right column - SQL preview */}
+          <div className="space-y-4 lg:sticky lg:top-4">
+            {config.website && (
+              <SQLPreview sql={generatedSQL} />
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <Kontaktboks />
         </div>
       </div>
-
-      <div className="mt-8">
-        <Kontaktboks />
-      </div>
-    </div>
   );
 };
 
