@@ -45,6 +45,7 @@ interface Filter {
   column: string;
   operator: string;
   value: string;
+  customColumn?: string; // Add new property for custom column name
 }
 
 interface Metric {
@@ -146,6 +147,12 @@ const FILTER_COLUMNS = {
       { label: 'Country', value: 'country' },
       { label: 'Region', value: 'subdivision1' },
       { label: 'City', value: 'city' }
+    ]
+  },
+  custom: {
+    label: 'Egendefinerte',  // Add this new group first
+    columns: [
+      { label: 'Eget filternavn', value: 'custom_column' }, // Changed from event_name_custom
     ]
   }
 };
@@ -463,9 +470,12 @@ const ChartsPage = () => {
 // Add static filters to the CTE
 filters.forEach(filter => {
     if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-      sql += `  AND e.${filter.column} ${filter.operator}\n`;
+      sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
     } else if (filter.value) {
-      if (filter.column === 'event_type') {
+      if (filter.column === 'custom_column') {
+        // Handle custom column name
+        sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
+      } else if (filter.column === 'event_type') {
         // Handle event_type as integer
         sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
       } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
@@ -785,7 +795,7 @@ filters.forEach(filter => {
                               <Select
                                 label="Kolonne"
                                 value={filter.column}
-                                onChange={(e) => updateFilter(index, { column: e.target.value })}
+                                onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })} // Reset value when changing column
                                 size="small"
                               >
                                 {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
@@ -799,27 +809,59 @@ filters.forEach(filter => {
                                 ))}
                               </Select>
 
-                              <Select
-                                label="Operator"
-                                value={filter.operator}
-                                onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })} // Reset value when changing operator
-                                size="small"
-                              >
-                                {OPERATORS.map(op => (
-                                  <option key={op.value} value={op.value}>
-                                    {op.label}
-                                  </option>
-                                ))}
-                              </Select>
+                              {filter.column === 'custom_column' ? (
+                                <>
+                                  <TextField
+                                    label="Filternavn"
+                                    value={filter.customColumn || ''} // Add new property for custom column name
+                                    onChange={(e) => updateFilter(index, { customColumn: e.target.value })}
+                                    size="small"
+                                  />
+                                  <Select
+                                    label="Operator"
+                                    value={filter.operator}
+                                    onChange={(e) => updateFilter(index, { operator: e.target.value })}
+                                    size="small"
+                                  >
+                                    {OPERATORS
+                                      .filter(op => !['IS NULL', 'IS NOT NULL'].includes(op.value))
+                                      .map(op => (
+                                        <option key={op.value} value={op.value}>
+                                          {op.label}
+                                        </option>
+                                      ))}
+                                  </Select>
+                                  <TextField
+                                    label="Verdi"
+                                    value={filter.value}
+                                    onChange={(e) => updateFilter(index, { value: e.target.value })}
+                                    size="small"
+                                  />
+                                </>
+                              ) : (
+                                <>
+                                  <Select
+                                    label="Operator"
+                                    value={filter.operator}
+                                    onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
+                                    size="small"
+                                  >
+                                    {OPERATORS.map(op => (
+                                      <option key={op.value} value={op.value}>
+                                        {op.label}
+                                      </option>
+                                    ))}
+                                  </Select>
 
-                              {/* Only show value field if operator is not IS NULL or IS NOT NULL */}
-                              {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
-                                <TextField
-                                  label="Verdi"
-                                  value={filter.value}
-                                  onChange={(e) => updateFilter(index, { value: e.target.value })}
-                                  size="small"
-                                />
+                                  {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
+                                    <TextField
+                                      label="Verdi"
+                                      value={filter.value}
+                                      onChange={(e) => updateFilter(index, { value: e.target.value })}
+                                      size="small"
+                                    />
+                                  )}
+                                </>
                               )}
 
                               <Button
