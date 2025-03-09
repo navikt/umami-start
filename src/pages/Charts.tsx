@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, KeyboardEvent } from 'react';
 import {
   Button,
   Heading,
@@ -66,6 +66,12 @@ interface DynamicFilterOption {
   label: string;
   value: string;
   template: string;
+}
+
+// Add interface for custom parameters
+interface Parameter {
+  key: string;
+  type: 'string' | 'number';
 }
 
 // Add date format options
@@ -147,12 +153,6 @@ const FILTER_COLUMNS = {
       { label: 'Country', value: 'country' },
       { label: 'Region', value: 'subdivision1' },
       { label: 'City', value: 'city' }
-    ]
-  },
-  custom: {
-    label: 'Egendefinerte',  // Add this new group first
-    columns: [
-      { label: 'Eget filternavn', value: 'custom_column' }, // Changed from event_name_custom
     ]
   }
 };
@@ -288,6 +288,8 @@ const ChartsPage = () => {
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);
   const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
+  const [parameters, setParameters] = useState<Parameter[]>([]);
+  const [newParameter, setNewParameter] = useState<string>('');
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -323,7 +325,7 @@ const ChartsPage = () => {
     if (debouncedConfig.website) {
       generateSQL();
     }
-  }, [debouncedConfig, dynamicFilters, filters]); // Add generateSQL to deps
+  }, [debouncedConfig, dynamicFilters, filters, parameters]); // Add generateSQL to deps
 
   // Add helper functions for metrics
   const addMetric = () => {
@@ -387,12 +389,23 @@ const ChartsPage = () => {
   const generateSQLCore = useCallback((
     config: ChartConfig,
     filters: Filter[],
-    dynamicFilters: string[]
+    dynamicFilters: string[],
+    parameters: Parameter[]
   ): string => {
     if (!config.website) return '';
 
     const requiredTables = getRequiredTables();
     
+    // Declare whereClauseFragments at the top
+    const whereClauseFragments: string[] = [];
+    dynamicFilters.forEach(filterValue => {
+      const filter = DYNAMIC_FILTER_OPTIONS.find(f => f.value === filterValue);
+      if (filter) {
+        const template = filter.template.replace(/\[\[AND /, '').replace(/\]\]/, '');
+        whereClauseFragments.push(template);
+      }
+    });
+
     // Start building the SQL with a CTE (Common Table Expression)
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';
@@ -467,28 +480,46 @@ const ChartsPage = () => {
     // WHERE clause
     sql += `  WHERE e.website_id = '${config.website.id}'\n`;
     
-// Add static filters to the CTE
-filters.forEach(filter => {
-    if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-      sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
-    } else if (filter.value) {
-      if (filter.column === 'custom_column') {
-        // Handle custom column name
-        sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
-      } else if (filter.column === 'event_type') {
-        // Handle event_type as integer
-        sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
-      } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
-        sql += `  AND e.${filter.column} ${filter.operator} '%${filter.value}%'\n`;
-      } else if (filter.operator === 'STARTS_WITH') {
-        sql += `  AND e.${filter.column} LIKE '${filter.value}%'\n`;
-      } else if (filter.operator === 'ENDS_WITH') {
-        sql += `  AND e.${filter.column} LIKE '%${filter.value}'\n`;
-      } else {
-        sql += `  AND e.${filter.column} ${filter.operator} '${filter.value}'\n`;
+    // Add static filters to the CTE
+    filters.forEach(filter => {
+      if (filter.column.startsWith('param_')) {
+        // Instead of skipping parameter filters, we need to handle them differently
+        // Parameter filters need to be applied in the main query with special JOIN conditions
+        const paramName = filter.column.replace('param_', '');
+        const param = parameters.find(p => sanitizeColumnName(p.key) === paramName);
+        
+        if (param) {
+          // Add note that this filter will be applied in the main query
+          sql += `  /* Parameter filter for ${param.key} will be applied in main query */\n`;
+        }
+      } else if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
+        // Handle custom parameters
+        if (filter.column.startsWith('param_')) {
+          sql += `  AND ${filter.column} ${filter.operator}\n`;
+        } else {
+          sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
+        }
+      } else if (filter.value) {
+        if (filter.column.startsWith('param_')) {
+          // Handle parameter filtering
+          sql += `  AND ${filter.column} ${filter.operator} '${filter.value}'\n`;
+        } else if (filter.column === 'custom_column') {
+          // Handle custom column name
+          sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
+        } else if (filter.column === 'event_type') {
+          // Handle event_type as integer
+          sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
+        } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
+          sql += `  AND e.${filter.column} ${filter.operator} '%${filter.value}%'\n`;
+        } else if (filter.operator === 'STARTS_WITH') {
+          sql += `  AND e.${filter.column} LIKE '${filter.value}%'\n`;
+        } else if (filter.operator === 'ENDS_WITH') {
+          sql += `  AND e.${filter.column} LIKE '%${filter.value}'\n`;
+        } else {
+          sql += `  AND e.${filter.column} ${filter.operator} '${filter.value}'\n`;
+        }
       }
-    }
-  });
+    });
     
     sql += ')\n\n';
     
@@ -503,21 +534,9 @@ filters.forEach(filter => {
       if (field === 'created_at') {
         const format = DATE_FORMATS.find(f => f.value === config.dateFormat)?.format || '%Y-%m-%d';
         selectClauses.push(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
-      } else {
-        // Handle date formatting for created_at
-        if (field === 'created_at') {
-          selectClauses.push('FORMAT_TIMESTAMP(\'%Y-%m-%d\', base_query.created_at) AS dato');
-        } else {
-          // Add table prefix based on column source
-          const column = Object.values(COLUMN_GROUPS)
-            .flatMap(group => group.columns)
-            .find(c => c.value === field);
-          
-          if (column) {
-            const tablePrefix = 'base_query';
-            selectClauses.push(`${tablePrefix}.${field}`);
-          }
-        }
+      } else if (!field.startsWith('param_')) { // Don't add parameters here
+        const tablePrefix = 'base_query';
+        selectClauses.push(`${tablePrefix}.${field}`);
       }
     });
     
@@ -525,30 +544,126 @@ filters.forEach(filter => {
     config.metrics.forEach((metric, index) => {
       selectClauses.push(getMetricSQL(metric, index));
     });
+
+    // Add parameters to the select
+    const parameterColumns = parameters.map(({ key, type }) => 
+      type === 'string' 
+        ? `  NULLIF(STRING_AGG(
+              CASE 
+                WHEN event_data.data_key = '${key}' 
+                THEN event_data.string_value 
+              END,
+              ',' 
+              ORDER BY base_query.created_at
+            ), '') AS param_${sanitizeColumnName(key)}`
+        : `  MAX(
+              CASE 
+                WHEN event_data.data_key = '${key}'
+                THEN CAST(event_data.number_value AS NUMERIC)
+              END
+            ) AS param_${sanitizeColumnName(key)}`
+    );
+    
+    // Add parameters to the selectClauses array
+    selectClauses.push(...parameterColumns);
     
     sql += '  ' + selectClauses.join(',\n  ');
     
     // FROM and JOIN
     sql += '\nFROM base_query\n';
     
-    // Dynamic filters section with type safety
-    const whereClauseFragments: string[] = [];
-    dynamicFilters.forEach(filterValue => {
-      const filter = DYNAMIC_FILTER_OPTIONS.find(f => f.value === filterValue);
-      if (filter) {
-        const template = filter.template.replace(/\[\[AND /, '').replace(/\]\]/, '');
-        whereClauseFragments.push(template);
+    // Add JOIN to event_data table if there are parameters
+    if (parameters.length > 0) {
+      sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
+      sql += '  ON base_query.event_id = event_data.website_event_id\n';
+      
+      // Get parameter filters
+      const paramFilters = filters.filter(filter => filter.column.startsWith('param_'));
+      
+      // Add WHERE clause for parameter filters and dynamic filters
+      const whereConditions = [...whereClauseFragments];
+      
+      // Add parameter filter conditions
+      paramFilters.forEach(filter => {
+        const paramName = filter.column.replace('param_', '');
+        const param = parameters.find(p => sanitizeColumnName(p.key) === paramName);
+        
+        if (param) {
+          if (filter.operator === 'IS NULL') {
+            whereConditions.push(`NOT EXISTS (
+              SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+              WHERE param_filter.website_event_id = base_query.event_id
+                AND param_filter.data_key = '${param.key}'
+            )`);
+          } else if (filter.operator === 'IS NOT NULL') {
+            whereConditions.push(`EXISTS (
+              SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+              WHERE param_filter.website_event_id = base_query.event_id
+                AND param_filter.data_key = '${param.key}'
+            )`);
+          } else {
+            const valueField = param.type === 'number' ? 'number_value' : 'string_value';
+            const valuePrefix = param.type === 'number' ? '' : "'";
+            const valueSuffix = param.type === 'number' ? '' : "'";
+            
+            if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
+              whereConditions.push(`EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND param_filter.data_key = '${param.key}'
+                  AND param_filter.${valueField} ${filter.operator} ${valuePrefix}%${filter.value}%${valueSuffix}
+              )`);
+            } else if (filter.operator === 'STARTS_WITH') {
+              whereConditions.push(`EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND param_filter.data_key = '${param.key}'
+                  AND param_filter.${valueField} LIKE ${valuePrefix}${filter.value}%${valueSuffix}
+              )`);
+            } else if (filter.operator === 'ENDS_WITH') {
+              whereConditions.push(`EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND param_filter.data_key = '${param.key}'
+                  AND param_filter.${valueField} LIKE ${valuePrefix}%${filter.value}${valueSuffix}
+              )`);
+            } else {
+              whereConditions.push(`EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND param_filter.data_key = '${param.key}'
+                  AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
+              )`);
+            }
+          }
+        }
+      });
+      
+      // Add WHERE clause if there are any conditions
+      if (whereConditions.length > 0) {
+        sql += 'WHERE ' + whereConditions.join('\n  AND ') + '\n';
       }
-    });
-    
-    if (whereClauseFragments.length > 0) {
+    } else if (whereClauseFragments.length > 0) {
+      // If no parameters but we have dynamic filters
       sql += 'WHERE ' + whereClauseFragments.join('\n  AND ') + '\n';
     }
-    
+
     // GROUP BY
-    if (config.groupByFields.length > 0) {
-      const groupColumns = config.groupByFields.map((_, i) => (i + 1).toString());
-      sql += 'GROUP BY ' + groupColumns.join(', ') + '\n';
+    if (config.groupByFields.length > 0 || parameters.length > 0) {
+      sql += 'GROUP BY\n  ';
+      const groupByCols: string[] = [];
+      
+      // Add regular columns
+      config.groupByFields.forEach(field => {
+        if (field === 'created_at') {
+          groupByCols.push('dato'); // Use the alias we created
+        } else if (!field.startsWith('param_')) { // Skip parameters in GROUP BY
+          groupByCols.push(`base_query.${field}`);
+        }
+      });
+    
+      sql += groupByCols.join(',\n  ');
+      sql += '\n';
     }
     
     // ORDER BY - Modified to handle date ordering correctly
@@ -569,7 +684,7 @@ filters.forEach(filter => {
   }, []);
 
   const generateSQL = () => {
-    setGeneratedSQL(generateSQLCore(config, filters, dynamicFilters));
+    setGeneratedSQL(generateSQLCore(config, filters, dynamicFilters, parameters));
   };
 
   // Update the getMetricSQL function to handle aliases and indices
@@ -665,6 +780,54 @@ filters.forEach(filter => {
     return tables;
   };
 
+  // Add helper functions for parameters
+  const addParameter = (): void => {
+    if (!newParameter.trim()) return;
+    
+    // Split the input by newlines and commas
+    const params = newParameter
+      .split(/[\n,]/)
+      .map(param => param.trim())
+      .filter(param => param && !parameters.some(p => p.key === param));
+    
+    if (params.length) {
+      setParameters(prev => [
+        ...prev,
+        ...params.map(param => ({ key: param, type: 'string' as 'string' }))
+      ]);
+      setNewParameter('');
+    }
+  };
+  
+  const removeParameter = (keyToRemove: string): void => {
+    setParameters(parameters.filter(param => param.key !== keyToRemove));
+  };
+  
+  const toggleParameterType = (key: string) => {
+    setParameters(prev => prev.map(param => 
+      param.key === key 
+        ? { ...param, type: param.type === 'string' ? 'number' : 'string' }
+        : param
+    ));
+  };
+  
+  const handleParameterKeyPress = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      action();
+    }
+  };
+
+  // Add a sanitizeColumnName helper function
+  const sanitizeColumnName = (key: string): string => {
+    return key
+      .replace(/\./g, '_')
+      .replace(/æ/gi, 'ae')
+      .replace(/ø/gi, 'oe')
+      .replace(/å/gi, 'aa')
+      .replace(/[^a-z0-9_]/gi, '_'); // Replace any other special characters with underscore
+  };
+
   return (
     // Update layout to side-by-side on large screens
     <div className="w-full max-w-[1600px]">
@@ -700,6 +863,85 @@ filters.forEach(filter => {
 
             {config.website && (
               <>
+                {/* Custom Parameters section - MOVED UP */}
+                <section>
+                  <Heading level="2" size="small" spacing>
+                    Egendefinerte parametere
+                  </Heading>
+                  
+                  <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Legg til parametere som er knyttet til eventene, for eksempel knappetekster eller andre attributter.
+                      Disse vil være tilgjengelige for filtrering, gruppering og beregninger.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="flex gap-2 items-end">
+                        <TextField
+                          label="Parametere"
+                          description="Eksempel: skjemanavn (legg til flere med komma)"
+                          value={newParameter}
+                          onChange={(e) => setNewParameter(e.target.value)}
+                          onKeyPress={(e) => handleParameterKeyPress(e, addParameter)}
+                          style={{ width: '100%' }}
+                        />
+                        <Button 
+                          variant="secondary" 
+                          onClick={addParameter}
+                          style={{ height: '50px' }}
+                        >
+                          Legg til parameter
+                        </Button>
+                      </div>
+
+                      {parameters.length > 0 && (
+                        <div className="space-y-2">
+                          <Label as="p" size="small">
+                            Valgte parametere:
+                          </Label>
+                          <div className="flex flex-col gap-2">
+                            {parameters.map((param) => (
+                              <div 
+                                key={param.key} 
+                                className="flex items-center justify-between bg-white px-4 py-3 rounded-md border"
+                              >
+                                <span className="font-medium">
+                                  {param.key}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Select 
+                                    label=""
+                                    size="small"
+                                    value={param.type}
+                                    className="!w-auto min-w-[120px]"
+                                    onChange={() => toggleParameterType(param.key)}
+                                  >
+                                    <option value="string">📝 Tekst</option>
+                                    <option value="number">🔢 Tall</option>
+                                  </Select>
+                                  <Button
+                                    variant="tertiary-neutral"
+                                    size="small"
+                                    onClick={() => removeParameter(param.key)}
+                                  >
+                                    Fjern
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-2 text-sm italic text-gray-600">
+                        <p>
+                          For å finne tilgjengelige parametere, bruk <Link href="/explore">Utforsk-verktøyet</Link> til å se hvilke parametere som er knyttet til eventene.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
                 {/* Filter section - Improved UI */}
                 <section>
                   <Heading level="2" size="small" spacing>
@@ -798,6 +1040,7 @@ filters.forEach(filter => {
                                 onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })} // Reset value when changing column
                                 size="small"
                               >
+                                {/* Regular columns */}
                                 {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
                                   <optgroup key={groupKey} label={group.label}>
                                     {group.columns.map(col => (
@@ -807,6 +1050,17 @@ filters.forEach(filter => {
                                     ))}
                                   </optgroup>
                                 ))}
+                                
+                                {/* Add custom parameters as filter options */}
+                                {parameters.length > 0 && (
+                                  <optgroup label="Egendefinerte parametere">
+                                    {parameters.map(param => (
+                                      <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                        {param.key}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
                               </Select>
 
                               {filter.column === 'custom_column' ? (
@@ -990,6 +1244,7 @@ filters.forEach(filter => {
                             className="flex-grow"
                           >
                             <option value="">Velg felt...</option>
+                            {/* Regular columns */}
                             {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
                               <optgroup key={groupKey} label={group.label}>
                                 {group.columns
@@ -1001,6 +1256,19 @@ filters.forEach(filter => {
                                   ))}
                               </optgroup>
                             ))}
+                            
+                            {/* Add custom parameters group */}
+                            {parameters.length > 0 && (
+                              <optgroup label="Egendefinerte parametere">
+                                {parameters
+                                  .filter(param => !config.groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
+                                  .map(param => (
+                                    <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                      {param.key}
+                                    </option>
+                                  ))}
+                              </optgroup>
+                            )}
                           </Select>
                         </div>
 
@@ -1011,9 +1279,15 @@ filters.forEach(filter => {
                             </Label>
                             <div className="flex flex-col gap-2">
                               {config.groupByFields.map((field, index) => {
+                                // Try to find in regular columns first
                                 const column = Object.values(COLUMN_GROUPS)
                                   .flatMap(group => group.columns)
                                   .find(col => col.value === field);
+                                
+                                // If not found in regular columns, check if it's a parameter
+                                const paramName = field.startsWith('param_') ? parameters.find(
+                                  p => `param_${sanitizeColumnName(p.key)}` === field
+                                )?.key : undefined;
                                 
                                 return (
                                   <div 
@@ -1025,7 +1299,7 @@ filters.forEach(filter => {
                                         {index + 1}.
                                       </span>
                                       <span className="font-medium">
-                                        {column?.label || field}
+                                        {paramName || column?.label || field}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2">
