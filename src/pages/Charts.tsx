@@ -568,51 +568,74 @@ const ChartsPage = () => {
     sql += 'SELECT\n';
     
     // Generate select clause with all metrics and group by fields
-    const selectClauses: string[] = [];
+    const selectClauses = new Set<string>(); // Use Set to prevent duplicates
     
     // Add group by fields to select with date formatting
     config.groupByFields.forEach(field => {
       if (field === 'created_at') {
         const format = DATE_FORMATS.find(f => f.value === config.dateFormat)?.format || '%Y-%m-%d';
-        selectClauses.push(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
-      } else if (!field.startsWith('param_')) { // Don't add parameters here
+        selectClauses.add(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
+      } else if (field.startsWith('param_')) {
+        // Skip parameters here - they'll be handled in a unified way below
+      } else {
         const tablePrefix = 'base_query';
-        selectClauses.push(`${tablePrefix}.${field}`);
+        selectClauses.add(`${tablePrefix}.${field}`);
       }
     });
     
     // Add metrics to select
     config.metrics.forEach((metric, index) => {
-      selectClauses.push(getMetricSQL(metric, index));
+      selectClauses.add(getMetricSQL(metric, index));
     });
 
-    // Add parameters to the select
-    const parameterColumns = parameters.map(({ key, type }) => 
-      type === 'string' 
-        ? `  NULLIF(STRING_AGG(
-              CASE 
-                WHEN event_data.data_key = '${key}' 
-                THEN event_data.string_value 
-              END,
-              ',' 
-              ORDER BY base_query.created_at
-            ), '') AS param_${sanitizeColumnName(key)}`
-        : `  MAX(
-              CASE 
-                WHEN event_data.data_key = '${key}'
-                THEN CAST(event_data.number_value AS NUMERIC)
-              END
-            ) AS param_${sanitizeColumnName(key)}`
-    );
+    // Add ALL parameters to select - both from groupBy and metrics - in a unified way
+    const usedParams = new Set<string>();
     
-    // Add parameters to the selectClauses array
-    selectClauses.push(...parameterColumns);
+    // Collect parameters from groupBy fields
+    config.groupByFields
+      .filter(field => field.startsWith('param_'))
+      .forEach(field => {
+        const paramKey = field.replace('param_', '');
+        usedParams.add(paramKey);
+      });
     
-    sql += '  ' + selectClauses.join(',\n  ');
+    // Collect parameters from metrics
+    config.metrics
+      .filter(metric => metric.column?.startsWith('param_'))
+      .forEach(metric => {
+        const paramKey = metric.column!.replace('param_', '');
+        usedParams.add(paramKey);
+      });
     
-    // FROM and JOIN
+    // Add all used parameters to select clause
+    Array.from(usedParams).forEach(paramKey => {
+      const param = parameters.find(p => sanitizeColumnName(p.key) === paramKey);
+      if (param) {
+        selectClauses.add(
+          param.type === 'string'
+            ? `  NULLIF(STRING_AGG(
+                CASE 
+                  WHEN event_data.data_key = '${param.key}' 
+                  THEN event_data.string_value 
+                END,
+                ',' 
+                ORDER BY base_query.created_at
+              ), '') AS param_${sanitizeColumnName(param.key)}`
+            : `  MAX(
+                CASE 
+                  WHEN event_data.data_key = '${param.key}'
+                  THEN CAST(event_data.number_value AS NUMERIC)
+                END
+              ) AS param_${sanitizeColumnName(param.key)}`
+        );
+      }
+    });
+    
+    sql += '  ' + Array.from(selectClauses).join(',\n  ');
+
+    // Add FROM clause
     sql += '\nFROM base_query\n';
-    
+
     // Add JOIN to event_data table if there are parameters
     if (parameters.length > 0) {
       sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
