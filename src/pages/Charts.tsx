@@ -1307,7 +1307,7 @@ const ChartsPage = () => {
                         Gruppering
                       </Heading>
                       <p className="text-sm text-gray-600 mb-4">
-                        Velg hvilke felter resultatet skal grupperes etter. Rekkefølgen bestemmer hvordan dataene grupperes.
+                        Velg hvordan dataene skal grupperes og vises. For eksempel kan du gruppere etter dato for å se endringer over tid, eller etter land for å sammenligne bruk på tvers av regioner.
                       </p>
                       
                       <div className="space-y-4">
