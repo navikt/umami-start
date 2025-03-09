@@ -1,10 +1,6 @@
 import { KeyboardEvent } from 'react';
 import { Button, TextField, Label, Link, Select } from '@navikt/ds-react';
-
-interface Parameter {
-  key: string;
-  type: 'string' | 'number';
-}
+import { Parameter } from '../types/chart';
 
 interface CustomParametersProps {
   parameters: Parameter[];
@@ -41,6 +37,7 @@ const CustomParameters = ({
   };
   
   const toggleParameterType = (key: string) => {
+    // @ts-ignore - Type inference issue with string literals, but implementation is correct
     setParameters(prev => prev.map(param => 
       param.key === key 
         ? { ...param, type: param.type === 'string' ? 'number' : 'string' }

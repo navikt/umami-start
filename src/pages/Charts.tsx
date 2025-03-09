@@ -1,77 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Heading,
-  VStack,
-} from '@navikt/ds-react';
+import { Heading, VStack } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/websitepicker';
 import SQLPreview from '../components/sqlpreview';
 import ChartFilters from '../components/ChartFilters';
 import CustomParameters from '../components/CustomParameters';
 import Summarize from '../components/Summarize';
+import { 
+  Parameter, 
+  Metric, 
+  DateFormat, 
+  ColumnGroup,
+  MetricOption,
+  ColumnOption,
+  ChartConfig,
+  Filter,
+  DynamicFilterOption,
+  Website
+} from '../types/chart';
 
-// Update ChartConfig interface to support multiple metrics
-interface ChartConfig {
-  website: Website | null;
-  filters: Array<{
-    column: string;
-    operator: string;
-    value: string;
-  }>;
-  metrics: Array<{
-    function: string;
-    column?: string;
-    alias?: string;
-  }>;
-  groupByFields: string[];
-  orderBy: {
-    column: string;
-    direction: 'ASC' | 'DESC';
-  } | null;
-  dateFormat: DateFormat['value'] | null;
-}
-
-interface Website {
-  id: string;
-  name: string;
-  domain: string;
-  teamId: string;
-}
-
-interface Filter {
-  column: string;
-  operator: string;
-  value: string;
-  customColumn?: string; // Add new property for custom column name
-}
-
-interface Metric {
-  function: string;
-  column?: string;
-  alias?: string;
-}
-
-// Add new interface for date grouping
-interface DateFormat {
-  label: string;
-  value: string;
-  format: string;
-}
-
-// Add interface for dynamic filter
-interface DynamicFilterOption {
-  label: string;
-  value: string;
-  template: string;
-}
-
-// Add interface for custom parameters
-interface Parameter {
-  key: string;
-  type: 'string' | 'number';
-}
-
-// Add date format options
+// Update your constants to use the new types
 const DATE_FORMATS: DateFormat[] = [
   { 
     label: 'År', 
@@ -100,7 +48,7 @@ const DATE_FORMATS: DateFormat[] = [
   }
 ];
 
-const METRICS = [
+const METRICS: MetricOption[] = [
   { label: 'Antall rader', value: 'count' },
   { label: 'Antall unike verdier', value: 'distinct' },
   { label: 'Sum av verdier', value: 'sum' },
@@ -108,32 +56,56 @@ const METRICS = [
   { label: 'Median', value: 'median' },
 ];
 
+const COLUMN_GROUPS: Record<string, ColumnGroup> = {
+  eventBasics: {
+    label: 'Basisdetaljer',
+    table: 'base_query',
+    columns: [
+      { label: 'Event ID', value: 'event_id' },
+      { label: 'Created At', value: 'created_at' },
+      { label: 'Event Type', value: 'event_type' },
+      { label: 'Event Name', value: 'event_name' },
+      { label: 'Website ID', value: 'website_id' },
+      { label: 'Website Domain', value: 'website_domain' },
+      { label: 'Website Name', value: 'website_name' }
+    ]
+  },
+  pageDetails: {
+    label: 'Hendelsesdetaljer',
+    table: 'base_query',
+    columns: [
+      { label: 'Page Title', value: 'page_title' },
+      { label: 'URL Path', value: 'url_path' },
+      { label: 'URL Query', value: 'url_query' },
+      { label: 'URL Full Path', value: 'url_fullpath' },
+      { label: 'URL Full URL', value: 'url_fullurl' },
+      { label: 'Referrer Domain', value: 'referrer_domain' },
+      { label: 'Referrer Path', value: 'referrer_path' },
+      { label: 'Referrer Query', value: 'referrer_query' },
+      { label: 'Referrer Full Path', value: 'referrer_fullpath' },
+      { label: 'Referrer Full URL', value: 'referrer_fullurl' }
+    ]
+  },
+  visitorDetails: {
+    label: 'Brukerdetaljer',
+    table: 'session',
+    columns: [
+      { label: 'Visit ID', value: 'visit_id' },
+      { label: 'Session ID', value: 'session_id' },
+      { label: 'Browser', value: 'browser' },
+      { label: 'OS', value: 'os' },
+      { label: 'Device', value: 'device' },
+      { label: 'Screen', value: 'screen' },
+      { label: 'Language', value: 'language' },
+      { label: 'Country', value: 'country' },
+      { label: 'Region', value: 'subdivision1' },
+      { label: 'City', value: 'city' }
+    ]
+  }
+};
+
 const DYNAMIC_FILTER_OPTIONS: DynamicFilterOption[] = [
-  // Time filters
-  { label: 'Dato', value: 'created_at', template: '{{created_at}}' },
-  
-  // Page/URL filters
-  { label: 'Sidesti (URL-sti)', value: 'url_path', template: '[[AND url_path = {{path}}]]' },
-  { label: 'Sidetittel', value: 'page_title', template: '[[AND page_title = {{page_title}}]]' },
-  { label: 'URL søkeparametere', value: 'url_query', template: '[[AND url_query = {{url_query}}]]' },
-  
-  // Referrer filters
-  { label: 'Henvisende domene', value: 'referrer_domain', template: '[[AND referrer_domain = {{referrer_domain}}]]' },
-  { label: 'Henvisende sti', value: 'referrer_path', template: '[[AND referrer_path = {{referrer_path}}]]' },
-  
-  // Visitor/Session filters
-  { label: 'Enhet', value: 'device', template: '[[AND device = {{device}}]]' },
-  { label: 'Nettleser', value: 'browser', template: '[[AND browser = {{browser}}]]' },
-  { label: 'Operativsystem', value: 'os', template: '[[AND os = {{os}}]]' },
-  { label: 'Land', value: 'country', template: '[[AND country = {{country}}]]' },
-  { label: 'Region', value: 'subdivision1', template: '[[AND subdivision1 = {{region}}]]' },
-  { label: 'By', value: 'city', template: '[[AND city = {{city}}]]' },
-  { label: 'Språk', value: 'language', template: '[[AND language = {{language}}]]' },
-  { label: 'Skjermstørrelse', value: 'screen', template: '[[AND screen = {{screen}}]]' },
-  
-  // Event filters
-  { label: 'Event navn', value: 'event_name', template: '[[AND event_name = {{event_name}}]]' },
-  { label: 'Event type', value: 'event_type', template: '[[AND event_type = {{event_type}}]]' },
+  // ...existing code...
 ];
 
 // Add the sanitizeColumnName helper function BEFORE it's used
@@ -147,7 +119,7 @@ const sanitizeColumnName = (key: string): string => {
 };
 
 // Now define getMetricColumns which uses sanitizeColumnName
-const getMetricColumns = (parameters: Parameter[], metric: string) => {
+const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption[] => {
   // Define the base columns structure with proper typing
   const baseColumns: Record<string, Array<{label: string, value: string}>> = {
     count: [],
@@ -198,61 +170,6 @@ const getMetricColumns = (parameters: Parameter[], metric: string) => {
   }
 
   return cols;
-};
-
-// Fix the columnGroups structure
-const COLUMN_GROUPS: {
-  [key: string]: {
-    label: string;
-    table: string;
-    columns: Array<{ label: string; value: string }>;
-  };
-} = {
-  eventBasics: {
-    label: 'Basisdetaljer',
-    table: 'base_query',
-    columns: [
-      { label: 'Event ID', value: 'event_id' },
-      { label: 'Created At', value: 'created_at' },
-      { label: 'Event Type', value: 'event_type' },
-      { label: 'Event Name', value: 'event_name' },
-      { label: 'Website ID', value: 'website_id' },
-      { label: 'Website Domain', value: 'website_domain' },
-      { label: 'Website Name', value: 'website_name' }
-    ]
-  },
-  pageDetails: {
-    label: 'Hendelsesdetaljer',
-    table: 'base_query',
-    columns: [
-      { label: 'Page Title', value: 'page_title' },
-      { label: 'URL Path', value: 'url_path' },
-      { label: 'URL Query', value: 'url_query' },
-      { label: 'URL Full Path', value: 'url_fullpath' },
-      { label: 'URL Full URL', value: 'url_fullurl' },
-      { label: 'Referrer Domain', value: 'referrer_domain' },
-      { label: 'Referrer Path', value: 'referrer_path' },
-      { label: 'Referrer Query', value: 'referrer_query' },
-      { label: 'Referrer Full Path', value: 'referrer_fullpath' },
-      { label: 'Referrer Full URL', value: 'referrer_fullurl' }
-    ]
-  },
-  visitorDetails: {
-    label: 'Brukerdetaljer',
-    table: 'session',
-    columns: [
-      { label: 'Visit ID', value: 'visit_id' },
-      { label: 'Session ID', value: 'session_id' },
-      { label: 'Browser', value: 'browser' },
-      { label: 'OS', value: 'os' },
-      { label: 'Device', value: 'device' },
-      { label: 'Screen', value: 'screen' },
-      { label: 'Language', value: 'language' },
-      { label: 'Country', value: 'country' },
-      { label: 'Region', value: 'subdivision1' },
-      { label: 'City', value: 'city' }
-    ]
-  }
 };
 
 const ChartsPage = () => {
@@ -783,8 +700,8 @@ const ChartsPage = () => {
               {/* Data section - Website picker */}
               <section>
                 <WebsitePicker
-                  selectedWebsite={config.website}
-                  onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
+                  selectedWebsite={config.website as Website | null}
+                  onWebsiteChange={(website: Website | null) => setConfig(prev => ({ ...prev, website }))}
                 />
               </section>
 

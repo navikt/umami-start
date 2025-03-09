@@ -1,23 +1,25 @@
 import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
-import { Parameter, Metric, DateFormat } from '../types/chart';
+import { 
+  Parameter, 
+  Metric, 
+  DateFormat, 
+  ColumnGroup,
+  MetricOption,
+  OrderBy,
+  ColumnOption
+} from '../types/chart';
 
 interface SummarizeProps {
   metrics: Metric[];
   groupByFields: string[];
   parameters: Parameter[];
   dateFormat: string | null;
-  orderBy: { column: string; direction: 'ASC' | 'DESC' } | null;
-  METRICS: Array<{ label: string; value: string }>;
+  orderBy: OrderBy | null;
+  METRICS: MetricOption[];
   DATE_FORMATS: DateFormat[];
-  COLUMN_GROUPS: {
-    [key: string]: {
-      label: string;
-      table: string;
-      columns: Array<{ label: string; value: string }>;
-    };
-  };
-  getMetricColumns: (parameters: Parameter[], metric: string) => Array<{ label: string; value: string }>;
+  COLUMN_GROUPS: Record<string, ColumnGroup>;
+  getMetricColumns: (parameters: Parameter[], metric: string) => ColumnOption[];
   sanitizeColumnName: (key: string) => string;
   updateMetric: (index: number, updates: Partial<Metric>) => void;
   removeMetric: (index: number) => void;
