@@ -85,15 +85,16 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       );
       const properties: EventProperty[] = await propertiesResponse.json();
       
-      // Extract unique property names and create parameters
+      // Extract unique event names and property names
+      const uniqueEventNames = Array.from(new Set(properties.map(prop => prop.eventName)));
       const uniqueProperties = Array.from(new Set(properties.map(prop => prop.propertyName)));
       
-      if (onEventsLoad && uniqueProperties.length > 0) {
-        const autoParameters = uniqueProperties.map(prop => ({
+      if (onEventsLoad) {
+        // Pass both event names and parameters to parent
+        onEventsLoad(uniqueEventNames, uniqueProperties.map(prop => ({
           key: prop,
           type: 'string' as const
-        }));
-        onEventsLoad(uniqueProperties, autoParameters);
+        })));
       }
     } catch (error) {
       console.error("Error fetching event properties:", error);

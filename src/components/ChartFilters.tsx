@@ -10,6 +10,7 @@ interface ChartFiltersProps {
   parameters: Parameter[];
   setFilters: (filters: Filter[]) => void;
   setDynamicFilters: (filters: string[]) => void;
+  availableEvents?: string[];
 }
 
 const ChartFilters = ({
@@ -17,7 +18,8 @@ const ChartFilters = ({
   dynamicFilters,
   parameters,
   setFilters,
-  setDynamicFilters
+  setDynamicFilters,
+  availableEvents = []
 }: ChartFiltersProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -188,12 +190,28 @@ const ChartFilters = ({
                   </Select>
 
                   {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
-                    <TextField
-                      label="Verdi"
-                      value={filter.value}
-                      onChange={(e) => updateFilter(index, { value: e.target.value })}
-                      size="small"
-                    />
+                    filter.column === 'event_name' ? (
+                      <Select
+                        label="Event navn"
+                        value={filter.value}
+                        onChange={(e) => updateFilter(index, { value: e.target.value })}
+                        size="small"
+                      >
+                        <option value="">Velg event...</option>
+                        {availableEvents.map(event => (
+                          <option key={event} value={event}>
+                            {event}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <TextField
+                        label="Verdi"
+                        value={filter.value}
+                        onChange={(e) => updateFilter(index, { value: e.target.value })}
+                        size="small"
+                      />
+                    )
                   )}
 
                   <Button

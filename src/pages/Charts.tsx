@@ -184,6 +184,7 @@ const ChartsPage = () => {
   const [filters, setFilters] = useState<Filter[]>([]);
   const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<string[]>([]);
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -666,7 +667,8 @@ const ChartsPage = () => {
   };
 
   // Update handleEventsLoad to match the WebsitePicker's onEventsLoad type
-  const handleEventsLoad = (_events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
+  const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
+    setAvailableEvents(events);
     if (autoParameters) {
       setParameters(autoParameters); // Only set parameters if they're provided
     }
@@ -705,6 +707,7 @@ const ChartsPage = () => {
                     parameters={parameters}
                     setFilters={setFilters}
                     setDynamicFilters={setDynamicFilters}
+                    availableEvents={availableEvents}
                   />
 
                   {/* Replace Summarize section with new component */}
