@@ -422,10 +422,10 @@ const ChartsPage = () => {
           // Use the first matching parameter's type for the value field
           const valueField = matchingParams[0].type === 'number' ? 'number_value' : 'string_value';
           
-          // Create CASE statement with exact matches for each parameter
+          // Use SUBSTR and INSTR to extract the parameter name
           selectClauses.add(
             `MAX(CASE 
-                WHEN event_data.data_key = '${paramBase}' THEN event_data.${valueField}
+                WHEN SUBSTR(event_data.data_key, INSTR(event_data.data_key, '.') + 1) = '${paramBase}' THEN event_data.${valueField}
                 ELSE NULL
               END) AS ${field}`
           );
@@ -471,13 +471,13 @@ const ChartsPage = () => {
             whereConditions.push(`NOT EXISTS (
               SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
               WHERE param_filter.website_event_id = base_query.event_id
-                AND param_filter.data_key = '${paramName}'
+                AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
             )`);
           } else if (filter.operator === 'IS NOT NULL') {
             whereConditions.push(`EXISTS (
               SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
               WHERE param_filter.website_event_id = base_query.event_id
-                AND param_filter.data_key = '${paramName}'
+                AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
             )`);
           } else {
             const valueField = param.type === 'number' ? 'number_value' : 'string_value';
@@ -487,7 +487,7 @@ const ChartsPage = () => {
             whereConditions.push(`EXISTS (
               SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
               WHERE param_filter.website_event_id = base_query.event_id
-                AND param_filter.data_key = '${paramName}'
+                AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
                 AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
             )`);
           }
@@ -690,7 +690,6 @@ const ChartsPage = () => {
           const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
           setMaxDaysAvailable(totalDays);
           
-          setTempDateRangeInDays(defaultDays);
           setDateRangeReady(true);
         } catch (err) {
           console.error("Error fetching date range:", err);

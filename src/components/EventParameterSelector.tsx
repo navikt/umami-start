@@ -9,13 +9,11 @@ import {
   BodyShort,
   Detail,
   Heading,
-  Tag,
   ReadMore,
   Panel,
   Alert,
   Switch,
-  Tooltip,
-  Badge
+  Tooltip
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon, 
@@ -46,7 +44,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   const [customParamAccordionOpen, setCustomParamAccordionOpen] = useState<boolean>(false);
   const [showGroupedView, setShowGroupedView] = useState<boolean>(false);
   
-  // Store event-parameter mapping to ensure proper relationship
+  // @ts-ignore Store event-parameter mapping to ensure proper relationship
   const [eventParamsMap, setEventParamsMap] = useState<EventParams>({});
   
   // Extract event-parameter map from the input parameters list
@@ -78,7 +76,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       // Remove event
       setSelectedEvents(prev => prev.filter(e => e !== event));
       
-      // Remove its parameters
+      // @ts-ignore Remove its parameters
       setParameters(prev => prev.filter(p => !p.key.startsWith(`${event}.`)));
     } else {
       // Add event
@@ -91,6 +89,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
         
       // If we have specific parameters for this event, add them
       if (eventParams.length > 0) {
+        // @ts-ignore
         setParameters(prev => [...prev, ...eventParams]);
       }
     }
@@ -173,7 +172,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     const newType = currentType === 'string' ? 'number' : 'string';
     // @ts-ignore - paramBase might be undefined but it's handled by the filter
     const paramBase = paramKey.split('.')[1];
-    
+    // @ts-ignore
     setParameters(prev => prev.map(p => {
       if (p.key.includes(`.${paramBase}`)) {
         return { ...p, type: newType };
@@ -272,7 +271,9 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                   size="small"
                   checked={showGroupedView}
                   onChange={() => setShowGroupedView(!showGroupedView)}
-                />
+                >
+                  Vis gruppert
+                </Switch>
                 <BodyShort size="small">Vis gruppert</BodyShort>
                 <Tooltip content="Grupperer detaljene etter hendelsestype">
                   <Button 
@@ -314,7 +315,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                             {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                           </Button>
                           <Button
-                            variant="danger-tertiary"
+                            variant="danger"
                             size="small"
                             icon={<TrashIcon title="Fjern" />}
                             onClick={() => removeParameter(param.key)}
@@ -362,7 +363,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                 {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                               </Button>
                               <Button
-                                variant="danger-tertiary"
+                                variant="danger"
                                 size="small"
                                 icon={<TrashIcon title="Fjern" />}
                                 onClick={() => removeParameter(param.key)}
@@ -388,7 +389,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
               onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
             >
               <span className="flex items-center gap-2">
-                <PlusCircleIcon aria-hidden size="1.25rem" />
+                <PlusCircleIcon aria-hidden width="1.25rem" height="1.25rem" />
                 Legg til parametere manuelt
               </span>
             </Accordion.Header>

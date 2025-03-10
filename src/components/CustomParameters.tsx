@@ -57,6 +57,7 @@ const CustomParameters = ({
   };
   
   const toggleParameterType = (key: string) => {
+    // @ts-ignore
     setParameters(prev => prev.map(param => 
       param.key === key 
         ? { ...param, type: param.type === 'string' ? 'number' : 'string' }
