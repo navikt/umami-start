@@ -12,7 +12,8 @@ import {
   Panel,
   Alert,
   Switch,
-  Tooltip
+  Tooltip,
+  Modal
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon, 
@@ -32,6 +33,10 @@ interface EventParams {
   [eventName: string]: string[];
 }
 
+// Constants for the fake event
+const MANUAL_EVENT_NAME = '_manual_parameters_';
+const MANUAL_EVENT_DISPLAY_NAME = 'Manuelt lagt til parametere';
+
 const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   availableEvents,
   parameters,
@@ -42,9 +47,13 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   const [newParamKey, setNewParamKey] = useState<string>('');
   const [customParamAccordionOpen, setCustomParamAccordionOpen] = useState<boolean>(false);
   const [showGroupedView, setShowGroupedView] = useState<boolean>(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   // @ts-ignore Store event-parameter mapping to ensure proper relationship
   const [eventParamsMap, setEventParamsMap] = useState<EventParams>({});
+  
+  // Track if we have manually added parameters
+  const [hasManualParameters, setHasManualParameters] = useState<boolean>(false);
   
   // Extract event-parameter map from the input parameters list
   useEffect(() => {
@@ -69,14 +78,38 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     setEventParamsMap(eventMap);
   }, [parameters]);
 
+  // Check if we already have manual parameters on component mount
+  useEffect(() => {
+    const hasManual = parameters.some(p => p.key.startsWith(`${MANUAL_EVENT_NAME}.`));
+    setHasManualParameters(hasManual);
+    
+    // If we have manual parameters but the event is not selected, select it
+    if (hasManual && !selectedEvents.includes(MANUAL_EVENT_NAME)) {
+      setSelectedEvents(prev => [...prev, MANUAL_EVENT_NAME]);
+    }
+  }, [parameters]);
+
   // Toggle event selection with proper parameter handling
   const toggleEvent = (event: string): void => {
+    // Show confirmation dialog when trying to deselect manual event with parameters
+    if (event === MANUAL_EVENT_NAME && 
+        hasManualParameters && 
+        selectedEvents.includes(MANUAL_EVENT_NAME)) {
+      setShowConfirmModal(true);
+      return;
+    }
+
     if (selectedEvents.includes(event)) {
       // Remove event
       setSelectedEvents(prev => prev.filter(e => e !== event));
       
       // @ts-ignore Remove its parameters
       setParameters(prev => prev.filter(p => !p.key.startsWith(`${event}.`)));
+      
+      // If it was the manual event, update the flag
+      if (event === MANUAL_EVENT_NAME) {
+        setHasManualParameters(false);
+      }
     } else {
       // Add event
       setSelectedEvents(prev => [...prev, event]);
@@ -94,6 +127,14 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     }
   };
 
+  // Remove manual parameters and deselect manual event
+  const confirmRemoveManualParameters = () => {
+    setParameters(prev => prev.filter(p => !p.key.startsWith(`${MANUAL_EVENT_NAME}.`)));
+    setSelectedEvents(prev => prev.filter(e => e !== MANUAL_EVENT_NAME));
+    setHasManualParameters(false);
+    setShowConfirmModal(false);
+  };
+
   // Add custom parameter
   const addParameter = (): void => {
     if (!newParamKey.trim()) return;
@@ -104,39 +145,53 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       .map(key => key.trim())
       .filter(key => key);
 
+    if (newParams.length === 0) return;
+
     const paramsToAdd: Parameter[] = [];
 
     // Process each new parameter
     newParams.forEach(paramName => {
-      // Check if parameter already contains event prefix (has a dot)
+      // Handle parameters with or without prefixes
       if (paramName.includes('.')) {
-        // Keep as is
-        paramsToAdd.push({ key: paramName, type: 'string' });
-      } else if (selectedEvents.length === 1) {
-        // If there's a selected event and only one, use it as prefix
+        // Parameter already has a dot - check if it's for a selected event
+        const [eventPart, ...rest] = paramName.split('.');
+        const paramPart = rest.join('.');
+        
+        if (selectedEvents.includes(eventPart)) {
+          // Add to specified event if it's selected
+          paramsToAdd.push({ key: paramName, type: 'string' });
+        } else {
+          // If event not selected, add to manual parameters
+          paramsToAdd.push({ key: `${MANUAL_EVENT_NAME}.${paramPart}`, type: 'string' });
+        }
+      } else if (selectedEvents.length === 1 && selectedEvents[0] !== MANUAL_EVENT_NAME) {
+        // One non-manual event selected, use it as prefix
         paramsToAdd.push({ key: `${selectedEvents[0]}.${paramName}`, type: 'string' });
       } else {
-        // Otherwise, handle as generic parameter (with warning)
-        if (selectedEvents.length > 1) {
-          // Multiple events selected, show warning or add to all
-          selectedEvents.forEach(event => {
-            paramsToAdd.push({ key: `${event}.${paramName}`, type: 'string' });
-          });
-        } else {
-          // No events selected, can't add parameter
-          alert("Velg minst én hendelse før du legger til detaljer");
-          return;
-        }
+        // Simple parameter, add with manual prefix
+        paramsToAdd.push({ key: `${MANUAL_EVENT_NAME}.${paramName}`, type: 'string' });
       }
     });
 
-    // Filter out duplicates 
+    // Filter out duplicates
     const uniqueParams = paramsToAdd.filter(
       newParam => !parameters.some(p => p.key === newParam.key)
     );
 
-    setParameters([...parameters, ...uniqueParams]);
-    setNewParamKey('');
+    if (uniqueParams.length > 0) {
+      // Check if we're adding manual parameters
+      const hasNewManualParams = uniqueParams.some(p => p.key.startsWith(`${MANUAL_EVENT_NAME}.`));
+      
+      // Add the manual event to selected events if needed
+      if (hasNewManualParams && !selectedEvents.includes(MANUAL_EVENT_NAME)) {
+        setSelectedEvents(prev => [...prev, MANUAL_EVENT_NAME]);
+        setHasManualParameters(true);
+      }
+      
+      // Add the parameters
+      setParameters([...parameters, ...uniqueParams]);
+      setNewParamKey('');
+    }
   };
 
   // Add missing getUniqueParameters function
@@ -223,6 +278,11 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     // For prefixed parameters, strip the prefix
     return param.key.split('.').slice(1).join('.');
   };
+
+  // Get a display name for the events in the UI
+  const getEventDisplayName = (eventName: string): string => {
+    return eventName === MANUAL_EVENT_NAME ? MANUAL_EVENT_DISPLAY_NAME : eventName;
+  };
   
   return (
     <VStack gap="6">
@@ -240,6 +300,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
         {availableEvents.length === 0 ? (
           <Alert variant="info" inline>
             Ingen egendefinerte hendelser funnet for denne nettsiden.
+            Du kan fortsatt legge til egendefinerte parametere manuelt.
           </Alert>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -252,6 +313,16 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 {event}
               </Checkbox>
             ))}
+            
+            {/* Only show manual event checkbox if we have manual parameters */}
+            {hasManualParameters && (
+              <Checkbox
+                checked={selectedEvents.includes(MANUAL_EVENT_NAME)}
+                onChange={() => toggleEvent(MANUAL_EVENT_NAME)}
+              >
+                {MANUAL_EVENT_DISPLAY_NAME}
+              </Checkbox>
+            )}
           </div>
         )}
       </div>
@@ -273,14 +344,6 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 >
                   Vis gruppert
                 </Switch>
-                <BodyShort size="small">Vis gruppert</BodyShort>
-                <Tooltip content="Grupperer detaljene etter hendelsestype">
-                  <Button 
-                    icon={<InformationSquareIcon aria-hidden />} 
-                    size="xsmall" 
-                    variant="tertiary"
-                  />
-                </Tooltip>
               </div>
             )}
           </div>
@@ -334,7 +397,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 <Accordion.Item key={eventName}>
                   <Accordion.Header>
                     <span className="flex items-center gap-2">
-                      🎯 {eventName}
+                      {eventName === MANUAL_EVENT_NAME ? '✍️' : '🎯'} {getEventDisplayName(eventName)}
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
                       </span>
@@ -413,22 +476,41 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                   </Button>
                 </div>
                 
-                {selectedEvents.length === 1 && (
-                  <Detail className="text-gray-600">
-                    Detaljene vil automatisk knyttes til hendelsen <strong>{selectedEvents[0]}</strong>
-                  </Detail>
-                )}
-                
-                {selectedEvents.length === 0 && (
-                  <Detail className="text-gray-600">
-                    Velg én hendelse først for å knytte detaljer til den hendelsen
-                  </Detail>
-                )}
+                <Detail className="text-gray-600">
+                  {selectedEvents.length === 1 && selectedEvents[0] !== MANUAL_EVENT_NAME ? (
+                    <>Parametere vil legges til under <strong>{selectedEvents[0]}</strong>.</>
+                  ) : (
+                    'Parametere vil legges til under "Manuelt lagt til parametere".'
+                  )}
+                </Detail>
               </VStack>
             </Accordion.Content>
           </Accordion.Item>
         </Accordion>
       </div>
+
+      {/* Confirmation Modal for removing manual parameters */}
+      <Modal
+        open={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        header={{ heading: "Fjerne manuelt lagt til parametere?" }}
+        width="small"
+      >
+        <Modal.Body>
+          <p>
+            Ved å fjerne denne gruppen vil alle manuelt lagt til parametere bli slettet.
+            Er du sikker på at du vil fortsette?
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="danger" onClick={confirmRemoveManualParameters}>
+            Ja, fjern parametere
+          </Button>
+          <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
+            Avbryt
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </VStack>
   );
 };
