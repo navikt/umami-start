@@ -13,7 +13,9 @@ import {
   Alert,
   Switch,
   Tooltip,
-  Modal
+  Modal,
+  Box,
+  Tag
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon, 
@@ -286,71 +288,101 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   
   return (
     <VStack gap="6">
-      <div>
-        <Heading level="3" size="small" spacing>
-          1. Velg hendelsene du vil analysere
-        </Heading>
-        <BodyShort size="small" spacing>
-          Velg hvilke hendelser du vil inkludere i analysen.
-        </BodyShort>
-      </div>
+      <Box background="surface-subtle" borderRadius="medium">
+        <div>
+          <Heading level="3" size="small" spacing className="text-blue-600">
+            1. Velg hendelser
+          </Heading>
+          <BodyShort size="small" spacing className="text-gray-600">
+            Velg hvilke hendelser du vil inkludere i grafen / tabellen din.
+          </BodyShort>
+        </div>
 
-      {/* Available Events */}
-      <div>
-        {availableEvents.length === 0 ? (
-          <Alert variant="info" inline>
-            Ingen egendefinerte hendelser funnet for denne nettsiden.
-            Du kan fortsatt legge til egendefinerte parametere manuelt.
-          </Alert>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {availableEvents.map(event => (
-              <Checkbox 
-                key={event}
-                checked={selectedEvents.includes(event)}
-                onChange={() => toggleEvent(event)}
-              >
-                {event}
-              </Checkbox>
-            ))}
-            
-            {/* Only show manual event checkbox if we have manual parameters */}
-            {hasManualParameters && (
-              <Checkbox
-                checked={selectedEvents.includes(MANUAL_EVENT_NAME)}
-                onChange={() => toggleEvent(MANUAL_EVENT_NAME)}
-              >
-                {MANUAL_EVENT_DISPLAY_NAME}
-              </Checkbox>
-            )}
-          </div>
-        )}
-      </div>
+        {/* Available Events - Improved Layout */}
+        <div className="mt-4">
+          {availableEvents.length === 0 ? (
+            <Panel border>
+              <Alert variant="info" inline>
+                Ingen egendefinerte hendelser funnet for denne nettsiden.
+                <div className="mt-2">Du kan fortsatt legge til egendefinerte parametere manuelt nedenfor.</div>
+              </Alert>
+            </Panel>
+          ) : (
+            <Panel border className="p-4 bg-white">
+              <div className="space-y-2">
+                {/* Section for real events */}
+                <div className="mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                    {availableEvents.map(event => (
+                      <div key={event} className="flex items-center">
+                        <Checkbox 
+                          checked={selectedEvents.includes(event)}
+                          onChange={() => toggleEvent(event)}
+                          className="items-center"
+                        >
+                          <div className="flex items-center">
+                            <span>{event}</span>
+                          </div>
+                        </Checkbox>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Separator if needed */}
+                {hasManualParameters && availableEvents.length > 0 && (
+                  <div className="border-t border-gray-200 my-3"></div>
+                )}
+                
+                {/* Section for manual parameters */}
+                {hasManualParameters && (
+                  <div className="pt-1">
+                    <div className="flex items-center">
+                      <Checkbox
+                        checked={selectedEvents.includes(MANUAL_EVENT_NAME)}
+                        onChange={() => toggleEvent(MANUAL_EVENT_NAME)}
+                      >
+                        <div className="flex items-center">
+                          <span>{MANUAL_EVENT_DISPLAY_NAME}</span>
+                          <Tag variant="info" size="small" className="ml-2">Manuell</Tag>
+                        </div>
+                      </Checkbox>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Panel>
+          )}
+        </div>
+      </Box>
 
       {/* Parameters Section - Only shown when events are selected */}
       {hasSelectedEvents && (
-        <div className="border-t pt-4">
+        <Box background="surface-subtle" borderRadius="medium">
           <div className="flex justify-between items-center pb-2">
-            <Heading level="3" size="small">
+            <Heading level="3" size="small" className="text-blue-600">
               2. Velg detaljer til analysen
             </Heading>
             {hasParameters && (
               <div className="flex items-center gap-2">
-                <BodyShort size="small">Vis alle</BodyShort>
                 <Switch 
                   size="small"
                   checked={showGroupedView}
                   onChange={() => setShowGroupedView(!showGroupedView)}
                 >
-                  Vis gruppert
+                  Gruppert visning
                 </Switch>
               </div>
             )}
           </div>
           
+          <BodyShort size="small" spacing className="text-gray-600 mb-4">
+            Velg hvilke detaljer du vil inkludere i analysen.
+          </BodyShort>
+          
           {!showGroupedView ? (
-            // Simple ungrouped view - unique parameters shown in a flat list
-            <Panel border className="bg-gray-50">
+            // Simple ungrouped view - with improved styling
+            <Panel border>
               {uniqueParameters.length === 0 ? (
                 <Alert variant="info" inline>
                   Ingen detaljer er valgt enda. Legg til egendefinerte detaljer nedenfor.
@@ -359,20 +391,24 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 <VStack gap="3">
                   {uniqueParameters.map((param) => {
                     const displayName = getParameterDisplayName(param);
+                    const eventName = param.key.split('.')[0];
+                    const isManual = eventName === MANUAL_EVENT_NAME;
                     
                     return (
                       <div 
                         key={param.key}
-                        className="flex items-center justify-between p-2 bg-white rounded border"
+                        className={`flex items-center justify-between p-3 rounded border ${isManual ? 'bg-blue-50' : 'bg-white'}`}
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{displayName}</span>
+                          {isManual && <Tag variant="info" size="xsmall">Manuell</Tag>}
                         </div>
                         <HStack gap="2">
                           <Button
                             variant="tertiary"
                             size="small"
                             onClick={() => toggleParameterType(param.key, param.type)}
+                            className="min-w-[80px]"
                           >
                             {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                           </Button>
@@ -390,28 +426,29 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
               )}
             </Panel>
           ) : (
-            // Grouped view by event
+            // Grouped view by event - with improved styling
             <Accordion>
               {/* Add selected event parameters */}
               {Object.keys(groupedParameters).map(eventName => (
                 <Accordion.Item key={eventName}>
-                  <Accordion.Header>
+                  <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50' : 'bg-white'}>
                     <span className="flex items-center gap-2">
                       {eventName === MANUAL_EVENT_NAME ? '✍️' : '🎯'} {getEventDisplayName(eventName)}
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
                       </span>
+                      {eventName === MANUAL_EVENT_NAME && <Tag variant="info" size="xsmall">Manuell</Tag>}
                     </span>
                   </Accordion.Header>
-                  <Accordion.Content>
-                    <VStack gap="3">
+                  <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
+                    <VStack gap="3" className="-ml-8 mt-5">
                       {groupedParameters[eventName]?.map((param) => {
                         const displayName = getParameterDisplayName(param);
                         
                         return (
                           <div 
                             key={param.key}
-                            className="flex items-center justify-between p-2 bg-white rounded border"
+                            className="flex items-center justify-between p-3 bg-white rounded border"
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{displayName}</span>
@@ -421,6 +458,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                 variant="tertiary"
                                 size="small"
                                 onClick={() => toggleParameterType(param.key, param.type)}
+                                className="min-w-[80px]"
                               >
                                 {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                               </Button>
@@ -440,27 +478,28 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
               ))}
             </Accordion>
           )}
-        </div>
+        </Box>
       )}
       
-      {/* Add Custom Parameters Section */}
-      <div>
-        <Accordion className="pt-2">
+      {/* Add Custom Parameters Section - Improved */}
+      <Box background="surface-subtle" borderRadius="medium">
+        <Accordion className="pt-0">
           <Accordion.Item open={customParamAccordionOpen}>
             <Accordion.Header 
               onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
+              className="bg-blue-50"
             >
               <span className="flex items-center gap-2">
                 <PlusCircleIcon aria-hidden width="1.25rem" height="1.25rem" />
-                Legg til parametere manuelt
+                <span className="font-medium">Legg til parametere manuelt</span>
               </span>
             </Accordion.Header>
-            <Accordion.Content>
+            <Accordion.Content className="bg-blue-50/30">
               <VStack gap="4">      
                 <div className="flex gap-2 items-end">
                   <TextField 
-                    label="Eventparameter"
-                    description="Du kan legge til flere med komma"
+                    label="Parameter"
+                    description="Du kan legge til flere parametere med komma"
                     value={newParamKey}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
                     onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
@@ -487,7 +526,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
             </Accordion.Content>
           </Accordion.Item>
         </Accordion>
-      </div>
+      </Box>
 
       {/* Confirmation Modal for removing manual parameters */}
       <Modal
