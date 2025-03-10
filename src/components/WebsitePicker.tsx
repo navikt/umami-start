@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { UNSAFE_Combobox } from '@navikt/ds-react';
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
+import { UNSAFE_Combobox, Button, ReadMore, TextField } from '@navikt/ds-react';
+import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface Website {
   id: string;
@@ -29,101 +30,58 @@ interface ApiCache {
   }
 }
 
+interface WebsiteApiResponse {
+  data: Website[];
+}
+
 const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
+  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(30);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3); // Changed from 7 to 3
+  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3); // Changed from 7 to 3
   const apiCache = useRef<ApiCache>({});
   const fetchInProgress = useRef<{[key: string]: boolean}>({});
+  const websitesLoaded = useRef<boolean>(false); // New flag to prevent repeated fetching
+  const [dateChanged, setDateChanged] = useState(false);
 
-  useEffect(() => {
-    const baseUrl = window.location.hostname === 'localhost' 
-      ? 'https://reops-proxy.intern.nav.no' 
-      : 'https://reops-proxy.ansatt.nav.no';
-
-    // Only fetch websites list once
-    Promise.all([
-      fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      }).then(response => response.json()),
-      fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      }).then(response => response.json())
-    ])
-      .then(([data1, data2]) => {
-        const combinedData = [...data1.data, ...data2.data];
-        combinedData.sort((a, b) => {
-          if (a.teamId === b.teamId) {
-            return a.name.localeCompare(b.name);
-          }
-          return a.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? -1 : 1;
-        });
-        setWebsites(combinedData);
-      })
-      .catch(error => console.error("Error fetching websites:", error));
-  }, []);
-
-  // Fetch events when a website is selected
-  useEffect(() => {
-    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
-      fetchEventNames(selectedWebsite.id)
-        .finally(() => {
-          setLoadedWebsiteId(selectedWebsite.id);
-        });
-    }
-  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad]);
-
-  const fetchEventNames = async (websiteId: string) => {
-    // Prevent multiple API calls for the same website
-    if (fetchInProgress.current[websiteId]) {
-      return;
-    }
-    
+  // @ts-ignore
+  const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false) => {
+    if (fetchInProgress.current[websiteId]) return;
     fetchInProgress.current[websiteId] = true;
-
+    
     try {
       const baseUrl = window.location.hostname === 'localhost' 
         ? 'https://reops-proxy.intern.nav.no' 
         : 'https://reops-proxy.ansatt.nav.no';
 
-      // Initialize cache for this website if needed
-      if (!apiCache.current[websiteId]) {
-        apiCache.current[websiteId] = {};
-      }
+      // Always get fresh date range
+      const dateRangeResponse = await fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
+        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+      });
+      const dateRange = await dateRangeResponse.json();
+      
+      // Calculate max available days
+      const endDate = new Date(dateRange.maxdate);
+      const startDate = new Date(dateRange.mindate);
+      const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      setMaxDaysAvailable(totalDays);
 
-      // Step 1: Get date range (check cache first)
-      let dateRange;
-      if (apiCache.current[websiteId].dateRange) {
-        console.log("Using cached date range");
-        dateRange = apiCache.current[websiteId].dateRange;
-      } else {
-        console.log("Fetching date range");
-        const dateRangeResponse = await fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
-          credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-        });
-        dateRange = await dateRangeResponse.json();
-        apiCache.current[websiteId].dateRange = dateRange;
-      }
+      // Always get fresh properties when date range changes
+      const calculatedEndDate = new Date(dateRange.maxdate);
+      const calculatedStartDate = new Date(calculatedEndDate);
+      calculatedStartDate.setDate(calculatedStartDate.getDate() - dateRangeInDays);
       
-      // Step 2: Get properties (check cache first)
-      let properties: EventProperty[];
-      if (apiCache.current[websiteId].properties) {
-        console.log("Using cached properties");
-        properties = apiCache.current[websiteId].properties!;
-      } else {
-        console.log("Fetching properties");
-        // Convert ISO dates to milliseconds
-        const startAt = new Date(dateRange.mindate).getTime();
-        const endAt = new Date(dateRange.maxdate).getTime();
-        
-        const propertiesResponse = await fetch(
-          `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
-          { credentials: window.location.hostname === 'localhost' ? 'omit' : 'include' }
-        );
-        properties = await propertiesResponse.json();
-        apiCache.current[websiteId].properties = properties;
-      }
+      const startAt = calculatedStartDate.getTime();
+      const endAt = calculatedEndDate.getTime();
       
-      // Process the properties to get unique event names and their related parameters
+      const propertiesResponse = await fetch(
+        `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
+        { credentials: window.location.hostname === 'localhost' ? 'omit' : 'include' }
+      );
+      const properties: EventProperty[] = await propertiesResponse.json();
+      
+      // Process events and parameters
       const eventMap = new Map<string, string[]>();
       properties.forEach(prop => {
         if (!eventMap.has(prop.eventName)) {
@@ -134,10 +92,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
         }
       });
       
-      // Convert map to arrays
       const uniqueEventNames = Array.from(eventMap.keys());
-      
-      // Create parameter objects with event name prefixes
       const paramsByEvent: {key: string, type: 'string'}[] = [];
       eventMap.forEach((props, eventName) => {
         props.forEach(prop => {
@@ -152,31 +107,148 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
         onEventsLoad(uniqueEventNames, paramsByEvent);
       }
     } catch (error) {
-      console.error("Error fetching event properties:", error);
+      console.error("Error fetching event data:", error);
     } finally {
       fetchInProgress.current[websiteId] = false;
     }
-  };
+  }, [dateRangeInDays, onEventsLoad, setMaxDaysAvailable]);
+
+  useEffect(() => {
+    if (websitesLoaded.current) return; // Prevent repeated fetching
+
+    const baseUrl = window.location.hostname === 'localhost' 
+      ? 'https://reops-proxy.intern.nav.no' 
+      : 'https://reops-proxy.ansatt.nav.no';
+
+    // Only fetch websites list once
+    Promise.all([
+      fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
+        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+      }).then(response => response.json() as Promise<WebsiteApiResponse>),
+      fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
+        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+      }).then(response => response.json() as Promise<WebsiteApiResponse>)
+    ])
+      .then(([data1, data2]) => {
+        const combinedData = [...data1.data, ...data2.data];
+        combinedData.sort((a, b) => {
+          if (a.teamId === b.teamId) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? -1 : 1;
+        });
+        setWebsites(combinedData);
+        websitesLoaded.current = true; // Mark as loaded
+      })
+      .catch(error => console.error("Error fetching websites:", error));
+  }, []);
+
+  // Fetch events when a website is selected
+  useEffect(() => {
+    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
+      // Clear cache when website changes
+      apiCache.current = {};
+      fetchEventNames(selectedWebsite.id, true)
+        .finally(() => {
+          setLoadedWebsiteId(selectedWebsite.id);
+        });
+    }
+  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames]);
+
+  // Wrap handleDateRangeChange in useCallback
+  const handleDateRangeChange = useCallback(() => {
+    if (tempDateRangeInDays < 1) {
+      setTempDateRangeInDays(1);
+      setDateRangeInDays(1);
+    } else if (tempDateRangeInDays > maxDaysAvailable && maxDaysAvailable > 0) {
+      setTempDateRangeInDays(maxDaysAvailable);
+      setDateRangeInDays(maxDaysAvailable);
+    } else {
+      setDateRangeInDays(tempDateRangeInDays);
+    }
+
+    // If we have a selected website, refresh the data with the new date range
+    if (selectedWebsite) {
+      // Clear cache and fetch fresh data when changing days
+      apiCache.current[selectedWebsite.id] = {};
+      fetchEventNames(selectedWebsite.id, true);
+      setDateChanged(true); // Set dateChanged to true after updating
+    }
+  }, [tempDateRangeInDays, maxDaysAvailable, selectedWebsite, fetchEventNames, setDateRangeInDays, setTempDateRangeInDays]);
 
   return (
-    <UNSAFE_Combobox
-      label="Velg nettside / app"
-      options={websites.map(website => ({
-        label: website.name,
-        value: website.name,
-        website: website
-      }))}
-      selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
-      onToggleSelected={(option, isSelected) => {
-        if (isSelected) {
-          const website = websites.find(w => w.name === option);
-          onWebsiteChange(website || null);
-        } else {
-          onWebsiteChange(null);
-        }
-      }}
-      clearButton
-    />
+    <div className="space-y-4">
+      
+      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+        <UNSAFE_Combobox
+          label="Velg nettside / app for å se tilgjengelige hendelser"
+          options={websites.map(website => ({
+            label: website.name,
+            value: website.name,
+            website: website
+          }))}
+          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+          onToggleSelected={(option: string, isSelected: boolean) => {
+            if (isSelected) {
+              const website = websites.find(w => w.name === option);
+              onWebsiteChange(website || null);
+            } else {
+              onWebsiteChange(null);
+            }
+          }}
+          clearButton
+        />
+        
+        {selectedWebsite && (
+          <div className="mt-4">
+            <ReadMore header="Innstillinger for hendelsesinnlasting">
+              
+              <div className="space-y-4 mt-2">
+                <div className="text-sm">
+                  Velg tidsperiode for å se tilgjengelige hendelser.
+                  {maxDaysAvailable > 0 && 
+                    ` Data er tilgjengelig for de siste ${maxDaysAvailable} dagene.`
+                  }
+                </div>
+                
+                <div className="flex items-end gap-2">
+                  <TextField
+                    label="Antall dager"
+                    type="number"
+                    size="small"
+                    value={tempDateRangeInDays}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      const val = parseInt(e.target.value, 10);
+                      setTempDateRangeInDays(isNaN(val) ? 1 : val);
+                    }}
+                    min={1}
+                    max={maxDaysAvailable}
+                    className="w-24"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={handleDateRangeChange}
+                    className="h-[33px]"
+                  >
+                    Oppdater
+                  </Button>
+                </div>
+                {dateChanged && (
+                  <AlertWithCloseButton variant="success">
+                    Tilgjengelige hendelser og parametere ble lastet inn
+                  </AlertWithCloseButton>
+                )}
+                
+                <div className="text-sm text-gray-600">
+                  Viser tilgjengelige hendelser for de siste {dateRangeInDays} dagene
+                </div>
+              </div>
+            </ReadMore>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

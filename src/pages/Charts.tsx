@@ -6,7 +6,6 @@ import SQLPreview from '../components/sqlpreview';
 import ChartFilters from '../components/ChartFilters';
 import Summarize from '../components/Summarize';
 import EventParameterSelector from '../components/EventParameterSelector';
-import AdvancedOptions from '../components/AdvancedOptions';
 import { 
   Parameter, 
   Metric, 
@@ -190,8 +189,6 @@ const ChartsPage = () => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [dateRangeInDays, setDateRangeInDays] = useState<number>(3);
-  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3);
-  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
 
   // Fix dependency in useEffect by adding config as a stable reference
@@ -650,54 +647,13 @@ const ChartsPage = () => {
     return tables;
   };
 
-  // Add a new function to handle date range changes
-  const handleDateRangeChange = () => {
-    if (tempDateRangeInDays < 1) {
-      setTempDateRangeInDays(1);
-      setDateRangeInDays(1);
-    } else if (tempDateRangeInDays > maxDaysAvailable && maxDaysAvailable > 0) {
-      setTempDateRangeInDays(maxDaysAvailable);
-      setDateRangeInDays(maxDaysAvailable);
-    } else {
-      setDateRangeInDays(tempDateRangeInDays);
-    }
-  };
-
-  // Update handleEventsLoad to get date range information
+  // Update handleEventsLoad to not handle date range information
   const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
     setAvailableEvents(events);
     if (autoParameters) {
       setParameters(autoParameters);
     }
-
-    // Get date range information
-    if (config.website) {
-      const fetchDateRange = async () => {
-        try {
-          const baseUrl = window.location.hostname === 'localhost' 
-            ? 'https://reops-proxy.intern.nav.no' 
-            : 'https://reops-proxy.ansatt.nav.no';
-
-          const dateRangeResponse = await fetch(`${baseUrl}/umami/api/websites/${config.website?.id}/daterange`, {
-            credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-          });
-          const dateRange = await dateRangeResponse.json();
-          
-          const endDate = new Date(dateRange.maxdate);
-          const startDate = new Date(dateRange.mindate);
-          
-          // Calculate max available days
-          const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-          setMaxDaysAvailable(totalDays);
-          
-          setDateRangeReady(true);
-        } catch (err) {
-          console.error("Error fetching date range:", err);
-        }
-      };
-
-      fetchDateRange();
-    }
+    setDateRangeReady(true); // Just set this to true when events are loaded
   };
 
   return (
@@ -718,7 +674,7 @@ const ChartsPage = () => {
             <VStack gap="8">
               {/* Data section - Website picker */}
               <section>
-                {/* @ts-ignore */}
+                {/* @ts-ignore Data section - Website picker */}
                 <WebsitePicker selectedWebsite={config.website}
                   onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
                   onEventsLoad={handleEventsLoad}
@@ -727,7 +683,7 @@ const ChartsPage = () => {
 
               {config.website && dateRangeReady && (
                 <>
-                  {/* Parameters section */}
+                  {/* Parameters section - Remove AdvancedOptions */}
                   <section>
                     <Heading level="2" size="small" spacing>
                       Egendefinerte eventer
@@ -738,16 +694,6 @@ const ChartsPage = () => {
                         parameters={parameters}
                         setParameters={setParameters}
                       />
-                      
-                      <div>
-                        <AdvancedOptions
-                          dateRangeInDays={dateRangeInDays}
-                          tempDateRangeInDays={tempDateRangeInDays}
-                          maxDaysAvailable={maxDaysAvailable}
-                          setTempDateRangeInDays={setTempDateRangeInDays}
-                          handleDateRangeChange={handleDateRangeChange}
-                        />
-                      </div>
                     </div>
                   </section>
 

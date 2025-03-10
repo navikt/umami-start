@@ -1,8 +1,7 @@
-import { Button, Heading, Select, Label, TextField, Loader } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
 import { Filter, Parameter } from '../types/chart';
 import { DYNAMIC_FILTER_OPTIONS, FILTER_COLUMNS, OPERATORS } from '../lib/constants';
 import { sanitizeColumnName } from '../lib/utils';
-import { useState, useEffect } from 'react';
 
 interface ChartFiltersProps {
   filters: Filter[];
@@ -21,7 +20,6 @@ const ChartFilters = ({
   setDynamicFilters,
   availableEvents = []
 }: ChartFiltersProps) => {
-  const [isLoading, setIsLoading] = useState(true);
 
   const addFilter = () => {
     setFilters([...filters, { column: 'url_path', operator: '=', value: '' }]);
@@ -36,28 +34,6 @@ const ChartFilters = ({
       i === index ? { ...filter, ...updates } : filter
     ));
   };
-
-  useEffect(() => {
-    if (parameters.length > 0) {
-      setIsLoading(false);
-    }
-  }, [parameters]);
-
-  if (isLoading) {
-    return (
-      <section>
-        <Heading level="2" size="small" spacing>
-          Filtre
-        </Heading>
-        <div className="bg-gray-50 p-8 rounded-md border">
-          <div className="flex flex-col items-center justify-center gap-4">
-            <Loader size="2xlarge" title="Laster inn filtere..." />
-            <p className="text-gray-600">Henter tilgjengelige filtere...</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section>
