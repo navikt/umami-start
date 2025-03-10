@@ -13,28 +13,6 @@ interface ChartFiltersProps {
   availableEvents?: string[];
 }
 
-const getFilterOptions = (parameters: Parameter[]): Array<{ label: string; value: string }> => {
-  // Create a Map to store unique parameters by their base name
-  const uniqueParams = new Map<string, Parameter>();
-  
-  // Process each parameter, keeping only one instance of each base name
-  parameters.forEach(param => {
-    const baseName = param.key.split('.').pop()!;
-    if (!uniqueParams.has(baseName)) {
-      uniqueParams.set(baseName, param);
-    }
-  });
-  
-  // Convert to filter options
-  return Array.from(uniqueParams.values()).map(param => {
-    const baseName = param.key.split('.').pop()!;
-    return {
-      label: baseName,
-      value: `param_${sanitizeColumnName(baseName)}`
-    };
-  });
-};
-
 const ChartFilters = ({
   filters,
   dynamicFilters,
@@ -189,9 +167,9 @@ const ChartFilters = ({
                     
                     {parameters.length > 0 && (
                       <optgroup label="Egendefinerte parametere">
-                        {getFilterOptions(parameters).map(param => (
-                          <option key={param.value} value={param.value}>
-                            {param.label}
+                        {parameters.map(param => (
+                          <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                            {param.key}
                           </option>
                         ))}
                       </optgroup>

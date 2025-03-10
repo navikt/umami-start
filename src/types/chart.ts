@@ -1,7 +1,7 @@
 export interface Filter {
   column: string;
   operator: string;
-  value: string;
+  value?: string;
   customColumn?: string;
 }
 
@@ -14,6 +14,7 @@ export interface DynamicFilterOption {
 export interface Parameter {
   key: string;
   type: 'string' | 'number';
+  description?: string;
 }
 
 export interface Metric {
@@ -31,7 +32,7 @@ export interface DateFormat {
 export interface ColumnGroup {
   label: string;
   table: string;
-  columns: Array<{ label: string; value: string }>;
+  columns: ColumnOption[];
 }
 
 export interface MetricOption {
@@ -51,9 +52,8 @@ export interface ColumnOption {
 
 export interface Website {
   id: string;
-  name: string;
   domain: string;
-  teamId: string;
+  name: string;
 }
 
 export interface WebsitePickerProps {
@@ -67,5 +67,5 @@ export interface ChartConfig {
   metrics: Metric[];
   groupByFields: string[];
   orderBy: OrderBy | null;
-  dateFormat: DateFormat['value'] | null;
+  dateFormat: string;
 }

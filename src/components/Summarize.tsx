@@ -52,6 +52,27 @@ const Summarize = ({
   clearOrderBy,
   setDateFormat
 }: SummarizeProps) => {
+  // Add helper function to deduplicate parameters
+  const getUniqueParameters = (params: Parameter[]): Parameter[] => {
+    const uniqueParams = new Map<string, Parameter>();
+    
+    params.forEach(param => {
+      const baseName = param.key.split('.').pop()!;
+      if (!uniqueParams.has(baseName)) {
+        // Store simplified version of the parameter
+        uniqueParams.set(baseName, {
+          key: baseName,
+          type: param.type
+        });
+      }
+    });
+    
+    return Array.from(uniqueParams.values());
+  };
+
+  // Get deduplicated parameters once
+  const uniqueParameters = getUniqueParameters(parameters);
+
   return (
     <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
       {/* Metrics section */}
@@ -96,9 +117,9 @@ const Summarize = ({
                       ))}
                     </optgroup>
                   ))}
-                  {parameters.length > 0 && (
+                  {uniqueParameters.length > 0 && (
                     <optgroup label="Egendefinerte parametere">
-                      {parameters.map(param => (
+                      {uniqueParameters.map(param => (
                         <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
                           {param.key}
                         </option>
@@ -172,9 +193,9 @@ const Summarize = ({
                 </optgroup>
               ))}
               
-              {parameters.length > 0 && (
+              {uniqueParameters.length > 0 && (
                 <optgroup label="Egendefinerte parametere">
-                  {parameters
+                  {uniqueParameters
                     .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
                     .map(param => (
                       <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
@@ -197,7 +218,7 @@ const Summarize = ({
                     .flatMap(group => group.columns)
                     .find(col => col.value === field);
                   
-                  const paramName = field.startsWith('param_') ? parameters.find(
+                  const paramName = field.startsWith('param_') ? uniqueParameters.find(
                     p => `param_${sanitizeColumnName(p.key)}` === field
                   )?.key : undefined;
                   

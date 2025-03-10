@@ -5,6 +5,8 @@ import WebsitePicker from '../components/WebsitePicker';
 import SQLPreview from '../components/sqlpreview';
 import ChartFilters from '../components/ChartFilters';
 import Summarize from '../components/Summarize';
+import EventParameterSelector from '../components/EventParameterSelector';
+import AdvancedOptions from '../components/AdvancedOptions';
 import { 
   Parameter, 
   Metric, 
@@ -14,8 +16,7 @@ import {
   ColumnOption,
   ChartConfig,
   Filter,
-  DynamicFilterOption,
-  Website
+  DynamicFilterOption
 } from '../types/chart';
 
 // Update your constants to use the new types
@@ -188,6 +189,10 @@ const ChartsPage = () => {
   const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3);
+  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3);
+  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
+  const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -404,21 +409,25 @@ const ChartsPage = () => {
         const format = DATE_FORMATS.find(f => f.value === config.dateFormat)?.format || '%Y-%m-%d';
         selectClauses.add(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
       } else if (field.startsWith('param_')) {
-        const paramKey = field.replace('param_', '');
-        const param = parameters.find(p => sanitizeColumnName(p.key) === paramKey);
-        if (param) {
+        // Get the base parameter name without the param_ prefix
+        const paramBase = field.replace('param_', '');
+        
+        // Find matching parameters by their base name
+        const matchingParams = parameters.filter(p => {
+          const baseName = p.key.split('.').pop();
+          return sanitizeColumnName(baseName!) === paramBase;
+        });
+        
+        if (matchingParams.length > 0) {
+          // Use the first matching parameter's type for the value field
+          const valueField = matchingParams[0].type === 'number' ? 'number_value' : 'string_value';
+          
+          // Create CASE statement with exact matches for each parameter
           selectClauses.add(
-            param.type === 'string'
-              ? `  MAX(CASE 
-                  WHEN event_data.data_key = '${param.key}' 
-                  THEN event_data.string_value 
-                END) AS param_${sanitizeColumnName(param.key)}`
-              : `  MAX(
-                CASE 
-                  WHEN event_data.data_key = '${param.key}'
-                  THEN CAST(event_data.number_value AS NUMERIC)
-                END
-              ) AS param_${sanitizeColumnName(param.key)}`
+            `MAX(CASE 
+                WHEN event_data.data_key = '${paramBase}' THEN event_data.${valueField}
+                ELSE NULL
+              END) AS ${field}`
           );
         }
       } else {
@@ -451,55 +460,36 @@ const ChartsPage = () => {
       // Add parameter filter conditions
       paramFilters.forEach(filter => {
         const paramName = filter.column.replace('param_', '');
-        const param = parameters.find(p => sanitizeColumnName(p.key) === paramName);
+        // Find matching parameter by base name (after the dot)
+        const param = parameters.find(p => {
+          const baseName = p.key.split('.').pop();
+          return sanitizeColumnName(baseName!) === paramName;
+        });
         
         if (param) {
           if (filter.operator === 'IS NULL') {
             whereConditions.push(`NOT EXISTS (
               SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
               WHERE param_filter.website_event_id = base_query.event_id
-                AND param_filter.data_key = '${param.key}'
+                AND param_filter.data_key = '${paramName}'
             )`);
           } else if (filter.operator === 'IS NOT NULL') {
             whereConditions.push(`EXISTS (
               SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
               WHERE param_filter.website_event_id = base_query.event_id
-                AND param_filter.data_key = '${param.key}'
+                AND param_filter.data_key = '${paramName}'
             )`);
           } else {
             const valueField = param.type === 'number' ? 'number_value' : 'string_value';
             const valuePrefix = param.type === 'number' ? '' : "'";
             const valueSuffix = param.type === 'number' ? '' : "'";
             
-            if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
-              whereConditions.push(`EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND param_filter.data_key = '${param.key}'
-                  AND param_filter.${valueField} ${filter.operator} ${valuePrefix}%${filter.value}%${valueSuffix}
-              )`);
-            } else if (filter.operator === 'STARTS_WITH') {
-              whereConditions.push(`EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND param_filter.data_key = '${param.key}'
-                  AND param_filter.${valueField} LIKE ${valuePrefix}${filter.value}%${valueSuffix}
-              )`);
-            } else if (filter.operator === 'ENDS_WITH') {
-              whereConditions.push(`EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND param_filter.data_key = '${param.key}'
-                  AND param_filter.${valueField} LIKE ${valuePrefix}%${filter.value}${valueSuffix}
-              )`);
-            } else {
-              whereConditions.push(`EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND param_filter.data_key = '${param.key}'
-                  AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
-              )`);
-            }
+            whereConditions.push(`EXISTS (
+              SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+              WHERE param_filter.website_event_id = base_query.event_id
+                AND param_filter.data_key = '${paramName}'
+                AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
+            )`);
           }
         }
       });
@@ -660,15 +650,59 @@ const ChartsPage = () => {
     return tables;
   };
 
-  // Update handleEventsLoad to match the WebsitePicker's onEventsLoad type
+  // Add a new function to handle date range changes
+  const handleDateRangeChange = () => {
+    if (tempDateRangeInDays < 1) {
+      setTempDateRangeInDays(1);
+      setDateRangeInDays(1);
+    } else if (tempDateRangeInDays > maxDaysAvailable && maxDaysAvailable > 0) {
+      setTempDateRangeInDays(maxDaysAvailable);
+      setDateRangeInDays(maxDaysAvailable);
+    } else {
+      setDateRangeInDays(tempDateRangeInDays);
+    }
+  };
+
+  // Update handleEventsLoad to get date range information
   const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
     setAvailableEvents(events);
     if (autoParameters) {
-      setParameters(autoParameters); // Only set parameters if they're provided
+      setParameters(autoParameters);
+    }
+
+    // Get date range information
+    if (config.website) {
+      const fetchDateRange = async () => {
+        try {
+          const baseUrl = window.location.hostname === 'localhost' 
+            ? 'https://reops-proxy.intern.nav.no' 
+            : 'https://reops-proxy.ansatt.nav.no';
+
+          const dateRangeResponse = await fetch(`${baseUrl}/umami/api/websites/${config.website?.id}/daterange`, {
+            credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+          });
+          const dateRange = await dateRangeResponse.json();
+          
+          const endDate = new Date(dateRange.maxdate);
+          const startDate = new Date(dateRange.mindate);
+          
+          // Calculate max available days
+          const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          setMaxDaysAvailable(totalDays);
+          
+          setTempDateRangeInDays(defaultDays);
+          setDateRangeReady(true);
+        } catch (err) {
+          console.error("Error fetching date range:", err);
+        }
+      };
+
+      fetchDateRange();
     }
   };
 
   return (
+    <>
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
         Bygg grafer og tabeller for Metabase
@@ -685,26 +719,52 @@ const ChartsPage = () => {
             <VStack gap="8">
               {/* Data section - Website picker */}
               <section>
-                <WebsitePicker
-                  selectedWebsite={config.website as Website | null}
-                  onWebsiteChange={(website: Website | null) => setConfig(prev => ({ ...prev, website }))}
+                {/* @ts-ignore */}
+                <WebsitePicker selectedWebsite={config.website}
+                  onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
                   onEventsLoad={handleEventsLoad}
                 />
               </section>
 
-              {config.website && (
+              {config.website && dateRangeReady && (
                 <>
-                  {/* Replace the Filter section with the new component */}
-                  <ChartFilters
-                    filters={filters}
-                    dynamicFilters={dynamicFilters}
-                    parameters={parameters}
-                    setFilters={setFilters}
-                    setDynamicFilters={setDynamicFilters}
-                    availableEvents={availableEvents}
-                  />
+                  {/* Parameters section */}
+                  <section>
+                    <Heading level="2" size="small" spacing>
+                      Egendefinerte eventer
+                    </Heading>
+                    <div className="bg-gray-50 p-5 rounded-md border">
+                      <EventParameterSelector
+                        availableEvents={availableEvents}
+                        parameters={parameters}
+                        setParameters={setParameters}
+                      />
+                      
+                      <div>
+                        <AdvancedOptions
+                          dateRangeInDays={dateRangeInDays}
+                          tempDateRangeInDays={tempDateRangeInDays}
+                          maxDaysAvailable={maxDaysAvailable}
+                          setTempDateRangeInDays={setTempDateRangeInDays}
+                          handleDateRangeChange={handleDateRangeChange}
+                        />
+                      </div>
+                    </div>
+                  </section>
 
-                  {/* Replace Summarize section with new component */}
+                  {/* Replace the Filter section with the new component */}
+                  <section>
+                    <ChartFilters
+                      filters={filters}
+                      dynamicFilters={dynamicFilters}
+                      parameters={parameters}
+                      setFilters={setFilters}
+                      setDynamicFilters={setDynamicFilters}
+                      availableEvents={availableEvents}
+                    />
+                  </section>
+
+                  {/* Summarize section */}
                   <section>
                     <Heading level="2" size="small" spacing>
                       Oppsummering
@@ -751,6 +811,7 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
+    </>
   );
 };
 
