@@ -9,7 +9,6 @@ import {
   BodyShort,
   Detail,
   Heading,
-  ReadMore,
   Panel,
   Alert,
   Switch,
@@ -382,8 +381,8 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       )}
       
       {/* Add Custom Parameters Section */}
-      <div className="mt-2 border-t">
-        <Accordion className="pt-6">
+      <div>
+        <Accordion className="pt-2">
           <Accordion.Item open={customParamAccordionOpen}>
             <Accordion.Header 
               onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
@@ -394,21 +393,11 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
               </span>
             </Accordion.Header>
             <Accordion.Content>
-              <VStack gap="4">
-                <ReadMore header="Hva er egendefinerte detaljer?">
-                  <BodyShort spacing>
-                    Egendefinerte detaljer er ekstra informasjon som sendes med hendelser. 
-                    For eksempel kan en "skjema fullført"-hendelse ha detaljer som "skjemanavn" eller "tid_brukt".
-                  </BodyShort>
-                  <BodyShort spacing>
-                    Hvis du sender med egendefinerte detaljer når du sporer hendelser, kan du legge dem til her for å inkludere dem i analysen.
-                  </BodyShort>
-                </ReadMore>
-                
+              <VStack gap="4">      
                 <div className="flex gap-2 items-end">
                   <TextField 
-                    label="Legg til detaljer"
-                    description="Skriv inn ett eller flere detalj-navn (kommaseparert)"
+                    label="Eventparameter"
+                    description="Du kan legge til flere med komma"
                     value={newParamKey}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
                     onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}

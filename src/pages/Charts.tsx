@@ -188,7 +188,6 @@ const ChartsPage = () => {
   const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
 
   // Fix dependency in useEffect by adding config as a stable reference
