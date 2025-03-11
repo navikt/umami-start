@@ -45,7 +45,7 @@ const ChartFilters = ({
   return (
     <section>
       <Heading level="2" size="small" spacing>
-        Filtrer
+        Filtrering
       </Heading>
 
       <div className="space-y-6 bg-gray-50 p-5 rounded-md border relative">

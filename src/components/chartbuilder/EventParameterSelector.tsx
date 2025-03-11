@@ -349,7 +349,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       <Box background="surface-subtle" borderRadius="medium">
         <div>
           <Heading level="3" size="small" spacing className="text-blue-600">
-            1. Velg hendelser
+            Velg hendelser du vil inkludere
           </Heading>
           <BodyShort size="small" spacing className="text-gray-600">
             Velg hvilke hendelser du vil inkludere i grafen / tabellen din.
@@ -371,7 +371,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
             <div>
               <Alert variant="info" inline>
                 Ingen egendefinerte hendelser funnet for denne nettsiden.
-                <div className="mt-2">Du kan fortsatt legge til egendefinerte parametere manuelt nedenfor.</div>
+                <div className="mt-2">Du kan fortsatt legge til egendefinerte parametere manuelt.</div>
               </Alert>
             </div>
           ) : (
@@ -411,7 +411,6 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                       >
                         <div className="flex items-center">
                           <span>{MANUAL_EVENT_DISPLAY_NAME}</span>
-                          <Tag variant="info" size="small" className="ml-2">Manuell</Tag>
                         </div>
                       </Checkbox>
                     </div>
@@ -428,7 +427,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
         <Box background="surface-subtle" borderRadius="medium">
           <div className="flex justify-between items-center pb-2">
             <Heading level="3" size="small" className="text-blue-600">
-              2. Velg detaljer
+              Detaljer du vil inkludere
             </Heading>
             {hasParameters && (
               <div className="flex items-center gap-2">
@@ -444,7 +443,10 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           </div>
           
           <BodyShort size="small" spacing className="text-gray-600 mb-4">
-            Velg hvilke detaljer du vil inkludere.
+            {showGroupedView
+              ? "Viser detaljer gruppert etter hendelse."
+              : "Viser detaljer knyttet til valgte hendelser."
+            }
           </BodyShort>
           
           {!showGroupedView ? (
@@ -468,7 +470,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{displayName}</span>
-                          {isManual && <Tag variant="info" size="xsmall">Manuell</Tag>}
+                          {isManual && <Tag variant="info" size="xsmall">Manuelt lagt til</Tag>}
                         </div>
                         <HStack gap="2">
                           <Button

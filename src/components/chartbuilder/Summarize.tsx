@@ -81,7 +81,7 @@ const Summarize = ({
           Beregninger
         </Heading>
         <p className="text-sm text-gray-600 mb-4">
-          Velg hvilke beregninger som skal vises i resultatet.
+          Velg hvilke beregninger du ønsker å inkludere.
         </p>
         
         <div className="space-y-4">
@@ -164,7 +164,7 @@ const Summarize = ({
           Gruppering
         </Heading>
         <p className="text-sm text-gray-600 mb-4">
-          Velg hvordan dataene skal grupperes og vises.
+          Velg hvordan dataene skal grupperes.
         </p>
         
         <div className="space-y-4">
@@ -293,7 +293,7 @@ const Summarize = ({
           Sortering
         </Heading>
         <p className="text-sm text-gray-600 mb-4">
-          Velg hvordan resultatene skal sorteres.
+          Velg hvordan dataene skal sorteres.
         </p>
         
         <div className="space-y-4">

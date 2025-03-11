@@ -195,7 +195,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
     <div className="space-y-4">
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
           <UNSAFE_Combobox
-            label="Velg nettside / app for å se tilgjengelige hendelser"
+            label="Nettside / app"
             options={websites.map(website => ({
               label: website.name,
               value: website.name,
@@ -219,7 +219,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
                 
                 <div className="space-y-4 mt-2">
                   <div className="text-sm">
-                    Velg tidsperiode for å se tilgjengelige hendelser.
+                    Velg tidsperiode for å se tilgjengelige hendelser og detaljer.
                     {maxDaysAvailable > 0 && 
                       ` Data er tilgjengelig for de siste ${maxDaysAvailable} dagene.`
                     }
@@ -266,7 +266,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
         {isLoading && (
                     <div className="flex items-center gap-2 my-2">
                       <Loader size="small" /> 
-                      <span>Laster hendelser...</span>
+                      <span>Laster inn hendelser og detaljer...</span>
                     </div>
                   )}
     </div>
