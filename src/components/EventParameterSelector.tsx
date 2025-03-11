@@ -480,7 +480,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                             {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="secondary"
                             size="small"
                             icon={<TrashIcon title="Fjern" />}
                             onClick={() => removeParameter(param.key)}
