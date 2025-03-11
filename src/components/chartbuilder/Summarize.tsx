@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, HelpText } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
 import { 
   Parameter, 
@@ -222,15 +222,23 @@ const Summarize = ({
                     p => `param_${sanitizeColumnName(p.key)}` === field
                   )?.key : undefined;
                   
+                  // Determine if this is a parameter and its type
+                  const isParam = field.startsWith('param_');
+                  const param = isParam ? uniqueParameters.find(p => `param_${sanitizeColumnName(p.key)}` === field) : null;
+                  const paramType = param?.type || 'string';
+                  
                   return (
                     <div key={field} className="flex items-center justify-between bg-white px-4 py-3 rounded-md border">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-500">
-                          {index + 1}.
-                        </span>
-                        <span className="font-medium">
-                          {paramName || column?.label || field}
-                        </span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-500">
+                            {index + 1}.
+                          </span>
+                          <span className="font-medium">
+                            {paramName || column?.label || field}
+                          </span>
+                        </div>
+                    
                       </div>
                       <div className="flex items-center gap-2">
                         {field === 'created_at' && (

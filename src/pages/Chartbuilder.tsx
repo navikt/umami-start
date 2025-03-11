@@ -169,6 +169,19 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
   return cols;
 };
 
+// Add this new function for parameter aggregation
+const getParameterAggregator = (paramType: string): string => {
+  // Use appropriate aggregation functions based on data type
+  switch (paramType) {
+    case 'number':
+      return 'MAX'; // Numbers can use MAX safely
+    case 'string':
+      return 'ANY_VALUE'; // For strings, use ANY_VALUE to get a representative value
+    default:
+      return 'ANY_VALUE'; // Default to ANY_VALUE for unknown types
+  }
+};
+
 const ChartsPage = () => {
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
@@ -399,11 +412,13 @@ const ChartsPage = () => {
         
         if (matchingParams.length > 0) {
           // Use the first matching parameter's type for the value field
-          const valueField = matchingParams[0].type === 'number' ? 'number_value' : 'string_value';
+          const param = matchingParams[0];
+          const valueField = param.type === 'number' ? 'number_value' : 'string_value';
+          const aggregator = getParameterAggregator(param.type);
           
-          // Use SUBSTR and INSTR to extract the parameter name
+          // Use proper aggregation function based on parameter type
           selectClauses.add(
-            `MAX(CASE 
+            `${aggregator}(CASE 
                 WHEN SUBSTR(event_data.data_key, INSTR(event_data.data_key, '.') + 1) = '${paramBase}' THEN event_data.${valueField}
                 ELSE NULL
               END) AS ${field}`
@@ -491,6 +506,14 @@ const ChartsPage = () => {
         } else if (!field.startsWith('param_')) {
           // Only add non-parameter fields to GROUP BY
           groupByCols.push(`base_query.${field}`);
+        } else {
+          // For parameters, we need to include the case expression in GROUP BY
+          const paramBase = field.replace('param_', '');
+          groupByCols.push(`CASE 
+            WHEN SUBSTR(event_data.data_key, INSTR(event_data.data_key, '.') + 1) = '${paramBase}' 
+            THEN event_data.string_value 
+            ELSE NULL 
+          END`);
         }
       });
 
