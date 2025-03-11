@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { UNSAFE_Combobox, Button, ReadMore, TextField } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader, Panel } from '@navikt/ds-react';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface Website {
@@ -44,11 +44,15 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   const fetchInProgress = useRef<{[key: string]: boolean}>({});
   const websitesLoaded = useRef<boolean>(false); // New flag to prevent repeated fetching
   const [dateChanged, setDateChanged] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
   // @ts-ignore
   const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false) => {
     if (fetchInProgress.current[websiteId]) return;
+    
     fetchInProgress.current[websiteId] = true;
+    setIsLoading(true); // Set loading state when fetching starts
     
     try {
       const baseUrl = window.location.hostname === 'localhost' 
@@ -110,11 +114,17 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       console.error("Error fetching event data:", error);
     } finally {
       fetchInProgress.current[websiteId] = false;
+      setIsLoading(false); // Clear loading state when done
     }
   }, [dateRangeInDays, onEventsLoad, setMaxDaysAvailable]);
 
   useEffect(() => {
-    if (websitesLoaded.current) return; // Prevent repeated fetching
+    if (websitesLoaded.current) {
+      setIsInitialLoading(false);
+      return;
+    }
+    
+    setIsInitialLoading(true); // Show loading state for initial load
 
     const baseUrl = window.location.hostname === 'localhost' 
       ? 'https://reops-proxy.intern.nav.no' 
@@ -139,8 +149,12 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
         });
         setWebsites(combinedData);
         websitesLoaded.current = true; // Mark as loaded
+        setIsInitialLoading(false); // Clear initial loading
       })
-      .catch(error => console.error("Error fetching websites:", error));
+      .catch(error => {
+        console.error("Error fetching websites:", error);
+        setIsInitialLoading(false); // Clear loading even on error
+      });
   }, []);
 
   // Fetch events when a website is selected
@@ -178,76 +192,91 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
 
   return (
     <div className="space-y-4">
-      
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-        <UNSAFE_Combobox
-          label="Velg nettside / app for å se tilgjengelige hendelser"
-          options={websites.map(website => ({
-            label: website.name,
-            value: website.name,
-            website: website
-          }))}
-          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
-          onToggleSelected={(option: string, isSelected: boolean) => {
-            if (isSelected) {
-              const website = websites.find(w => w.name === option);
-              onWebsiteChange(website || null);
-            } else {
-              onWebsiteChange(null);
-            }
-          }}
-          clearButton
-        />
-        
-        {selectedWebsite && (
-          <div className="mt-4">
-            <ReadMore header="Innstillinger for hendelsesinnlasting">
-              
-              <div className="space-y-4 mt-2">
-                <div className="text-sm">
-                  Velg tidsperiode for å se tilgjengelige hendelser.
-                  {maxDaysAvailable > 0 && 
-                    ` Data er tilgjengelig for de siste ${maxDaysAvailable} dagene.`
-                  }
-                </div>
-                
-                <div className="flex items-end gap-2">
-                  <TextField
-                    label="Antall dager"
-                    type="number"
-                    size="small"
-                    value={tempDateRangeInDays}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      const val = parseInt(e.target.value, 10);
-                      setTempDateRangeInDays(isNaN(val) ? 1 : val);
-                    }}
-                    min={1}
-                    max={maxDaysAvailable}
-                    className="w-24"
-                  />
-                  <Button
-                    variant="secondary"
-                    size="small"
-                    onClick={handleDateRangeChange}
-                    className="h-[33px]"
-                  >
-                    Oppdater
-                  </Button>
-                </div>
-                {dateChanged && (
-                  <AlertWithCloseButton variant="success">
-                    Tilgjengelige hendelser og parametere ble lastet inn
-                  </AlertWithCloseButton>
-                )}
-                
-                <div className="text-sm text-gray-600">
-                  Viser tilgjengelige hendelser for de siste {dateRangeInDays} dagene
-                </div>
-              </div>
-            </ReadMore>
+      {isInitialLoading ? (
+        <Panel border className="p-4 flex items-center justify-center" style={{minHeight: '120px'}}>
+          <div className="text-center">
+            <Loader size="2xlarge" />
+            <div className="mt-4 text-gray-600">Laster nettsider...</div>
           </div>
-        )}
-      </div>
+        </Panel>
+      ) : (
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+          <UNSAFE_Combobox
+            label="Velg nettside / app for å se tilgjengelige hendelser"
+            options={websites.map(website => ({
+              label: website.name,
+              value: website.name,
+              website: website
+            }))}
+            selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+            onToggleSelected={(option: string, isSelected: boolean) => {
+              if (isSelected) {
+                const website = websites.find(w => w.name === option);
+                onWebsiteChange(website || null);
+              } else {
+                onWebsiteChange(null);
+              }
+            }}
+            clearButton
+          />
+          
+          {selectedWebsite && (
+            <div className="mt-4">
+              <ReadMore header="Innstillinger for hendelsesinnlasting">
+                
+                <div className="space-y-4 mt-2">
+                  <div className="text-sm">
+                    Velg tidsperiode for å se tilgjengelige hendelser.
+                    {maxDaysAvailable > 0 && 
+                      ` Data er tilgjengelig for de siste ${maxDaysAvailable} dagene.`
+                    }
+                  </div>
+                  
+                  <div className="flex items-end gap-2">
+                    <TextField
+                      label="Antall dager"
+                      type="number"
+                      size="small"
+                      value={tempDateRangeInDays}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const val = parseInt(e.target.value, 10);
+                        setTempDateRangeInDays(isNaN(val) ? 1 : val);
+                      }}
+                      min={1}
+                      max={maxDaysAvailable}
+                      className="w-24"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={handleDateRangeChange}
+                      className="h-[33px]"
+                    >
+                      Oppdater
+                    </Button>
+                  </div>
+                  {isLoading && (
+                    <div className="flex items-center gap-2 my-2">
+                      <Loader size="small" /> 
+                      <span>Laster hendelser...</span>
+                    </div>
+                  )}
+                  
+                  {dateChanged && !isLoading && (
+                    <AlertWithCloseButton variant="success">
+                      Tilgjengelige hendelser og parametere ble lastet inn
+                    </AlertWithCloseButton>
+                  )}
+                  
+                  <div className="text-sm text-gray-600">
+                    Viser tilgjengelige hendelser for de siste {dateRangeInDays} dagene
+                  </div>
+                </div>
+              </ReadMore>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
