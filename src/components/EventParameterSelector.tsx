@@ -9,18 +9,16 @@ import {
   BodyShort,
   Detail,
   Heading,
-  Panel,
   Alert,
   Switch,
-  Tooltip,
   Modal,
   Box,
-  Tag
+  Tag,
+  Loader
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon, 
   TrashIcon,
-  InformationSquareIcon
 } from '@navikt/aksel-icons';
 import { Parameter } from '../types/chart';
 
@@ -57,6 +55,12 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   // Track if we have manually added parameters
   const [hasManualParameters, setHasManualParameters] = useState<boolean>(false);
   
+  // Add loading state
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Cache for remembering parameters by event
+  const [eventParameterCache, setEventParameterCache] = useState<Record<string, Parameter[]>>({});
+  
   // Extract event-parameter map from the input parameters list
   useEffect(() => {
     const eventMap: EventParams = {};
@@ -78,6 +82,71 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     });
     
     setEventParamsMap(eventMap);
+  }, [parameters]);
+
+  // Extract event-parameter map and cache all parameters by event
+  useEffect(() => {
+    const eventMap: EventParams = {};
+
+    // Build a map of events to their parameters
+    parameters.forEach(param => {
+      if (param.key.includes('.')) {
+        const [eventName, ...rest] = param.key.split('.');
+        const paramName = rest.join('.');
+        
+        if (!eventMap[eventName]) {
+          eventMap[eventName] = [];
+        }
+        
+        if (!eventMap[eventName].includes(paramName)) {
+          eventMap[eventName].push(paramName);
+        }
+      }
+    });
+    
+    setEventParamsMap(eventMap);
+
+    // Update our cache of parameters by event
+    const parametersByEvent: Record<string, Parameter[]> = {};
+    
+    parameters.forEach(param => {
+      if (param.key.includes('.')) {
+        const [eventName] = param.key.split('.');
+        
+        if (!parametersByEvent[eventName]) {
+          parametersByEvent[eventName] = [];
+        }
+        
+        // Only add if not already in the cache
+        if (!parametersByEvent[eventName].some(p => p.key === param.key)) {
+          parametersByEvent[eventName].push(param);
+        }
+      }
+    });
+    
+    // Merge with existing cache (don't overwrite what we have)
+    setEventParameterCache(prev => {
+      const newCache = {...prev};
+      
+      // For each event in the parameters, update the cache
+      Object.keys(parametersByEvent).forEach(eventName => {
+        if (!newCache[eventName]) {
+          newCache[eventName] = [];
+        }
+        
+        // Add any parameters not already in cache
+        parametersByEvent[eventName].forEach(param => {
+          if (!newCache[eventName].some(p => p.key === param.key)) {
+            newCache[eventName].push(param);
+          }
+        });
+      });
+      
+      return newCache;
+    });
+    
+    // Indicate we're done loading after initial parameters are processed
+    setIsLoading(false);
   }, [parameters]);
 
   // Check if we already have manual parameters on component mount
@@ -116,21 +185,23 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       // Add event
       setSelectedEvents(prev => [...prev, event]);
       
-      // Find parameters for this event from the input parameters list
-      const eventParams = parameters
-        .filter(p => p.key.startsWith(`${event}.`))
-        .map(p => p);
-        
-      // If we have specific parameters for this event, add them
-      if (eventParams.length > 0) {
-        // @ts-ignore
-        setParameters(prev => [...prev, ...eventParams]);
+      // Here's the key change: Use our cache to restore parameters
+      if (eventParameterCache[event] && eventParameterCache[event].length > 0) {
+        // @ts-ignore Add all cached parameters for this event
+        setParameters(prev => {
+          // Filter out any parameters already in the list
+          const newParams = eventParameterCache[event].filter(
+            cachedParam => !prev.some((p: Parameter) => p.key === cachedParam.key)
+          );
+          return [...prev, ...newParams];
+        });
       }
     }
   };
 
   // Remove manual parameters and deselect manual event
   const confirmRemoveManualParameters = () => {
+    // @ts-ignore
     setParameters(prev => prev.filter(p => !p.key.startsWith(`${MANUAL_EVENT_NAME}.`)));
     setSelectedEvents(prev => prev.filter(e => e !== MANUAL_EVENT_NAME));
     setHasManualParameters(false);
@@ -153,22 +224,12 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
 
     // Process each new parameter
     newParams.forEach(paramName => {
-      // Handle parameters with or without prefixes
+      // For manually added parameters, always use the manual event as prefix
       if (paramName.includes('.')) {
-        // Parameter already has a dot - check if it's for a selected event
-        const [eventPart, ...rest] = paramName.split('.');
-        const paramPart = rest.join('.');
-        
-        if (selectedEvents.includes(eventPart)) {
-          // Add to specified event if it's selected
-          paramsToAdd.push({ key: paramName, type: 'string' });
-        } else {
-          // If event not selected, add to manual parameters
-          paramsToAdd.push({ key: `${MANUAL_EVENT_NAME}.${paramPart}`, type: 'string' });
-        }
-      } else if (selectedEvents.length === 1 && selectedEvents[0] !== MANUAL_EVENT_NAME) {
-        // One non-manual event selected, use it as prefix
-        paramsToAdd.push({ key: `${selectedEvents[0]}.${paramName}`, type: 'string' });
+        // If it already has a dot, keep as is but change the event part
+        const parts = paramName.split('.');
+        const paramPart = parts.slice(1).join('.');
+        paramsToAdd.push({ key: `${MANUAL_EVENT_NAME}.${paramPart}`, type: 'string' });
       } else {
         // Simple parameter, add with manual prefix
         paramsToAdd.push({ key: `${MANUAL_EVENT_NAME}.${paramName}`, type: 'string' });
@@ -181,11 +242,8 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     );
 
     if (uniqueParams.length > 0) {
-      // Check if we're adding manual parameters
-      const hasNewManualParams = uniqueParams.some(p => p.key.startsWith(`${MANUAL_EVENT_NAME}.`));
-      
-      // Add the manual event to selected events if needed
-      if (hasNewManualParams && !selectedEvents.includes(MANUAL_EVENT_NAME)) {
+      // Add the manual event to selected events if not already there
+      if (!selectedEvents.includes(MANUAL_EVENT_NAME)) {
         setSelectedEvents(prev => [...prev, MANUAL_EVENT_NAME]);
         setHasManualParameters(true);
       }
@@ -298,17 +356,26 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           </BodyShort>
         </div>
 
-        {/* Available Events - Improved Layout */}
+        {/* Available Events - With Loading State */}
         <div className="mt-4">
-          {availableEvents.length === 0 ? (
-            <Panel border>
+          {isLoading ? (
+            <div className="p-4">
+              <div className="flex items-center justify-center p-8">
+                <div className="text-center">
+                  <Loader size="2xlarge" />
+                  <div className="mt-4 text-gray-600">Laster hendelser...</div>
+                </div>
+              </div>
+            </div>
+          ) : availableEvents.length === 0 ? (
+            <div>
               <Alert variant="info" inline>
                 Ingen egendefinerte hendelser funnet for denne nettsiden.
                 <div className="mt-2">Du kan fortsatt legge til egendefinerte parametere manuelt nedenfor.</div>
               </Alert>
-            </Panel>
+            </div>
           ) : (
-            <Panel border className="p-4 bg-white">
+            <div className="p-4 bg-white">
               <div className="space-y-2">
                 {/* Section for real events */}
                 <div className="mb-4">
@@ -351,17 +418,17 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                   </div>
                 )}
               </div>
-            </Panel>
+            </div>
           )}
         </div>
       </Box>
 
-      {/* Parameters Section - Only shown when events are selected */}
-      {hasSelectedEvents && (
+      {/* Parameters Section - Only shown when events are selected and not loading */}
+      {hasSelectedEvents && !isLoading && (
         <Box background="surface-subtle" borderRadius="medium">
           <div className="flex justify-between items-center pb-2">
             <Heading level="3" size="small" className="text-blue-600">
-              2. Velg detaljer til analysen
+              2. Velg detaljer
             </Heading>
             {hasParameters && (
               <div className="flex items-center gap-2">
@@ -377,12 +444,12 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           </div>
           
           <BodyShort size="small" spacing className="text-gray-600 mb-4">
-            Velg hvilke detaljer du vil inkludere i analysen.
+            Velg hvilke detaljer du vil inkludere.
           </BodyShort>
           
           {!showGroupedView ? (
             // Simple ungrouped view - with improved styling
-            <Panel border>
+            <div>
               {uniqueParameters.length === 0 ? (
                 <Alert variant="info" inline>
                   Ingen detaljer er valgt enda. Legg til egendefinerte detaljer nedenfor.
@@ -405,7 +472,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                         </div>
                         <HStack gap="2">
                           <Button
-                            variant="tertiary"
+                            variant="secondary"
                             size="small"
                             onClick={() => toggleParameterType(param.key, param.type)}
                             className="min-w-[80px]"
@@ -424,7 +491,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                   })}
                 </VStack>
               )}
-            </Panel>
+            </div>
           ) : (
             // Grouped view by event - with improved styling
             <Accordion>
@@ -437,7 +504,6 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
                       </span>
-                      {eventName === MANUAL_EVENT_NAME && <Tag variant="info" size="xsmall">Manuell</Tag>}
                     </span>
                   </Accordion.Header>
                   <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
@@ -481,52 +547,49 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
         </Box>
       )}
       
-      {/* Add Custom Parameters Section - Improved */}
-      <Box background="surface-subtle" borderRadius="medium">
-        <Accordion className="pt-0">
-          <Accordion.Item open={customParamAccordionOpen}>
-            <Accordion.Header 
-              onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
-              className="bg-blue-50"
-            >
-              <span className="flex items-center gap-2">
-                <PlusCircleIcon aria-hidden width="1.25rem" height="1.25rem" />
-                <span className="font-medium">Legg til parametere manuelt</span>
-              </span>
-            </Accordion.Header>
-            <Accordion.Content className="bg-blue-50/30">
-              <VStack gap="4">      
-                <div className="flex gap-2 items-end">
-                  <TextField 
-                    label="Parameter"
-                    description="Du kan legge til flere parametere med komma"
-                    value={newParamKey}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
-                    onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
-                    style={{ width: '100%' }}
-                  />
-                  <Button 
-                    variant="secondary" 
-                    onClick={addParameter}
-                    icon={<PlusCircleIcon aria-hidden />}
-                    style={{ height: '50px' }}
-                  >
-                    Legg til
-                  </Button>
-                </div>
-                
-                <Detail className="text-gray-600">
-                  {selectedEvents.length === 1 && selectedEvents[0] !== MANUAL_EVENT_NAME ? (
-                    <>Parametere vil legges til under <strong>{selectedEvents[0]}</strong>.</>
-                  ) : (
-                    'Parametere vil legges til under "Manuelt lagt til parametere".'
-                  )}
-                </Detail>
-              </VStack>
-            </Accordion.Content>
-          </Accordion.Item>
-        </Accordion>
-      </Box>
+      {/* Add Custom Parameters Section - Only when not loading */}
+      {!isLoading && (
+        <Box background="surface-subtle" borderRadius="medium">
+          <Accordion className="pt-0">
+            <Accordion.Item open={customParamAccordionOpen}>
+              <Accordion.Header 
+                onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
+                className="bg-blue-50"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">Legg til parametere manuelt</span>
+                </span>
+              </Accordion.Header>
+              <Accordion.Content className="bg-blue-50/30">
+                <VStack gap="4">      
+                  <div className="flex gap-2 mt-4 items-end">
+                    <TextField 
+                      label="Parameter"
+                      description="Du kan legge til flere parametere med komma"
+                      value={newParamKey}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
+                      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
+                      style={{ width: '100%' }}
+                    />
+                    <Button 
+                      variant="secondary" 
+                      onClick={addParameter}
+                      icon={<PlusCircleIcon aria-hidden />}
+                      style={{ height: '50px' }}
+                    >
+                      Legg til
+                    </Button>
+                  </div>
+                  
+                  <Detail className="text-gray-600">
+                    Parametere vil legges til under "Manuelt lagt til parametere".
+                  </Detail>
+                </VStack>
+              </Accordion.Content>
+            </Accordion.Item>
+          </Accordion>
+        </Box>
+      )}
 
       {/* Confirmation Modal for removing manual parameters */}
       <Modal
