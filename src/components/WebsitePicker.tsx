@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader, Panel } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader } from '@navikt/ds-react';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface Website {
@@ -45,6 +45,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   const websitesLoaded = useRef<boolean>(false); // New flag to prevent repeated fetching
   const [dateChanged, setDateChanged] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  // @ts-ignore
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
   // @ts-ignore
@@ -192,14 +193,6 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
 
   return (
     <div className="space-y-4">
-      {isInitialLoading ? (
-        <Panel border className="p-4 flex items-center justify-center" style={{minHeight: '120px'}}>
-          <div className="text-center">
-            <Loader size="2xlarge" />
-            <div className="mt-4 text-gray-600">Laster nettsider...</div>
-          </div>
-        </Panel>
-      ) : (
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
           <UNSAFE_Combobox
             label="Velg nettside / app for å se tilgjengelige hendelser"
@@ -255,12 +248,6 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
                       Oppdater
                     </Button>
                   </div>
-                  {isLoading && (
-                    <div className="flex items-center gap-2 my-2">
-                      <Loader size="small" /> 
-                      <span>Laster hendelser...</span>
-                    </div>
-                  )}
                   
                   {dateChanged && !isLoading && (
                     <AlertWithCloseButton variant="success">
@@ -276,7 +263,12 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
             </div>
           )}
         </div>
-      )}
+        {isLoading && (
+                    <div className="flex items-center gap-2 my-2">
+                      <Loader size="small" /> 
+                      <span>Laster hendelser...</span>
+                    </div>
+                  )}
     </div>
   );
 };
