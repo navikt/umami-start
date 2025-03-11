@@ -1,7 +1,6 @@
 import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
 import { Filter, Parameter } from '../types/chart';
 import { DYNAMIC_FILTER_OPTIONS, FILTER_COLUMNS, OPERATORS } from '../lib/constants';
-import { sanitizeColumnName } from '../lib/utils';
 
 interface ChartFiltersProps {
   filters: Filter[];
@@ -33,6 +32,18 @@ const ChartFilters = ({
     setFilters(filters.map((filter, i) => 
       i === index ? { ...filter, ...updates } : filter
     ));
+  };
+
+  // Helper function to get clean parameter name
+  const getCleanParamName = (param: Parameter): string => {
+    const parts = param.key.split('.');
+    return parts[parts.length - 1]; // Get last part after dot
+  };
+
+  // Helper function to get parameter display name
+  const getParamDisplayName = (param: Parameter): string => {
+    const parts = param.key.split('.');
+    return parts[parts.length - 1]; // Show only the parameter name, not the event prefix
   };
 
   return (
@@ -144,8 +155,11 @@ const ChartFilters = ({
                     {parameters.length > 0 && (
                       <optgroup label="Egendefinerte parametere">
                         {parameters.map(param => (
-                          <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                            {param.key}
+                          <option 
+                            key={`param_${param.key}`} 
+                            value={`param_${getCleanParamName(param)}`}
+                          >
+                            {getParamDisplayName(param)}
                           </option>
                         ))}
                       </optgroup>
