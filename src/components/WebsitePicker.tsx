@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
 import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader } from '@navikt/ds-react';
-import AlertWithCloseButton from './AlertWithCloseButton';
+import AlertWithCloseButton from './chartbuilder/AlertWithCloseButton';
 
 interface Website {
   id: string;

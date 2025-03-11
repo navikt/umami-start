@@ -20,7 +20,7 @@ import {
   PlusCircleIcon, 
   TrashIcon,
 } from '@navikt/aksel-icons';
-import { Parameter } from '../types/chart';
+import { Parameter } from '../../types/chart';
 
 interface EventParameterSelectorProps {
   availableEvents: string[];

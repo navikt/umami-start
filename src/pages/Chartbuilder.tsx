@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Heading, VStack } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
-import SQLPreview from '../components/sqlpreview';
-import ChartFilters from '../components/ChartFilters';
-import Summarize from '../components/Summarize';
-import EventParameterSelector from '../components/EventParameterSelector';
+import SQLPreview from '../components/chartbuilder/sqlpreview';
+import ChartFilters from '../components/chartbuilder/ChartFilters';
+import Summarize from '../components/chartbuilder/Summarize';
+import EventParameterSelector from '../components/chartbuilder/EventParameterSelector';
 import { 
   Parameter, 
   Metric, 
@@ -14,8 +14,7 @@ import {
   MetricOption,
   ColumnOption,
   ChartConfig,
-  Filter,
-  DynamicFilterOption
+  Filter
 } from '../types/chart';
 
 // Update your constants to use the new types
@@ -103,10 +102,6 @@ const COLUMN_GROUPS: Record<string, ColumnGroup> = {
   }
 };
 
-const DYNAMIC_FILTER_OPTIONS: DynamicFilterOption[] = [
-  // ...existing code...
-];
-
 // Add the sanitizeColumnName helper function BEFORE it's used
 const sanitizeColumnName = (key: string): string => {
   return key
@@ -185,7 +180,6 @@ const ChartsPage = () => {
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);
-  const [dynamicFilters, setDynamicFilters] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
@@ -197,7 +191,7 @@ const ChartsPage = () => {
     if (debouncedConfig.website) {
       generateSQL();
     }
-  }, [debouncedConfig, dynamicFilters, filters, parameters]); // Add generateSQL to deps
+  }, [debouncedConfig, filters, parameters]);
 
   // Add helper functions for metrics
   const addMetric = () => {
@@ -257,27 +251,16 @@ const ChartsPage = () => {
     });
   };
 
-  // Update the SQL generation
+  // Update the SQL generation to remove dynamic filters
   const generateSQLCore = useCallback((
     config: ChartConfig,
     filters: Filter[],
-    dynamicFilters: string[],
     parameters: Parameter[]
   ): string => {
     if (!config.website) return '';
 
     const requiredTables = getRequiredTables();
     
-    // Declare whereClauseFragments at the top
-    const whereClauseFragments: string[] = [];
-    dynamicFilters.forEach(filterValue => {
-      const filter = DYNAMIC_FILTER_OPTIONS.find(f => f.value === filterValue);
-      if (filter) {
-        const template = filter.template.replace(/\[\[AND /, '').replace(/\]\]/, '');
-        whereClauseFragments.push(template);
-      }
-    });
-
     // Start building the SQL with a CTE (Common Table Expression)
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';
@@ -450,53 +433,51 @@ const ChartsPage = () => {
       // Get parameter filters
       const paramFilters = filters.filter(filter => filter.column.startsWith('param_'));
       
-      // Add WHERE clause for parameter filters and dynamic filters
-      const whereConditions = [...whereClauseFragments];
-      
-      // Add parameter filter conditions
-      paramFilters.forEach(filter => {
-        const paramName = filter.column.replace('param_', '');
-        // Find matching parameter by base name (after the dot)
-        const param = parameters.find(p => {
-          const baseName = p.key.split('.').pop();
-          return sanitizeColumnName(baseName!) === paramName;
-        });
+      // Add WHERE clause for parameter filters only
+      if (paramFilters.length > 0) {
+        sql += 'WHERE ';
         
-        if (param) {
-          if (filter.operator === 'IS NULL') {
-            whereConditions.push(`NOT EXISTS (
-              SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-              WHERE param_filter.website_event_id = base_query.event_id
-                AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
-            )`);
-          } else if (filter.operator === 'IS NOT NULL') {
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-              WHERE param_filter.website_event_id = base_query.event_id
-                AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
-            )`);
-          } else {
-            const valueField = param.type === 'number' ? 'number_value' : 'string_value';
-            const valuePrefix = param.type === 'number' ? '' : "'";
-            const valueSuffix = param.type === 'number' ? '' : "'";
-            
-            whereConditions.push(`EXISTS (
-              SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-              WHERE param_filter.website_event_id = base_query.event_id
-                AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
-                AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
-            )`);
+        // Add parameter filter conditions
+        paramFilters.forEach((filter, index) => {
+          if (index > 0) {
+            sql += '  AND ';
           }
-        }
-      });
-      
-      // Add WHERE clause if there are any conditions
-      if (whereConditions.length > 0) {
-        sql += 'WHERE ' + whereConditions.join('\n  AND ') + '\n';
+          
+          const paramName = filter.column.replace('param_', '');
+          // Find matching parameter by base name (after the dot)
+          const param = parameters.find(p => {
+            const baseName = p.key.split('.').pop();
+            return sanitizeColumnName(baseName!) === paramName;
+          });
+          
+          if (param) {
+            if (filter.operator === 'IS NULL') {
+              sql += `NOT EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
+              )`;
+            } else if (filter.operator === 'IS NOT NULL') {
+              sql += `EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
+              )`;
+            } else {
+              const valueField = param.type === 'number' ? 'number_value' : 'string_value';
+              const valuePrefix = param.type === 'number' ? '' : "'";
+              const valueSuffix = param.type === 'number' ? '' : "'";
+              
+              sql += `EXISTS (
+                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
+                WHERE param_filter.website_event_id = base_query.event_id
+                  AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
+                  AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
+              )`;
+            }
+          }
+        });
       }
-    } else if (whereClauseFragments.length > 0) {
-      // If no parameters but we have dynamic filters
-      sql += 'WHERE ' + whereClauseFragments.join('\n  AND ') + '\n';
     }
 
     // GROUP BY
@@ -538,7 +519,7 @@ const ChartsPage = () => {
   }, []);
 
   const generateSQL = () => {
-    setGeneratedSQL(generateSQLCore(config, filters, dynamicFilters, parameters));
+    setGeneratedSQL(generateSQLCore(config, filters, parameters));
   };
 
   // Update the getMetricSQL function to handle aliases and indices
@@ -700,10 +681,8 @@ const ChartsPage = () => {
                   <section>
                     <ChartFilters
                       filters={filters}
-                      dynamicFilters={dynamicFilters}
                       parameters={parameters}
                       setFilters={setFilters}
-                      setDynamicFilters={setDynamicFilters}
                       availableEvents={availableEvents}
                     />
                   </section>

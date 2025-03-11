@@ -7,7 +7,7 @@ import Combine from "./pages/Combine.tsx";
 import Explore from "./pages/Explore.tsx";
 import Copilot from "./pages/Copilot.tsx";
 import Validator from "./pages/Validator.tsx";
-import Charts from "./pages/Charts.tsx";
+import Charts from "./pages/Chartbuilder.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },

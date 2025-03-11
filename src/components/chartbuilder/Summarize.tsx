@@ -8,7 +8,7 @@ import {
   MetricOption,
   OrderBy,
   ColumnOption
-} from '../types/chart';
+} from '../../types/chart';
 
 interface SummarizeProps {
   metrics: Metric[];
