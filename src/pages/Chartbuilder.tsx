@@ -264,7 +264,7 @@ const ChartsPage = () => {
     });
   };
 
-  // Update the SQL generation to remove dynamic filters
+  // Update the SQL generation to handle parameters better
   const generateSQLCore = useCallback((
     config: ChartConfig,
     filters: Filter[],
@@ -495,26 +495,19 @@ const ChartsPage = () => {
       }
     }
 
-    // GROUP BY
+    // GROUP BY - Modified to exclude parameters from GROUP BY
     if (config.groupByFields.length > 0) {
       const groupByCols: string[] = [];
       
-      // Add regular columns to GROUP BY, but handle parameters differently
+      // Only add regular columns to GROUP BY (not parameters)
       config.groupByFields.forEach(field => {
         if (field === 'created_at') {
           groupByCols.push('dato');
         } else if (!field.startsWith('param_')) {
           // Only add non-parameter fields to GROUP BY
           groupByCols.push(`base_query.${field}`);
-        } else {
-          // For parameters, we need to include the case expression in GROUP BY
-          const paramBase = field.replace('param_', '');
-          groupByCols.push(`CASE 
-            WHEN SUBSTR(event_data.data_key, INSTR(event_data.data_key, '.') + 1) = '${paramBase}' 
-            THEN event_data.string_value 
-            ELSE NULL 
-          END`);
         }
+        // Parameters are now excluded from GROUP BY
       });
 
       // Only add GROUP BY clause if we have columns to group by
