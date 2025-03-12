@@ -5,11 +5,14 @@ import {
   TextField, 
   HStack, 
   Accordion,
+  Checkbox,
   BodyShort,
-  Alert,
+  Detail,
   Heading,
+  Alert,
   Modal,
   Box,
+  Loader
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon
@@ -29,7 +32,7 @@ interface EventParams {
 
 // Constants for the fake event
 const MANUAL_EVENT_NAME = '_manual_parameters_';
-const MANUAL_EVENT_DISPLAY_NAME = 'manuelt lagt til';
+const MANUAL_EVENT_DISPLAY_NAME = 'Manuelt lagt til parametere';
 
 const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   availableEvents,
@@ -48,8 +51,14 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   // @ts-ignore Store event-parameter mapping to ensure proper relationship
   const [eventParamsMap, setEventParamsMap] = useState<EventParams>({});
   
+  // Track if we have manually added parameters
+  const [hasManualParameters, setHasManualParameters] = useState<boolean>(false);
+  
   // Add loading state
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Cache for remembering parameters by event
+  const [eventParameterCache, setEventParameterCache] = useState<Record<string, Parameter[]>>({});
   
   // Extract event-parameter map from the input parameters list
   useEffect(() => {
@@ -114,6 +123,26 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       }
     });
     
+    // Merge with existing cache (don't overwrite what we have)
+    setEventParameterCache(prev => {
+      const newCache = {...prev};
+      
+      // For each event in the parameters, update the cache
+      Object.keys(parametersByEvent).forEach(eventName => {
+        if (!newCache[eventName]) {
+          newCache[eventName] = [];
+        }
+        
+        // Add any parameters not already in cache
+        parametersByEvent[eventName].forEach(param => {
+          if (!newCache[eventName].some(p => p.key === param.key)) {
+            newCache[eventName].push(param);
+          }
+        });
+      });
+      
+      return newCache;
+    });
     
     // Indicate we're done loading after initial parameters are processed
     setIsLoading(false);
@@ -122,6 +151,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   // Check if we already have manual parameters on component mount
   useEffect(() => {
     const hasManual = parameters.some(p => p.key.startsWith(`${MANUAL_EVENT_NAME}.`));
+    setHasManualParameters(hasManual);
     
     // If we have manual parameters but the event is not selected, select it
     if (hasManual && !selectedEvents.includes(MANUAL_EVENT_NAME)) {
@@ -129,11 +159,93 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     }
   }, [parameters]);
 
+  // Toggle event selection with proper parameter handling
+  const toggleEvent = (event: string): void => {
+    // Show confirmation dialog when trying to deselect manual event with parameters
+    if (event === MANUAL_EVENT_NAME && 
+        hasManualParameters && 
+        selectedEvents.includes(MANUAL_EVENT_NAME)) {
+      setShowConfirmModal(true);
+      return;
+    }
+
+    if (selectedEvents.includes(event)) {
+      // Remove event
+      setSelectedEvents(prev => prev.filter(e => e !== event));
+      
+      // @ts-ignore Remove its parameters
+      setParameters(prev => prev.filter(p => !p.key.startsWith(`${event}.`)));
+      
+      // If it was the manual event, update the flag
+      if (event === MANUAL_EVENT_NAME) {
+        setHasManualParameters(false);
+      }
+    } else {
+      // Add event
+      setSelectedEvents(prev => [...prev, event]);
+      
+      // Here's the key change: Use our cache to restore parameters
+      if (eventParameterCache[event] && eventParameterCache[event].length > 0) {
+        // @ts-ignore Add all cached parameters for this event
+        setParameters(prev => {
+          // Filter out any parameters already in the list
+          const newParams = eventParameterCache[event].filter(
+            cachedParam => !prev.some((p: Parameter) => p.key === cachedParam.key)
+          );
+          return [...prev, ...newParams];
+        });
+      }
+    }
+  };
+
+  // Add a function to select or deselect all events
+  const toggleAllEvents = () => {
+    // Check if all available events are already selected
+    const allEventsSelected = availableEvents.every(event => 
+      selectedEvents.includes(event)
+    );
+    
+    if (allEventsSelected) {
+      // Deselect all real events (keep manual if it exists)
+      const newSelection = selectedEvents.filter(e => e === MANUAL_EVENT_NAME);
+      setSelectedEvents(newSelection);
+      
+      // Remove parameters for all deselected events
+      setParameters(prev => 
+        prev.filter(p => !p.key.includes('.') || p.key.startsWith(`${MANUAL_EVENT_NAME}.`))
+      );
+    } else {
+      // Select all events while keeping manual event if it exists
+      const eventsToAdd = availableEvents.filter(e => !selectedEvents.includes(e));
+      const newSelection = [...selectedEvents, ...eventsToAdd];
+      setSelectedEvents(newSelection);
+      
+      // Add back cached parameters for newly selected events
+      const paramsToAdd: Parameter[] = [];
+      eventsToAdd.forEach(event => {
+        if (eventParameterCache[event] && eventParameterCache[event].length > 0) {
+          paramsToAdd.push(...eventParameterCache[event]);
+        }
+      });
+      
+      // Add only parameters that don't already exist
+      if (paramsToAdd.length > 0) {
+        setParameters(prev => {
+          const newParams = paramsToAdd.filter(
+            newParam => !prev.some(p => p.key === newParam.key)
+          );
+          return [...prev, ...newParams];
+        });
+      }
+    }
+  };
+
   // Remove manual parameters and deselect manual event
   const confirmRemoveManualParameters = () => {
     // @ts-ignore
     setParameters(prev => prev.filter(p => !p.key.startsWith(`${MANUAL_EVENT_NAME}.`)));
     setSelectedEvents(prev => prev.filter(e => e !== MANUAL_EVENT_NAME));
+    setHasManualParameters(false);
     setShowConfirmModal(false);
   };
 
@@ -174,6 +286,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       // Add the manual event to selected events if not already there
       if (!selectedEvents.includes(MANUAL_EVENT_NAME)) {
         setSelectedEvents(prev => [...prev, MANUAL_EVENT_NAME]);
+        setHasManualParameters(true);
       }
       
       // Add the parameters
@@ -202,42 +315,33 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     }));
   };
 
-  useEffect(() => {
-    console.log('Initial available events:', availableEvents);
-    if (initiallySelectAll && availableEvents.length > 0) {
-      setSelectedEvents(availableEvents);
-    }
-  }, [availableEvents]);
-
-const getGroupedParameters = () => {
-  const groups: Record<string, Parameter[]> = {};
-  
-  // Create a group for each selected event
-  selectedEvents.forEach(event => {
-    // Initialize the group even if there are no parameters
-    groups[event] = [];
+  // Update the getGroupedParameters function
+  const getGroupedParameters = () => {
+    const groups: Record<string, Parameter[]> = {};
     
-    // Get all parameters for this event
-    const eventParams = parameters.filter(p => p.key.startsWith(`${event}.`));
-    
-    // Deduplicate parameters by their base name
-    const uniqueParams = new Map<string, Parameter>();
-    
-    eventParams.forEach(param => {
-      const baseName = param.key.split('.')[1]; // Get parameter name without event prefix
-      if (!uniqueParams.has(baseName)) {
-        uniqueParams.set(baseName, param);
+    // Create a group for each selected event
+    selectedEvents.forEach(event => {
+      // Get all parameters for this event
+      const eventParams = parameters.filter(p => p.key.startsWith(`${event}.`));
+      
+      // Deduplicate parameters by their base name
+      const uniqueParams = new Map<string, Parameter>();
+      
+      eventParams.forEach(param => {
+        const baseName = param.key.split('.')[1]; // Get parameter name without event prefix
+        if (!uniqueParams.has(baseName)) {
+          uniqueParams.set(baseName, param);
+        }
+      });
+      
+      // Only add the group if we have parameters
+      if (uniqueParams.size > 0) {
+        groups[event] = Array.from(uniqueParams.values());
       }
     });
     
-    // Add parameters if we have any
-    if (uniqueParams.size > 0) {
-      groups[event] = Array.from(uniqueParams.values());
-    }
-  });
-  
-  return groups;
-};
+    return groups;
+  };
   
   const groupedParameters = getGroupedParameters();
   const hasSelectedEvents = selectedEvents.length > 0;
@@ -260,37 +364,117 @@ const getGroupedParameters = () => {
   
   return (
     <VStack gap="6">
+      <Box background="surface-subtle" borderRadius="medium">
+        <div>
+          <Heading level="3" size="small" spacing className="text-blue-600">
+            Velg hendelser
+          </Heading>
+        </div>
+
+        {/* Available Events - With Loading State */}
+        <div className="mt-4">
+          {isLoading ? (
+            <div className="p-4">
+              <div className="flex items-center justify-center p-8">
+                <div className="text-center">
+                  <Loader size="2xlarge" />
+                  <div className="mt-4 text-gray-600">Laster hendelser...</div>
+                </div>
+              </div>
+            </div>
+          ) : availableEvents.length === 0 ? (
+            <div>
+              <Alert variant="info" inline>
+                Ingen egendefinerte hendelser funnet.
+                <div className="mt-2">Du kan fortsatt legge til egendefinerte parametere manuelt.</div>
+              </Alert>
+            </div>
+          ) : (
+            <div className="p-4 bg-white">
+              <div className="space-y-2">
+                {/* Add Select All button */}
+                {availableEvents.length > 1 && (
+                  <div className="flex justify-end mb-3">
+                    <Button 
+                      variant="tertiary" 
+                      size="small" 
+                      onClick={toggleAllEvents}
+                      className="text-blue-600"
+                    >
+                      {availableEvents.every(event => selectedEvents.includes(event)) 
+                        ? 'Fjern alle' 
+                        : 'Velg alle'}
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Section for real events */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                    {availableEvents.map(event => (
+                      <div key={event} className="flex items-center">
+                        <Checkbox 
+                          checked={selectedEvents.includes(event)}
+                          onChange={() => toggleEvent(event)}
+                          className="items-center"
+                        >
+                          <div className="flex items-center">
+                            <span>{event || 'pageviews'}</span>
+                          </div>
+                        </Checkbox>
+                      </div>
+                    ))}
+                </div>
+                
+                {/* Separator if needed */}
+                {hasManualParameters && availableEvents.length > 0 && (
+                  <div className="border-t border-gray-200 my-3"></div>
+                )}
+                
+                {/* Section for manual parameters */}
+                {hasManualParameters && (
+                  <div className="pt-1">
+                    <div className="flex items-center">
+                      <Checkbox
+                        checked={selectedEvents.includes(MANUAL_EVENT_NAME)}
+                        onChange={() => toggleEvent(MANUAL_EVENT_NAME)}
+                      >
+                        <div className="flex items-center">
+                          <span>{MANUAL_EVENT_DISPLAY_NAME}</span>
+                        </div>
+                      </Checkbox>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Box>
+
       {/* Parameters Section - Only shown when events are selected and not loading */}
       {hasSelectedEvents && !isLoading && (
         <Box background="surface-subtle" borderRadius="medium">
           <div className="flex justify-between items-center pb-2">
             <Heading level="3" size="small" className="text-blue-600">
-              Utforsk egendefinerte hendelser og detaljer
+              Hendelsesdetaljer
             </Heading>
           </div>
-
-          {!isLoading && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
-            <Alert variant="info" inline className="mt-3">
-              Ingen egendefinerte hendelser eller detaljer funnet. Du kan fortsatt legge til detaljer manuelt.
-            </Alert>
-          )}
-
-          {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-            <BodyShort size="small" spacing className="text-gray-600 pt-1 pb-3">
-              Detaljer er forhåndsatt som tekst. Du kan endre til tall der det er relevant.
-            </BodyShort>
-          )}
-  
+          
+          <BodyShort size="small" spacing className="text-gray-600 pb-3">
+            Behold hendelsestetaljene du trenger.
+          </BodyShort>
+          
             <Accordion>
+              {/* Add selected event parameters */}
               {Object.keys(groupedParameters).map(eventName => (
                 <Accordion.Item key={eventName}>
-                  <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
+                  <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50' : 'bg-white'}>
                     <span className="flex items-center gap-2">
-                     {
+                    {eventName === MANUAL_EVENT_NAME ? '✍️' : '🎯'} {
                         (eventName && getEventDisplayName(eventName) && 
                         getEventDisplayName(eventName) !== "null") ? 
                           getEventDisplayName(eventName) : 
-                          'pageview'
+                          'pageviews'
                       }
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
@@ -319,13 +503,11 @@ const getGroupedParameters = () => {
                               >
                                 {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                               </Button>
-                              {parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
                               <Button
                                 variant="tertiary"
                                 size="small"
                                 onClick={() => removeParameter(param.key)}
                               >Fjern</Button>
-                              )}
                             </HStack>
                           </div>
                         );
@@ -371,6 +553,10 @@ const getGroupedParameters = () => {
                       Legg til
                     </Button>
                   </div>
+                  
+                  <Detail className="text-gray-600">
+                    Detaljene legges til under "Manuelt lagt til parametere".
+                  </Detail>
                 </VStack>
               </Accordion.Content>
             </Accordion.Item>
