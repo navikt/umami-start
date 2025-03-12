@@ -349,11 +349,8 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       <Box background="surface-subtle" borderRadius="medium">
         <div>
           <Heading level="3" size="small" spacing className="text-blue-600">
-            Velg hendelser du vil inkludere
+            Hendelser du ønsker å hente detaljer om
           </Heading>
-          <BodyShort size="small" spacing className="text-gray-600">
-            Velg hvilke hendelser du vil inkludere i grafen / tabellen din.
-          </BodyShort>
         </div>
 
         {/* Available Events - With Loading State */}
@@ -445,7 +442,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           <BodyShort size="small" spacing className="text-gray-600 mb-4">
             {showGroupedView
               ? "Viser detaljer gruppert etter hendelse."
-              : "Viser detaljer knyttet til valgte hendelser."
+              : "En og samme detalje kan tilhøre flere hendelser."
             }
           </BodyShort>
           
