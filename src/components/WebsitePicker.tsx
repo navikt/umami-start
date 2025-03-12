@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader, Alert } from '@navikt/ds-react';
 import AlertWithCloseButton from './chartbuilder/AlertWithCloseButton';
 
 interface Website {
@@ -34,6 +34,16 @@ interface WebsiteApiResponse {
   data: Website[];
 }
 
+const API_TIMEOUT_MS = 30000; // 30 seconds timeout
+
+const timeoutPromise = (ms: number) => {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Request timed out after ${ms}ms`));
+    }, ms);
+  });
+};
+
 const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -47,6 +57,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   const [isLoading, setIsLoading] = useState<boolean>(false);
   // @ts-ignore
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // @ts-ignore
   const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false) => {
@@ -54,16 +65,21 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
     
     fetchInProgress.current[websiteId] = true;
     setIsLoading(true); // Set loading state when fetching starts
+    setError(null); // Clear any previous errors
     
     try {
       const baseUrl = window.location.hostname === 'localhost' 
         ? 'https://reops-proxy.intern.nav.no' 
         : 'https://reops-proxy.ansatt.nav.no';
 
-      // Always get fresh date range
-      const dateRangeResponse = await fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
-        credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-      });
+      // Add timeout to date range fetch
+      const dateRangeResponse = await Promise.race([
+        fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
+          credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]);
+      // @ts-ignore
       const dateRange = await dateRangeResponse.json();
       
       // Calculate max available days
@@ -80,10 +96,14 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       const startAt = calculatedStartDate.getTime();
       const endAt = calculatedEndDate.getTime();
       
-      const propertiesResponse = await fetch(
-        `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
-        { credentials: window.location.hostname === 'localhost' ? 'omit' : 'include' }
-      );
+      // Add timeout to properties fetch
+      const propertiesResponse = await Promise.race([
+        fetch(
+          `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
+          { credentials: window.location.hostname === 'localhost' ? 'omit' : 'include' }
+        ),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]);// @ts-ignore
       const properties: EventProperty[] = await propertiesResponse.json();
       
       // Process events and parameters
@@ -113,6 +133,12 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       }
     } catch (error) {
       console.error("Error fetching event data:", error);
+      if (error instanceof Error) {
+        const message = error.message.includes('timed out') 
+          ? 'Forespørselen tok for lang tid. Prøv igjen senere.'
+          : 'Det oppstod en feil ved lasting av data. Forsøk å laste siden inn på nytt.';
+        setError(message);
+      }
     } finally {
       fetchInProgress.current[websiteId] = false;
       setIsLoading(false); // Clear loading state when done
@@ -194,6 +220,11 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   return (
     <div className="space-y-4">
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+          {error && (
+            <Alert variant="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
           <UNSAFE_Combobox
             label="Nettside / app"
             options={websites.map(website => ({
