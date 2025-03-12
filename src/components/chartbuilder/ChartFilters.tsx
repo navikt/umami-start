@@ -55,7 +55,7 @@ const ChartFilters = ({
             Legg til statiske filter
           </Heading>
           <p className="text-sm text-gray-600 mb-4">
-            Legg til faste filtre som vil være låst i grafen/tabellen.
+            Statiske filtre er låst til grafen eller tabellen du lager.
           </p>
 
           {filters.length > 0 && (
