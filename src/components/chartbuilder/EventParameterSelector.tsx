@@ -549,15 +549,15 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 className="bg-blue-50"
               >
                 <span className="flex items-center gap-2">
-                  <span className="font-medium">Legg til parametere manuelt</span>
+                  <span className="font-medium">Legg til hendelsesdetaljer manuelt</span>
                 </span>
               </Accordion.Header>
               <Accordion.Content className="bg-blue-50/30">
                 <VStack gap="4">      
                   <div className="flex gap-2 mt-4 items-end">
                     <TextField 
-                      label="Parameter"
-                      description="Du kan legge til flere parametere med komma"
+                      label="Hendelsesdetalj"
+                      description="Du kan legge til flere med komma"
                       value={newParamKey}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
                       onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
@@ -574,7 +574,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                   </div>
                   
                   <Detail className="text-gray-600">
-                    Parametere vil legges til under "Manuelt lagt til parametere".
+                    Detaljene legges til under "Manuelt lagt til parametere".
                   </Detail>
                 </VStack>
               </Accordion.Content>
