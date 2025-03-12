@@ -383,7 +383,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                           className="items-center"
                         >
                           <div className="flex items-center">
-                            <span>{event}</span>
+                            <span>{event || 'pageviews'}</span>
                           </div>
                         </Checkbox>
                       </div>
@@ -492,7 +492,12 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 <Accordion.Item key={eventName}>
                   <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50' : 'bg-white'}>
                     <span className="flex items-center gap-2">
-                      {eventName === MANUAL_EVENT_NAME ? '✍️' : '🎯'} {getEventDisplayName(eventName)}
+                    {eventName === MANUAL_EVENT_NAME ? '✍️' : '🎯'} {
+                        (eventName && getEventDisplayName(eventName) && 
+                        getEventDisplayName(eventName) !== "null") ? 
+                          getEventDisplayName(eventName) : 
+                          'pageviews'
+                      }
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
                       </span>
