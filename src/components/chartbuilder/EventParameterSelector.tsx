@@ -17,8 +17,7 @@ import {
   Loader
 } from '@navikt/ds-react';
 import { 
-  PlusCircleIcon, 
-  TrashIcon,
+  PlusCircleIcon
 } from '@navikt/aksel-icons';
 import { Parameter } from '../../types/chart';
 

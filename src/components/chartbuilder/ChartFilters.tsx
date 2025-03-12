@@ -1,4 +1,5 @@
 import { Button, Heading, Select, TextField } from '@navikt/ds-react';
+import { useMemo } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 
@@ -42,6 +43,19 @@ const ChartFilters = ({
     return parts[parts.length - 1]; // Show only the parameter name, not the event prefix
   };
 
+  // Create a Set to track unique parameters
+  const uniqueParameters = useMemo(() => {
+    const seen = new Set();
+    return parameters.filter(param => {
+      const cleanName = param.key.split('.').pop() || '';
+      if (seen.has(cleanName)) {
+        return false;
+      }
+      seen.add(cleanName);
+      return true;
+    });
+  }, [parameters]);
+
   return (
     <section>
       <Heading level="2" size="small" spacing>
@@ -80,7 +94,7 @@ const ChartFilters = ({
                     
                     {parameters.length > 0 && (
                       <optgroup label="Egendefinerte parametere">
-                        {parameters.map(param => (
+                        {uniqueParameters.map(param => (
                           <option 
                             key={`param_${param.key}`} 
                             value={`param_${getCleanParamName(param)}`}
