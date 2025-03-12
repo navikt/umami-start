@@ -682,7 +682,7 @@ const ChartsPage = () => {
                   {/* Parameters section - Remove AdvancedOptions */}
                   <section>
                     <Heading level="2" size="small" spacing>
-                      Detaljinnhenting
+                      Hendelsesdetaljer
                     </Heading>
                     <div className="bg-gray-50 p-5 rounded-md border">
                       <EventParameterSelector

@@ -349,7 +349,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       <Box background="surface-subtle" borderRadius="medium">
         <div>
           <Heading level="3" size="small" spacing className="text-blue-600">
-            Hendelser du ønsker å hente detaljer om
+            Velg hendelser
           </Heading>
         </div>
 
@@ -367,7 +367,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           ) : availableEvents.length === 0 ? (
             <div>
               <Alert variant="info" inline>
-                Ingen egendefinerte hendelser funnet for denne nettsiden.
+                Ingen egendefinerte hendelser funnet.
                 <div className="mt-2">Du kan fortsatt legge til egendefinerte parametere manuelt.</div>
               </Alert>
             </div>
@@ -375,7 +375,6 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
             <div className="p-4 bg-white">
               <div className="space-y-2">
                 {/* Section for real events */}
-                <div className="mb-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                     {availableEvents.map(event => (
                       <div key={event} className="flex items-center">
@@ -390,7 +389,6 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                         </Checkbox>
                       </div>
                     ))}
-                  </div>
                 </div>
                 
                 {/* Separator if needed */}
@@ -424,7 +422,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
         <Box background="surface-subtle" borderRadius="medium">
           <div className="flex justify-between items-center pb-2">
             <Heading level="3" size="small" className="text-blue-600">
-              Detaljer du vil inkludere
+              Hendelsesdetaljer
             </Heading>
             {hasParameters && (
               <div className="flex items-center gap-2">
@@ -439,10 +437,10 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
             )}
           </div>
           
-          <BodyShort size="small" spacing className="text-gray-600 mb-4">
+          <BodyShort size="small" spacing className="text-gray-600 pb-3">
             {showGroupedView
               ? "Viser detaljer gruppert etter hendelse."
-              : "En og samme detalje kan tilhøre flere hendelser."
+              : "Behold hendelsestetaljene du trenger."
             }
           </BodyShort>
           
@@ -479,11 +477,10 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                             {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                           </Button>
                           <Button
-                            variant="secondary"
+                            variant="tertiary"
                             size="small"
-                            icon={<TrashIcon title="Fjern" />}
                             onClick={() => removeParameter(param.key)}
-                          />
+                          >Fjern</Button>
                         </HStack>
                       </div>
                     );
@@ -520,7 +517,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                             </div>
                             <HStack gap="2">
                               <Button
-                                variant="tertiary"
+                                variant="secondary"
                                 size="small"
                                 onClick={() => toggleParameterType(param.key, param.type)}
                                 className="min-w-[80px]"
@@ -528,11 +525,10 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                 {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
                               </Button>
                               <Button
-                                variant="danger"
+                                variant="tertiary"
                                 size="small"
-                                icon={<TrashIcon title="Fjern" />}
                                 onClick={() => removeParameter(param.key)}
-                              />
+                              >Fjern</Button>
                             </HStack>
                           </div>
                         );
