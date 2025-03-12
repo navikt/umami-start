@@ -438,10 +438,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           </div>
           
           <BodyShort size="small" spacing className="text-gray-600 pb-3">
-            {showGroupedView
-              ? "Viser detaljer gruppert etter hendelse."
-              : "Behold hendelsestetaljene du trenger."
-            }
+            Behold hendelsestetaljene du trenger.
           </BodyShort>
           
           {!showGroupedView ? (
