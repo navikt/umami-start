@@ -238,6 +238,23 @@ const ChartsPage = () => {
     }));
   };
 
+  // Add move metric function
+  const moveMetric = (index: number, direction: 'up' | 'down') => {
+    setConfig(prev => {
+      const newMetrics = [...prev.metrics];
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      
+      if (newIndex >= 0 && newIndex < newMetrics.length) {
+        [newMetrics[index], newMetrics[newIndex]] = [newMetrics[newIndex], newMetrics[index]];
+      }
+      
+      return {
+        ...prev,
+        metrics: newMetrics
+      };
+    });
+  };
+      
   // Add helper functions for group by fields
   const addGroupByField = (field: string) => {
     if (!config.groupByFields.includes(field)) {
@@ -936,6 +953,7 @@ const ChartsPage = () => {
                       addGroupByField={addGroupByField}
                       removeGroupByField={removeGroupByField}
                       moveGroupField={moveGroupField}
+                      moveMetric={moveMetric}
                       setOrderBy={setOrderBy}
                       clearOrderBy={clearOrderBy}
                       setParamAggregation={setParamAggregation}

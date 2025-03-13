@@ -28,6 +28,7 @@ interface SummarizeProps {
   addGroupByField: (field: string) => void;
   removeGroupByField: (field: string) => void;
   moveGroupField: (index: number, direction: 'up' | 'down') => void;
+  moveMetric: (index: number, direction: 'up' | 'down') => void; // Add this prop
   setOrderBy: (column: string, direction: 'ASC' | 'DESC') => void;
   clearOrderBy: () => void;
   setDateFormat: (format: string) => void;
@@ -43,7 +44,7 @@ const Summarize = ({
   METRICS,
   DATE_FORMATS,
   COLUMN_GROUPS,
-  getMetricColumns, // Add this line to include the function
+  getMetricColumns,
   sanitizeColumnName,
   updateMetric,
   removeMetric,
@@ -51,6 +52,7 @@ const Summarize = ({
   addGroupByField,
   removeGroupByField,
   moveGroupField,
+  moveMetric, // Add this prop
   setOrderBy,
   clearOrderBy,
   setDateFormat
@@ -219,6 +221,13 @@ const Summarize = ({
         <div className="space-y-4 mb-6">
           {metrics.map((metric, index) => (
             <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
+              {/* Add row number */}
+              <div className="flex flex-col justify-center mr-2 w-6 text-center">
+                <span className="text-sm text-gray-500">
+                  {index + 1}.
+                </span>
+              </div>
+              
               <Select
                 label="Funksjon"
                 value={metric.function}
@@ -283,14 +292,42 @@ const Summarize = ({
                 size="small"
               />
               
-              <Button
-                variant="tertiary-neutral"
-                size="small"
-                onClick={() => removeMetric(index)}
-                className="mb-1"
-              >
-                Fjern
-              </Button>
+              {/* Group the control buttons together in a fixed width container */}
+              <div className="flex items-center gap-1 min-w-[90px] justify-end mb-1">
+                {/* Move arrows before remove button for more consistent UI */}
+                <div className="flex gap-1">
+                  {index > 0 && (
+                    <Button
+                      variant="tertiary"
+                      size="small"
+                      icon={<MoveUp size={16} />}
+                      onClick={() => moveMetric(index, 'up')}
+                      title="Flytt opp"
+                    />
+                  )}
+                  {index < metrics.length - 1 && (
+                    <Button
+                      variant="tertiary"
+                      size="small"
+                      icon={<MoveDown size={16} />}
+                      onClick={() => moveMetric(index, 'down')}
+                      title="Flytt ned"
+                    />
+                  )}
+                  {/* Add invisible placeholder button when only one arrow is showing */}
+                  {(index === 0 || index === metrics.length - 1) && metrics.length > 1 && (
+                    <div className="w-8"></div>
+                  )}
+                </div>
+                
+                <Button
+                  variant="tertiary-neutral"
+                  size="small"
+                  onClick={() => removeMetric(index)}
+                >
+                  Fjern
+                </Button>
+              </div>
             </div>
           ))}
           
