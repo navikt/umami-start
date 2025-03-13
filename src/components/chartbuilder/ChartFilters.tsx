@@ -1,4 +1,4 @@
-import { Button, Heading, Select, TextField } from '@navikt/ds-react';
+import { Button, Heading, Select, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import { useMemo } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -55,6 +55,11 @@ const ChartFilters = ({
       return true;
     });
   }, [parameters]);
+
+  // Helper to check if a filter is using event_name with multiple values
+  const isMultiEventFilter = (filter: Filter): boolean => {
+    return filter.column === 'event_name' && filter.multipleValues && filter.multipleValues.length > 0;
+  };
 
   return (
     <section>
@@ -121,23 +126,39 @@ const ChartFilters = ({
 
                   {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
                     filter.column === 'event_name' ? (
-                      <Select
-                        label="Event navn"
-                        value={filter.value}
-                        onChange={(e) => updateFilter(index, { value: e.target.value })}
-                        size="small"
-                      >
-                        <option value="">Velg event...</option>
-                        {availableEvents.map(event => (
-                          <option key={event} value={event}>
-                            {event}
-                          </option>
-                        ))}
-                      </Select>
+                      <div style={{ flex: 1 }}>
+                        <UNSAFE_Combobox
+                          label="Event navn"
+                          options={availableEvents.map(event => ({
+                            label: event || '',
+                            value: event || ''
+                          }))}
+                          selectedOptions={filter.multipleValues?.map(v => v || '') || 
+                                          (filter.value ? [filter.value] : [])}
+                          onToggleSelected={(option, isSelected) => {
+                            if (option) {
+                              const currentValues = filter.multipleValues || 
+                                                   (filter.value ? [filter.value] : []);
+                              const newValues = isSelected 
+                                ? [...currentValues, option]
+                                : currentValues.filter(val => val !== option);
+                              
+                              updateFilter(index, { 
+                                multipleValues: newValues.length > 0 ? newValues : [],
+                                // Keep a single value for backward compatibility
+                                value: newValues.length > 0 ? newValues[0] : '' 
+                              });
+                            }
+                          }}
+                          isMultiSelect
+                          size="small"
+                          clearButton
+                        />
+                      </div>
                     ) : (
                       <TextField
                         label="Verdi"
-                        value={filter.value}
+                        value={filter.value || ''}
                         onChange={(e) => updateFilter(index, { value: e.target.value })}
                         size="small"
                       />

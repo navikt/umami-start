@@ -3,6 +3,7 @@ export interface Filter {
   operator: string;
   value?: string;
   customColumn?: string;
+  multipleValues?: string[]; // Add this line if it's missing
 }
 
 export interface Parameter {

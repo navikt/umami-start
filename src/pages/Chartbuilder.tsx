@@ -368,7 +368,7 @@ const ChartsPage = () => {
         } else {
           sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
         }
-      } else if (filter.value) {
+      } else if (filter.value || (filter.multipleValues && filter.multipleValues.length > 0)) {
         if (filter.column.startsWith('param_')) {
           // Handle parameter filtering
           sql += `  AND ${filter.column} ${filter.operator} '${filter.value}'\n`;
@@ -378,6 +378,10 @@ const ChartsPage = () => {
         } else if (filter.column === 'event_type') {
           // Handle event_type as integer
           sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
+        } else if (filter.column === 'event_name' && filter.multipleValues && filter.multipleValues.length > 0) {
+          // Handle multiple event names using IN clause
+          const eventNames = filter.multipleValues.map(val => `'${val}'`).join(', ');
+          sql += `  AND e.${filter.column} IN (${eventNames})\n`;
         } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
           sql += `  AND e.${filter.column} ${filter.operator} '%${filter.value}%'\n`;
         } else if (filter.operator === 'STARTS_WITH') {
