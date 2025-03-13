@@ -240,7 +240,6 @@ const getGroupedParameters = () => {
 };
   
   const groupedParameters = getGroupedParameters();
-  const hasSelectedEvents = selectedEvents.length > 0;
   
   // Helper to generate a display name for parameters
   const getParameterDisplayName = (param: Parameter): string => {
@@ -261,7 +260,7 @@ const getGroupedParameters = () => {
   return (
     <VStack gap="6">
       {/* Parameters Section - Only shown when events are selected and not loading */}
-      {hasSelectedEvents && !isLoading && (
+      {!isLoading && (
         <Box background="surface-subtle" borderRadius="medium">
           <div className="flex justify-between items-center pb-2">
             <Heading level="3" size="small" className="text-blue-600">
@@ -281,6 +280,7 @@ const getGroupedParameters = () => {
             </BodyShort>
           )}
   
+          {!isLoading && availableEvents.length > 0 && (
             <Accordion>
               {Object.keys(groupedParameters).map(eventName => (
                 <Accordion.Item key={eventName}>
@@ -335,6 +335,7 @@ const getGroupedParameters = () => {
                 </Accordion.Item>
               ))}
             </Accordion>
+          )}
         </Box>
       )}
       

@@ -74,92 +74,8 @@ const Summarize = ({
   const uniqueParameters = getUniqueParameters(parameters);
 
   return (
-    <div className="space-y-6 bg-gray-50 p-5 rounded-md border">
-      {/* Metrics section */}
-      <div>
-        <Heading level="3" size="xsmall" spacing>
-          Beregninger
-        </Heading>
-        <p className="text-sm text-gray-600 mb-4">
-          Velg hvilke beregninger du ønsker å inkludere.
-        </p>
-        
-        <div className="space-y-4">
-          {metrics.map((metric, index) => (
-            <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-              <Select
-                label="Funksjon"
-                value={metric.function}
-                onChange={(e) => updateMetric(index, { function: e.target.value })}
-                size="small"
-              >
-                {METRICS.map(m => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-              
-              {metric.function !== 'count' && (
-                <Select
-                  label="Kolonne"
-                  value={metric.column || ''}
-                  onChange={(e) => updateMetric(index, { column: e.target.value })}
-                  size="small"
-                >
-                  <option value="">Velg kolonne</option>
-                  {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                    <optgroup key={groupKey} label={group.label}>
-                      {group.columns.map(col => (
-                        <option key={col.value} value={col.value}>
-                          {col.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                  {uniqueParameters.length > 0 && (
-                    <optgroup label="Egendefinerte parametere">
-                      {uniqueParameters.map(param => (
-                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                          {param.key}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </Select>
-              )}
-              
-              <TextField
-                label="Alias (valgfritt)"
-                value={metric.alias || ''}
-                onChange={(e) => updateMetric(index, { alias: e.target.value })}
-                placeholder={`metric_${index + 1}`}
-                size="small"
-              />
-              
-              <Button
-                variant="tertiary-neutral"
-                size="small"
-                onClick={() => removeMetric(index)}
-                className="mb-1"
-              >
-                Fjern
-              </Button>
-            </div>
-          ))}
-          
-          <Button
-            variant="secondary"
-            onClick={addMetric}
-            size="small"
-          >
-            Legg til flere beregninger
-          </Button>
-        </div>
-      </div>
-      
-      {/* Group By section */}
-      <div className="border-t pt-4">
+    <div className="bg-gray-50 p-5 rounded-md border"> 
+        {/* Group By section */} 
         <Heading level="3" size="xsmall" spacing>
           Gruppering
         </Heading>
@@ -167,7 +83,7 @@ const Summarize = ({
           Velg hvordan dataene skal grupperes.
         </p>
         
-        <div className="space-y-4">
+        <div className="space-y-4 mb-6">
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
             <Select
               label="Legg til gruppering"
@@ -286,6 +202,88 @@ const Summarize = ({
               </div>
             </div>
           )}
+      </div>
+
+      {/* Metrics section */}
+      <div className="border-t pt-4">
+        <Heading level="3" size="xsmall" spacing>
+          Beregninger
+        </Heading>
+        <p className="text-sm text-gray-600 mb-4">
+          Velg hvilke beregninger du ønsker å inkludere.
+        </p>
+        
+        <div className="space-y-4 mb-6">
+          {metrics.map((metric, index) => (
+            <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
+              <Select
+                label="Funksjon"
+                value={metric.function}
+                onChange={(e) => updateMetric(index, { function: e.target.value })}
+                size="small"
+              >
+                {METRICS.map(m => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+              
+              {metric.function !== 'count' && (
+                <Select
+                  label="Kolonne"
+                  value={metric.column || ''}
+                  onChange={(e) => updateMetric(index, { column: e.target.value })}
+                  size="small"
+                >
+                  <option value="">Velg kolonne</option>
+                  {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                    <optgroup key={groupKey} label={group.label}>
+                      {group.columns.map(col => (
+                        <option key={col.value} value={col.value}>
+                          {col.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  {uniqueParameters.length > 0 && (
+                    <optgroup label="Egendefinerte parametere">
+                      {uniqueParameters.map(param => (
+                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                          {param.key}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </Select>
+              )}
+              
+              <TextField
+                label="Alias (valgfritt)"
+                value={metric.alias || ''}
+                onChange={(e) => updateMetric(index, { alias: e.target.value })}
+                placeholder={`metric_${index + 1}`}
+                size="small"
+              />
+              
+              <Button
+                variant="tertiary-neutral"
+                size="small"
+                onClick={() => removeMetric(index)}
+                className="mb-1"
+              >
+                Fjern
+              </Button>
+            </div>
+          ))}
+          
+          <Button
+            variant="secondary"
+            onClick={addMetric}
+            size="small"
+          >
+            Legg til flere beregninger
+          </Button>
         </div>
       </div>
 

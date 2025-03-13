@@ -2,7 +2,6 @@ import {
   MenuHamburgerIcon,
   BookIcon,
   CodeIcon,
-  DatabaseIcon,
   AreaChartIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
