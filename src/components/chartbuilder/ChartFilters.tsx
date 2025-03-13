@@ -75,99 +75,105 @@ const ChartFilters = ({
           {filters.length > 0 && (
             <div className="space-y-3 mb-4">
               {filters.map((filter, index) => (
-                <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-                  <Select
-                    label="Kolonne"
-                    value={filter.column}
-                    onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })}
-                    size="small"
-                  >
-                    {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                      <optgroup key={groupKey} label={group.label}>
-                        {group.columns.map(col => (
-                          <option key={col.value} value={col.value}>
-                            {col.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                    
-                    {parameters.length > 0 && (
-                      <optgroup label="Egendefinerte parametere">
-                        {uniqueParameters.map(param => (
-                          <option 
-                            key={`param_${param.key}`} 
-                            value={`param_${getCleanParamName(param)}`}
-                          >
-                            {getParamDisplayName(param)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </Select>
-
-                  <Select
-                    label="Operator"
-                    value={filter.operator}
-                    onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
-                    size="small"
-                  >
-                    {OPERATORS.map(op => (
-                      <option key={op.value} value={op.value}>
-                        {op.label}
-                      </option>
-                    ))}
-                  </Select>
-
-                  {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
-                    filter.column === 'event_name' ? (
-                      <div style={{ flex: 1 }}>
-                        <UNSAFE_Combobox
-                          label="Event navn"
-                          options={availableEvents.map(event => ({
-                            label: event || '',
-                            value: event || ''
-                          }))}
-                          selectedOptions={filter.multipleValues?.map(v => v || '') || 
-                                          (filter.value ? [filter.value] : [])}
-                          onToggleSelected={(option, isSelected) => {
-                            if (option) {
-                              const currentValues = filter.multipleValues || 
-                                                   (filter.value ? [filter.value] : []);
-                              const newValues = isSelected 
-                                ? [...currentValues, option]
-                                : currentValues.filter(val => val !== option);
-                              
-                              updateFilter(index, { 
-                                multipleValues: newValues.length > 0 ? newValues : [],
-                                // Keep a single value for backward compatibility
-                                value: newValues.length > 0 ? newValues[0] : '' 
-                              });
-                            }
-                          }}
-                          isMultiSelect
+                <div key={index} className="bg-white p-3 rounded-md border">
+                  <div className="flex justify-between">
+                    <div className="flex-1">
+                      <div className="flex gap-2 items-end">
+                        <Select
+                          label="Kolonne"
+                          value={filter.column}
+                          onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })}
                           size="small"
-                          clearButton
-                        />
-                      </div>
-                    ) : (
-                      <TextField
-                        label="Verdi"
-                        value={filter.value || ''}
-                        onChange={(e) => updateFilter(index, { value: e.target.value })}
-                        size="small"
-                      />
-                    )
-                  )}
+                        >
+                          {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                            <optgroup key={groupKey} label={group.label}>
+                              {group.columns.map(col => (
+                                <option key={col.value} value={col.value}>
+                                  {col.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                          
+                          {parameters.length > 0 && (
+                            <optgroup label="Egendefinerte parametere">
+                              {uniqueParameters.map(param => (
+                                <option 
+                                  key={`param_${param.key}`} 
+                                  value={`param_${getCleanParamName(param)}`}
+                                >
+                                  {getParamDisplayName(param)}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </Select>
 
-                  <Button
-                    variant="tertiary-neutral"
-                    size="small"
-                    onClick={() => removeFilter(index)}
-                    className="mb-1"
-                  >
-                    Fjern
-                  </Button>
+                        <Select
+                          label="Operator"
+                          value={filter.operator}
+                          onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
+                          size="small"
+                        >
+                          {OPERATORS.map(op => (
+                            <option key={op.value} value={op.value}>
+                              {op.label}
+                            </option>
+                          ))}
+                        </Select>
+                        
+                        {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && filter.column !== 'event_name' && (
+                          <TextField
+                            label="Verdi"
+                            value={filter.value || ''}
+                            onChange={(e) => updateFilter(index, { value: e.target.value })}
+                            size="small"
+                          />
+                        )}
+                      </div>
+                      
+                      {/* Put event_name combobox on its own row */}
+                      {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && filter.column === 'event_name' && (
+                        <div className="mt-3">
+                          <UNSAFE_Combobox
+                            label="Event navn"
+                            options={availableEvents.map(event => ({
+                              label: event || '',
+                              value: event || ''
+                            }))}
+                            selectedOptions={filter.multipleValues?.map(v => v || '') || 
+                                            (filter.value ? [filter.value] : [])}
+                            onToggleSelected={(option, isSelected) => {
+                              if (option) {
+                                const currentValues = filter.multipleValues || 
+                                                    (filter.value ? [filter.value] : []);
+                                const newValues = isSelected 
+                                  ? [...currentValues, option]
+                                  : currentValues.filter(val => val !== option);
+                                
+                                updateFilter(index, { 
+                                  multipleValues: newValues.length > 0 ? newValues : [],
+                                  value: newValues.length > 0 ? newValues[0] : '' 
+                                });
+                              }
+                            }}
+                            isMultiSelect
+                            size="small"
+                            clearButton
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      variant="tertiary-neutral"
+                      size="small"
+                      onClick={() => removeFilter(index)}
+                      className="ml-2 self-start"
+                    >
+                      Fjern
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
