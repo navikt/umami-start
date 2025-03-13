@@ -5,7 +5,7 @@ export const FILTER_COLUMNS = {
       { label: 'Event Name', value: 'event_name' },
       { label: 'Event Type', value: 'event_type' },
       { label: 'Event ID', value: 'event_id' },
-      { label: 'Created At', value: 'created_at' },
+      { label: 'Date / Created At', value: 'created_at' },
       { label: 'Website ID', value: 'website_id' },
       { label: 'Website Domain', value: 'website_domain' },
       { label: 'Website Name', value: 'website_name' }

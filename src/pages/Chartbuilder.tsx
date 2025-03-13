@@ -197,6 +197,7 @@ const ChartsPage = () => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
+  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -382,6 +383,9 @@ const ChartsPage = () => {
           // Handle multiple event names using IN clause
           const eventNames = filter.multipleValues.map(val => `'${val}'`).join(', ');
           sql += `  AND e.${filter.column} IN (${eventNames})\n`;
+        } else if (filter.column === 'created_at' && filter.dateRangeType && filter.dateRangeType !== 'custom') {
+          // Special handling for date ranges - use the actual SQL expression
+          sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
         } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
           sql += `  AND e.${filter.column} ${filter.operator} '%${filter.value}%'\n`;
         } else if (filter.operator === 'STARTS_WITH') {
@@ -389,7 +393,15 @@ const ChartsPage = () => {
         } else if (filter.operator === 'ENDS_WITH') {
           sql += `  AND e.${filter.column} LIKE '%${filter.value}'\n`;
         } else {
-          sql += `  AND e.${filter.column} ${filter.operator} '${filter.value}'\n`;
+          // For custom date expressions and all other cases, use the original approach
+          // Skip the quotes for date expressions that are SQL functions
+          const needsQuotes = !(
+            filter.column === 'created_at' && 
+            // @ts-ignore
+            (filter.value.includes('TIMESTAMP') || filter.value.includes('CURRENT_'))
+          );
+          
+          sql += `  AND e.${filter.column} ${filter.operator} ${needsQuotes ? `'${filter.value}'` : filter.value}\n`;
         }
       }
     });
@@ -694,10 +706,13 @@ const ChartsPage = () => {
   };
 
   // Update handleEventsLoad to not handle date range information
-  const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[]) => {
+  const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
     setAvailableEvents(events);
     if (autoParameters) {
       setParameters(autoParameters);
+    }
+    if (maxDays !== undefined) {
+      setMaxDaysAvailable(maxDays);
     }
     setDateRangeReady(true); // Just set this to true when events are loaded
   };
@@ -758,6 +773,7 @@ const ChartsPage = () => {
                       parameters={parameters}
                       setFilters={setFilters}
                       availableEvents={availableEvents}
+                      maxDaysAvailable={maxDaysAvailable}
                     />
                   </section>
 

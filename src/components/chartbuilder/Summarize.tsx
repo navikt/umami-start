@@ -112,7 +112,7 @@ const Summarize = ({
               ))}
               
               {uniqueParameters.length > 0 && (
-                <optgroup label="Egendefinerte parametere">
+                <optgroup label="Egendefinerte">
                   {uniqueParameters
                     .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
                     .map(param => (
@@ -249,7 +249,7 @@ const Summarize = ({
                     </optgroup>
                   ))}
                   {uniqueParameters.length > 0 && (
-                    <optgroup label="Egendefinerte parametere">
+                    <optgroup label="Egendefinerte">
                       {uniqueParameters.map(param => (
                         <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
                           {param.key}

@@ -12,7 +12,7 @@ interface Website {
 interface WebsitePickerProps {
   selectedWebsite: Website | null;
   onWebsiteChange: (website: Website | null) => void;
-  onEventsLoad?: (events: string[], autoParameters?: { key: string; type: 'string' }[]) => void;
+  onEventsLoad?: (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => void;
 }
 
 interface EventProperty {
@@ -129,7 +129,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       });
       
       if (onEventsLoad) {
-        onEventsLoad(uniqueEventNames, paramsByEvent);
+        onEventsLoad(uniqueEventNames, paramsByEvent, totalDays);
       }
     } catch (error) {
       console.error("Error fetching event data:", error);

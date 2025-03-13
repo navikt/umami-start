@@ -1,21 +1,36 @@
 import { Button, Heading, Select, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 
+// Time unit options for custom period
+const TIME_UNITS = [
+  { label: 'Minutter', value: 'MINUTE' },
+  { label: 'Timer', value: 'HOUR' },
+  { label: 'Dager', value: 'DAY' },
+  { label: 'Uker', value: 'WEEK' },
+  { label: 'Måneder', value: 'MONTH' }
+];
+
+// Modified interface to receive date range info
 interface ChartFiltersProps {
   filters: Filter[];
   parameters: Parameter[];
   setFilters: (filters: Filter[]) => void;
   availableEvents?: string[];
+  maxDaysAvailable?: number; // Added this prop to receive date range info
 }
 
 const ChartFilters = ({
   filters,
   parameters,
   setFilters,
-  availableEvents = []
+  availableEvents = [],
+  maxDaysAvailable = 365 // Default to a year if not provided
 }: ChartFiltersProps) => {
+
+  // Add state for custom period inputs
+  const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
 
   const addFilter = () => {
     setFilters([...filters, { column: 'url_path', operator: '=', value: '' }]);
@@ -55,6 +70,49 @@ const ChartFilters = ({
       return true;
     });
   }, [parameters]);
+
+  // Initialize custom period for created_at filters
+  useEffect(() => {
+    filters.forEach((filter, index) => {
+      if (filter.column === 'created_at' && !customPeriodInputs[index]) {
+        // Set a sensible default - 7 days or maxDaysAvailable, whichever is smaller
+        const defaultDays = Math.min(7, maxDaysAvailable);
+        
+        setCustomPeriodInputs(prev => ({
+          ...prev,
+          [index]: { amount: defaultDays.toString(), unit: 'DAY' }
+        }));
+        
+        // Set initial SQL value if not already set
+        if (!filter.value || !filter.operator) {
+          const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
+          updateFilter(index, {
+            operator: '>=', // Default to >= for date filters
+            value: sql
+          });
+        }
+      }
+    });
+  }, [filters, maxDaysAvailable]);
+
+  // Update custom period values
+  const updateCustomPeriod = (index: number, field: 'amount' | 'unit', value: string) => {
+    const currentValues = customPeriodInputs[index] || { amount: '7', unit: 'DAY' };
+    const newValues = { ...currentValues, [field]: value };
+    
+    setCustomPeriodInputs({
+      ...customPeriodInputs,
+      [index]: newValues
+    });
+    
+    // Also update the SQL in the filter
+    const amount = parseInt(newValues.amount) || 1;
+    const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount} ${newValues.unit})`;
+    
+    updateFilter(index, {
+      value: sql
+    });
+  };
 
   return (
     <section>
@@ -96,7 +154,7 @@ const ChartFilters = ({
                           ))}
                           
                           {parameters.length > 0 && (
-                            <optgroup label="Egendefinerte parametere">
+                            <optgroup label="Egendefinerte">
                               {uniqueParameters.map(param => (
                                 <option 
                                   key={`param_${param.key}`} 
@@ -109,20 +167,25 @@ const ChartFilters = ({
                           )}
                         </Select>
 
-                        <Select
-                          label="Operator"
-                          value={filter.operator}
-                          onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
-                          size="small"
-                        >
-                          {OPERATORS.map(op => (
-                            <option key={op.value} value={op.value}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </Select>
+                        {/* Only show operator dropdown for non-created_at columns */}
+                        {filter.column !== 'created_at' && filter.column !== 'event_name' && (
+                          <Select
+                            label="Operator"
+                            value={filter.operator || '='}
+                            onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
+                            size="small"
+                          >
+                            {OPERATORS.map(op => (
+                              <option key={op.value} value={op.value}>
+                                {op.label}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
                         
-                        {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && filter.column !== 'event_name' && (
+                        {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
+                         filter.column !== 'event_name' && 
+                         filter.column !== 'created_at' && (
                           <TextField
                             label="Verdi"
                             value={filter.value || ''}
@@ -132,8 +195,49 @@ const ChartFilters = ({
                         )}
                       </div>
                       
-                      {/* Put event_name combobox on its own row */}
-                      {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && filter.column === 'event_name' && (
+                      {/* Simplified Date Input for created_at */}
+                      {filter.column === 'created_at' && (
+                        <div className="mt-3">
+                          <div className="flex items-end gap-2">
+                            <TextField
+                              label="Tid tilbake"
+                              value={customPeriodInputs[index]?.amount || '7'}
+                              onChange={(e) => updateCustomPeriod(index, 'amount', e.target.value)}
+                              type="number"
+                              min="1"
+                              max={(customPeriodInputs[index]?.unit || 'DAY') === 'DAY' ? maxDaysAvailable : undefined}
+                              size="small"
+                              className="w-24"
+                            />
+                            <Select
+                              label="Tidsenhet"
+                              value={customPeriodInputs[index]?.unit || 'DAY'}
+                              onChange={(e) => updateCustomPeriod(index, 'unit', e.target.value)}
+                              size="small"
+                            >
+                              {TIME_UNITS.map(unit => (
+                                <option key={unit.value} value={unit.value}>
+                                  {unit.label}
+                                </option>
+                              ))}
+                            </Select>
+                            <div className="text-sm self-center ml-2">
+                              fra nåværende tidspunkt
+                            </div>
+                          </div>
+                          
+                          {/* Add info about available date range */}
+                          <div className="mt-2 text-xs text-gray-600">
+                            {maxDaysAvailable ? 
+                              `Data er tilgjengelig for de siste ${maxDaysAvailable} dagene.` : 
+                              'Velg nettside for å se tilgjengelig data.'
+                            }
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Event name combobox on its own row */}
+                      {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && filter.column === 'event_name' && (
                         <div className="mt-3">
                           <UNSAFE_Combobox
                             label="Event navn"

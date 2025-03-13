@@ -3,7 +3,8 @@ export interface Filter {
   operator: string;
   value?: string;
   customColumn?: string;
-  multipleValues?: string[]; // Add this line if it's missing
+  multipleValues?: string[];
+  dateRangeType?: string; // For tracking which date range type is selected
 }
 
 export interface Parameter {
