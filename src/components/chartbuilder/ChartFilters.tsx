@@ -167,8 +167,8 @@ const ChartFilters = ({
                           )}
                         </Select>
 
-                        {/* Only show operator dropdown for non-created_at columns */}
-                        {filter.column !== 'created_at' && filter.column !== 'event_name' && (
+                        {/* Only exclude operator dropdown for created_at column */}
+                        {filter.column !== 'created_at' && (
                           <Select
                             label="Operator"
                             value={filter.operator || '='}
