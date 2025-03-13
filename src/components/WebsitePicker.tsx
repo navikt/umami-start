@@ -226,7 +226,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
             </Alert>
           )}
           <UNSAFE_Combobox
-            label="Nettside / app"
+            label="Velg nettside / app"
             options={websites.map(website => ({
               label: website.name,
               value: website.name,

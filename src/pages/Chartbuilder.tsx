@@ -732,9 +732,7 @@ const ChartsPage = () => {
         Bygg grafer og tabeller for Metabase
       </Heading>
       <p className="text-gray-600 mb-10 prose">
-         Med grafbyggeren kan du lage grafer og tabeller som kan legges til i Metabase. 
-         For eksempel en graf som viser andelen besøkende som har trykket på en knapp,
-         eller hvor mange som har besøkt en spesifikk side.
+      Gode beslutninger starter med innsikt. Med Grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
         </p>
 
         <div className="lg:grid lg:grid-cols-2 lg:gap-8">
