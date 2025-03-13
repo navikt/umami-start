@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, Switch, Box } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
 import { 
   Parameter, 
@@ -16,6 +16,7 @@ interface SummarizeProps {
   parameters: Parameter[];
   dateFormat: string | null;
   orderBy: OrderBy | null;
+  paramAggregation: 'representative' | 'unique';
   METRICS: MetricOption[];
   DATE_FORMATS: DateFormat[];
   COLUMN_GROUPS: Record<string, ColumnGroup>;
@@ -30,6 +31,7 @@ interface SummarizeProps {
   setOrderBy: (column: string, direction: 'ASC' | 'DESC') => void;
   clearOrderBy: () => void;
   setDateFormat: (format: string) => void;
+  setParamAggregation: (strategy: 'representative' | 'unique') => void;
 }
 
 const Summarize = ({
@@ -38,6 +40,7 @@ const Summarize = ({
   parameters,
   dateFormat,
   orderBy,
+  paramAggregation,
   METRICS,
   DATE_FORMATS,
   COLUMN_GROUPS,
@@ -50,7 +53,8 @@ const Summarize = ({
   moveGroupField,
   setOrderBy,
   clearOrderBy,
-  setDateFormat
+  setDateFormat,
+  setParamAggregation
 }: SummarizeProps) => {
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -286,6 +290,35 @@ const Summarize = ({
           </Button>
         </div>
       </div>
+
+      {/* Add new Parameter Aggregation section */}
+      {parameters.length > 0 && parameters.some(p => p.type === 'string') && (
+        <div className="mt-4 pb-4 border-b border-gray-200">
+          <Box paddingBlock="4">
+            <Heading level="3" size="xsmall" spacing>
+              Parameter aggregering
+            </Heading>
+            <div className="flex items-center mt-2">
+              <Switch
+                size="small"
+                checked={paramAggregation === 'unique'}
+                onChange={() => setParamAggregation(
+                  paramAggregation === 'unique' ? 'representative' : 'unique'
+                )}
+              >
+                Vis sammendrag
+              </Switch>
+              <span className="ml-2 text-sm">
+                Vis alle unike verdier (standard) eller sammendrag
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Som standard vises alle unike verdier for tekst-parametere.
+              Når deaktivert vil spørringen vise én representativ verdi per gruppering.
+            </p>
+          </Box>
+        </div>
+      )}
 
       {/* Order By section */}
       <div className="border-t pt-4">

@@ -60,6 +60,7 @@ export interface ChartConfig {
   filters: Filter[];
   metrics: Metric[];
   groupByFields: string[];
-  orderBy: OrderBy | null;
-  dateFormat: string;
+  orderBy: { column: string; direction: 'ASC' | 'DESC' } | null;
+  dateFormat: DateFormat['value'];
+  paramAggregation: 'representative' | 'unique'; // New property for controlling parameter aggregation
 }

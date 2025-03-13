@@ -189,7 +189,8 @@ const ChartsPage = () => {
     metrics: [{ function: 'count' }],
     groupByFields: [],
     orderBy: null,
-    dateFormat: 'day' // Default to daily grouping
+    dateFormat: 'day', // Default to daily grouping
+    paramAggregation: 'unique' // Changed to 'unique' as default
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);
@@ -414,15 +415,24 @@ const ChartsPage = () => {
           // Use the first matching parameter's type for the value field
           const param = matchingParams[0];
           const valueField = param.type === 'number' ? 'number_value' : 'string_value';
-          const aggregator = getParameterAggregator(param.type);
           
-          // Use proper aggregation function based on parameter type
-          selectClauses.add(
-            `${aggregator}(CASE 
+          // Change how we handle parameters based on aggregation strategy
+          if (config.paramAggregation === 'unique' && param.type === 'string') {
+            // For unique string values, use the direct value without aggregation
+            // This will create a row per unique value when combined with GROUP BY
+            selectClauses.add(
+              `event_data_${paramBase}.${valueField} AS ${field}`
+            );
+          } else {
+            // Use aggregation for representative mode or numeric parameters
+            const aggregator = getParameterAggregator(param.type);
+            selectClauses.add(
+              `${aggregator}(CASE 
                 WHEN SUBSTR(event_data.data_key, INSTR(event_data.data_key, '.') + 1) = '${paramBase}' THEN event_data.${valueField}
                 ELSE NULL
               END) AS ${field}`
-          );
+            );
+          }
         }
       } else {
         const tablePrefix = 'base_query';
@@ -440,10 +450,31 @@ const ChartsPage = () => {
     // Add FROM clause
     sql += '\nFROM base_query\n';
 
-    // Add JOIN to event_data table if there are parameters
+    // Add JOINs for parameters
     if (parameters.length > 0) {
+      // First, add the main event_data join that all parameters will use in representative mode
       sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
       sql += '  ON base_query.event_id = event_data.website_event_id\n';
+      
+      // For unique mode: Add dedicated joins for each parameter that's being grouped
+      if (config.paramAggregation === 'unique') {
+        config.groupByFields.forEach(field => {
+          if (field.startsWith('param_')) {
+            const paramBase = field.replace('param_', '');
+            const matchingParam = parameters.find(p => {
+              const baseName = p.key.split('.').pop();
+              return sanitizeColumnName(baseName!) === paramBase;
+            });
+            
+            if (matchingParam && matchingParam.type === 'string') {
+              // Add a specific join for this parameter
+              sql += `LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS event_data_${paramBase}\n`;
+              sql += `  ON base_query.event_id = event_data_${paramBase}.website_event_id\n`;
+              sql += `  AND SUBSTR(event_data_${paramBase}.data_key, INSTR(event_data_${paramBase}.data_key, '.') + 1) = '${paramBase}'\n`;
+            }
+          }
+        });
+      }
       
       // Get parameter filters
       const paramFilters = filters.filter(filter => filter.column.startsWith('param_'));
@@ -495,19 +526,34 @@ const ChartsPage = () => {
       }
     }
 
-    // GROUP BY - Modified to exclude parameters from GROUP BY
+    // GROUP BY - Modified to include parameters in unique mode
     if (config.groupByFields.length > 0) {
       const groupByCols: string[] = [];
       
-      // Only add regular columns to GROUP BY (not parameters)
+      // Add columns to GROUP BY based on aggregation strategy
       config.groupByFields.forEach(field => {
         if (field === 'created_at') {
           groupByCols.push('dato');
+        } else if (field.startsWith('param_') && config.paramAggregation === 'unique') {
+          // For unique mode, include parameters in GROUP BY
+          const paramBase = field.replace('param_', '');
+          const matchingParam = parameters.find(p => {
+            const baseName = p.key.split('.').pop();
+            return sanitizeColumnName(baseName!) === paramBase;
+          });
+          
+          // Only include string parameters in GROUP BY
+          if (matchingParam && matchingParam.type === 'string') {
+            groupByCols.push(field);
+          } else if (!matchingParam) {
+            // If parameter doesn't exist but was selected, still add it
+            groupByCols.push(field);
+          }
         } else if (!field.startsWith('param_')) {
-          // Only add non-parameter fields to GROUP BY
+          // Always add non-parameter fields to GROUP BY
           groupByCols.push(`base_query.${field}`);
         }
-        // Parameters are now excluded from GROUP BY
+        // Skip parameters in representative mode
       });
 
       // Only add GROUP BY clause if we have columns to group by
@@ -518,7 +564,7 @@ const ChartsPage = () => {
       }
     }
     
-    // ORDER BY - Modified to handle date ordering correctly
+    // ORDER BY - no changes needed here
     if (config.orderBy) {
       const orderColumn = config.orderBy.column === 'created_at' ? 'dato' : config.orderBy.column;
       sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
@@ -652,6 +698,14 @@ const ChartsPage = () => {
     setDateRangeReady(true); // Just set this to true when events are loaded
   };
 
+  // Add function to update parameter aggregation strategy
+  const setParamAggregation = (strategy: 'representative' | 'unique') => {
+    setConfig(prev => ({
+      ...prev,
+      paramAggregation: strategy
+    }));
+  };
+
   return (
     <>
     <div className="w-full max-w-[1600px]">
@@ -703,7 +757,7 @@ const ChartsPage = () => {
                     />
                   </section>
 
-                  {/* Summarize section */}
+                  {/* Summarize section with new parameter aggregation toggle */}
                   <section>
                     <Heading level="2" size="small" spacing>
                       Oppsummering
@@ -714,6 +768,7 @@ const ChartsPage = () => {
                       parameters={parameters}
                       dateFormat={config.dateFormat}
                       orderBy={config.orderBy}
+                      paramAggregation={config.paramAggregation}
                       METRICS={METRICS}
                       DATE_FORMATS={DATE_FORMATS}
                       COLUMN_GROUPS={COLUMN_GROUPS}
@@ -727,6 +782,7 @@ const ChartsPage = () => {
                       moveGroupField={moveGroupField}
                       setOrderBy={setOrderBy}
                       clearOrderBy={clearOrderBy}
+                      setParamAggregation={setParamAggregation}
                       setDateFormat={(format) => setConfig(prev => ({
                         ...prev,
                         dateFormat: format as DateFormat['value']
