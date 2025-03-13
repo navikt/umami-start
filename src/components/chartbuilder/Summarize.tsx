@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, Switch, Box } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
 import { 
   Parameter, 
@@ -40,7 +40,6 @@ const Summarize = ({
   parameters,
   dateFormat,
   orderBy,
-  paramAggregation,
   METRICS,
   DATE_FORMATS,
   COLUMN_GROUPS,
@@ -53,8 +52,7 @@ const Summarize = ({
   moveGroupField,
   setOrderBy,
   clearOrderBy,
-  setDateFormat,
-  setParamAggregation
+  setDateFormat
 }: SummarizeProps) => {
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -291,7 +289,7 @@ const Summarize = ({
         </div>
       </div>
 
-      {/* Add new Parameter Aggregation section */}
+      {/* Add new Parameter Aggregation section 
       {parameters.length > 0 && parameters.some(p => p.type === 'string') && (
         <div className="mt-4 pb-4 border-b border-gray-200">
           <Box paddingBlock="4">
@@ -319,6 +317,7 @@ const Summarize = ({
           </Box>
         </div>
       )}
+      */}
 
       {/* Order By section */}
       <div className="border-t pt-4">
