@@ -56,11 +56,6 @@ const ChartFilters = ({
     });
   }, [parameters]);
 
-  // Helper to check if a filter is using event_name with multiple values
-  const isMultiEventFilter = (filter: Filter): boolean => {
-    return filter.column === 'event_name' && filter.multipleValues && filter.multipleValues.length > 0;
-  };
-
   return (
     <section>
       <Heading level="2" size="small" spacing>
