@@ -31,7 +31,7 @@ const FILTER_SUGGESTIONS = [
     label: 'Filtrer på egendefinerte hendelser', 
     filters: [{ column: 'event_type', operator: '=', value: '2' }],
     description: 'Skuler sidevisninger'
-  }
+  },
 ];
 
 // Modified interface to receive date range info
@@ -50,19 +50,20 @@ const ChartFilters = ({
   availableEvents = [],
   maxDaysAvailable = 365 // Default to a year if not provided
 }: ChartFiltersProps) => {
-
   // Add state for custom period inputs
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
   // Change to store single string instead of array
   const [appliedSuggestion, setAppliedSuggestion] = useState<string>('');
 
-  const addFilter = () => {
-    setFilters([...filters, { column: 'url_path', operator: '=', value: '' }]);
+  // Change addFilter to accept a column parameter
+  const addFilter = (column: string) => {
+    if (column) {
+      setFilters([...filters, { column, operator: '=', value: '' }]);
+    }
   };
 
   const removeFilter = (index: number) => {
     const filterToRemove = filters[index];
-    
     // Check if this filter was added by a suggestion
     const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
       suggestion.filters.some(f => 
@@ -71,12 +72,10 @@ const ChartFilters = ({
         f.value === filterToRemove.value
       )
     );
-    
     // If we're removing a suggestion filter, clear the selection
     if (isSuggestionFilter) {
       setAppliedSuggestion('');
     }
-    
     setFilters(filters.filter((_, i) => i !== index));
   };
 
@@ -111,7 +110,6 @@ const ChartFilters = ({
         );
         return !isSuggestionFilter;
       });
-
       // Add new suggestion filters
       const suggestion = FILTER_SUGGESTIONS.find(s => s.id === suggestionId);
       if (suggestion) {
@@ -152,12 +150,10 @@ const ChartFilters = ({
       if (filter.column === 'created_at' && !customPeriodInputs[index]) {
         // Set a sensible default - 7 days or maxDaysAvailable, whichever is smaller
         const defaultDays = Math.min(7, maxDaysAvailable);
-        
         setCustomPeriodInputs(prev => ({
           ...prev,
           [index]: { amount: defaultDays.toString(), unit: 'DAY' }
         }));
-        
         // Set initial SQL value if not already set
         if (!filter.value || !filter.operator) {
           const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
@@ -174,16 +170,13 @@ const ChartFilters = ({
   const updateCustomPeriod = (index: number, field: 'amount' | 'unit', value: string) => {
     const currentValues = customPeriodInputs[index] || { amount: '7', unit: 'DAY' };
     const newValues = { ...currentValues, [field]: value };
-    
     setCustomPeriodInputs({
       ...customPeriodInputs,
       [index]: newValues
     });
-    
     // Also update the SQL in the filter
     const amount = parseInt(newValues.amount) || 1;
     const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount} ${newValues.unit})`;
-    
     updateFilter(index, {
       value: sql
     });
@@ -202,7 +195,6 @@ const ChartFilters = ({
             <Heading level="3" size="xsmall" spacing>
               Type hendelser
             </Heading>
-            
             <div className="flex flex-wrap gap-2 mt-2">
               <button 
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
@@ -214,7 +206,6 @@ const ChartFilters = ({
               >
                 Alle hendelser
               </button>
-              
               {FILTER_SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion.id}
@@ -231,7 +222,7 @@ const ChartFilters = ({
               ))}
             </div>
           </div>
-          
+
           {/* Static Filters */}
           <div className="mt-6">
             <Heading level="3" size="xsmall" spacing>
@@ -240,7 +231,7 @@ const ChartFilters = ({
             <p className="text-sm text-gray-600 mb-4">
               Statiske filtre er låst til grafen eller tabellen du lager.
             </p>
-
+            
             {filters.length > 0 && (
               <div className="space-y-3 mb-4">
                 {filters.map((filter, index) => (
@@ -263,7 +254,6 @@ const ChartFilters = ({
                                 ))}
                               </optgroup>
                             ))}
-                            
                             {parameters.length > 0 && (
                               <optgroup label="Egendefinerte">
                                 {uniqueParameters.map(param => (
@@ -277,7 +267,6 @@ const ChartFilters = ({
                               </optgroup>
                             )}
                           </Select>
-
                           {/* Only exclude operator dropdown for created_at column */}
                           {filter.column !== 'created_at' && (
                             <Select
@@ -293,7 +282,6 @@ const ChartFilters = ({
                               ))}
                             </Select>
                           )}
-                          
                           {/* Special case for event_type - show dropdown instead of text field */}
                           {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
                           filter.column === 'event_type' && (
@@ -311,7 +299,6 @@ const ChartFilters = ({
                               ))}
                             </Select>
                           )}
-                          
                           {/* Regular text field for all other columns except event_name and created_at */}
                           {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
                           filter.column !== 'event_name' && 
@@ -325,7 +312,6 @@ const ChartFilters = ({
                             />
                           )}
                         </div>
-                        
                         {/* Simplified Date Input for created_at */}
                         {filter.column === 'created_at' && (
                           <div className="mt-3">
@@ -356,7 +342,6 @@ const ChartFilters = ({
                                 fra nåværende tidspunkt
                               </div>
                             </div>
-                            
                             {/* Add info about available date range */}
                             <div className="mt-2 text-xs text-gray-600">
                               {maxDaysAvailable ? 
@@ -366,7 +351,6 @@ const ChartFilters = ({
                             </div>
                           </div>
                         )}
-                        
                         {/* Event name combobox on its own row */}
                         {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && filter.column === 'event_name' && (
                           <div className="mt-3">
@@ -385,13 +369,12 @@ const ChartFilters = ({
                                   const newValues = isSelected 
                                     ? [...currentValues, option]
                                     : currentValues.filter(val => val !== option);
-                                  
                                   updateFilter(index, { 
                                     multipleValues: newValues.length > 0 ? newValues : [],
                                     value: newValues.length > 0 ? newValues[0] : '' 
                                   });
                                 }
-                              }}
+                              }}  
                               isMultiSelect
                               size="small"
                               clearButton
@@ -399,7 +382,6 @@ const ChartFilters = ({
                           </div>
                         )}
                       </div>
-
                       <Button
                         variant="tertiary-neutral"
                         size="small"
@@ -413,15 +395,45 @@ const ChartFilters = ({
                 ))}
               </div>
             )}
-
-            <Button
-              variant="secondary"
-              onClick={addFilter}
-              size="small"
-              className="mb-2"
-            >
-              Legg til flere filtre
-            </Button>
+            
+            {/* Replace button with dropdown and button combo like in Summarize.tsx */}
+            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+              <Select
+                label="Legg til filter"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    addFilter(e.target.value);
+                    (e.target as HTMLSelectElement).value = '';
+                  }
+                }}
+                size="small"
+                className="flex-grow"
+              >
+                <option value="">Velg felt...</option>
+                {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                  <optgroup key={groupKey} label={group.label}>
+                    {group.columns.map(col => (
+                      <option key={col.value} value={col.value}>
+                        {col.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                
+                {parameters.length > 0 && (
+                  <optgroup label="Egendefinerte">
+                    {uniqueParameters.map(param => (
+                      <option 
+                        key={`param_${param.key}`} 
+                        value={`param_${getCleanParamName(param)}`}
+                      >
+                        {getParamDisplayName(param)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </Select>
+            </div>
           </div>
         </div>
       </div>
