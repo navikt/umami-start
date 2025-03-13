@@ -43,6 +43,7 @@ const Summarize = ({
   METRICS,
   DATE_FORMATS,
   COLUMN_GROUPS,
+  getMetricColumns, // Add this line to include the function
   sanitizeColumnName,
   updateMetric,
   removeMetric,
@@ -239,23 +240,37 @@ const Summarize = ({
                   size="small"
                 >
                   <option value="">Velg kolonne</option>
-                  {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                    <optgroup key={groupKey} label={group.label}>
-                      {group.columns.map(col => (
-                        <option key={col.value} value={col.value}>
-                          {col.label}
-                        </option>
+                  
+                  {/* For percentage, use the simplified dropdown */}
+                  {metric.function === 'percentage' ? (
+                    getMetricColumns(parameters, 'percentage').map(col => (
+                      <option key={col.value} value={col.value}>
+                        {col.label}
+                      </option>
+                    ))
+                  ) : (
+                    /* For all other functions, use the original grouped dropdowns */
+                    <>
+                      {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                        <optgroup key={groupKey} label={group.label}>
+                          {group.columns.map(col => (
+                            <option key={col.value} value={col.value}>
+                              {col.label}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
-                    </optgroup>
-                  ))}
-                  {uniqueParameters.length > 0 && (
-                    <optgroup label="Egendefinerte">
-                      {uniqueParameters.map(param => (
-                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                          {param.key}
-                        </option>
-                      ))}
-                    </optgroup>
+                      
+                      {uniqueParameters.length > 0 && (
+                        <optgroup label="Egendefinerte">
+                          {uniqueParameters.map(param => (
+                            <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                              {param.key}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
                   )}
                 </Select>
               )}

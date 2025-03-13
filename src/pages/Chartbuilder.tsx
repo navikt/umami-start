@@ -52,6 +52,7 @@ const METRICS: MetricOption[] = [
   { label: 'Sum av verdier', value: 'sum' },
   { label: 'Gjennomsnitt', value: 'average' },
   { label: 'Median', value: 'median' },
+  { label: 'Andel (%)', value: 'percentage' },
 ];
 
 const COLUMN_GROUPS: Record<string, ColumnGroup> = {
@@ -138,6 +139,11 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
     ],
     max: [
       { label: 'Created At', value: 'created_at' },
+    ],
+    percentage: [
+      // ONLY these 2 essential columns for percentages - nothing else
+      { label: 'Personer', value: 'session_id' },
+      { label: 'Økter', value: 'visit_id' }
     ]
   };
 
@@ -542,6 +548,56 @@ const ChartsPage = () => {
       }
     }
 
+    // Add WHERE clause to filter out NULL values for percentage calculations on grouped fields
+    const hasPercentageMetric = config.metrics.some(m => m.function === 'percentage');
+    const needsNullFilter = hasPercentageMetric && config.groupByFields.length > 0;
+    
+    if (needsNullFilter) {
+      const percentageMetrics = config.metrics.filter(m => m.function === 'percentage' && m.column);
+      
+      if (percentageMetrics.length > 0) {
+        // For regular columns - add WHERE clause to filter NULL values
+        const nonParamMetrics = percentageMetrics.filter(m => !m.column?.startsWith('param_'));
+        
+        if (nonParamMetrics.length > 0) {
+          const whereClause = nonParamMetrics.map(m => 
+            `base_query.${m.column} IS NOT NULL`
+          ).join(' AND ');
+          
+          if (parameters.length > 0 && filters.some(f => f.column.startsWith('param_'))) {
+            // Already has a WHERE clause for parameters
+            sql += `  AND ${whereClause}\n`;
+          } else {
+            sql += `WHERE ${whereClause}\n`;
+          }
+        }
+        
+        // For parameter columns - add special filter in the JOIN condition
+        const paramMetrics = percentageMetrics.filter(m => m.column?.startsWith('param_'));
+        
+        paramMetrics.forEach(metric => {
+          const paramKey = metric.column?.replace('param_', '');
+          
+          if (paramKey && config.groupByFields.includes(`param_${paramKey}`)) {
+            // Already handled in the JOIN condition for group fields
+          } else if (paramKey) {
+            // Add specific JOIN for parameter percentage filtering
+            sql += `LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS pct_${paramKey}\n`;
+            sql += `  ON base_query.event_id = pct_${paramKey}.website_event_id\n`;
+            sql += `  AND SUBSTR(pct_${paramKey}.data_key, INSTR(pct_${paramKey}.data_key, '.') + 1) = '${paramKey}'\n`;
+            
+            // Add WHERE condition
+            if (parameters.length > 0 && filters.some(f => f.column.startsWith('param_'))) {
+              // Already has a WHERE clause
+              sql += `  AND pct_${paramKey}.string_value IS NOT NULL\n`;
+            } else {
+              sql += `WHERE pct_${paramKey}.string_value IS NOT NULL\n`;
+            }
+          }
+        });
+      }
+    }
+
     // GROUP BY - Modified to include parameters in unique mode
     if (config.groupByFields.length > 0) {
       const groupByCols: string[] = [];
@@ -580,9 +636,21 @@ const ChartsPage = () => {
       }
     }
     
-    // ORDER BY - no changes needed here
+    // Order By - modified to handle metric columns properly
     if (config.orderBy) {
-      const orderColumn = config.orderBy.column === 'created_at' ? 'dato' : config.orderBy.column;
+      // @ts-ignore First try to find any metric by alias
+      const metricByAlias = config.metrics.find(m => m.alias === config.orderBy.column);
+      
+      const orderColumn = config.orderBy.column === 'created_at' 
+        ? 'dato' 
+        : metricByAlias 
+          ? `\`${config.orderBy.column}\`` // Use backticks for quoted identifiers
+          : config.orderBy.column.startsWith('metric_') || 
+            config.orderBy.column.startsWith('andel') || 
+            config.orderBy.column.includes('`')
+            ? `\`${config.orderBy.column.replace(/`/g, '')}\`` // Clean and quote
+            : config.orderBy.column;
+      
       sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
     } else if (config.groupByFields.length > 0) {
       // Default ordering
@@ -602,6 +670,17 @@ const ChartsPage = () => {
 
   // Update the getMetricSQL function to handle aliases and indices
   const getMetricSQL = (metric: Metric, index: number): string => {
+    // For percentage metrics, standardize the alias to 'andel' if not specified
+    if (metric.function === 'percentage' && !metric.alias) {
+      // If there are multiple percentage metrics, add an index
+      const percentageCount = config.metrics
+        .filter(m => m.function === 'percentage')
+        .length;
+      
+      const alias = percentageCount > 1 ? `andel_${index + 1}` : 'andel';
+      return getMetricSQLByType(metric.function, metric.column, alias);
+    }
+    
     // If user has set a custom alias, use that
     if (metric.alias) {
       return getMetricSQLByType(metric.function, metric.column, metric.alias);
@@ -614,13 +693,16 @@ const ChartsPage = () => {
 
   // Helper function to generate the actual SQL
   const getMetricSQLByType = (func: string, column?: string, alias: string = 'metric'): string => {
+    // Ensure the alias is properly quoted with backticks for BigQuery
+    const quotedAlias = `\`${alias}\``;
+    
     // If it's a custom parameter metric
     if (column?.startsWith('param_')) {
       const paramKey = column.replace('param_', '');
       
       switch (func) {
         case 'distinct':
-          return `COUNT(DISTINCT CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${alias}`;
+          return `COUNT(DISTINCT CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
         case 'sum':
         case 'average':
         case 'median':
@@ -629,40 +711,96 @@ const ChartsPage = () => {
               WHEN event_data.data_key = '${paramKey}'
               THEN CAST(event_data.number_value AS NUMERIC)
             END
-          ) as ${alias}`;
+          ) as ${quotedAlias}`;
         case 'min':
-          return `MIN(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${alias}`;
+          return `MIN(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
         case 'max':
-          return `MAX(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${alias}`;
+          return `MAX(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
+        case 'percentage':
+          // Use 10.0 instead of 100.0 to compensate for Metabase's display behavior
+          return `ROUND(
+            10.0 * COUNT(*) / (
+              SELECT COUNT(*) 
+              FROM base_query
+              LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS all_params
+                ON base_query.event_id = all_params.website_event_id
+                AND SUBSTR(all_params.data_key, INSTR(all_params.data_key, '.') + 1) = '${paramKey}'
+              WHERE all_params.string_value IS NOT NULL
+            )
+          , 2) as ${quotedAlias}`;
         default:
-          return `COUNT(*) as ${alias}`;
+          return `COUNT(*) as ${quotedAlias}`;
       }
     }
   
     // For regular columns
     switch (func) {
       case 'count':
-        return `COUNT(*) as ${alias}`;
+        return `COUNT(*) as ${quotedAlias}`;
       case 'distinct':
-        return `COUNT(DISTINCT ${column || 'session_id'}) as ${alias}`;
+        return `COUNT(DISTINCT ${column || 'session_id'}) as ${quotedAlias}`;
       case 'sum':
-        return column ? `SUM(${column}) as ${alias}` : `COUNT(*) as ${alias}`;
+        return column ? `SUM(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'average':
-        return column ? `AVG(${column}) as ${alias}` : `COUNT(*) as ${alias}`;
+        return column ? `AVG(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'min':
-        return column ? `MIN(${column}) as ${alias}` : `COUNT(*) as ${alias}`;
+        return column ? `MIN(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'max':
-        return column ? `MAX(${column}) as ${alias}` : `COUNT(*) as ${alias}`;
+        return column ? `MAX(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
+      case 'percentage':
+        if (column) {
+          // Check if it's a visitor detail column (session table)
+          const isVisitorDetail = COLUMN_GROUPS.visitorDetails.columns.some(c => c.value === column);
+          
+          if (isVisitorDetail) {
+            // For visitor details, use 10.0 instead of 100.0
+            return `ROUND(
+              10.0 * COUNT(*) / (
+                SELECT COUNT(DISTINCT base_query.session_id)
+                FROM base_query 
+              )
+            , 2) as ${quotedAlias}`;
+          } else {
+            // For other columns, use 10.0 instead of 100.0
+            return `ROUND(
+              10.0 * COUNT(*) / (
+                SELECT COUNT(*)
+                FROM base_query
+              )
+            , 2) as ${quotedAlias}`;
+          }
+        }
+        return `COUNT(*) as ${quotedAlias}`;
       default:
-        return `COUNT(*) as ${alias}`;
+        return `COUNT(*) as ${quotedAlias}`;
     }
   };
 
   // Add orderBy management functions
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
+    // For known metrics, ensure consistent naming
+    const metricWithAlias = config.metrics.find(m => m.alias === column);
+    
+    // If ordering by a percentage metric, check if it has a standard alias
+    let finalColumn = column;
+    if (column === 'andel' && !metricWithAlias) {
+      // Find percentage metrics without custom aliases
+      const percentageMetrics = config.metrics.filter(m => 
+        m.function === 'percentage' && !m.alias
+      );
+      
+      if (percentageMetrics.length === 1) {
+        // If there's only one, use the standardized alias
+        finalColumn = 'andel';
+      }
+    }
+    
     setConfig(prev => ({
       ...prev,
-      orderBy: { column, direction }
+      orderBy: { 
+        column: finalColumn, 
+        direction 
+      }
     }));
   };
 
