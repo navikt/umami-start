@@ -290,7 +290,7 @@ const getGroupedParameters = () => {
                         (eventName && getEventDisplayName(eventName) && 
                         getEventDisplayName(eventName) !== "null") ? 
                           getEventDisplayName(eventName) : 
-                          'pageview'
+                          'sidevisning'
                       }
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
