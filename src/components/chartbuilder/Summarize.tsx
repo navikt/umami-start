@@ -335,7 +335,9 @@ const Summarize = ({
               value={orderBy?.column || ""}
               onChange={(e) => {
                 if (e.target.value) {
-                  setOrderBy(e.target.value, 'DESC');
+                  // Use ascending order for dates, descending for other metrics
+                  const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
+                  setOrderBy(e.target.value, direction);
                 } else {
                   clearOrderBy();
                 }

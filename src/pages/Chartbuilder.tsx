@@ -60,7 +60,7 @@ const COLUMN_GROUPS: Record<string, ColumnGroup> = {
     table: 'base_query',
     columns: [
       { label: 'Event ID', value: 'event_id' },
-      { label: 'Created At', value: 'created_at' },
+      { label: 'Date / Created At', value: 'created_at' },
       { label: 'Event Type', value: 'event_type' },
       { label: 'Event Name', value: 'event_name' },
       { label: 'Website ID', value: 'website_id' },
