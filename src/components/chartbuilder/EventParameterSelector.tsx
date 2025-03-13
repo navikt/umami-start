@@ -10,6 +10,7 @@ import {
   Heading,
   Modal,
   Box,
+  Tag
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon
@@ -290,7 +291,10 @@ const getGroupedParameters = () => {
                         (eventName && getEventDisplayName(eventName) && 
                         getEventDisplayName(eventName) !== "null") ? 
                           getEventDisplayName(eventName) : 
-                          'sidevisning'
+                          <>
+                          sidevisning
+                          <Tag size="xsmall" variant="info" className="whitespace-nowrap">standard</Tag>
+                        </>
                       }
                       <span className="text-sm text-gray-600">
                         ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
