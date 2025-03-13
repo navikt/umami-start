@@ -52,14 +52,6 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/datastruktur"
-                className="no-underline"
-              >
-                <DatabaseIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Datastruktur</span>
-              </Dropdown.Menu.List.Item>
-              <Dropdown.Menu.List.Item
-                as={Link}
                 href="/grafbygger"
                 className="no-underline"
               >
@@ -95,13 +87,6 @@ export default function Header() {
             >
               <BarChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Metabase</span>
-            </Link>
-            <Link
-              href="/datastruktur"
-              className={linkButton}
-            >
-              <DatabaseIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Datastruktur</span>
             </Link>
             <Link
               href="/grafbygger"
