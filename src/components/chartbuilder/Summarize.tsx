@@ -221,12 +221,14 @@ const Summarize = ({
         <div className="space-y-4 mb-6">
           {metrics.map((metric, index) => (
             <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-              {/* Add row number */}
-              <div className="flex flex-col justify-center mr-2 w-6 text-center">
-                <span className="text-sm text-gray-500">
-                  {index + 1}.
-                </span>
-              </div>
+              {/* Only show row number if there are multiple metrics */}
+              {metrics.length > 1 && (
+                <div className="flex flex-col justify-center mr-2 w-6 text-center">
+                  <span className="text-sm text-gray-500">
+                    {index + 1}.
+                  </span>
+                </div>
+              )}
               
               <Select
                 label="Funksjon"
