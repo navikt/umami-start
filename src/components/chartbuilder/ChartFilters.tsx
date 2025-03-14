@@ -174,9 +174,26 @@ const ChartFilters = ({
       ...customPeriodInputs,
       [index]: newValues
     });
+    
     // Also update the SQL in the filter
     const amount = parseInt(newValues.amount) || 1;
-    const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount} ${newValues.unit})`;
+    let sql;
+    
+    // Handle different time units - TIMESTAMP_ADD doesn't support WEEK and MONTH
+    switch(newValues.unit) {
+      case 'WEEK':
+        // Convert weeks to days (7 days per week)
+        sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount * 7} DAY)`;
+        break;
+      case 'MONTH':
+        // Use DATE_ADD and convert to TIMESTAMP for consistent typing
+        sql = `TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL ${amount} MONTH))`;
+        break;
+      default:
+        // MINUTE, HOUR, DAY are directly supported by TIMESTAMP_ADD
+        sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount} ${newValues.unit})`;
+    }
+    
     updateFilter(index, {
       value: sql
     });
