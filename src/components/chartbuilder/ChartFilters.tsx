@@ -602,7 +602,7 @@ const ChartFilters = ({
           {/* Static Filters */}
           <div className="mt-6">
             <Heading level="3" size="xsmall" spacing>
-              Legg til statiske filter
+              Statiske filter
             </Heading>
             <p className="text-sm text-gray-600 mb-4">
               Statiske filtre er låst til grafen eller tabellen du lager.
