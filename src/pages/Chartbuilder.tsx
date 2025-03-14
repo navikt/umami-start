@@ -299,60 +299,100 @@ const ChartsPage = () => {
 
     const requiredTables = getRequiredTables();
     
+    // Helper function to check if a column is used in the chart
+    const isColumnUsed = (column: string): boolean => {
+      // Check if it's used in filters
+      if (filters.some(f => f.column === column)) return true;
+      
+      // Check if it's used in group by
+      if (config.groupByFields.includes(column)) return true;
+      
+      // Check if it's used in metrics
+      if (config.metrics.some(m => m.column === column)) return true;
+      
+      return false;
+    };
+    
     // Start building the SQL with a CTE (Common Table Expression)
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';
     sql += '    e.*,\n';
     
-    // Add computed columns
+    // Add computed columns only if they're used
     sql += `    '${config.website.domain}' as website_domain,\n`;
     sql += `    '${config.website.name}' as website_name,\n`;
-    sql += '    -- URL path calculations\n';
-    sql += '    CONCAT(\n';
-    sql += '      e.url_path,\n';
-    sql += '      CASE\n';
-    sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
-    sql += '        THEN CONCAT(\'?\', e.url_query)\n';
-    sql += '        ELSE \'\'\n';
-    sql += '      END\n';
-    sql += '    ) AS url_fullpath,\n';
-    sql += '    CONCAT(\n';
-    sql += `      'https://${config.website.domain}',\n`;
-    sql += '      e.url_path,\n';
-    sql += '      CASE\n';
-    sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
-    sql += '        THEN CONCAT(\'?\', e.url_query)\n';
-    sql += '        ELSE \'\'\n';
-    sql += '      END\n';
-    sql += '    ) AS url_fullurl,\n';
     
-    // Referrer calculations
-    sql += '    CONCAT(\n';
-    sql += '      e.referrer_path,\n';
-    sql += '      CASE\n';
-    sql += '        WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
-    sql += '        THEN CONCAT(\'?\', e.referrer_query)\n';
-    sql += '        ELSE \'\'\n';
-    sql += '      END\n';
-    sql += '    ) AS referrer_fullpath,\n';
-    sql += '    CASE\n';
-    sql += '      WHEN e.referrer_domain IS NOT NULL AND e.referrer_domain != \'\'\n';
-    sql += '      THEN CONCAT(\n';
-    sql += '        \'https://\',\n';
-    sql += '        e.referrer_domain,\n';
-    sql += '        e.referrer_path,\n';
-    sql += '        CASE\n';
-    sql += '          WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
-    sql += '          THEN CONCAT(\'?\', e.referrer_query)\n';
-    sql += '          ELSE \'\'\n';
-    sql += '        END\n';
-    sql += '      )\n';
-    sql += '      ELSE NULL\n';
-    sql += '    END AS referrer_fullurl';
+    // URL path calculations - only add if needed
+    if (isColumnUsed('url_fullpath') || isColumnUsed('url_fullurl')) {
+      sql += '    -- URL path calculations\n';
+      
+      if (isColumnUsed('url_fullpath')) {
+        sql += '    CONCAT(\n';
+        sql += '      e.url_path,\n';
+        sql += '      CASE\n';
+        sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
+        sql += '        THEN CONCAT(\'?\', e.url_query)\n';
+        sql += '        ELSE \'\'\n';
+        sql += '      END\n';
+        sql += '    ) AS url_fullpath,\n';
+      }
+      
+      if (isColumnUsed('url_fullurl')) {
+        sql += '    CONCAT(\n';
+        sql += `      'https://${config.website.domain}',\n`;
+        sql += '      e.url_path,\n';
+        sql += '      CASE\n';
+        sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
+        sql += '        THEN CONCAT(\'?\', e.url_query)\n';
+        sql += '        ELSE \'\'\n';
+        sql += '      END\n';
+        sql += '    ) AS url_fullurl,\n';
+      }
+    }
+    
+    // Referrer calculations - only add if needed
+    if (isColumnUsed('referrer_fullpath') || isColumnUsed('referrer_fullurl')) {
+      if (isColumnUsed('referrer_fullpath')) {
+        sql += '    CONCAT(\n';
+        sql += '      e.referrer_path,\n';
+        sql += '      CASE\n';
+        sql += '        WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
+        sql += '        THEN CONCAT(\'?\', e.referrer_query)\n';
+        sql += '        ELSE \'\'\n';
+        sql += '      END\n';
+        sql += '    ) AS referrer_fullpath';
+        
+        // Only add comma if referrer_fullurl is also used
+        sql += isColumnUsed('referrer_fullurl') ? ',\n' : '\n';
+      }
+      
+      if (isColumnUsed('referrer_fullurl')) {
+        sql += '    CASE\n';
+        sql += '      WHEN e.referrer_domain IS NOT NULL AND e.referrer_domain != \'\'\n';
+        sql += '      THEN CONCAT(\n';
+        sql += '        \'https://\',\n';
+        sql += '        e.referrer_domain,\n';
+        sql += '        e.referrer_path,\n';
+        sql += '        CASE\n';
+        sql += '          WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
+        sql += '          THEN CONCAT(\'?\', e.referrer_query)\n';
+        sql += '          ELSE \'\'\n';
+        sql += '        END\n';
+        sql += '      )\n';
+        sql += '      ELSE NULL\n';
+        sql += '    END AS referrer_fullurl\n';
+      }
+    } else {
+      // Remove trailing comma from the last column
+      sql = sql.trimRight();
+      if (sql.endsWith(',')) {
+        sql = sql.slice(0, -1) + '\n';
+      }
+    }
 
     // Add session columns if needed
     if (requiredTables.session) {
-      sql += ',\n    s.browser,\n';
+      sql += '    s.browser,\n';
       sql += '    s.os,\n';
       sql += '    s.device,\n';
       sql += '    s.screen,\n';
@@ -360,6 +400,12 @@ const ChartsPage = () => {
       sql += '    s.country,\n';
       sql += '    s.subdivision1,\n';
       sql += '    s.city\n';
+    } else {
+      // Remove trailing comma if there are no session columns
+      sql = sql.trimRight();
+      if (sql.endsWith(',')) {
+        sql = sql.slice(0, -1) + '\n';
+      }
     }
     
     // FROM and JOIN clauses
