@@ -524,7 +524,13 @@ const ChartsPage = () => {
           }
         }
       } else {
-        const tablePrefix = 'base_query';
+        // Check if the field is a session field
+        const isSessionField = Object.values(COLUMN_GROUPS)
+          .find(group => group.table === 'session')
+          ?.columns.some(col => col.value === field) || false;
+
+        // Use s. prefix for session fields, base_query. for others
+        const tablePrefix = isSessionField ? 's' : 'base_query';
         selectClauses.add(`${tablePrefix}.${field}`);
       }
     });
@@ -539,6 +545,25 @@ const ChartsPage = () => {
     // Add FROM clause
     sql += '\nFROM base_query\n';
 
+    // Always add session join if selecting session columns
+    const needsSessionTable = config.groupByFields.some(field => {
+      const isSessionField = Object.values(COLUMN_GROUPS)
+        .find(group => group.table === 'session')
+        ?.columns.some(col => col.value === field) || false;
+      return isSessionField;
+    }) || config.metrics.some(metric => {
+      if (!metric.column) return false;
+      const isSessionField = Object.values(COLUMN_GROUPS)
+        .find(group => group.table === 'session')
+        ?.columns.some(col => col.value === metric.column) || false;
+      return isSessionField;
+    });
+
+    if (needsSessionTable) {
+      sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
+      sql += '  ON base_query.session_id = s.session_id\n';
+    }
+    
     // Add JOINs for parameters
     if (parameters.length > 0) {
       // First, add the main event_data join that all parameters will use in representative mode
@@ -615,6 +640,12 @@ const ChartsPage = () => {
       }
     }
 
+    // Add session join to the main query if required
+    if (requiredTables.session) {
+      sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
+      sql += '  ON base_query.session_id = s.session_id\n';
+    }
+
     // Add WHERE clause to filter out NULL values for percentage calculations on grouped fields
     const hasPercentageMetric = config.metrics.some(m => m.function === 'percentage');
     const needsNullFilter = hasPercentageMetric && config.groupByFields.length > 0;
@@ -689,8 +720,14 @@ const ChartsPage = () => {
             groupByCols.push(field);
           }
         } else if (!field.startsWith('param_')) {
-          // Always add non-parameter fields to GROUP BY
-          groupByCols.push(`base_query.${field}`);
+          // Check if the field is a session field
+          const isSessionField = Object.values(COLUMN_GROUPS)
+            .find(group => group.table === 'session')
+            ?.columns.some(col => col.value === field) || false;
+
+          // Use s. prefix for session fields, base_query. for others
+          const tablePrefix = isSessionField ? 's' : 'base_query';
+          groupByCols.push(`${tablePrefix}.${field}`);
         }
         // Skip parameters in representative mode
       });
