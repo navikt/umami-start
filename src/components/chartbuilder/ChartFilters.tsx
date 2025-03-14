@@ -248,9 +248,48 @@ const ChartFilters = ({
             <p className="text-sm text-gray-600 mb-4">
               Statiske filtre er låst til grafen eller tabellen du lager.
             </p>
+
+                        {/* Replace button with dropdown and button combo like in Summarize.tsx */}
+                        <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+              <Select
+                label="Legg til filter"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    addFilter(e.target.value);
+                    (e.target as HTMLSelectElement).value = '';
+                  }
+                }}
+                size="small"
+                className="flex-grow"
+              >
+                <option value="">Velg felt...</option>
+                {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                  <optgroup key={groupKey} label={group.label}>
+                    {group.columns.map(col => (
+                      <option key={col.value} value={col.value}>
+                        {col.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                
+                {parameters.length > 0 && (
+                  <optgroup label="Egendefinerte">
+                    {uniqueParameters.map(param => (
+                      <option 
+                        key={`param_${param.key}`} 
+                        value={`param_${getCleanParamName(param)}`}
+                      >
+                        {getParamDisplayName(param)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </Select>
+            </div>
             
             {filters.length > 0 && (
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mt-3">
                 {filters.map((filter, index) => (
                   <div key={index} className="bg-white p-3 rounded-md border">
                     <div className="flex justify-between">
@@ -412,45 +451,7 @@ const ChartFilters = ({
                 ))}
               </div>
             )}
-            
-            {/* Replace button with dropdown and button combo like in Summarize.tsx */}
-            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-              <Select
-                label="Legg til filter"
-                onChange={(e) => {
-                  if (e.target.value) {
-                    addFilter(e.target.value);
-                    (e.target as HTMLSelectElement).value = '';
-                  }
-                }}
-                size="small"
-                className="flex-grow"
-              >
-                <option value="">Velg felt...</option>
-                {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                  <optgroup key={groupKey} label={group.label}>
-                    {group.columns.map(col => (
-                      <option key={col.value} value={col.value}>
-                        {col.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-                
-                {parameters.length > 0 && (
-                  <optgroup label="Egendefinerte">
-                    {uniqueParameters.map(param => (
-                      <option 
-                        key={`param_${param.key}`} 
-                        value={`param_${getCleanParamName(param)}`}
-                      >
-                        {getParamDisplayName(param)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </Select>
-            </div>
+          
           </div>
         </div>
       </div>
