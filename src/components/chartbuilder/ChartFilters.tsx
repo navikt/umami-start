@@ -75,6 +75,18 @@ const ChartFilters = ({
   const [appliedSuggestion, setAppliedSuggestion] = useState<string>('');
   // Add state for selected date range
   const [selectedDateRange, setSelectedDateRange] = useState<string>('');
+  // Add state to track custom events selection
+  const [customEvents, setCustomEvents] = useState<string[]>([]);
+  
+  // Add a function to filter available events to only custom events (non-pageviews)
+  const customEventsList = useMemo(() => {
+    // If user has selected a custom event filter, filter out pageview events
+    // Pageview events typically start with "pageview" or contain "/"
+    return availableEvents.filter(event => 
+      !event.toLowerCase().startsWith('pageview') && 
+      !event.includes('/')
+    );
+  }, [availableEvents]);
 
   // Change addFilter to accept a column parameter
   const addFilter = (column: string) => {
@@ -200,6 +212,8 @@ const ChartFilters = ({
     if (appliedSuggestion === suggestionId) {
       // Deselect current suggestion
       setAppliedSuggestion('');
+      // Reset custom events selection
+      setCustomEvents([]);
       // Remove all suggestion filters
       const newFilters = filters.filter(existingFilter => {
         const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
@@ -209,7 +223,11 @@ const ChartFilters = ({
         );
         return !isSuggestionFilter;
       });
-      setFilters(newFilters);
+      // Also remove any event_name filters
+      const finalFilters = newFilters.filter(f => 
+        !(f.column === 'event_name' && f.operator === 'IN')
+      );
+      setFilters(finalFilters);
     } else {
       // Remove any existing suggestion filters first
       const cleanFilters = filters.filter(existingFilter => {
@@ -220,12 +238,43 @@ const ChartFilters = ({
         );
         return !isSuggestionFilter;
       });
+      // Remove any existing event_name filters
+      const cleanerFilters = cleanFilters.filter(f => 
+        !(f.column === 'event_name')
+      );
+      
       // Add new suggestion filters
       const suggestion = FILTER_SUGGESTIONS.find(s => s.id === suggestionId);
       if (suggestion) {
-        setFilters([...cleanFilters, ...suggestion.filters]);
+        setFilters([...cleanerFilters, ...suggestion.filters]);
+        // Reset custom events if switching between suggestions
+        setCustomEvents([]);
       }
       setAppliedSuggestion(suggestionId);
+    }
+  };
+  
+  // Add function to handle custom event selection
+  const handleCustomEventsChange = (selectedEvents: string[]) => {
+    setCustomEvents(selectedEvents);
+    
+    // Find and remove any existing event_name filters
+    const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
+    
+    // Only add event_name filter if events are selected
+    if (selectedEvents.length > 0) {
+      setFilters([
+        ...filtersWithoutEventNames,
+        { 
+          column: 'event_name', 
+          operator: 'IN', 
+          value: selectedEvents[0], // Set first as value for compatibility
+          multipleValues: selectedEvents // Store all values here
+        }
+      ]);
+    } else {
+      // Keep just the event_type=2 filter without specific event names
+      setFilters(filtersWithoutEventNames);
     }
   };
 
@@ -390,6 +439,32 @@ const ChartFilters = ({
                 </button>
               ))}
             </div>
+            
+            {/* Show custom events selector when custom events filter is active */}
+            {appliedSuggestion === 'custom_events' && customEventsList.length > 0 && (
+              <div className="mt-5 ml-1 p-3 bg-white border rounded-md">
+                <UNSAFE_Combobox
+                  label="Velg spesifikke egendefinerte hendelser"
+                  description="La stå tom for å vise alle egendefinerte hendelser"
+                  options={customEventsList.map(event => ({
+                    label: event,
+                    value: event
+                  }))}
+                  selectedOptions={customEvents}
+                  onToggleSelected={(option, isSelected) => {
+                    if (option) {
+                      const newSelection = isSelected 
+                        ? [...customEvents, option] 
+                        : customEvents.filter(e => e !== option);
+                      handleCustomEventsChange(newSelection);
+                    }
+                  }}
+                  isMultiSelect
+                  size="small"
+                  clearButton
+                />
+              </div>
+            )}
           </div>
 
           {/* Date Range Quick Picker */}
