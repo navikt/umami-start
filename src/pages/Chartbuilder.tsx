@@ -215,10 +215,10 @@ const ChartsPage = () => {
   }, [debouncedConfig, filters, parameters]);
 
   // Add helper functions for metrics
-  const addMetric = () => {
+  const addMetric = (functionType?: string) => {
     setConfig(prev => ({
       ...prev,
-      metrics: [...prev.metrics, { function: 'count' }]
+      metrics: [...prev.metrics, { function: functionType || 'count' }]
     }));
   };
 

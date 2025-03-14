@@ -24,7 +24,7 @@ interface SummarizeProps {
   sanitizeColumnName: (key: string) => string;
   updateMetric: (index: number, updates: Partial<Metric>) => void;
   removeMetric: (index: number) => void;
-  addMetric: () => void;
+  addMetric: (metricFunction: string) => void;
   addGroupByField: (field: string) => void;
   removeGroupByField: (field: string) => void;
   moveGroupField: (index: number, direction: 'up' | 'down') => void;
@@ -225,7 +225,7 @@ const Summarize = ({
               label="Legg til beregning"
               onChange={(e) => {
                 if (e.target.value) {
-                  addMetric();
+                  addMetric(e.target.value);
                   (e.target as HTMLSelectElement).value = '';
                 }
               }}
