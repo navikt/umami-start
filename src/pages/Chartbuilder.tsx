@@ -192,11 +192,11 @@ const ChartsPage = () => {
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
     filters: [],
-    metrics: [{ function: 'count' }],
+    metrics: [],
     groupByFields: [],
     orderBy: null,
-    dateFormat: 'day', // Default to daily grouping
-    paramAggregation: 'unique' // Changed to 'unique' as default
+    dateFormat: 'day',
+    paramAggregation: 'unique'
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);

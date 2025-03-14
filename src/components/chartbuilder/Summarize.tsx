@@ -219,6 +219,28 @@ const Summarize = ({
         </p>
         
         <div className="space-y-4 mb-6">
+          {/* Move dropdown to the top */}
+          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+            <Select
+              label="Legg til beregning"
+              onChange={(e) => {
+                if (e.target.value) {
+                  addMetric();
+                  (e.target as HTMLSelectElement).value = '';
+                }
+              }}
+              size="small"
+              className="flex-grow"
+            >
+              <option value="">Velg beregning...</option>
+              {METRICS.map(metric => (
+                <option key={metric.value} value={metric.value}>
+                  {metric.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+
           {metrics.map((metric, index) => (
             <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
               {/* Only show row number if there are multiple metrics */}
@@ -332,14 +354,6 @@ const Summarize = ({
               </div>
             </div>
           ))}
-          
-          <Button
-            variant="secondary"
-            onClick={addMetric}
-            size="small"
-          >
-            Legg til flere beregninger
-          </Button>
         </div>
       </div>
 
