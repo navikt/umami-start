@@ -600,13 +600,14 @@ const ChartFilters = ({
           </div>
 
           {/* Static Filters */}
-          <div className="mt-6">
+          <div className="mt-4">
             <Heading level="3" size="xsmall" spacing>
-              Statiske filter
+              Filtervalg
             </Heading>
-            <p className="text-sm text-gray-600 mb-4">
+           {/* <p className="text-sm text-gray-600 mb-4">
               Statiske filtre er låst til grafen eller tabellen du lager.
             </p>
+            */}
 
             {/* Replace button with dropdown and button combo like in Summarize.tsx */}
             <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
