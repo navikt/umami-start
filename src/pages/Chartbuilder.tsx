@@ -881,7 +881,6 @@ const ChartsPage = () => {
   };
 
   return (
-    <>
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
         Bygg grafer og tabeller for Metabase
@@ -892,7 +891,7 @@ const ChartsPage = () => {
 
         <div className="lg:grid lg:grid-cols-2 lg:gap-8">
           {/* Left column - Form controls */}
-          <div className="space-y-8">
+          <div className="mb-8 space-y-8">
             <VStack gap="8">
               {/* Data section - Website picker */}
               <section>
@@ -969,18 +968,17 @@ const ChartsPage = () => {
           </div>
 
           {/* Right column - SQL preview */}
-          <div className="space-y-4 lg:sticky lg:top-4">
+          <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-screen lg:flex lg:flex-col">
             {config.website && (
-              <SQLPreview sql={generatedSQL} />
+              <div className="mb-8 overflow-y-auto">
+                <SQLPreview sql={generatedSQL} />
+              </div>
             )}
           </div>
         </div>
 
-        <div className="mt-8">
-          <Kontaktboks />
-        </div>
+        <Kontaktboks />
       </div>
-    </>
   );
 };
 
