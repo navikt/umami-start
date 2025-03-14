@@ -77,6 +77,8 @@ const ChartFilters = ({
   const [selectedDateRange, setSelectedDateRange] = useState<string>('');
   // Add state to track custom events selection
   const [customEvents, setCustomEvents] = useState<string[]>([]);
+  // Add state to track selected URL paths
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -86,6 +88,20 @@ const ChartFilters = ({
       !event.toLowerCase().startsWith('pageview') && 
       !event.includes('/')
     );
+  }, [availableEvents]);
+
+  // Update the availablePaths logic to better detect pageview paths
+  const availablePaths = useMemo(() => {
+    const paths = new Set<string>();
+    availableEvents.forEach(event => {
+      // Check if it's a pageview event (starts with '/' or contains 'pageview')
+      if (event.startsWith('/')) {
+        paths.add(event);
+      }
+    });
+    
+    // Sort paths alphabetically
+    return Array.from(paths).sort((a, b) => a.localeCompare(b));
   }, [availableEvents]);
 
   // Change addFilter to accept a column parameter
@@ -212,8 +228,9 @@ const ChartFilters = ({
     if (appliedSuggestion === suggestionId) {
       // Deselect current suggestion
       setAppliedSuggestion('');
-      // Reset custom events selection
+      // Reset selections
       setCustomEvents([]);
+      setSelectedPaths([]);
       // Remove all suggestion filters
       const newFilters = filters.filter(existingFilter => {
         const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
@@ -223,9 +240,10 @@ const ChartFilters = ({
         );
         return !isSuggestionFilter;
       });
-      // Also remove any event_name filters
+      // Also remove any event_name filters and url_path filters
       const finalFilters = newFilters.filter(f => 
-        !(f.column === 'event_name' && f.operator === 'IN')
+        !(f.column === 'event_name' && f.operator === 'IN') && 
+        !(f.column === 'url_path' && f.operator === 'IN')
       );
       setFilters(finalFilters);
     } else {
@@ -238,17 +256,19 @@ const ChartFilters = ({
         );
         return !isSuggestionFilter;
       });
-      // Remove any existing event_name filters
+      // Remove any existing event_name filters and url_path filters
       const cleanerFilters = cleanFilters.filter(f => 
-        !(f.column === 'event_name')
+        !(f.column === 'event_name') && 
+        !(f.column === 'url_path' && f.operator === 'IN')
       );
       
       // Add new suggestion filters
       const suggestion = FILTER_SUGGESTIONS.find(s => s.id === suggestionId);
       if (suggestion) {
         setFilters([...cleanerFilters, ...suggestion.filters]);
-        // Reset custom events if switching between suggestions
+        // Reset selections when switching between suggestions
         setCustomEvents([]);
+        setSelectedPaths([]);
       }
       setAppliedSuggestion(suggestionId);
     }
@@ -275,6 +295,32 @@ const ChartFilters = ({
     } else {
       // Keep just the event_type=2 filter without specific event names
       setFilters(filtersWithoutEventNames);
+    }
+  };
+
+  // Update function to handle URL path selection
+  const handlePathsChange = (paths: string[]) => {
+    setSelectedPaths(paths);
+    
+    // Find and remove any existing url_path filters
+    const filtersWithoutPaths = filters.filter(f => 
+      !(f.column === 'url_path')
+    );
+    
+    // Only add url_path filter if paths are selected
+    if (paths.length > 0) {
+      setFilters([
+        ...filtersWithoutPaths,
+        { 
+          column: 'url_path', 
+          operator: 'IN', 
+          value: paths[0], // Set first as value for compatibility
+          multipleValues: paths // Store all values here
+        }
+      ]);
+    } else {
+      // Keep just the event_type=1 filter without specific paths
+      setFilters(filtersWithoutPaths);
     }
   };
 
@@ -400,6 +446,11 @@ const ChartFilters = ({
     return filters.some(filter => filter.column === 'created_at');
   };
 
+  // Add this helper to check if filter should use the combobox interface
+  const shouldUseCombobox = (column: string): boolean => {
+    return column === 'url_path' || column === 'event_name';
+  };
+
   return (
     <section>
       <Heading level="2" size="small" spacing>
@@ -439,6 +490,38 @@ const ChartFilters = ({
                 </button>
               ))}
             </div>
+            
+            {/* Show URL path selector when pageviews filter is active */}
+            {appliedSuggestion === 'pageviews' && (
+              <div className="mt-5 ml-1 p-3 bg-white border rounded-md">
+                <UNSAFE_Combobox
+                  label="Filtrer på spesifikke URL-stier"
+                  description="La stå tom for å vise alle sidevisninger"
+                  options={availablePaths.map(path => ({
+                    label: path,
+                    value: path
+                  }))}
+                  selectedOptions={selectedPaths}
+                  onToggleSelected={(option, isSelected) => {
+                    if (option) {
+                      const newSelection = isSelected 
+                        ? [...selectedPaths, option] 
+                        : selectedPaths.filter(p => p !== option);
+                      handlePathsChange(newSelection);
+                    }
+                  }}
+                  isMultiSelect
+                  size="small"
+                  clearButton
+                  allowNewValues
+                />
+                {selectedPaths.length === 0 && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    Skriv inn URL-stier eller velg fra listen. For eksempel: /min-side
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Show custom events selector when custom events filter is active */}
             {appliedSuggestion === 'custom_events' && customEventsList.length > 0 && (
@@ -635,7 +718,8 @@ const ChartFilters = ({
                           {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
                           filter.column !== 'event_name' && 
                           filter.column !== 'created_at' &&
-                          filter.column !== 'event_type' && (
+                          filter.column !== 'event_type' && 
+                          !shouldUseCombobox(filter.column) && (
                             <TextField
                               label="Verdi"
                               value={filter.value || ''}
@@ -651,7 +735,7 @@ const ChartFilters = ({
                               <div className="flex items-center">
                                 <div className="text-sm text-blue-600 font-medium">
                                   Bruker forhåndsdefinert periode: {" "}
-                                  {DATE_RANGE_SUGGESTIONS.find(dr => dr.id === selectedDateRange)?.label || 'Egendefinert'}
+                                  {DATE_RANGE_SUGGESTIONS.find(dr => dr.sql === filter.value)?.label || 'Egendefinert'}
                                 </div>
                                 <Button 
                                   variant="tertiary-neutral" 
@@ -733,6 +817,44 @@ const ChartFilters = ({
                               isMultiSelect
                               size="small"
                               clearButton
+                            />
+                          </div>
+                        )}
+                        {/* Add combobox for URL Path */}
+                        {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
+                        filter.column === 'url_path' && (
+                          <div className="mt-3 w-full">
+                            <UNSAFE_Combobox
+                              label="URL-stier"
+                              description="Velg en eller flere URL-stier"
+                              options={availablePaths.map(path => ({
+                                label: path,
+                                value: path
+                              }))}
+                              selectedOptions={filter.multipleValues?.map(v => v || '') || 
+                                              (filter.value ? [filter.value] : [])}
+                              onToggleSelected={(option, isSelected) => {
+                                if (option) {
+                                  const currentValues = filter.multipleValues || 
+                                                      (filter.value ? [filter.value] : []);
+                                  const newValues = isSelected 
+                                    ? [...currentValues, option]
+                                    : currentValues.filter(val => val !== option);
+                                  
+                                  // Always set operator to IN when there are multiple values
+                                  const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
+                                  
+                                  updateFilter(index, { 
+                                    multipleValues: newValues.length > 0 ? newValues : undefined,
+                                    value: newValues.length > 0 ? newValues[0] : '',
+                                    operator: newOperator
+                                  });
+                                }
+                              }}  
+                              isMultiSelect
+                              size="small"
+                              clearButton
+                              allowNewValues
                             />
                           </div>
                         )}

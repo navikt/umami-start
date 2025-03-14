@@ -452,6 +452,10 @@ const ChartsPage = () => {
           // Handle multiple event names using IN clause
           const eventNames = filter.multipleValues.map(val => `'${val}'`).join(', ');
           sql += `  AND e.${filter.column} IN (${eventNames})\n`;
+        } else if (filter.column === 'url_path' && filter.multipleValues && filter.multipleValues.length > 0) {
+          // Handle multiple URL paths using IN clause
+          const urlPaths = filter.multipleValues.map(val => `'${val}'`).join(', ');
+          sql += `  AND e.${filter.column} IN (${urlPaths})\n`;
         } else if (filter.column === 'created_at' && filter.dateRangeType && filter.dateRangeType !== 'custom') {
           // Special handling for date ranges - use the actual SQL expression
           sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
