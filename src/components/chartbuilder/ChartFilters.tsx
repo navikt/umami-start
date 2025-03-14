@@ -551,7 +551,7 @@ const ChartFilters = ({
           </div>
 
           {/* Date Range Quick Picker */}
-          <div className="mb-4">
+          <div className="mb-6">
             <Heading level="3" size="xsmall" spacing>
               Datoområde
             </Heading>
@@ -600,7 +600,7 @@ const ChartFilters = ({
           </div>
 
           {/* Static Filters */}
-          <div className="mt-4">
+          <div className="mt-4 border-t border-grey-200 pt-4">
             <Heading level="3" size="xsmall" spacing>
               Filtervalg
             </Heading>
