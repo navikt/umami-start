@@ -219,7 +219,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
 
   return (
     <div className="space-y-4">
-        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg border shadow-sm ">
           {error && (
             <Alert variant="error" className="mb-4">
               {error}

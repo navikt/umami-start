@@ -1,4 +1,4 @@
-import { Button, ExpansionCard, Heading, Select, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, Heading, Select, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import { useMemo, useState, useEffect } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -79,8 +79,6 @@ const ChartFilters = ({
   const [customEvents, setCustomEvents] = useState<string[]>([]);
   // Add state to track selected URL paths
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
-  // Add this near other state declarations
-  const [stagingFilter, setStagingFilter] = useState<Filter | null>(null);
   
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -113,15 +111,7 @@ const ChartFilters = ({
   // Change addFilter to accept a column parameter
   const addFilter = (column: string) => {
     if (column) {
-      setStagingFilter({ column, operator: '=', value: '' });
-    }
-  };
-
-  // Add helper function to commit staging filter
-  const commitStagingFilter = () => {
-    if (stagingFilter) {
-      setFilters([...filters, stagingFilter]);
-      setStagingFilter(null);
+      setFilters([...filters, { column, operator: '=', value: '' }]);
     }
   };
 
@@ -471,7 +461,7 @@ const ChartFilters = ({
         Filtrering
       </Heading>
 
-      <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative">
+      <div className="space-y-6 bg-white p-5 rounded-lg border shadow-sm relative">
         <div>
           {/* Improved Filter Suggestions */}
           <div className="mb-6">
@@ -483,7 +473,7 @@ const ChartFilters = ({
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                   appliedSuggestion === '' 
                     ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                 }`}
                 onClick={() => toggleFilterSuggestion(appliedSuggestion)} // Clicking active suggestion clears it
               >
@@ -495,7 +485,7 @@ const ChartFilters = ({
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     appliedSuggestion === suggestion.id 
                       ? 'bg-blue-600 text-white border-blue-700' 
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                   }`}
                   onClick={() => toggleFilterSuggestion(suggestion.id)}
                   title={suggestion.description}
@@ -507,7 +497,7 @@ const ChartFilters = ({
             
             {/* Show URL path selector when pageviews filter is active */}
             {appliedSuggestion === 'pageviews' && (
-              <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
+              <div className="mt-4 ml-1 p-4 bg-gray-50 border rounded-md shadow-inner">
                 <UNSAFE_Combobox
                   label="Filtrer på spesifikke URL-stier"
                   description="La stå tom for å vise alle sidevisninger"
@@ -539,7 +529,7 @@ const ChartFilters = ({
             
             {/* Show custom events selector when custom events filter is active */}
             {appliedSuggestion === 'custom_events' && (
-              <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
+              <div className="mt-4 ml-1 p-4 bg-gray-50 border rounded-md shadow-inner">
                 <UNSAFE_Combobox
                   label="Velg spesifikke egendefinerte hendelser"
                   description="La stå tom for å vise alle egendefinerte hendelser"
@@ -570,7 +560,7 @@ const ChartFilters = ({
           </div>
 
           {/* Date Range Quick Picker */}
-          <div className="mb-4">
+          <div className="mb-6 pt-4 border-t border-gray-200">
             <Heading level="3" size="xsmall" spacing>
               Datoområde
             </Heading>
@@ -593,7 +583,7 @@ const ChartFilters = ({
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     selectedDateRange === dateRange.id 
                       ? 'bg-blue-600 text-white border-blue-700' 
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                   }`}
                   onClick={() => applyDateRange(dateRange.id)}
                 >
@@ -604,7 +594,7 @@ const ChartFilters = ({
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                   isCustomPeriodActive() 
                     ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                 }`}
                 onClick={() => applyDateRange('custom')}
               >
@@ -613,98 +603,67 @@ const ChartFilters = ({
             </div>
             
             {/* Show info about available date range with actual date */}
-            <div className="mt-2 pb-1 text-xs text-gray-600">
+            <div className="mt-2 text-xs text-gray-600">
               {getStartDateDisplay()}
             </div>
-
-            {/* Show custom period inputs immediately when active */}
-            {isCustomPeriodActive() && filters.map((filter, index) => (
-              filter.column === 'created_at' && (
-                <div key={index} className="mt-5">
-                  <div className="flex items-end gap-2">
-                    <TextField
-                      label="Tid tilbake"
-                      value={customPeriodInputs[index]?.amount || '7'}
-                      onChange={(e) => updateCustomPeriod(index, 'amount', e.target.value)}
-                      type="number"
-                      min="1"
-                      max={(customPeriodInputs[index]?.unit || 'DAY') === 'DAY' ? maxDaysAvailable : undefined}
-                      size="small"
-                      className="w-24"
-                    />
-                    <Select
-                      label="Tidsenhet"
-                      value={customPeriodInputs[index]?.unit || 'DAY'}
-                      onChange={(e) => updateCustomPeriod(index, 'unit', e.target.value)}
-                      size="small"
-                    >
-                      {TIME_UNITS.map(unit => (
-                        <option key={unit.value} value={unit.value}>
-                          {unit.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <div className="text-sm self-center ml-2">
-                      fra nåværende tidspunkt
-                    </div>
-                  </div>
-                </div>
-              )
-            ))}
           </div>
 
-                <div>
-                <Heading level="3" size="xsmall" spacing className='mt-2'>
-                  Filtervalg
-                </Heading>
-            
-                 <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3">
-                    <Select
-                      label="Legg til filter"
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          addFilter(e.target.value);
-                          (e.target as HTMLSelectElement).value = '';
-                        }
-                      }}
-                      size="small"
-                      className="flex-grow"
-                    >
-                      <option value="">Velg filter...</option>
-                      {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                        <optgroup key={groupKey} label={group.label}>
-                          {group.columns.map(col => (
-                            <option key={col.value} value={col.value}>
-                              {col.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                      
-                      {parameters.length > 0 && (
-                        <optgroup label="Egendefinerte">
-                          {uniqueParameters.map(param => (
-                            <option 
-                              key={`param_${param.key}`} 
-                              value={`param_${getCleanParamName(param)}`}
-                            >
-                              {getParamDisplayName(param)}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </Select>
-                  </div>
+          {/* Static Filters */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <Heading level="3" size="xsmall" spacing>
+              Filtervalg
+            </Heading>
 
-                  {/* Add staging area */}
-                  {stagingFilter && (
-                    <div className="mt-3 bg-white p-4 rounded-md border shadow-sm">
+            {/* Replace button with dropdown and button combo like in Summarize.tsx */}
+            <div className="flex gap-2 items-center bg-gray-50 p-3 rounded-md border mt-3">
+              <Select
+                label="Legg til filter"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    addFilter(e.target.value);
+                    (e.target as HTMLSelectElement).value = '';
+                  }
+                }}
+                size="small"
+                className="flex-grow"
+              >
+                <option value="">Velg felt...</option>
+                {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
+                  <optgroup key={groupKey} label={group.label}>
+                    {group.columns.map(col => (
+                      <option key={col.value} value={col.value}>
+                        {col.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                
+                {parameters.length > 0 && (
+                  <optgroup label="Egendefinerte">
+                    {uniqueParameters.map(param => (
+                      <option 
+                        key={`param_${param.key}`} 
+                        value={`param_${getCleanParamName(param)}`}
+                      >
+                        {getParamDisplayName(param)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </Select>
+            </div>
+            
+            {filters.length > 0 && (
+              <div className="space-y-3 mt-3">
+                {filters.map((filter, index) => (
+                  <div key={index} className="bg-gray-50 p-4 rounded-md border shadow-sm">
+                    <div className="flex justify-between">
                       <div className="flex-1">
                         <div className="flex gap-2 items-end">
                           <Select
                             label="Kolonne"
-                            value={stagingFilter.column}
-                            onChange={(e) => setStagingFilter({ ...stagingFilter, column: e.target.value, operator: '=', value: '' })}
+                            value={filter.column}
+                            onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })}
                             size="small"
                           >
                             {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
@@ -729,11 +688,12 @@ const ChartFilters = ({
                               </optgroup>
                             )}
                           </Select>
-                          {stagingFilter.column !== 'created_at' && (
+                          {/* Only exclude operator dropdown for created_at column */}
+                          {filter.column !== 'created_at' && (
                             <Select
                               label="Operator"
-                              value={stagingFilter.operator || '='}
-                              onChange={(e) => setStagingFilter({ ...stagingFilter, operator: e.target.value })}
+                              value={filter.operator || '='}
+                              onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
                               size="small"
                             >
                               {OPERATORS.map(op => (
@@ -743,17 +703,13 @@ const ChartFilters = ({
                               ))}
                             </Select>
                           )}
-                        </div>
-                        
-                        {/* Value inputs based on column type */}
-                        <div className="mt-3">
-                          {/* Event type dropdown */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column === 'event_type' && (
+                          {/* Special case for event_type - show dropdown instead of text field */}
+                          {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
+                          filter.column === 'event_type' && (
                             <Select
                               label="Hendelsestype"
-                              value={stagingFilter.value || ''}
-                              onChange={(e) => setStagingFilter({ ...stagingFilter, value: e.target.value })}
+                              value={filter.value || ''}
+                              onChange={(e) => updateFilter(index, { value: e.target.value })}
                               size="small"
                             >
                               <option value="">Velg hendelsestype</option>
@@ -764,43 +720,118 @@ const ChartFilters = ({
                               ))}
                             </Select>
                           )}
-
-                          {/* Event name combobox */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column === 'event_name' && (
+                          {/* Regular text field for all other columns except event_name and created_at */}
+                          {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
+                          filter.column !== 'event_name' && 
+                          filter.column !== 'created_at' &&
+                          filter.column !== 'event_type' && 
+                          !shouldUseCombobox(filter.column) && (
+                            <TextField
+                              label="Verdi"
+                              value={filter.value || ''}
+                              onChange={(e) => updateFilter(index, { value: e.target.value })}
+                              size="small"
+                            />
+                          )}
+                        </div>
+                        {/* Simplified Date Input for created_at */}
+                        {filter.column === 'created_at' && (
+                          <div className="mt-3">
+                            {filter.dateRangeType === 'preset' ? (
+                              <div className="flex items-center">
+                                <div className="text-sm text-blue-600 font-medium">
+                                  Bruker forhåndsdefinert periode: {" "}
+                                  {DATE_RANGE_SUGGESTIONS.find(dr => dr.sql === filter.value)?.label || 'Egendefinert'}
+                                </div>
+                                <Button 
+                                  variant="tertiary-neutral" 
+                                  size="small"
+                                  onClick={() => {
+                                    // Switch back to custom mode
+                                    setSelectedDateRange('');
+                                    const defaultDays = Math.min(7, maxDaysAvailable);
+                                    const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
+                                    updateFilter(index, {
+                                      value: sql,
+                                      dateRangeType: 'custom'
+                                    });
+                                    setCustomPeriodInputs(prev => ({
+                                      ...prev,
+                                      [index]: { amount: defaultDays.toString(), unit: 'DAY' }
+                                    }));
+                                  }}
+                                  className="ml-2"
+                                >
+                                  Tilpass
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-end gap-2">
+                                <TextField
+                                  label="Tid tilbake"
+                                  value={customPeriodInputs[index]?.amount || '7'}
+                                  onChange={(e) => updateCustomPeriod(index, 'amount', e.target.value)}
+                                  type="number"
+                                  min="1"
+                                  max={(customPeriodInputs[index]?.unit || 'DAY') === 'DAY' ? maxDaysAvailable : undefined}
+                                  size="small"
+                                  className="w-24"
+                                />
+                                <Select
+                                  label="Tidsenhet"
+                                  value={customPeriodInputs[index]?.unit || 'DAY'}
+                                  onChange={(e) => updateCustomPeriod(index, 'unit', e.target.value)}
+                                  size="small"
+                                >
+                                  {TIME_UNITS.map(unit => (
+                                    <option key={unit.value} value={unit.value}>
+                                      {unit.label}
+                                    </option>
+                                  ))}
+                                </Select>
+                                <div className="text-sm self-center ml-2">
+                                  fra nåværende tidspunkt
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Event name combobox on its own row */}
+                        {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && filter.column === 'event_name' && (
+                          <div className="mt-3">
                             <UNSAFE_Combobox
                               label="Event navn"
                               options={availableEvents
-                                .filter(event => event != null)
+                                .filter(event => event != null) // Filter out null/undefined events
                                 .map(event => ({
                                   label: event || '',
                                   value: event || ''
                                 }))}
-                              selectedOptions={stagingFilter.multipleValues?.map(v => v || '') || 
-                                              (stagingFilter.value ? [stagingFilter.value] : [])}
+                              selectedOptions={filter.multipleValues?.map(v => v || '') || 
+                                              (filter.value ? [filter.value] : [])}
                               onToggleSelected={(option, isSelected) => {
                                 if (option) {
-                                  const currentValues = stagingFilter.multipleValues || 
-                                                      (stagingFilter.value ? [stagingFilter.value] : []);
+                                  const currentValues = filter.multipleValues || 
+                                                      (filter.value ? [filter.value] : []);
                                   const newValues = isSelected 
                                     ? [...currentValues, option]
                                     : currentValues.filter(val => val !== option);
-                                  setStagingFilter({
-                                    ...stagingFilter,
+                                  updateFilter(index, { 
                                     multipleValues: newValues.length > 0 ? newValues : [],
-                                    value: newValues.length > 0 ? newValues[0] : ''
+                                    value: newValues.length > 0 ? newValues[0] : '' 
                                   });
                                 }
-                              }}
+                              }}  
                               isMultiSelect
                               size="small"
                               clearButton
                             />
-                          )}
-
-                          {/* URL path combobox */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column === 'url_path' && (
+                          </div>
+                        )}
+                        {/* Add combobox for URL Path */}
+                        {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
+                        filter.column === 'url_path' && (
+                          <div className="mt-3 w-full">
                             <UNSAFE_Combobox
                               label="URL-stier"
                               description="Velg en eller flere URL-stier"
@@ -808,318 +839,48 @@ const ChartFilters = ({
                                 label: path,
                                 value: path
                               }))}
-                              selectedOptions={stagingFilter.multipleValues?.map(v => v || '') || 
-                                              (stagingFilter.value ? [stagingFilter.value] : [])}
+                              selectedOptions={filter.multipleValues?.map(v => v || '') || 
+                                              (filter.value ? [filter.value] : [])}
                               onToggleSelected={(option, isSelected) => {
                                 if (option) {
-                                  const currentValues = stagingFilter.multipleValues || 
-                                                      (stagingFilter.value ? [stagingFilter.value] : []);
+                                  const currentValues = filter.multipleValues || 
+                                                      (filter.value ? [filter.value] : []);
                                   const newValues = isSelected 
                                     ? [...currentValues, option]
                                     : currentValues.filter(val => val !== option);
                                   
-                                  const newOperator = newValues.length > 1 ? 'IN' : stagingFilter.operator;
+                                  // Always set operator to IN when there are multiple values
+                                  const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
                                   
-                                  setStagingFilter({
-                                    ...stagingFilter,
+                                  updateFilter(index, { 
                                     multipleValues: newValues.length > 0 ? newValues : undefined,
                                     value: newValues.length > 0 ? newValues[0] : '',
                                     operator: newOperator
                                   });
                                 }
-                              }}
+                              }}  
                               isMultiSelect
                               size="small"
                               clearButton
                               allowNewValues
                             />
-                          )}
-
-                          {/* Default text field for other columns */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column !== 'event_name' && 
-                          stagingFilter.column !== 'created_at' &&
-                          stagingFilter.column !== 'event_type' && 
-                          !shouldUseCombobox(stagingFilter.column) && (
-                            <TextField
-                              label="Verdi"
-                              value={stagingFilter.value || ''}
-                              onChange={(e) => setStagingFilter({ ...stagingFilter, value: e.target.value })}
-                              size="small"
-                            />
-                          )}
-                        </div>
-
-                        {/* Action buttons at the bottom */}
-                        <div className="mt-4 flex gap-2">
-                          <Button
-                            variant="primary"
-                            size="small"
-                            onClick={commitStagingFilter}
-                          >
-                            Legg til
-                          </Button>
-                          <Button
-                            variant="tertiary-neutral"
-                            size="small"
-                            onClick={() => setStagingFilter(null)}
-                          >
-                            Avbryt
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-          {/* Static Filters in ExpansionCard */}
-          <div className="mt-4">
-            <ExpansionCard
-              aria-label="Aktive filtre"
-              defaultOpen={false}
-              size="small"
-            >
-              <ExpansionCard.Header>
-                <ExpansionCard.Title as="h3" size="small">
-                  Aktive filtre ({filters.length})
-                </ExpansionCard.Title>
-              </ExpansionCard.Header>
-              <ExpansionCard.Content>
-              {filters.length === 0 && (
-                <div className="text-sm text-gray-600">
-                  Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
-                </div>
-              )}
-
-                {filters.length > 0 && (
-                  <div className="space-y-3">
-                    {filters.map((filter, index) => (
-                      <div key={index} className="bg-gray-50 p-4 rounded-md border shadow-sm">
-                        <div className="flex justify-between">
-                          <div className="flex-1">
-                            <div className="flex gap-2 items-end">
-                              <Select
-                                label="Kolonne"
-                                value={filter.column}
-                                onChange={(e) => updateFilter(index, { column: e.target.value, operator: '=', value: '' })}
-                                size="small"
-                              >
-                                {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
-                                  <optgroup key={groupKey} label={group.label}>
-                                    {group.columns.map(col => (
-                                      <option key={col.value} value={col.value}>
-                                        {col.label}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ))}
-                                {parameters.length > 0 && (
-                                  <optgroup label="Egendefinerte">
-                                    {uniqueParameters.map(param => (
-                                      <option 
-                                        key={`param_${param.key}`} 
-                                        value={`param_${getCleanParamName(param)}`}
-                                      >
-                                        {getParamDisplayName(param)}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                              </Select>
-                              {/* Only exclude operator dropdown for created_at column */}
-                              {filter.column !== 'created_at' && (
-                                <Select
-                                  label="Operator"
-                                  value={filter.operator || '='}
-                                  onChange={(e) => updateFilter(index, { operator: e.target.value, value: '' })}
-                                  size="small"
-                                >
-                                  {OPERATORS.map(op => (
-                                    <option key={op.value} value={op.value}>
-                                      {op.label}
-                                    </option>
-                                  ))}
-                                </Select>
-                              )}
-                              {/* Special case for event_type - show dropdown instead of text field */}
-                              {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
-                              filter.column === 'event_type' && (
-                                <Select
-                                  label="Hendelsestype"
-                                  value={filter.value || ''}
-                                  onChange={(e) => updateFilter(index, { value: e.target.value })}
-                                  size="small"
-                                >
-                                  <option value="">Velg hendelsestype</option>
-                                  {EVENT_TYPES.map(type => (
-                                    <option key={type.value} value={type.value}>
-                                      {type.label}
-                                    </option>
-                                  ))}
-                                </Select>
-                              )}
-                              {/* Regular text field for all other columns except event_name and created_at */}
-                              {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
-                              filter.column !== 'event_name' && 
-                              filter.column !== 'created_at' &&
-                              filter.column !== 'event_type' && 
-                              !shouldUseCombobox(filter.column) && (
-                                <TextField
-                                  label="Verdi"
-                                  value={filter.value || ''}
-                                  onChange={(e) => updateFilter(index, { value: e.target.value })}
-                                  size="small"
-                                />
-                              )}
-                            </div>
-                            {/* Simplified Date Input for created_at */}
-                            {filter.column === 'created_at' && (
-                              <div className="mt-3">
-                                {filter.dateRangeType === 'preset' ? (
-                                  <div className="flex items-center">
-                                    <div className="text-sm text-blue-600 font-medium">
-                                      Bruker forhåndsdefinert periode: {" "}
-                                      {DATE_RANGE_SUGGESTIONS.find(dr => dr.sql === filter.value)?.label || 'Egendefinert'}
-                                    </div>
-                                    <Button 
-                                      variant="tertiary-neutral" 
-                                      size="small"
-                                      onClick={() => {
-                                        // Switch back to custom mode
-                                        setSelectedDateRange('');
-                                        const defaultDays = Math.min(7, maxDaysAvailable);
-                                        const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
-                                        updateFilter(index, {
-                                          value: sql,
-                                          dateRangeType: 'custom'
-                                        });
-                                        setCustomPeriodInputs(prev => ({
-                                          ...prev,
-                                          [index]: { amount: defaultDays.toString(), unit: 'DAY' }
-                                        }));
-                                      }}
-                                      className="ml-2"
-                                    >
-                                      Tilpass
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-end gap-2">
-                                    <TextField
-                                      label="Tid tilbake"
-                                      value={customPeriodInputs[index]?.amount || '7'}
-                                      onChange={(e) => updateCustomPeriod(index, 'amount', e.target.value)}
-                                      type="number"
-                                      min="1"
-                                      max={(customPeriodInputs[index]?.unit || 'DAY') === 'DAY' ? maxDaysAvailable : undefined}
-                                      size="small"
-                                      className="w-24"
-                                    />
-                                    <Select
-                                      label="Tidsenhet"
-                                      value={customPeriodInputs[index]?.unit || 'DAY'}
-                                      onChange={(e) => updateCustomPeriod(index, 'unit', e.target.value)}
-                                      size="small"
-                                    >
-                                      {TIME_UNITS.map(unit => (
-                                        <option key={unit.value} value={unit.value}>
-                                          {unit.label}
-                                        </option>
-                                      ))}
-                                    </Select>
-                                    <div className="text-sm self-center ml-2">
-                                      fra nåværende tidspunkt
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {/* Event name combobox on its own row */}
-                            {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && filter.column === 'event_name' && (
-                              <div className="mt-3">
-                                <UNSAFE_Combobox
-                                  label="Event navn"
-                                  options={availableEvents
-                                    .filter(event => event != null) // Filter out null/undefined events
-                                    .map(event => ({
-                                      label: event || '',
-                                      value: event || ''
-                                    }))}
-                                  selectedOptions={filter.multipleValues?.map(v => v || '') || 
-                                                  (filter.value ? [filter.value] : [])}
-                                  onToggleSelected={(option, isSelected) => {
-                                    if (option) {
-                                      const currentValues = filter.multipleValues || 
-                                                          (filter.value ? [filter.value] : []);
-                                      const newValues = isSelected 
-                                        ? [...currentValues, option]
-                                        : currentValues.filter(val => val !== option);
-                                      updateFilter(index, { 
-                                        multipleValues: newValues.length > 0 ? newValues : [],
-                                        value: newValues.length > 0 ? newValues[0] : '' 
-                                      });
-                                    }
-                                  }}  
-                                  isMultiSelect
-                                  size="small"
-                                  clearButton
-                                />
-                              </div>
-                            )}
-                            {/* Add combobox for URL Path */}
-                            {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
-                            filter.column === 'url_path' && (
-                              <div className="mt-3 w-full">
-                                <UNSAFE_Combobox
-                                  label="URL-stier"
-                                  description="Velg en eller flere URL-stier"
-                                  options={availablePaths.map(path => ({
-                                    label: path,
-                                    value: path
-                                  }))}
-                                  selectedOptions={filter.multipleValues?.map(v => v || '') || 
-                                                  (filter.value ? [filter.value] : [])}
-                                  onToggleSelected={(option, isSelected) => {
-                                    if (option) {
-                                      const currentValues = filter.multipleValues || 
-                                                          (filter.value ? [filter.value] : []);
-                                      const newValues = isSelected 
-                                        ? [...currentValues, option]
-                                        : currentValues.filter(val => val !== option);
-                                      
-                                      // Always set operator to IN when there are multiple values
-                                      const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
-                                      
-                                      updateFilter(index, { 
-                                        multipleValues: newValues.length > 0 ? newValues : undefined,
-                                        value: newValues.length > 0 ? newValues[0] : '',
-                                        operator: newOperator
-                                      });
-                                    }
-                                  }}  
-                                  isMultiSelect
-                                  size="small"
-                                  clearButton
-                                  allowNewValues
-                                />
-                              </div>
-                            )}
                           </div>
-                          <Button
-                            variant="tertiary-neutral"
-                            size="small"
-                            onClick={() => removeFilter(index)}
-                            className="ml-2 self-start"
-                          >
-                            Fjern
-                          </Button>
-                        </div>
+                        )}
                       </div>
-                    ))}
+                      <Button
+                        variant="tertiary-neutral"
+                        size="small"
+                        onClick={() => removeFilter(index)}
+                        className="ml-2 self-start"
+                      >
+                        Fjern
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </ExpansionCard.Content>
-            </ExpansionCard>
+                ))}
+              </div>
+            )}
+          
           </div>
         </div>
       </div>
