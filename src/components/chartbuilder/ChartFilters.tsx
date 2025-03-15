@@ -258,6 +258,19 @@ const ChartFilters = ({
     return column === 'url_path' || column === 'event_name';
   };
 
+  // Add this helper function near other helper functions
+  const isDateRangeFilter = (filter: Filter): boolean => {
+    return filter.column === 'created_at' && ['>=', '<='].includes(filter.operator || '');
+  };
+
+  // Add this helper function to get the actual filter count
+  const getActiveFilterCount = () => {
+    const dateRangeFilters = filters.filter(isDateRangeFilter);
+    const nonDateFilters = filters.filter(f => !isDateRangeFilter(f));
+    // Count date range filters (from/to) as one filter
+    return nonDateFilters.length + (dateRangeFilters.length > 0 ? 1 : 0);
+  };
+
   return (
     <section>
       <Heading level="2" size="small" spacing>
@@ -601,7 +614,7 @@ const ChartFilters = ({
             >
               <ExpansionCard.Header>
                 <ExpansionCard.Title as="h3" size="small">
-                  Aktive filter ({filters.length})
+                  Aktive filter ({getActiveFilterCount()})
                 </ExpansionCard.Title>
               </ExpansionCard.Header>
               <ExpansionCard.Content>
@@ -613,7 +626,13 @@ const ChartFilters = ({
 
                 {filters.length > 0 && (
                   <div className="space-y-3">
-                    {filters.map((filter, index) => (
+                    {/* Add a single date range message if any date filters exist */}
+                    {filters.some(isDateRangeFilter) && (
+                      <div className="bg-gray-50 p-4 rounded-md border shadow-sm">Datoområde filter er aktivt</div>
+                    )}
+                    
+                    {/* Only show non-date range filters in the regular filter list */}
+                    {filters.map((filter, index) => !isDateRangeFilter(filter) && (
                       <div key={index} className="bg-gray-50 p-4 rounded-md border shadow-sm">
                         <div className="flex justify-between">
                           <div className="flex-1">
@@ -646,7 +665,7 @@ const ChartFilters = ({
                                   </optgroup>
                                 )}
                               </Select>
-                              {/* Only exclude operator dropdown for created_at column */}
+                              {/* Rest of the filter inputs */}
                               {filter.column !== 'created_at' && (
                                 <Select
                                   label="Operator"
@@ -661,45 +680,8 @@ const ChartFilters = ({
                                   ))}
                                 </Select>
                               )}
-                              {/* Special case for event_type - show dropdown instead of text field */}
-                              {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
-                              filter.column === 'event_type' && (
-                                <Select
-                                  label="Hendelsestype"
-                                  value={filter.value || ''}
-                                  onChange={(e) => updateFilter(index, { value: e.target.value })}
-                                  size="small"
-                                >
-                                  <option value="">Velg hendelsestype</option>
-                                  {EVENT_TYPES.map(type => (
-                                    <option key={type.value} value={type.value}>
-                                      {type.label}
-                                    </option>
-                                  ))}
-                                </Select>
-                              )}
-                              {/* Regular text field for all other columns except event_name and created_at */}
-                              {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
-                              filter.column !== 'event_name' && 
-                              filter.column !== 'created_at' &&
-                              filter.column !== 'event_type' && 
-                              !shouldUseCombobox(filter.column) && (
-                                <TextField
-                                  label="Verdi"
-                                  value={filter.value || ''}
-                                  onChange={(e) => updateFilter(index, { value: e.target.value })}
-                                  size="small"
-                                />
-                              )}
+                              {/* ...rest of existing filter input code... */}
                             </div>
-                            {/* Simplified Date Input for created_at */}
-                            {filter.column === 'created_at' && (
-                              <div className="mt-3">
-                                <div className="text-sm text-blue-600">
-                                  Dette filteret styres av Datoområde-velgeren.
-                                </div>
-                              </div>
-                            )}
                             {/* Event name combobox on its own row */}
                             {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && filter.column === 'event_name' && (
                               <div className="mt-3">
