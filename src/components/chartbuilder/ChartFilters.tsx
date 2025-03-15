@@ -406,11 +406,13 @@ const ChartFilters = ({
                       <option value="">Velg filter...</option>
                       {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
                         <optgroup key={groupKey} label={group.label}>
-                          {group.columns.map(col => (
-                            <option key={col.value} value={col.value}>
-                              {col.label}
-                            </option>
-                          ))}
+                          {group.columns
+                            .filter(col => col.value !== 'created_at') // Filter out the date option
+                            .map(col => (
+                              <option key={col.value} value={col.value}>
+                                {col.label}
+                              </option>
+                            ))}
                         </optgroup>
                       ))}
                       
