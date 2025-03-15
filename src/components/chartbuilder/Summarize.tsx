@@ -312,7 +312,7 @@ const Summarize = ({
                 label="Alias (valgfritt)"
                 value={metric.alias || ''}
                 onChange={(e) => updateMetric(index, { alias: e.target.value })}
-                placeholder={`metric_${index + 1}`}
+                placeholder={`metrikk_${index + 1}`}
                 size="small"
               />
               
@@ -430,10 +430,10 @@ const Summarize = ({
               <optgroup label="Metrikker">
                 {metrics.map((metric, index) => (
                   <option 
-                    key={`metric_${index}`} 
-                    value={metric.alias || `metric_${index + 1}`}
+                    key={`metrikk_${index}`} 
+                    value={metric.alias || `metrikk_${index + 1}`}
                   >
-                    {metric.alias || `metric_${index + 1}`}
+                    {metric.alias || `metrikk_${index + 1}`}
                   </option>
                 ))}
               </optgroup>

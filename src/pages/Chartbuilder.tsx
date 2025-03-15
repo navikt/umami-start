@@ -6,18 +6,18 @@ import SQLPreview from '../components/chartbuilder/sqlpreview';
 import ChartFilters from '../components/chartbuilder/ChartFilters';
 import Summarize from '../components/chartbuilder/Summarize';
 import EventParameterSelector from '../components/chartbuilder/EventParameterSelector';
+import { FILTER_COLUMNS } from '../lib/constants';
 import { 
   Parameter, 
   Metric, 
   DateFormat, 
-  ColumnGroup,
   MetricOption,
   ColumnOption,
   ChartConfig,
   Filter
 } from '../types/chart';
 
-// Update your constants to use the new types
+// Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [
   { 
     label: 'År', 
@@ -55,54 +55,6 @@ const METRICS: MetricOption[] = [
   { label: 'Andel (%)', value: 'percentage' },
 ];
 
-const COLUMN_GROUPS: Record<string, ColumnGroup> = {
-  eventBasics: {
-    label: 'Basisdetaljer',
-    table: 'base_query',
-    columns: [
-      { label: 'Event ID', value: 'event_id' },
-      { label: 'Date / Created At', value: 'created_at' },
-      { label: 'Event Type', value: 'event_type' },
-      { label: 'Event Name', value: 'event_name' },
-      { label: 'Website ID', value: 'website_id' },
-      { label: 'Website Domain', value: 'website_domain' },
-      { label: 'Website Name', value: 'website_name' }
-    ]
-  },
-  pageDetails: {
-    label: 'Hendelsesdetaljer',
-    table: 'base_query',
-    columns: [
-      { label: 'Page Title', value: 'page_title' },
-      { label: 'URL Path', value: 'url_path' },
-      { label: 'URL Query', value: 'url_query' },
-      { label: 'URL Full Path', value: 'url_fullpath' },
-      { label: 'URL Full URL', value: 'url_fullurl' },
-      { label: 'Referrer Domain', value: 'referrer_domain' },
-      { label: 'Referrer Path', value: 'referrer_path' },
-      { label: 'Referrer Query', value: 'referrer_query' },
-      { label: 'Referrer Full Path', value: 'referrer_fullpath' },
-      { label: 'Referrer Full URL', value: 'referrer_fullurl' }
-    ]
-  },
-  visitorDetails: {
-    label: 'Brukerdetaljer',
-    table: 'session',
-    columns: [
-      { label: 'Visit ID', value: 'visit_id' },
-      { label: 'Session ID', value: 'session_id' },
-      { label: 'Browser', value: 'browser' },
-      { label: 'OS', value: 'os' },
-      { label: 'Device', value: 'device' },
-      { label: 'Screen', value: 'screen' },
-      { label: 'Language', value: 'language' },
-      { label: 'Country', value: 'country' },
-      { label: 'Region', value: 'subdivision1' },
-      { label: 'City', value: 'city' }
-    ]
-  }
-};
-
 // Add the sanitizeColumnName helper function BEFORE it's used
 const sanitizeColumnName = (key: string): string => {
   return key
@@ -119,13 +71,13 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
   const baseColumns: Record<string, Array<{label: string, value: string}>> = {
     count: [],
     distinct: [
-      { label: 'Event ID', value: 'event_id' },
-      { label: 'Session ID', value: 'session_id' },
-      { label: 'Visit ID', value: 'visit_id' },
-      { label: 'Browser', value: 'browser' },
-      { label: 'URL Path', value: 'url_path' },
+      { label: 'Hendelses-ID', value: 'event_id' },
+      { label: 'Person-ID', value: 'session_id' },
+      { label: 'Besøk-ID', value: 'visit_id' },
+      { label: 'Nettleser', value: 'browser' },
+      { label: 'URL-sti', value: 'url_path' },
       // Add more columns from COLUMN_GROUPS
-      ...Object.values(COLUMN_GROUPS).flatMap(group => group.columns)
+      ...Object.values(FILTER_COLUMNS).flatMap(group => group.columns)
     ],
     sum: [
       { label: 'Event Data (numeric)', value: 'event_data' },
@@ -141,9 +93,9 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
       { label: 'Created At', value: 'created_at' },
     ],
     percentage: [
-      // ONLY these 2 essential columns for percentages - nothing else
       { label: 'Personer', value: 'session_id' },
-      { label: 'Økter', value: 'visit_id' }
+      { label: 'Besøk', value: 'visit_id' },
+      { label: 'Hendelser', value: 'event_id' }
     ]
   };
 
@@ -525,7 +477,7 @@ const ChartsPage = () => {
         }
       } else {
         // Check if the field is a session field
-        const isSessionField = Object.values(COLUMN_GROUPS)
+        const isSessionField = Object.values(FILTER_COLUMNS)
           .find(group => group.table === 'session')
           ?.columns.some(col => col.value === field) || false;
 
@@ -553,13 +505,13 @@ const ChartsPage = () => {
 
     // Always add session join if selecting session columns
     const needsSessionTable = config.groupByFields.some(field => {
-      const isSessionField = Object.values(COLUMN_GROUPS)
+      const isSessionField = Object.values(FILTER_COLUMNS)
         .find(group => group.table === 'session')
         ?.columns.some(col => col.value === field) || false;
       return isSessionField;
     }) || config.metrics.some(metric => {
       if (!metric.column) return false;
-      const isSessionField = Object.values(COLUMN_GROUPS)
+      const isSessionField = Object.values(FILTER_COLUMNS)
         .find(group => group.table === 'session')
         ?.columns.some(col => col.value === metric.column) || false;
       return isSessionField;
@@ -727,7 +679,7 @@ const ChartsPage = () => {
           }
         } else if (!field.startsWith('param_')) {
           // Check if the field is a session field
-          const isSessionField = Object.values(COLUMN_GROUPS)
+          const isSessionField = Object.values(FILTER_COLUMNS)
             .find(group => group.table === 'session')
             ?.columns.some(col => col.value === field) || false;
 
@@ -755,7 +707,7 @@ const ChartsPage = () => {
         ? 'dato' 
         : metricByAlias 
           ? `\`${config.orderBy.column}\`` // Use backticks for quoted identifiers
-          : config.orderBy.column.startsWith('metric_') || 
+          : config.orderBy.column.startsWith('metrikk_') || 
             config.orderBy.column.startsWith('andel') || 
             config.orderBy.column.includes('`')
             ? `\`${config.orderBy.column.replace(/`/g, '')}\`` // Clean and quote
@@ -796,8 +748,8 @@ const ChartsPage = () => {
       return getMetricSQLByType(metric.function, metric.column, metric.alias);
     }
   
-    // Always use metric_N format for consistency
-    const defaultAlias = `metric_${index + 1}`;
+    // Always use metrikk_N format for consistency
+    const defaultAlias = `metrikk_${index + 1}`;
     return getMetricSQLByType(metric.function, metric.column, defaultAlias);
   };
 
@@ -859,7 +811,7 @@ const ChartsPage = () => {
       case 'percentage':
         if (column) {
           // Check if it's a visitor detail column (session table)
-          const isVisitorDetail = COLUMN_GROUPS.visitorDetails.columns.some(c => c.value === column);
+          const isVisitorDetail = FILTER_COLUMNS.visitorDetails.columns.some(c => c.value === column);
           
           // Fix ambiguous column references for session_id
           if (column === 'session_id') {
@@ -930,7 +882,7 @@ const ChartsPage = () => {
     const tables = { session: false, eventData: false };
     
     // Check if any session columns are used in grouping, filtering or metrics
-    const sessionColumns = Object.values(COLUMN_GROUPS)
+    const sessionColumns = Object.values(FILTER_COLUMNS)
       .find(group => group.table === 'session')
       ?.columns.map(col => col.value) || [];
     
@@ -1040,7 +992,7 @@ const ChartsPage = () => {
                       paramAggregation={config.paramAggregation}
                       METRICS={METRICS}
                       DATE_FORMATS={DATE_FORMATS}
-                      COLUMN_GROUPS={COLUMN_GROUPS}
+                      COLUMN_GROUPS={FILTER_COLUMNS}
                       getMetricColumns={getMetricColumns}
                       sanitizeColumnName={sanitizeColumnName}
                       updateMetric={(index, updates) => updateMetric(index, updates)}

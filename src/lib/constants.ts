@@ -1,44 +1,47 @@
 export const FILTER_COLUMNS = {
   eventBasics: {
     label: 'Basisdetaljer',
+    table: 'base_query',
     columns: [
-      { label: 'Event Name', value: 'event_name' },
-      { label: 'Event Type', value: 'event_type' },
-      { label: 'Event ID', value: 'event_id' },
-      { label: 'Date / Created At', value: 'created_at' },
-      { label: 'Website ID', value: 'website_id' },
-      { label: 'Website Domain', value: 'website_domain' },
-      { label: 'Website Name', value: 'website_name' }
+      { label: 'Hendelsesnavn', value: 'event_name' },
+      { label: 'Hendelsestype', value: 'event_type' },
+      { label: 'Hendelses-ID', value: 'event_id' },
+      { label: 'Dato', value: 'created_at' },
+      { label: 'Nettside-ID', value: 'website_id' },
+      { label: 'Nettside-domene', value: 'website_domain' },
+      { label: 'Nettsidenavn', value: 'website_name' }
     ]
   },
   pageDetails: {
-    label: 'Hendelsesdetaljer',
+    label: 'Sidedetaljer',
+    table: 'base_query',
     columns: [
-      { label: 'URL Path', value: 'url_path' },
-      { label: 'URL Query', value: 'url_query' },
-      { label: 'URL Full Path', value: 'url_fullpath' },
-      { label: 'URL Full URL', value: 'url_fullurl' },
-      { label: 'Page Title', value: 'page_title' },
-      { label: 'Referrer Domain', value: 'referrer_domain' },
-      { label: 'Referrer Path', value: 'referrer_path' },
-      { label: 'Referrer Query', value: 'referrer_query' },
-      { label: 'Referrer Full Path', value: 'referrer_fullpath' },
-      { label: 'Referrer Full URL', value: 'referrer_fullurl' }
+      { label: 'URL-sti', value: 'url_path' },
+      { label: 'URL-spørring', value: 'url_query' },
+      { label: 'URL fullstendig sti', value: 'url_fullpath' },
+      { label: 'URL fullstendig adresse', value: 'url_fullurl' },
+      { label: 'Sidetittel', value: 'page_title' },
+      { label: 'Henvisningsdomene', value: 'referrer_domain' },
+      { label: 'Henvisningssti', value: 'referrer_path' },
+      { label: 'Henvisningsspørring', value: 'referrer_query' },
+      { label: 'Henvisning fullstendig sti', value: 'referrer_fullpath' },
+      { label: 'Henvisning fullstendig URL', value: 'referrer_fullurl' }
     ]
   },
   visitorDetails: {
-    label: 'Brukerdetaljer',
+    label: 'Besøksdetaljer',
+    table: 'session',
     columns: [
-      { label: 'Session ID', value: 'session_id' },
-      { label: 'Visit ID', value: 'visit_id' },
-      { label: 'Browser', value: 'browser' },
-      { label: 'OS', value: 'os' },
-      { label: 'Device', value: 'device' },
-      { label: 'Screen', value: 'screen' },
-      { label: 'Language', value: 'language' },
-      { label: 'Country', value: 'country' },
+      { label: 'Besøk-ID', value: 'session_id' },
+      { label: 'Person-ID', value: 'visit_id' },
+      { label: 'Nettleser', value: 'browser' },
+      { label: 'Operativsystem', value: 'os' },
+      { label: 'Enhet', value: 'device' },
+      { label: 'Skjerm', value: 'screen' },
+      { label: 'Språk', value: 'language' },
+      { label: 'Land', value: 'country' },
       { label: 'Region', value: 'subdivision1' },
-      { label: 'City', value: 'city' }
+      { label: 'By', value: 'city' }
     ]
   }
 };
