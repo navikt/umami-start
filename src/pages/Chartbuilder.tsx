@@ -821,15 +821,10 @@ const ChartsPage = () => {
         case 'max':
           return `MAX(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
         case 'percentage':
-          // Use 10.0 instead of 100.0 to compensate for Metabase's display behavior
+          // Use window function for more accurate percentages
           return `ROUND(
-            10.0 * COUNT(*) / (
-              SELECT COUNT(*) 
-              FROM base_query
-              LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS all_params
-                ON base_query.event_id = all_params.website_event_id
-                AND SUBSTR(all_params.data_key, INSTR(all_params.data_key, '.') + 1) = '${paramKey}'
-              WHERE all_params.string_value IS NOT NULL
+            100.0 * COUNT(*) / (
+              SUM(COUNT(*)) OVER()
             )
           , 2) as ${quotedAlias}`;
         default:
@@ -857,19 +852,17 @@ const ChartsPage = () => {
           const isVisitorDetail = COLUMN_GROUPS.visitorDetails.columns.some(c => c.value === column);
           
           if (isVisitorDetail) {
-            // For visitor details, use 10.0 instead of 100.0
+            // For visitor details, use window function for accurate percentages
             return `ROUND(
-              10.0 * COUNT(*) / (
-                SELECT COUNT(DISTINCT base_query.session_id)
-                FROM base_query 
+              100.0 * COUNT(*) / (
+                SUM(COUNT(*)) OVER()
               )
             , 2) as ${quotedAlias}`;
           } else {
-            // For other columns, use 10.0 instead of 100.0
+            // For other columns, use window function for accurate percentages
             return `ROUND(
-              10.0 * COUNT(*) / (
-                SELECT COUNT(*)
-                FROM base_query
+              100.0 * COUNT(*) / (
+                SUM(COUNT(*)) OVER()
               )
             , 2) as ${quotedAlias}`;
           }

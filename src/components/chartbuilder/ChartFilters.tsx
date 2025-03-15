@@ -82,18 +82,22 @@ const ChartFilters = ({
   
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
-    // If user has selected a custom event filter, filter out pageview events
-    // Pageview events typically start with "pageview" or contain "/"
-    return availableEvents.filter(event => 
-      !event.toLowerCase().startsWith('pageview') && 
-      !event.includes('/')
-    );
+    // Filter out null or undefined events and then filter for custom events
+    return availableEvents
+      .filter(event => event != null) // Filter out null/undefined events
+      .filter(event => 
+        !event.toLowerCase().startsWith('pageview') && 
+        !event.includes('/')
+      );
   }, [availableEvents]);
 
   // Update the availablePaths logic to better detect pageview paths
   const availablePaths = useMemo(() => {
     const paths = new Set<string>();
     availableEvents.forEach(event => {
+      // Skip null events
+      if (event == null) return;
+      
       // Check if it's a pageview event (starts with '/' or contains 'pageview')
       if (event.startsWith('/')) {
         paths.add(event);
@@ -796,10 +800,12 @@ const ChartFilters = ({
                           <div className="mt-3">
                             <UNSAFE_Combobox
                               label="Event navn"
-                              options={availableEvents.map(event => ({
-                                label: event || '',
-                                value: event || ''
-                              }))}
+                              options={availableEvents
+                                .filter(event => event != null) // Filter out null/undefined events
+                                .map(event => ({
+                                  label: event || '',
+                                  value: event || ''
+                                }))}
                               selectedOptions={filter.multipleValues?.map(v => v || '') || 
                                               (filter.value ? [filter.value] : [])}
                               onToggleSelected={(option, isSelected) => {
