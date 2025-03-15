@@ -1029,7 +1029,7 @@ const ChartsPage = () => {
                   {/* Summarize section with new parameter aggregation toggle */}
                   <section>
                     <Heading level="2" size="small" spacing>
-                      Oppsummering
+                      Tilpass visning
                     </Heading>
                     <Summarize
                       metrics={config.metrics}

@@ -85,13 +85,13 @@ const Summarize = ({
           Gruppering
         </Heading>
         <p className="text-sm text-gray-600 mb-4">
-          Velg hvordan dataene skal grupperes.
+          Du kan legge til en eller flere grupperinger, disse vises som kolonner i tabeller.
         </p>
         
         <div className="space-y-4 mb-6">
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
             <Select
-              label="Legg til gruppering"
+              label="Grupper etter"
               onChange={(e) => {
                 if (e.target.value) {
                   addGroupByField(e.target.value);
@@ -101,7 +101,7 @@ const Summarize = ({
               size="small"
               className="flex-grow"
             >
-              <option value="">Velg felt...</option>
+              <option value="">Velg gruppering...</option>
               {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
                 <optgroup key={groupKey} label={group.label}>
                   {group.columns
@@ -214,8 +214,8 @@ const Summarize = ({
         <Heading level="3" size="xsmall" spacing>
           Beregninger
         </Heading>
-        <p className="text-sm text-gray-600 mb-4">
-          Velg hvilke beregninger du ønsker å inkludere.
+         <p className="text-sm text-gray-600 mb-4">
+          Du kan legge til en eller flere beregninger, disse vises som kolonner i tabeller.
         </p>
         
         <div className="space-y-4 mb-6">
@@ -232,7 +232,7 @@ const Summarize = ({
               size="small"
               className="flex-grow"
             >
-              <option value="">Velg beregning...</option>
+              <option value="">Velg utregning...</option>
               {METRICS.map(metric => (
                 <option key={metric.value} value={metric.value}>
                   {metric.label}
@@ -393,7 +393,7 @@ const Summarize = ({
           Sortering
         </Heading>
         <p className="text-sm text-gray-600 mb-4">
-          Velg hvordan dataene skal sorteres.
+          Standard sorterer etter den første kolonnen i synkende rekkefølge.
         </p>
         
         <div className="space-y-4">

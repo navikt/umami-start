@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Heading, Link, CopyButton, Button, Alert } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink } from 'lucide-react';
 
 interface SQLPreviewProps {
   sql: string;
