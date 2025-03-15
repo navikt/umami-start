@@ -5,6 +5,28 @@ import { useState, useEffect } from 'react';
 
 // Date range suggestions for quick date filtering
 const DATE_RANGE_SUGGESTIONS = [
+{
+    id: 'today',
+    label: 'I dag',
+    getRange: () => {
+        const today = new Date();
+        return {
+        from: today,
+        to: today
+        };
+    }
+    },
+    {
+    id: 'yesterday',
+    label: 'I går',
+    getRange: () => {
+        const yesterday = subDays(new Date(), 1);
+        return {
+        from: yesterday,
+        to: yesterday
+        };
+    }
+    },
   {
     id: 'thismonth',
     label: 'Denne måneden',
