@@ -1,16 +1,8 @@
 import { Button, ExpansionCard, Heading, Select, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState  } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
-
-// Time unit options for custom period
-const TIME_UNITS = [
-  { label: 'Minutter', value: 'MINUTE' },
-  { label: 'Timer', value: 'HOUR' },
-  { label: 'Dager', value: 'DAY' },
-  { label: 'Uker', value: 'WEEK' },
-  { label: 'Måneder', value: 'MONTH' }
-];
+import DateRangePicker from './DateRangePicker';
 
 // Event type options for the dropdown
 const EVENT_TYPES = [
@@ -32,25 +24,6 @@ const FILTER_SUGGESTIONS = [
     filters: [{ column: 'event_type', operator: '=', value: '2' }],
     description: 'Skuler sidevisninger'
   },
-];
-
-// Date range suggestions for quick date filtering
-const DATE_RANGE_SUGGESTIONS = [
-  {
-    id: 'thismonth',
-    label: 'Denne måneden',
-    sql: `TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), MONTH))`
-  },
-  {
-    id: 'lastmonth',
-    label: 'Forrige måned',
-    sql: `TIMESTAMP(DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH))`
-  },
-  {
-    id: 'thisyear',
-    label: 'I år',
-    sql: `TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), YEAR))`
-  }
 ];
 
 // Modified interface to receive date range info
@@ -122,89 +95,6 @@ const ChartFilters = ({
     if (stagingFilter) {
       setFilters([...filters, stagingFilter]);
       setStagingFilter(null);
-    }
-  };
-
-  // Find the date filter index in the filters array
-  const getDateFilterIndex = (): number => {
-    return filters.findIndex(filter => filter.column === 'created_at');
-  };
-
-  // Apply a date range filter
-  const applyDateRange = (rangeId: string) => {
-    if (rangeId === 'all') {
-      // "Hele perioden" option - remove any existing date filters
-      setSelectedDateRange('all');
-      const newFilters = filters.filter(f => f.column !== 'created_at');
-      setFilters(newFilters);
-      return;
-    }
-    
-    if (selectedDateRange === rangeId) {
-      // Deselect current date range - go back to "Hele perioden"
-      setSelectedDateRange('all');
-      
-      // Remove the date filter
-      const newFilters = filters.filter(f => f.column !== 'created_at');
-      setFilters(newFilters);
-    } else {
-      // Select the new date range
-      setSelectedDateRange(rangeId);
-      
-      if (rangeId === 'custom') {
-        // Special case for custom period
-        const dateFilterIndex = getDateFilterIndex();
-        const defaultDays = Math.min(7, maxDaysAvailable);
-        const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
-        
-        if (dateFilterIndex >= 0) {
-          // Update existing date filter
-          updateFilter(dateFilterIndex, {
-            operator: '>=',
-            value: sql,
-            dateRangeType: 'custom'
-          });
-          setCustomPeriodInputs(prev => ({
-            ...prev,
-            [dateFilterIndex]: { amount: defaultDays.toString(), unit: 'DAY' }
-          }));
-        } else {
-          // Add new date filter
-          const newFilter = {
-            column: 'created_at',
-            operator: '>=',
-            value: sql,
-            dateRangeType: 'custom'
-          };
-          setFilters([...filters, newFilter]);
-          
-          // Initialize custom period inputs for the new filter
-          // This will be picked up by useEffect
-        }
-      } else {
-        // Regular preset date range
-        const dateRange = DATE_RANGE_SUGGESTIONS.find(dr => dr.id === rangeId);
-        if (!dateRange) return;
-        
-        const dateFilterIndex = getDateFilterIndex();
-        
-        if (dateFilterIndex >= 0) {
-          // Update existing date filter
-          updateFilter(dateFilterIndex, {
-            operator: '>=',
-            value: dateRange.sql,
-            dateRangeType: 'preset'
-          });
-        } else {
-          // Add new date filter
-          setFilters([...filters, { 
-            column: 'created_at', 
-            operator: '>=', 
-            value: dateRange.sql,
-            dateRangeType: 'preset'
-          }]);
-        }
-      }
     }
   };
 
@@ -363,103 +253,6 @@ const ChartFilters = ({
     });
   }, [parameters]);
 
-  // Initialize custom period for created_at filters
-  useEffect(() => {
-    filters.forEach((filter, index) => {
-      if (filter.column === 'created_at' && !customPeriodInputs[index]) {
-        // If it's a preset date range, find and select it
-        if (filter.dateRangeType === 'preset') {
-          const matchingRange = DATE_RANGE_SUGGESTIONS.find(dr => dr.sql === filter.value);
-          if (matchingRange) {
-            setSelectedDateRange(matchingRange.id);
-            return;
-          }
-        }
-        
-        // Set a sensible default - 7 days or maxDaysAvailable, whichever is smaller
-        const defaultDays = Math.min(30, maxDaysAvailable);
-        setCustomPeriodInputs(prev => ({
-          ...prev,
-          [index]: { amount: defaultDays.toString(), unit: 'DAY' }
-        }));
-        // Set initial SQL value if not already set
-        if (!filter.value || !filter.operator) {
-          const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
-          updateFilter(index, {
-            operator: '>=', // Default to >= for date filters
-            value: sql,
-            dateRangeType: 'custom'
-          });
-        }
-      }
-    });
-  }, [filters, maxDaysAvailable]);
-
-  // Update custom period values
-  const updateCustomPeriod = (index: number, field: 'amount' | 'unit', value: string) => {
-    // Clear selected date range when using custom period
-    setSelectedDateRange('');
-    
-    const currentValues = customPeriodInputs[index] || { amount: '7', unit: 'DAY' };
-    const newValues = { ...currentValues, [field]: value };
-    setCustomPeriodInputs({
-      ...customPeriodInputs,
-      [index]: newValues
-    });
-    
-    // Also update the SQL in the filter
-    const amount = parseInt(newValues.amount) || 1;
-    let sql;
-    
-    // Handle different time units - TIMESTAMP_ADD doesn't support WEEK and MONTH
-    switch(newValues.unit) {
-      case 'WEEK':
-        // Convert weeks to days (7 days per week)
-        sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount * 7} DAY)`;
-        break;
-      case 'MONTH':
-        // Use DATE_ADD and convert to TIMESTAMP for consistent typingent typing
-        sql = `TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL ${amount} MONTH))`;
-        break;
-      default:
-        // MINUTE, HOUR, DAY are directly supported by TIMESTAMP_ADD
-        sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${amount} ${newValues.unit})`;
-    }
-    
-    updateFilter(index, {
-      value: sql,
-      dateRangeType: 'custom'
-    });
-  };
-
-  // Add helper to check if custom period is active
-  const isCustomPeriodActive = (): boolean => {
-    return filters.some(filter => 
-      filter.column === 'created_at' && 
-      filter.dateRangeType === 'custom'
-    );
-  };
-
-  // Convert max days available to a specific date
-  const getStartDateDisplay = (): string => {
-    if (!maxDaysAvailable) return 'Velg nettside for å se tilgjengelig data.';
-    
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - maxDaysAvailable);
-    
-    // Format date as DD.MM.YYYY (Norwegian format)
-    const day = String(startDate.getDate()).padStart(2, '0');
-    const month = String(startDate.getMonth() + 1).padStart(2, '0');
-    const year = startDate.getFullYear();
-    
-    return `Data er tilgjengelig fra ${day}.${month}.${year} til i dag.`;
-  };
-
-  // Update to check if any date filter exists
-  const hasDateFilter = (): boolean => {
-    return filters.some(filter => filter.column === 'created_at');
-  };
-
   // Add this helper to check if filter should use the combobox interface
   const shouldUseCombobox = (column: string): boolean => {
     return column === 'url_path' || column === 'event_name';
@@ -569,89 +362,16 @@ const ChartFilters = ({
             )}
           </div>
 
-          {/* Date Range Quick Picker */}
-          <div className="mb-4">
-            <Heading level="3" size="xsmall" spacing>
-              Datoområde
-            </Heading>
-            
-            <div className="flex flex-wrap gap-2 mt-2">
-              {/* Add "Hele perioden" button as the first option */}
-              <button 
-                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                  !hasDateFilter() || selectedDateRange === 'all'
-                    ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
-                }`}
-                onClick={() => applyDateRange('all')}
-              >
-                Alt
-              </button>
-              {DATE_RANGE_SUGGESTIONS.map((dateRange) => (
-                <button
-                  key={dateRange.id}
-                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                    selectedDateRange === dateRange.id 
-                      ? 'bg-blue-600 text-white border-blue-700' 
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                  }`}
-                  onClick={() => applyDateRange(dateRange.id)}
-                >
-                  {dateRange.label}
-                </button>
-              ))}
-              <button 
-                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                  isCustomPeriodActive() 
-                    ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                }`}
-                onClick={() => applyDateRange('custom')}
-              >
-                Egendefinert
-              </button>
-            </div>
-            
-            {/* Show info about available date range with actual date */}
-            <div className="mt-2 pb-1 text-xs text-gray-600">
-              {getStartDateDisplay()}
-            </div>
-
-            {/* Show custom period inputs immediately when active */}
-            {isCustomPeriodActive() && filters.map((filter, index) => (
-              filter.column === 'created_at' && (
-                <div key={index} className="mt-5">
-                  <div className="flex items-end gap-2">
-                    <TextField
-                      label="Tid tilbake"
-                      value={customPeriodInputs[index]?.amount || '7'}
-                      onChange={(e) => updateCustomPeriod(index, 'amount', e.target.value)}
-                      type="number"
-                      min="1"
-                      max={(customPeriodInputs[index]?.unit || 'DAY') === 'DAY' ? maxDaysAvailable : undefined}
-                      size="small"
-                      className="w-24"
-                    />
-                    <Select
-                      label="Tidsenhet"
-                      value={customPeriodInputs[index]?.unit || 'DAY'}
-                      onChange={(e) => updateCustomPeriod(index, 'unit', e.target.value)}
-                      size="small"
-                    >
-                      {TIME_UNITS.map(unit => (
-                        <option key={unit.value} value={unit.value}>
-                          {unit.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <div className="text-sm self-center ml-2">
-                      fra nåværende tidspunkt
-                    </div>
-                  </div>
-                </div>
-              )
-            ))}
-          </div>
+          {/* Replace the date range section with the new component */}
+          <DateRangePicker
+            filters={filters}
+            setFilters={setFilters}
+            maxDaysAvailable={maxDaysAvailable}
+            selectedDateRange={selectedDateRange}
+            setSelectedDateRange={setSelectedDateRange}
+            customPeriodInputs={customPeriodInputs}
+            setCustomPeriodInputs={setCustomPeriodInputs}
+          />
 
                 <div>
                 <Heading level="3" size="xsmall" spacing className='mt-2'>
@@ -975,63 +695,9 @@ const ChartFilters = ({
                             {/* Simplified Date Input for created_at */}
                             {filter.column === 'created_at' && (
                               <div className="mt-3">
-                                {filter.dateRangeType === 'preset' ? (
-                                  <div className="flex items-center">
-                                    <div className="text-sm text-blue-600 font-medium">
-                                      Bruker forhåndsdefinert periode: {" "}
-                                      {DATE_RANGE_SUGGESTIONS.find(dr => dr.sql === filter.value)?.label || 'Egendefinert'}
-                                    </div>
-                                    <Button 
-                                      variant="tertiary-neutral" 
-                                      size="small"
-                                      onClick={() => {
-                                        // Switch back to custom mode
-                                        setSelectedDateRange('');
-                                        const defaultDays = Math.min(7, maxDaysAvailable);
-                                        const sql = `TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL -${defaultDays} DAY)`;
-                                        updateFilter(index, {
-                                          value: sql,
-                                          dateRangeType: 'custom'
-                                        });
-                                        setCustomPeriodInputs(prev => ({
-                                          ...prev,
-                                          [index]: { amount: defaultDays.toString(), unit: 'DAY' }
-                                        }));
-                                      }}
-                                      className="ml-2"
-                                    >
-                                      Tilpass
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-end gap-2">
-                                    <TextField
-                                      label="Tid tilbake"
-                                      value={customPeriodInputs[index]?.amount || '7'}
-                                      onChange={(e) => updateCustomPeriod(index, 'amount', e.target.value)}
-                                      type="number"
-                                      min="1"
-                                      max={(customPeriodInputs[index]?.unit || 'DAY') === 'DAY' ? maxDaysAvailable : undefined}
-                                      size="small"
-                                      className="w-24"
-                                    />
-                                    <Select
-                                      label="Tidsenhet"
-                                      value={customPeriodInputs[index]?.unit || 'DAY'}
-                                      onChange={(e) => updateCustomPeriod(index, 'unit', e.target.value)}
-                                      size="small"
-                                    >
-                                      {TIME_UNITS.map(unit => (
-                                        <option key={unit.value} value={unit.value}>
-                                          {unit.label}
-                                        </option>
-                                      ))}
-                                    </Select>
-                                    <div className="text-sm self-center ml-2">
-                                      fra nåværende tidspunkt
-                                    </div>
-                                  </div>
-                                )}
+                                <div className="text-sm text-blue-600">
+                                  Dette filteret styres av Datoområde-velgeren.
+                                </div>
                               </div>
                             )}
                             {/* Event name combobox on its own row */}
