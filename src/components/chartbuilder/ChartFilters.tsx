@@ -377,7 +377,7 @@ const ChartFilters = ({
         }
         
         // Set a sensible default - 7 days or maxDaysAvailable, whichever is smaller
-        const defaultDays = Math.min(7, maxDaysAvailable);
+        const defaultDays = Math.min(30, maxDaysAvailable);
         setCustomPeriodInputs(prev => ({
           ...prev,
           [index]: { amount: defaultDays.toString(), unit: 'DAY' }
