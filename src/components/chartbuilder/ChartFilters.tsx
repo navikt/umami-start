@@ -363,6 +363,7 @@ const ChartFilters = ({
                     }
                   }}
                   isMultiSelect
+                  allowNewValues
                   size="small"
                   clearButton
                 />
