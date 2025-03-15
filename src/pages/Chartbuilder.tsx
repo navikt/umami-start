@@ -76,7 +76,7 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
       { label: 'Besøk-ID', value: 'visit_id' },
       { label: 'Nettleser', value: 'browser' },
       { label: 'URL-sti', value: 'url_path' },
-      // Add more columns from COLUMN_GROUPS
+      // Add more columns from FILTER_COLUMNS
       ...Object.values(FILTER_COLUMNS).flatMap(group => group.columns)
     ],
     sum: [
@@ -95,7 +95,8 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
     percentage: [
       { label: 'Personer', value: 'session_id' },
       { label: 'Besøk', value: 'visit_id' },
-      { label: 'Hendelser', value: 'event_id' }
+      { label: 'Hendelser', value: 'event_id' },
+      { label: 'Rader', value: 'alle_rader_prosent' }
     ]
   };
 
@@ -616,9 +617,13 @@ const ChartsPage = () => {
         const nonParamMetrics = percentageMetrics.filter(m => !m.column?.startsWith('param_'));
         
         if (nonParamMetrics.length > 0) {
-          const whereClause = nonParamMetrics.map(m => 
-            `base_query.${m.column} IS NOT NULL`
-          ).join(' AND ');
+          const whereClause = nonParamMetrics.map(m => {
+            // Special case for alle_rader_prosent which is not an actual column
+            if (m.column === 'alle_rader_prosent') {
+              return `base_query.event_id IS NOT NULL`;
+            }
+            return `base_query.${m.column} IS NOT NULL`;
+          }).join(' AND ');
           
           if (parameters.length > 0 && filters.some(f => f.column.startsWith('param_'))) {
             // Already has a WHERE clause for parameters
@@ -810,33 +815,30 @@ const ChartsPage = () => {
         return column ? `MAX(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'percentage':
         if (column) {
-          // Check if it's a visitor detail column (session table)
-          const isVisitorDetail = FILTER_COLUMNS.visitorDetails.columns.some(c => c.value === column);
-          
-          // Fix ambiguous column references for session_id
-          if (column === 'session_id') {
-            return `ROUND(
-              100.0 * COUNT(*) / (
-                SUM(COUNT(*)) OVER()
-              )
-            , 2) as ${quotedAlias}`;
-          } else if (isVisitorDetail) {
-            // For visitor details
-            return `ROUND(
-              100.0 * COUNT(*) / (
-                SUM(COUNT(*)) OVER()
-              )
-            , 2) as ${quotedAlias}`;
-          } else {
-            // For other columns
+          // Special case for the "Rader" (all rows percentage)
+          // This is a special key, not an actual column name
+          if (column === 'alle_rader_prosent') {
             return `ROUND(
               100.0 * COUNT(*) / (
                 SUM(COUNT(*)) OVER()
               )
             , 2) as ${quotedAlias}`;
           }
+          
+          // For specific columns (session_id, visit_id, event_id), use COUNT(DISTINCT)
+          // This ensures we're calculating percentages based on unique entities
+          return `ROUND(
+            100.0 * COUNT(DISTINCT base_query.${column}) / (
+              SUM(COUNT(DISTINCT base_query.${column})) OVER()
+            )
+          , 2) as ${quotedAlias}`;
         }
-        return `COUNT(*) as ${quotedAlias}`;
+        // Default percentage calculation if no column specified
+        return `ROUND(
+          100.0 * COUNT(*) / (
+            SUM(COUNT(*)) OVER()
+          )
+        , 2) as ${quotedAlias}`;
       default:
         return `COUNT(*) as ${quotedAlias}`;
     }
