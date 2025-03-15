@@ -531,7 +531,13 @@ const ChartsPage = () => {
 
         // Use s. prefix for session fields, base_query. for others
         const tablePrefix = isSessionField ? 's' : 'base_query';
-        selectClauses.add(`${tablePrefix}.${field}`);
+        
+        // Special case for session_id which exists in both tables
+        if (field === 'session_id') {
+          selectClauses.add(`base_query.${field}`);
+        } else {
+          selectClauses.add(`${tablePrefix}.${field}`);
+        }
       }
     });
 
@@ -837,7 +843,11 @@ const ChartsPage = () => {
       case 'count':
         return `COUNT(*) as ${quotedAlias}`;
       case 'distinct':
-        return `COUNT(DISTINCT ${column || 'session_id'}) as ${quotedAlias}`;
+        // Fix ambiguous column reference by explicitly specifying the table
+        if (column === 'session_id') {
+          return `COUNT(DISTINCT base_query.session_id) as ${quotedAlias}`;
+        }
+        return `COUNT(DISTINCT ${column || 'base_query.session_id'}) as ${quotedAlias}`;
       case 'sum':
         return column ? `SUM(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'average':
@@ -851,15 +861,22 @@ const ChartsPage = () => {
           // Check if it's a visitor detail column (session table)
           const isVisitorDetail = COLUMN_GROUPS.visitorDetails.columns.some(c => c.value === column);
           
-          if (isVisitorDetail) {
-            // For visitor details, use window function for accurate percentages
+          // Fix ambiguous column references for session_id
+          if (column === 'session_id') {
+            return `ROUND(
+              100.0 * COUNT(*) / (
+                SUM(COUNT(*)) OVER()
+              )
+            , 2) as ${quotedAlias}`;
+          } else if (isVisitorDetail) {
+            // For visitor details
             return `ROUND(
               100.0 * COUNT(*) / (
                 SUM(COUNT(*)) OVER()
               )
             , 2) as ${quotedAlias}`;
           } else {
-            // For other columns, use window function for accurate percentages
+            // For other columns
             return `ROUND(
               100.0 * COUNT(*) / (
                 SUM(COUNT(*)) OVER()
