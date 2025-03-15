@@ -10,7 +10,8 @@ import {
   Heading,
   Modal,
   Box,
-  Tag
+  Tag,
+  ReadMore
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon
@@ -345,42 +346,34 @@ const getGroupedParameters = () => {
       
       {/* Add Custom Parameters Section - Only when not loading */}
       {!isLoading && (
-        <Box background="surface-subtle" borderRadius="medium">
-          <Accordion className="pt-0">
-            <Accordion.Item open={customParamAccordionOpen}>
-              <Accordion.Header 
-                onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
-                className="bg-blue-50"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="font-medium">Legg til hendelsesdetaljer manuelt</span>
-                </span>
-              </Accordion.Header>
-              <Accordion.Content className="bg-blue-50/30">
-                <VStack gap="4">      
-                  <div className="flex gap-2 mt-4 items-end">
-                    <TextField 
-                      label="Hendelsesdetalj"
-                      description="Du kan legge til flere med komma"
-                      value={newParamKey}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
-                      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
-                      style={{ width: '100%' }}
-                    />
-                    <Button 
-                      variant="secondary" 
-                      onClick={addParameter}
-                      icon={<PlusCircleIcon aria-hidden />}
-                      style={{ height: '50px' }}
-                    >
-                      Legg til
-                    </Button>
-                  </div>
-                </VStack>
-              </Accordion.Content>
-            </Accordion.Item>
-          </Accordion>
-        </Box>
+        <div className="-mt-2">
+          <ReadMore 
+            header="Legg til hendelsesdetaljer manuelt" 
+            defaultOpen={customParamAccordionOpen}
+            onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
+          >
+            <VStack gap="4">      
+              <div className="flex gap-2 mt-4 items-end">
+                <TextField 
+                  label="Hendelsesdetalj"
+                  description="Du kan legge til flere med komma"
+                  value={newParamKey}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
+                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
+                  style={{ width: '100%' }}
+                />
+                <Button 
+                  variant="secondary" 
+                  onClick={addParameter}
+                  icon={<PlusCircleIcon aria-hidden />}
+                  style={{ height: '50px' }}
+                >
+                  Legg til
+                </Button>
+              </div>
+            </VStack>
+          </ReadMore>
+        </div>
       )}
 
       {/* Confirmation Modal for removing manual parameters */}
