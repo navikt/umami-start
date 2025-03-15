@@ -468,7 +468,7 @@ const ChartFilters = ({
   return (
     <section>
       <Heading level="2" size="small" spacing>
-        Filtrering
+        Filtervalg
       </Heading>
 
       <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative">
@@ -655,7 +655,7 @@ const ChartFilters = ({
 
                 <div>
                 <Heading level="3" size="xsmall" spacing className='mt-2'>
-                  Filtervalg
+                  Filter
                 </Heading>
             
                  <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3">
@@ -881,13 +881,13 @@ const ChartFilters = ({
             >
               <ExpansionCard.Header>
                 <ExpansionCard.Title as="h3" size="small">
-                  Aktive filtre ({filters.length})
+                  Aktive filter ({filters.length})
                 </ExpansionCard.Title>
               </ExpansionCard.Header>
               <ExpansionCard.Content>
               {filters.length === 0 && (
                 <div className="text-sm text-gray-600">
-                  Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
+                  Ingen aktive filter. Legg til et filter for å få mer spesifikke data.
                 </div>
               )}
 

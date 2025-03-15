@@ -58,7 +58,7 @@ const SQLPreview = ({ sql }: SQLPreviewProps) => {
                     <div className="bg-blue-600 text-white rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
                       1
                     </div>
-                    <p>Bruk filtreringsvalgene for å begrense hvilke data som vises</p>
+                    <p>Bruk filtervalg for å begrense hvilke data som vises</p>
                   </li>
                   <li className="pb-1 flex gap-2">
                     <div className="bg-blue-600 text-white rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
