@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 import DateRangePicker from './DateRangePicker';
+import AlertWithCloseButton from './AlertWithCloseButton';
 
 // Event type options for the dropdown
 const EVENT_TYPES = [
@@ -61,6 +62,12 @@ const ChartFilters = ({
   const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific'>('all');
   const [customEventsMode, setCustomEventsMode] = useState<'all' | 'specific'>('all');
   
+  // Add alert state
+  const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
+    show: false,
+    message: ''
+  });
+
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
     // Filter out null or undefined events and then filter for custom events
@@ -99,8 +106,26 @@ const ChartFilters = ({
   // Add helper function to commit staging filter
   const commitStagingFilter = () => {
     if (stagingFilter) {
+      // Format the filter description for the alert message
+      let filterDesc = '';
+      if (stagingFilter.column.startsWith('param_')) {
+        filterDesc = `Parameter ${stagingFilter.column.replace('param_', '')}`;
+      } else {
+        // Find the column label from FILTER_COLUMNS
+        const columnDef = Object.values(FILTER_COLUMNS)
+          .flatMap(group => group.columns)
+          .find(col => col.value === stagingFilter.column);
+        filterDesc = columnDef?.label || stagingFilter.column;
+      }
+
       setFilters([...filters, stagingFilter]);
       setStagingFilter(null);
+      
+      // Show alert
+      setAlertInfo({
+        show: true,
+        message: `Filter lagt til under aktive filter`
+      });
     }
   };
 
@@ -158,6 +183,11 @@ const ChartFilters = ({
         !(f.column === 'url_path' && f.operator === 'IN')
       );
       setFilters(finalFilters);
+
+      setAlertInfo({
+        show: true,
+        message: 'Filtrering opphevet - alle hendelser vises nå'
+      });
     } else {
       // Remove any existing suggestion filters first
       const cleanFilters = filters.filter(existingFilter => {
@@ -183,9 +213,19 @@ const ChartFilters = ({
         setSelectedPaths([]);
         setPageViewsMode('all');
         setCustomEventsMode('all');
+        
+        setAlertInfo({
+          show: true,
+          message: `Filter "${suggestion.label}" ble lagt til`
+        });
       }
       setAppliedSuggestion(suggestionId);
     }
+    
+    // Auto-hide alert after 5 seconds
+    setTimeout(() => {
+      setAlertInfo(prev => ({...prev, show: false}));
+    }, 5000);
   };
   
   // Update the handleCustomEventsChange function to handle different operators
@@ -349,7 +389,7 @@ const ChartFilters = ({
         Filtervalg
       </Heading>
 
-      <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative">
+      <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative"> 
         <div>
           {/* Improved Filter Suggestions */}
           <div className="mb-6">
@@ -674,6 +714,7 @@ const ChartFilters = ({
                       onChange={(e) => {
                         if (e.target.value) {
                           addFilter(e.target.value);
+                          setAlertInfo({ show: false, message: '' });
                           (e.target as HTMLSelectElement).value = '';
                         }
                       }}
@@ -707,6 +748,15 @@ const ChartFilters = ({
                       )}
                     </Select>
                   </div>
+
+                  {/* Show alert if it's active */}
+                  {alertInfo.show && (
+                    <div className="mb-4 mt-4">
+                      <AlertWithCloseButton variant="success">
+                        {alertInfo.message}
+                      </AlertWithCloseButton>
+                    </div>
+                  )}
 
                   {/* Add staging area */}
                   {stagingFilter && (
