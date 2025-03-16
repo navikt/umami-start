@@ -1,5 +1,5 @@
 import { Button, ExpansionCard, Heading, Select, UNSAFE_Combobox } from '@navikt/ds-react';
-import { useMemo, useState  } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 import DateRangePicker from './DateRangePicker';
@@ -52,6 +52,7 @@ const ChartFilters = ({
   const [customEvents, setCustomEvents] = useState<string[]>([]);
   // Add state to track selected URL paths
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [urlPathOperator, setUrlPathOperator] = useState<string>('IN'); // Add this state
   // Add this near other state declarations
   const [stagingFilter, setStagingFilter] = useState<Filter | null>(null);
   
@@ -203,8 +204,9 @@ const ChartFilters = ({
   };
 
   // Update function to handle URL path selection
-  const handlePathsChange = (paths: string[]) => {
+  const handlePathsChange = (paths: string[], operator: string = urlPathOperator) => {
     setSelectedPaths(paths);
+    setUrlPathOperator(operator);
     
     // Find and remove any existing url_path filters
     const filtersWithoutPaths = filters.filter(f => 
@@ -213,20 +215,41 @@ const ChartFilters = ({
     
     // Only add url_path filter if paths are selected
     if (paths.length > 0) {
-      setFilters([
-        ...filtersWithoutPaths,
-        { 
-          column: 'url_path', 
-          operator: 'IN', 
-          value: paths[0], // Set first as value for compatibility
-          multipleValues: paths // Store all values here
-        }
-      ]);
+      // For IN operator, use multipleValues
+      if (operator === 'IN') {
+        setFilters([
+          ...filtersWithoutPaths,
+          { 
+            column: 'url_path', 
+            operator: 'IN', 
+            value: paths[0],
+            multipleValues: paths
+          }
+        ]);
+      } 
+      // For other operators (LIKE, STARTS_WITH, etc.), use normal format
+      else {
+        setFilters([
+          ...filtersWithoutPaths,
+          { 
+            column: 'url_path', 
+            operator: operator,
+            value: paths[0]
+          }
+        ]);
+      }
     } else {
-      // Keep just the event_type=1 filter without specific paths
       setFilters(filtersWithoutPaths);
     }
   };
+
+  // Add this useEffect to sync operator state with filters
+  useEffect(() => {
+    const urlPathFilter = filters.find(f => f.column === 'url_path');
+    if (urlPathFilter && urlPathFilter.operator) {
+      setUrlPathOperator(urlPathFilter.operator);
+    }
+  }, [filters]);
 
   // Helper function to get clean parameter name
   const getCleanParamName = (param: Parameter): string => {
@@ -331,30 +354,89 @@ const ChartFilters = ({
             {/* Show URL path selector when pageviews filter is active */}
             {appliedSuggestion === 'pageviews' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
-                <UNSAFE_Combobox
-                  label="Filtrer på spesifikke URL-stier"
-                  description="La stå tom for å vise alle sidevisninger"
-                  options={availablePaths.map(path => ({
-                    label: path,
-                    value: path
-                  }))}
-                  selectedOptions={selectedPaths}
-                  onToggleSelected={(option, isSelected) => {
-                    if (option) {
-                      const newSelection = isSelected 
-                        ? [...selectedPaths, option] 
-                        : selectedPaths.filter(p => p !== option);
-                      handlePathsChange(newSelection);
+                <div className="flex gap-2 items-end mb-3">
+                  <Select
+                    label="URL-sti"
+                    value={urlPathOperator}
+                    onChange={(e) => {
+                      const newOperator = e.target.value;
+                      setUrlPathOperator(newOperator);
+                      
+                      // Handle the transition between IN and other operators
+                      if ((newOperator === 'IN' && selectedPaths.length <= 1) || 
+                          (urlPathOperator === 'IN' && newOperator !== 'IN')) {
+                        // Convert between single value and multiple values format
+                        const pathValue = selectedPaths.length > 0 ? selectedPaths[0] : '';
+                        handlePathsChange(
+                          newOperator === 'IN' ? selectedPaths : [pathValue],  
+                          newOperator
+                        );
+                      } else {
+                        handlePathsChange(selectedPaths, newOperator);
+                      }
+                    }}
+                    size="small"
+                    className="w-full md:w-1/3"
+                  >
+                    {OPERATORS.map(op => (
+                      <option key={op.value} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                
+                {urlPathOperator === 'IN' ? (
+                  <UNSAFE_Combobox
+                    label="Velg URL-stier"
+                    description="Flere stier kan velges for 'er lik' operator"
+                    options={availablePaths.map(path => ({
+                      label: path,
+                      value: path
+                    }))}
+                    selectedOptions={selectedPaths}
+                    onToggleSelected={(option, isSelected) => {
+                      if (option) {
+                        const newSelection = isSelected 
+                          ? [...selectedPaths, option] 
+                          : selectedPaths.filter(p => p !== option);
+                        handlePathsChange(newSelection, urlPathOperator);
+                      }
+                    }}
+                    isMultiSelect
+                    size="small"
+                    clearButton
+                    allowNewValues
+                  />
+                ) : (
+                  <UNSAFE_Combobox
+                    label="Legg til en eller flere URL-stier"
+                    description={
+                      urlPathOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
+                      urlPathOperator === 'STARTS_WITH' ? "Søket vil finne stier som starter med verdien" :
+                      urlPathOperator === 'ENDS_WITH' ? "Søket vil finne stier som slutter med verdien" :
+                      null
                     }
-                  }}
-                  isMultiSelect
-                  size="small"
-                  clearButton
-                  allowNewValues
-                />
+                    options={availablePaths.map(path => ({
+                      label: path,
+                      value: path
+                    }))}
+                    selectedOptions={selectedPaths.length > 0 ? [selectedPaths[0]] : []}
+                    onToggleSelected={(option, isSelected) => {
+                      if (option) {
+                        handlePathsChange(isSelected ? [option] : [], urlPathOperator);
+                      }
+                    }}
+                    isMultiSelect={false}
+                    size="small"
+                    clearButton
+                    allowNewValues
+                  />
+                )}
+                
                 {selectedPaths.length === 0 && (
                   <div className="mt-2 text-xs text-gray-600">
-                    Skriv inn URL-stier eller velg fra listen. For eksempel: /min-side
+                    Når tom vises alle sidevisninger
                   </div>
                 )}
               </div>

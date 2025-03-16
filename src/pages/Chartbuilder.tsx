@@ -399,7 +399,7 @@ const ChartsPage = () => {
     // WHERE clause for the CTE - only apply event filters here
     sql += `  WHERE e.website_id = '${config.website.id}'\n`;
     
-    // Add event filters to the CTE
+    // Update the SQL generation for event filters to handle different operator types
     eventFilters.forEach(filter => {
       if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
         sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
@@ -408,7 +408,8 @@ const ChartsPage = () => {
           sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
         } else if (filter.column === 'event_type') {
           sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
-        } else if (filter.multipleValues && filter.multipleValues.length > 0) {
+        } else if (filter.multipleValues && filter.multipleValues.length > 0 && filter.operator === 'IN') {
+          // Only use IN for multiple values when operator is explicitly IN
           const values = filter.multipleValues.map(val => {
             return !isNaN(Number(val)) && filter.column !== 'url_path' && filter.column !== 'event_name'
               ? val
