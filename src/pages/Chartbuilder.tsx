@@ -911,11 +911,6 @@ const ChartsPage = () => {
   const getRequiredTables = (): { session: boolean, eventData: boolean } => {
     const tables = { session: false, eventData: false };
     
-    // Check if any session columns are used in grouping, filtering or metrics
-    const sessionColumns = Object.values(FILTER_COLUMNS)
-      .find(group => group.table === 'session')
-      ?.columns.map(col => col.value) || [];
-    
     // Check group by fields
     if (config.groupByFields.some(field => isSessionColumn(field))) {
       tables.session = true;
