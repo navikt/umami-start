@@ -55,6 +55,8 @@ const ChartFilters = ({
   const [urlPathOperator, setUrlPathOperator] = useState<string>('IN'); // Add this state
   // Add this near other state declarations
   const [stagingFilter, setStagingFilter] = useState<Filter | null>(null);
+  // Add a new state for the event operator (near other state variables)
+  const [eventNameOperator, setEventNameOperator] = useState<string>('IN');
   
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -179,24 +181,39 @@ const ChartFilters = ({
     }
   };
   
-  // Add function to handle custom event selection
-  const handleCustomEventsChange = (selectedEvents: string[]) => {
+  // Update the handleCustomEventsChange function to handle different operators
+  const handleCustomEventsChange = (selectedEvents: string[], operator: string = eventNameOperator) => {
     setCustomEvents(selectedEvents);
+    setEventNameOperator(operator);
     
     // Find and remove any existing event_name filters
     const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
     
     // Only add event_name filter if events are selected
     if (selectedEvents.length > 0) {
-      setFilters([
-        ...filtersWithoutEventNames,
-        { 
-          column: 'event_name', 
-          operator: 'IN', 
-          value: selectedEvents[0], // Set first as value for compatibility
-          multipleValues: selectedEvents // Store all values here
-        }
-      ]);
+      // For IN operator, use multipleValues
+      if (operator === 'IN') {
+        setFilters([
+          ...filtersWithoutEventNames,
+          { 
+            column: 'event_name', 
+            operator: 'IN', 
+            value: selectedEvents[0],
+            multipleValues: selectedEvents
+          }
+        ]);
+      } 
+      // For other operators (LIKE, STARTS_WITH, etc.), use normal format
+      else {
+        setFilters([
+          ...filtersWithoutEventNames,
+          { 
+            column: 'event_name', 
+            operator: operator,
+            value: selectedEvents[0]
+          }
+        ]);
+      }
     } else {
       // Keep just the event_type=2 filter without specific event names
       setFilters(filtersWithoutEventNames);
@@ -248,6 +265,14 @@ const ChartFilters = ({
     const urlPathFilter = filters.find(f => f.column === 'url_path');
     if (urlPathFilter && urlPathFilter.operator) {
       setUrlPathOperator(urlPathFilter.operator);
+    }
+  }, [filters]);
+
+  // Add useEffect to sync operator state with filters (near other useEffects)
+  useEffect(() => {
+    const eventNameFilter = filters.find(f => f.column === 'event_name');
+    if (eventNameFilter && eventNameFilter.operator) {
+      setEventNameOperator(eventNameFilter.operator);
     }
   }, [filters]);
 
@@ -445,27 +470,91 @@ const ChartFilters = ({
             {/* Show custom events selector when custom events filter is active */}
             {appliedSuggestion === 'custom_events' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
-                <UNSAFE_Combobox
-                  label="Velg spesifikke egendefinerte hendelser"
-                  description="La stå tom for å vise alle egendefinerte hendelser"
-                  options={customEventsList.map(event => ({
-                    label: event,
-                    value: event
-                  }))}
-                  selectedOptions={customEvents}
-                  onToggleSelected={(option, isSelected) => {
-                    if (option) {
-                      const newSelection = isSelected 
-                        ? [...customEvents, option] 
-                        : customEvents.filter(e => e !== option);
-                      handleCustomEventsChange(newSelection);
+                <div className="flex gap-2 items-end mb-3">
+                  <Select
+                    label="Hendelser"
+                    value={eventNameOperator}
+                    onChange={(e) => {
+                      const newOperator = e.target.value;
+                      setEventNameOperator(newOperator);
+                      
+                      // Handle the transition between IN and other operators
+                      if ((newOperator === 'IN' && customEvents.length <= 1) || 
+                          (eventNameOperator === 'IN' && newOperator !== 'IN')) {
+                        // Convert between single value and multiple values format
+                        const eventValue = customEvents.length > 0 ? customEvents[0] : '';
+                        handleCustomEventsChange(
+                          newOperator === 'IN' ? customEvents : [eventValue],
+                          newOperator
+                        );
+                      } else {
+                        handleCustomEventsChange(customEvents, newOperator);
+                      }
+                    }}
+                    size="small"
+                    className="w-full md:w-1/3"
+                  >
+                    {OPERATORS.map(op => (
+                      <option key={op.value} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                
+                {eventNameOperator === 'IN' ? (
+                  <UNSAFE_Combobox
+                    label="Velg spesifikke hendelser"
+                    description="Flere hendelser kan velges for 'er lik' operator"
+                    options={customEventsList.map(event => ({
+                      label: event,
+                      value: event
+                    }))}
+                    selectedOptions={customEvents}
+                    onToggleSelected={(option, isSelected) => {
+                      if (option) {
+                        const newSelection = isSelected 
+                          ? [...customEvents, option] 
+                          : customEvents.filter(e => e !== option);
+                        handleCustomEventsChange(newSelection, eventNameOperator);
+                      }
+                    }}
+                    isMultiSelect
+                    size="small"
+                    clearButton
+                    allowNewValues
+                  />
+                ) : (
+                  <UNSAFE_Combobox
+                    label="Legg til hendelse"
+                    description={
+                      eventNameOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
+                      eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
+                      eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
+                      null
                     }
-                  }}
-                  isMultiSelect
-                  allowNewValues
-                  size="small"
-                  clearButton
-                />
+                    options={customEventsList.map(event => ({
+                      label: event,
+                      value: event
+                    }))}
+                    selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
+                    onToggleSelected={(option, isSelected) => {
+                      if (option) {
+                        handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
+                      }
+                    }}
+                    isMultiSelect={false}
+                    size="small"
+                    clearButton
+                    allowNewValues
+                  />
+                )}
+
+                {customEvents.length === 0 && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    Når tom vises alle egendefinerte hendelser
+                  </div>
+                )}
                 {customEventsList.length === 0 && (
                   <div className="mt-2 text-sm text-amber-600">
                     Ingen egendefinerte hendelser funnet. Velg en nettside som har sporing av egendefinerte hendelser.
