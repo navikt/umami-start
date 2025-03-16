@@ -194,13 +194,13 @@ const DateRangePicker = ({
         Datoområde
       </Heading>
       
-      <div className="mt-3 bg-white p-4 rounded-md border shadow-sm">
+      <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
         <div className="flex flex-wrap gap-2 mb-4">
           <button 
             className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
               !hasDateFilter() || selectedDateRange === 'all'
                 ? 'bg-blue-600 text-white border-blue-700' 
-                : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
             }`}
             onClick={() => applyDateRange('all')}
           >
