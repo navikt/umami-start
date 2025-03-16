@@ -57,6 +57,9 @@ const ChartFilters = ({
   const [stagingFilter, setStagingFilter] = useState<Filter | null>(null);
   // Add a new state for the event operator (near other state variables)
   const [eventNameOperator, setEventNameOperator] = useState<string>('IN');
+  // Add these new state variables
+  const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific'>('all');
+  const [customEventsMode, setCustomEventsMode] = useState<'all' | 'specific'>('all');
   
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -138,6 +141,8 @@ const ChartFilters = ({
       // Reset selections
       setCustomEvents([]);
       setSelectedPaths([]);
+      setPageViewsMode('all');
+      setCustomEventsMode('all');
       // Remove all suggestion filters
       const newFilters = filters.filter(existingFilter => {
         const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
@@ -176,6 +181,8 @@ const ChartFilters = ({
         // Reset selections when switching between suggestions
         setCustomEvents([]);
         setSelectedPaths([]);
+        setPageViewsMode('all');
+        setCustomEventsMode('all');
       }
       setAppliedSuggestion(suggestionId);
     }
@@ -379,187 +386,268 @@ const ChartFilters = ({
             {/* Show URL path selector when pageviews filter is active */}
             {appliedSuggestion === 'pageviews' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
-                <div className="flex gap-2 items-end mb-3">
-                  <Select
-                    label="URL-sti"
-                    value={urlPathOperator}
-                    onChange={(e) => {
-                      const newOperator = e.target.value;
-                      setUrlPathOperator(newOperator);
-                      
-                      // Handle the transition between IN and other operators
-                      if ((newOperator === 'IN' && selectedPaths.length <= 1) || 
-                          (urlPathOperator === 'IN' && newOperator !== 'IN')) {
-                        // Convert between single value and multiple values format
-                        const pathValue = selectedPaths.length > 0 ? selectedPaths[0] : '';
-                        handlePathsChange(
-                          newOperator === 'IN' ? selectedPaths : [pathValue],  
-                          newOperator
-                        );
-                      } else {
-                        handlePathsChange(selectedPaths, newOperator);
-                      }
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      pageViewsMode === 'all' 
+                        ? 'bg-blue-600 text-white border-blue-700' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      setPageViewsMode('all');
+                      // Clear any specific URL path filters
+                      const filtersWithoutPaths = filters.filter(f => 
+                        !(f.column === 'url_path')
+                      );
+                      setFilters(filtersWithoutPaths);
+                      setSelectedPaths([]);
                     }}
-                    size="small"
-                    className="w-full md:w-1/3"
                   >
-                    {OPERATORS.map(op => (
-                      <option key={op.value} value={op.value}>
-                        {op.label}
-                      </option>
-                    ))}
-                  </Select>
+                    Alle sidevisninger
+                  </button>
+                  <button 
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      pageViewsMode === 'specific' 
+                        ? 'bg-blue-600 text-white border-blue-700' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setPageViewsMode('specific')}
+                  >
+                    Bestemte sider
+                  </button>
                 </div>
                 
-                {urlPathOperator === 'IN' ? (
-                  <UNSAFE_Combobox
-                    label="Velg URL-stier"
-                    description="Flere stier kan velges for 'er lik' operator"
-                    options={availablePaths.map(path => ({
-                      label: path,
-                      value: path
-                    }))}
-                    selectedOptions={selectedPaths}
-                    onToggleSelected={(option, isSelected) => {
-                      if (option) {
-                        const newSelection = isSelected 
-                          ? [...selectedPaths, option] 
-                          : selectedPaths.filter(p => p !== option);
-                        handlePathsChange(newSelection, urlPathOperator);
-                      }
-                    }}
-                    isMultiSelect
-                    size="small"
-                    clearButton
-                    allowNewValues
-                  />
-                ) : (
-                  <UNSAFE_Combobox
-                    label="Legg til en eller flere URL-stier"
-                    description={
-                      urlPathOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
-                      urlPathOperator === 'STARTS_WITH' ? "Søket vil finne stier som starter med verdien" :
-                      urlPathOperator === 'ENDS_WITH' ? "Søket vil finne stier som slutter med verdien" :
-                      null
-                    }
-                    options={availablePaths.map(path => ({
-                      label: path,
-                      value: path
-                    }))}
-                    selectedOptions={selectedPaths.length > 0 ? [selectedPaths[0]] : []}
-                    onToggleSelected={(option, isSelected) => {
-                      if (option) {
-                        handlePathsChange(isSelected ? [option] : [], urlPathOperator);
-                      }
-                    }}
-                    isMultiSelect={false}
-                    size="small"
-                    clearButton
-                    allowNewValues
-                  />
+                {pageViewsMode === 'specific' && (
+                  <>
+                    <div className="flex gap-2 items-end mb-3 mt-4">
+                      <Select
+                        label="URL-sti"
+                        value={urlPathOperator}
+                        onChange={(e) => {
+                          const newOperator = e.target.value;
+                          setUrlPathOperator(newOperator);
+                          
+                          // Handle the transition between IN and other operators
+                          if ((newOperator === 'IN' && selectedPaths.length <= 1) || 
+                              (urlPathOperator === 'IN' && newOperator !== 'IN')) {
+                            const pathValue = selectedPaths.length > 0 ? selectedPaths[0] : '';
+                            handlePathsChange(
+                              newOperator === 'IN' ? selectedPaths : [pathValue],  
+                              newOperator
+                            );
+                          } else {
+                            handlePathsChange(selectedPaths, newOperator);
+                          }
+                        }}
+                        size="small"
+                        className="w-full md:w-1/3"
+                      >
+                        {OPERATORS.map(op => (
+                          <option key={op.value} value={op.value}>
+                            {op.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    
+                    {urlPathOperator === 'IN' ? (
+                      <UNSAFE_Combobox
+                        label="Velg URL-stier"
+                        description="Flere stier kan velges for 'er lik' operator"
+                        options={availablePaths.map(path => ({
+                          label: path,
+                          value: path
+                        }))}
+                        selectedOptions={selectedPaths}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            const newSelection = isSelected 
+                              ? [...selectedPaths, option] 
+                              : selectedPaths.filter(p => p !== option);
+                            handlePathsChange(newSelection, urlPathOperator);
+                          }
+                        }}
+                        isMultiSelect
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
+                    ) : (
+                      <UNSAFE_Combobox
+                        label="Legg til en eller flere URL-stier"
+                        description={
+                          urlPathOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
+                          urlPathOperator === 'STARTS_WITH' ? "Søket vil finne stier som starter med verdien" :
+                          urlPathOperator === 'ENDS_WITH' ? "Søket vil finne stier som slutter med verdien" :
+                          null
+                        }
+                        options={availablePaths.map(path => ({
+                          label: path,
+                          value: path
+                        }))}
+                        selectedOptions={selectedPaths.length > 0 ? [selectedPaths[0]] : []}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            handlePathsChange(isSelected ? [option] : [], urlPathOperator);
+                          }
+                        }}
+                        isMultiSelect={false}
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
+                    )}
+                    
+                    {selectedPaths.length === 0 && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        Når tom vises alle sidevisninger
+                      </div>
+                    )}
+                  </>
                 )}
                 
-                {selectedPaths.length === 0 && (
-                  <div className="mt-2 text-xs text-gray-600">
-                    Når tom vises alle sidevisninger
+                {/* 
+                {pageViewsMode === 'all' && (
+                  <div className="text-sm text-gray-600">
+                    Viser alle sidevisninger for valgt tidsperiode.
                   </div>
-                )}
+                )} 
+                */}
               </div>
             )}
             
             {/* Show custom events selector when custom events filter is active */}
             {appliedSuggestion === 'custom_events' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
-                <div className="flex gap-2 items-end mb-3">
-                  <Select
-                    label="Hendelser"
-                    value={eventNameOperator}
-                    onChange={(e) => {
-                      const newOperator = e.target.value;
-                      setEventNameOperator(newOperator);
-                      
-                      // Handle the transition between IN and other operators
-                      if ((newOperator === 'IN' && customEvents.length <= 1) || 
-                          (eventNameOperator === 'IN' && newOperator !== 'IN')) {
-                        // Convert between single value and multiple values format
-                        const eventValue = customEvents.length > 0 ? customEvents[0] : '';
-                        handleCustomEventsChange(
-                          newOperator === 'IN' ? customEvents : [eventValue],
-                          newOperator
-                        );
-                      } else {
-                        handleCustomEventsChange(customEvents, newOperator);
-                      }
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      customEventsMode === 'all' 
+                        ? 'bg-blue-600 text-white border-blue-700' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      setCustomEventsMode('all');
+                      // Clear any specific event name filters
+                      const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
+                      setFilters(filtersWithoutEventNames);
+                      setCustomEvents([]);
                     }}
-                    size="small"
-                    className="w-full md:w-1/3"
                   >
-                    {OPERATORS.map(op => (
-                      <option key={op.value} value={op.value}>
-                        {op.label}
-                      </option>
-                    ))}
-                  </Select>
+                    Alle hendelser
+                  </button>
+                  <button 
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      customEventsMode === 'specific' 
+                        ? 'bg-blue-600 text-white border-blue-700' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setCustomEventsMode('specific')}
+                  >
+                    Bestemte hendelser
+                  </button>
                 </div>
                 
-                {eventNameOperator === 'IN' ? (
-                  <UNSAFE_Combobox
-                    label="Velg spesifikke hendelser"
-                    description="Flere hendelser kan velges for 'er lik' operator"
-                    options={customEventsList.map(event => ({
-                      label: event,
-                      value: event
-                    }))}
-                    selectedOptions={customEvents}
-                    onToggleSelected={(option, isSelected) => {
-                      if (option) {
-                        const newSelection = isSelected 
-                          ? [...customEvents, option] 
-                          : customEvents.filter(e => e !== option);
-                        handleCustomEventsChange(newSelection, eventNameOperator);
-                      }
-                    }}
-                    isMultiSelect
-                    size="small"
-                    clearButton
-                    allowNewValues
-                  />
-                ) : (
-                  <UNSAFE_Combobox
-                    label="Legg til hendelse"
-                    description={
-                      eventNameOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
-                      eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
-                      eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
-                      null
-                    }
-                    options={customEventsList.map(event => ({
-                      label: event,
-                      value: event
-                    }))}
-                    selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
-                    onToggleSelected={(option, isSelected) => {
-                      if (option) {
-                        handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
-                      }
-                    }}
-                    isMultiSelect={false}
-                    size="small"
-                    clearButton
-                    allowNewValues
-                  />
-                )}
+                {customEventsMode === 'specific' && (
+                  <>
+                    <div className="flex gap-2 items-end mb-3 mt-4">
+                      <Select
+                        label="Hendelser"
+                        value={eventNameOperator}
+                        onChange={(e) => {
+                          const newOperator = e.target.value;
+                          setEventNameOperator(newOperator);
+                          
+                          // Handle the transition between IN and other operators
+                          if ((newOperator === 'IN' && customEvents.length <= 1) || 
+                              (eventNameOperator === 'IN' && newOperator !== 'IN')) {
+                            const eventValue = customEvents.length > 0 ? customEvents[0] : '';
+                            handleCustomEventsChange(
+                              newOperator === 'IN' ? customEvents : [eventValue],
+                              newOperator
+                            );
+                          } else {
+                            handleCustomEventsChange(customEvents, newOperator);
+                          }
+                        }}
+                        size="small"
+                        className="w-full md:w-1/3"
+                      >
+                        {OPERATORS.map(op => (
+                          <option key={op.value} value={op.value}>
+                            {op.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    
+                    {eventNameOperator === 'IN' ? (
+                      <UNSAFE_Combobox
+                        label="Velg spesifikke hendelser"
+                        description="Flere hendelser kan velges for 'er lik' operator"
+                        options={customEventsList.map(event => ({
+                          label: event,
+                          value: event
+                        }))}
+                        selectedOptions={customEvents}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            const newSelection = isSelected 
+                              ? [...customEvents, option] 
+                              : customEvents.filter(e => e !== option);
+                            handleCustomEventsChange(newSelection, eventNameOperator);
+                          }
+                        }}
+                        isMultiSelect
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
+                    ) : (
+                      <UNSAFE_Combobox
+                        label="Legg til hendelse"
+                        description={
+                          eventNameOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
+                          eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
+                          eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
+                          null
+                        }
+                        options={customEventsList.map(event => ({
+                          label: event,
+                          value: event
+                        }))}
+                        selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
+                          }
+                        }}
+                        isMultiSelect={false}
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
+                    )}
 
-                {customEvents.length === 0 && (
-                  <div className="mt-2 text-xs text-gray-600">
-                    Når tom vises alle egendefinerte hendelser
+                    {customEvents.length === 0 && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        Når tom vises alle egendefinerte hendelser
+                      </div>
+                    )}
+                    {customEventsList.length === 0 && (
+                      <div className="mt-2 text-sm text-amber-600">
+                        Ingen egendefinerte hendelser funnet. Velg en nettside som har sporing av egendefinerte hendelser.
+                      </div>
+                    )}
+                  </>
+                )}
+                {/* 
+                {customEventsMode === 'all' && (
+                  <div className="text-sm text-gray-600">
+                    Viser alle egendefinerte hendelser for valgt tidsperiode.
                   </div>
                 )}
-                {customEventsList.length === 0 && (
-                  <div className="mt-2 text-sm text-amber-600">
-                    Ingen egendefinerte hendelser funnet. Velg en nettside som har sporing av egendefinerte hendelser.
-                  </div>
-                )}
+                */}
               </div>
             )}
           </div>
