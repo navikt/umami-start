@@ -1,4 +1,4 @@
-import { Button, ExpansionCard, Heading, Select, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, ExpansionCard, Heading, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import { useMemo, useState  } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -253,11 +253,6 @@ const ChartFilters = ({
     });
   }, [parameters]);
 
-  // Add this helper to check if filter should use the combobox interface
-  const shouldUseCombobox = (column: string): boolean => {
-    return column === 'url_path' || column === 'event_name';
-  };
-
   // Add this helper function near other helper functions
   const isDateRangeFilter = (filter: Filter): boolean => {
     return filter.column === 'created_at' && ['>=', '<='].includes(filter.operator || '');
@@ -269,6 +264,28 @@ const ChartFilters = ({
     const nonDateFilters = filters.filter(f => !isDateRangeFilter(f));
     // Count date range filters (from/to) as one filter
     return nonDateFilters.length + (dateRangeFilters.length > 0 ? 1 : 0);
+  };
+
+  // Add this helper function near the top with other helpers
+  const getOptionsForColumn = (column: string, availableEvents: string[], availablePaths: string[]): { label: string, value: string }[] => {
+    switch (column) {
+      case 'event_name':
+        return availableEvents
+          .filter(event => event != null)
+          .map(event => ({
+            label: event || '',
+            value: event || ''
+          }));
+      case 'url_path':
+        return availablePaths.map(path => ({
+          label: path,
+          value: path
+        }));
+      case 'event_type':
+        return EVENT_TYPES;
+      default:
+        return []; // Empty array for free-form input fields
+    }
   };
 
   return (
@@ -501,49 +518,16 @@ const ChartFilters = ({
                             </Select>
                           )}
 
-                          {/* Event name combobox */}
+                          {/* Replace all other value inputs with Combobox */}
                           {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column === 'event_name' && (
+                          stagingFilter.column !== 'event_type' && 
+                          stagingFilter.column !== 'created_at' && (
                             <UNSAFE_Combobox
-                              label="Event navn"
-                              options={availableEvents
-                                .filter(event => event != null)
-                                .map(event => ({
-                                  label: event || '',
-                                  value: event || ''
-                                }))}
-                              selectedOptions={stagingFilter.multipleValues?.map(v => v || '') || 
-                                              (stagingFilter.value ? [stagingFilter.value] : [])}
-                              onToggleSelected={(option, isSelected) => {
-                                if (option) {
-                                  const currentValues = stagingFilter.multipleValues || 
-                                                      (stagingFilter.value ? [stagingFilter.value] : []);
-                                  const newValues = isSelected 
-                                    ? [...currentValues, option]
-                                    : currentValues.filter(val => val !== option);
-                                  setStagingFilter({
-                                    ...stagingFilter,
-                                    multipleValues: newValues.length > 0 ? newValues : [],
-                                    value: newValues.length > 0 ? newValues[0] : ''
-                                  });
-                                }
-                              }}
-                              isMultiSelect
-                              size="small"
-                              clearButton
-                            />
-                          )}
-
-                          {/* URL path combobox */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column === 'url_path' && (
-                            <UNSAFE_Combobox
-                              label="URL-stier"
-                              description="Velg en eller flere URL-stier"
-                              options={availablePaths.map(path => ({
-                                label: path,
-                                value: path
-                              }))}
+                              label="Verdi"
+                              description={stagingFilter.column === 'url_path' ? "Velg eller skriv inn URL-stier" : 
+                                          stagingFilter.column === 'event_name' ? "Velg eller skriv inn hendelser" : 
+                                          "Velg eller skriv inn verdier"}
+                              options={getOptionsForColumn(stagingFilter.column, availableEvents, availablePaths)}
                               selectedOptions={stagingFilter.multipleValues?.map(v => v || '') || 
                                               (stagingFilter.value ? [stagingFilter.value] : [])}
                               onToggleSelected={(option, isSelected) => {
@@ -567,21 +551,7 @@ const ChartFilters = ({
                               isMultiSelect
                               size="small"
                               clearButton
-                              allowNewValues
-                            />
-                          )}
-
-                          {/* Default text field for other columns */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
-                          stagingFilter.column !== 'event_name' && 
-                          stagingFilter.column !== 'created_at' &&
-                          stagingFilter.column !== 'event_type' && 
-                          !shouldUseCombobox(stagingFilter.column) && (
-                            <TextField
-                              label="Verdi"
-                              value={stagingFilter.value || ''}
-                              onChange={(e) => setStagingFilter({ ...stagingFilter, value: e.target.value })}
-                              size="small"
+                              allowNewValues={stagingFilter.column !== 'event_type'}
                             />
                           )}
                         </div>
@@ -686,48 +656,14 @@ const ChartFilters = ({
                               {/* ...rest of existing filter input code... */}
                             </div>
                             {/* Event name combobox on its own row */}
-                            {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && filter.column === 'event_name' && (
+                            {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && (
                               <div className="mt-3">
                                 <UNSAFE_Combobox
-                                  label="Event navn"
-                                  options={availableEvents
-                                    .filter(event => event != null) // Filter out null/undefined events
-                                    .map(event => ({
-                                      label: event || '',
-                                      value: event || ''
-                                    }))}
-                                  selectedOptions={filter.multipleValues?.map(v => v || '') || 
-                                                  (filter.value ? [filter.value] : [])}
-                                  onToggleSelected={(option, isSelected) => {
-                                    if (option) {
-                                      const currentValues = filter.multipleValues || 
-                                                          (filter.value ? [filter.value] : []);
-                                      const newValues = isSelected 
-                                        ? [...currentValues, option]
-                                        : currentValues.filter(val => val !== option);
-                                      updateFilter(index, { 
-                                        multipleValues: newValues.length > 0 ? newValues : [],
-                                        value: newValues.length > 0 ? newValues[0] : '' 
-                                      });
-                                    }
-                                  }}  
-                                  isMultiSelect
-                                  size="small"
-                                  clearButton
-                                />
-                              </div>
-                            )}
-                            {/* Add combobox for URL Path */}
-                            {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && 
-                            filter.column === 'url_path' && (
-                              <div className="mt-3 w-full">
-                                <UNSAFE_Combobox
-                                  label="URL-stier"
-                                  description="Velg en eller flere URL-stier"
-                                  options={availablePaths.map(path => ({
-                                    label: path,
-                                    value: path
-                                  }))}
+                                  label="Verdi"
+                                  description={filter.column === 'url_path' ? "Velg eller skriv inn URL-stier" : 
+                                              filter.column === 'event_name' ? "Velg eller skriv inn hendelser" : 
+                                              "Velg eller skriv inn verdier"}
+                                  options={getOptionsForColumn(filter.column, availableEvents, availablePaths)}
                                   selectedOptions={filter.multipleValues?.map(v => v || '') || 
                                                   (filter.value ? [filter.value] : [])}
                                   onToggleSelected={(option, isSelected) => {
@@ -738,20 +674,19 @@ const ChartFilters = ({
                                         ? [...currentValues, option]
                                         : currentValues.filter(val => val !== option);
                                       
-                                      // Always set operator to IN when there are multiple values
                                       const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
                                       
-                                      updateFilter(index, { 
+                                      updateFilter(index, {
                                         multipleValues: newValues.length > 0 ? newValues : undefined,
                                         value: newValues.length > 0 ? newValues[0] : '',
                                         operator: newOperator
                                       });
                                     }
-                                  }}  
+                                  }}
                                   isMultiSelect
                                   size="small"
                                   clearButton
-                                  allowNewValues
+                                  allowNewValues={filter.column !== 'event_type'}
                                 />
                               </div>
                             )}

@@ -141,6 +141,13 @@ const getParameterAggregator = (paramType: string): string => {
   }
 };
 
+// Add this helper function near the top with other helpers
+const isSessionColumn = (column: string): boolean => {
+  // These are columns that exist in the session table rather than the event table
+  const sessionColumns = ['browser', 'os', 'device', 'screen', 'language', 'country', 'subdivision1', 'city'];
+  return sessionColumns.includes(column);
+};
+
 const ChartsPage = () => {
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
@@ -251,6 +258,13 @@ const ChartsPage = () => {
     if (!config.website) return '';
 
     const requiredTables = getRequiredTables();
+    
+    // Split filters into event and session filters
+    const eventFilters = filters.filter(filter => 
+      !filter.column.startsWith('param_') && !isSessionColumn(filter.column)
+    );
+    const sessionFilters = filters.filter(filter => isSessionColumn(filter.column));
+    const paramFilters = filters.filter(filter => filter.column.startsWith('param_'));
     
     // Helper function to check if a column is used in the chart
     const isColumnUsed = (column: string): boolean => {
@@ -369,48 +383,27 @@ const ChartsPage = () => {
       sql += '    ON e.session_id = s.session_id\n';
     }
     
-    // WHERE clause
+    // WHERE clause for the CTE - only apply event filters here
     sql += `  WHERE e.website_id = '${config.website.id}'\n`;
     
-    // Add static filters to the CTE
-    filters.forEach(filter => {
-      if (filter.column.startsWith('param_')) {
-        // Instead of skipping parameter filters, we need to handle them differently
-        // Parameter filters need to be applied in the main query with special JOIN conditions
-        const paramName = filter.column.replace('param_', '');
-        const param = parameters.find(p => sanitizeColumnName(p.key) === paramName);
-        
-        if (param) {
-          // Add note that this filter will be applied in the main query
-          sql += `  /* Parameter filter for ${param.key} will be applied in main query */\n`;
-        }
-      } else if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-        // Handle custom parameters
-        if (filter.column.startsWith('param_')) {
-          sql += `  AND ${filter.column} ${filter.operator}\n`;
-        } else {
-          sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
-        }
+    // Add event filters to the CTE
+    eventFilters.forEach(filter => {
+      if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
+        sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
       } else if (filter.value || (filter.multipleValues && filter.multipleValues.length > 0)) {
-        if (filter.column.startsWith('param_')) {
-          // Handle parameter filtering
-          sql += `  AND ${filter.column} ${filter.operator} '${filter.value}'\n`;
-        } else if (filter.column === 'custom_column') {
-          // Handle custom column name
+        if (filter.column === 'custom_column') {
           sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
         } else if (filter.column === 'event_type') {
-          // Handle event_type as integer
           sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
-        } else if (filter.column === 'event_name' && filter.multipleValues && filter.multipleValues.length > 0) {
-          // Handle multiple event names using IN clause
-          const eventNames = filter.multipleValues.map(val => `'${val}'`).join(', ');
-          sql += `  AND e.${filter.column} IN (${eventNames})\n`;
-        } else if (filter.column === 'url_path' && filter.multipleValues && filter.multipleValues.length > 0) {
-          // Handle multiple URL paths using IN clause
-          const urlPaths = filter.multipleValues.map(val => `'${val}'`).join(', ');
-          sql += `  AND e.${filter.column} IN (${urlPaths})\n`;
+        } else if (filter.multipleValues && filter.multipleValues.length > 0) {
+          const values = filter.multipleValues.map(val => {
+            return !isNaN(Number(val)) && filter.column !== 'url_path' && filter.column !== 'event_name'
+              ? val
+              : `'${val}'`;
+          }).join(', ');
+          
+          sql += `  AND e.${filter.column} IN (${values})\n`;
         } else if (filter.column === 'created_at' && filter.dateRangeType && filter.dateRangeType !== 'custom') {
-          // Special handling for date ranges - use the actual SQL expression
           sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
         } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
           sql += `  AND e.${filter.column} ${filter.operator} '%${filter.value}%'\n`;
@@ -419,8 +412,6 @@ const ChartsPage = () => {
         } else if (filter.operator === 'ENDS_WITH') {
           sql += `  AND e.${filter.column} LIKE '%${filter.value}'\n`;
         } else {
-          // For custom date expressions and all other cases, use the original approach
-          // Skip the quotes for date expressions that are SQL functions
           const needsQuotes = !(
             filter.column === 'created_at' && 
             // @ts-ignore
@@ -605,6 +596,32 @@ const ChartsPage = () => {
       sql += '  ON base_query.session_id = s.session_id\n';
     }
 
+    // Main query WHERE clause for session and parameter filters
+    const mainWhereConditions: string[] = [];
+    
+    // Add session filters to the main query WHERE clause
+    sessionFilters.forEach(filter => {
+      if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
+        mainWhereConditions.push(`s.${filter.column} ${filter.operator}`);
+      } else if (filter.value || (filter.multipleValues && filter.multipleValues.length > 0)) {
+        if (filter.multipleValues && filter.multipleValues.length > 0) {
+          const values = filter.multipleValues.map(val => {
+            return !isNaN(Number(val)) ? val : `'${val}'`;
+          }).join(', ');
+          
+          mainWhereConditions.push(`s.${filter.column} IN (${values})`);
+        } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
+          mainWhereConditions.push(`s.${filter.column} ${filter.operator} '%${filter.value}%'`);
+        } else if (filter.operator === 'STARTS_WITH') {
+          mainWhereConditions.push(`s.${filter.column} LIKE '${filter.value}%'`);
+        } else if (filter.operator === 'ENDS_WITH') {
+          mainWhereConditions.push(`s.${filter.column} LIKE '%${filter.value}'`);
+        } else {
+          mainWhereConditions.push(`s.${filter.column} ${filter.operator} '${filter.value}'`);
+        }
+      }
+    });
+    
     // Add WHERE clause to filter out NULL values for percentage calculations on grouped fields
     const hasPercentageMetric = config.metrics.some(m => m.function === 'percentage');
     const needsNullFilter = hasPercentageMetric && config.groupByFields.length > 0;
@@ -656,6 +673,17 @@ const ChartsPage = () => {
             }
           }
         });
+      }
+    }
+
+    // Add the main query WHERE clause if we have any conditions
+    if (mainWhereConditions.length > 0) {
+      if (needsNullFilter || paramFilters.length > 0) {
+        // If we already have a WHERE clause, add conditions with AND
+        sql += '  AND ' + mainWhereConditions.join('\n  AND ') + '\n';
+      } else {
+        // If no previous WHERE clause exists, create a new one
+        sql += 'WHERE ' + mainWhereConditions.join('\n  AND ') + '\n';
       }
     }
 
@@ -889,18 +917,18 @@ const ChartsPage = () => {
       ?.columns.map(col => col.value) || [];
     
     // Check group by fields
-    if (config.groupByFields.some(field => sessionColumns.includes(field))) {
+    if (config.groupByFields.some(field => isSessionColumn(field))) {
       tables.session = true;
     }
     
     // Check filters
-    if (filters.some(filter => sessionColumns.includes(filter.column))) {
+    if (filters.some(filter => isSessionColumn(filter.column))) {
       tables.session = true;
     }
 
     // Check metrics
     if (config.metrics.some(metric => 
-      metric.column && sessionColumns.includes(metric.column)
+      metric.column && isSessionColumn(metric.column)
     )) {
       tables.session = true;
     }

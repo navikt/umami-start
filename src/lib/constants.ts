@@ -34,7 +34,7 @@ export const FILTER_COLUMNS = {
     columns: [
       { label: 'Person-ID', value: 'session_id' },
       { label: 'Besøk-ID', value: 'visit_id' },
-      { label: 'Nettleser', value: 'browser' },
+      { label: 'Nettlesertype', value: 'browser' },
       { label: 'Operativsystem', value: 'os' },
       { label: 'Enhet (mobil, laptop ++)', value: 'device' },
       { label: 'Skjermstørrelse', value: 'screen' },
