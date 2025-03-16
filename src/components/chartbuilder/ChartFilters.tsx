@@ -106,18 +106,6 @@ const ChartFilters = ({
   // Add helper function to commit staging filter
   const commitStagingFilter = () => {
     if (stagingFilter) {
-      // Format the filter description for the alert message
-      let filterDesc = '';
-      if (stagingFilter.column.startsWith('param_')) {
-        filterDesc = `Parameter ${stagingFilter.column.replace('param_', '')}`;
-      } else {
-        // Find the column label from FILTER_COLUMNS
-        const columnDef = Object.values(FILTER_COLUMNS)
-          .flatMap(group => group.columns)
-          .find(col => col.value === stagingFilter.column);
-        filterDesc = columnDef?.label || stagingFilter.column;
-      }
-
       setFilters([...filters, stagingFilter]);
       setStagingFilter(null);
       
