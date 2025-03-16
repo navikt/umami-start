@@ -183,10 +183,27 @@ const ChartsPage = () => {
   };
 
   const removeMetric = (index: number) => {
-    setConfig(prev => ({
-      ...prev,
-      metrics: prev.metrics.filter((_, i) => i !== index)
-    }));
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      
+      // Get the metric being removed
+      const removedMetric = prev.metrics[index];
+      const removedMetricAlias = removedMetric.alias || `metrikk_${index + 1}`;
+      
+      // If we're removing the metric that's being used for sorting, clear the orderBy
+      if (newConfig.orderBy && (
+        newConfig.orderBy.column === removedMetricAlias || 
+        newConfig.orderBy.column === `andel_${index + 1}` ||
+        (removedMetric.function === 'percentage' && !removedMetric.alias && newConfig.orderBy.column === 'andel')
+      )) {
+        newConfig.orderBy = null;
+      }
+      
+      // Remove the metric
+      newConfig.metrics = prev.metrics.filter((_, i) => i !== index);
+      
+      return newConfig;
+    });
   };
 
   const updateMetric = (index: number, updates: Partial<Metric>) => {
@@ -300,7 +317,6 @@ const ChartsPage = () => {
         sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
         sql += '        THEN CONCAT(\'?\', e.url_query)\n';
         sql += '        ELSE \'\'\n';
-        sql += '      END\n';
         sql += '    ) AS url_fullpath,\n';
       }
       
@@ -312,7 +328,6 @@ const ChartsPage = () => {
         sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
         sql += '        THEN CONCAT(\'?\', e.url_query)\n';
         sql += '        ELSE \'\'\n';
-        sql += '      END\n';
         sql += '    ) AS url_fullurl,\n';
       }
     }
@@ -326,7 +341,6 @@ const ChartsPage = () => {
         sql += '        WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
         sql += '        THEN CONCAT(\'?\', e.referrer_query)\n';
         sql += '        ELSE \'\'\n';
-        sql += '      END\n';
         sql += '    ) AS referrer_fullpath';
         
         // Only add comma if referrer_fullurl is also used
@@ -344,8 +358,7 @@ const ChartsPage = () => {
         sql += '          WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
         sql += '          THEN CONCAT(\'?\', e.referrer_query)\n';
         sql += '          ELSE \'\'\n';
-        sql += '        END\n';
-        sql += '      )\n';
+        sql += '    )\n';
         sql += '      ELSE NULL\n';
         sql += '    END AS referrer_fullurl\n';
       }
@@ -732,9 +745,9 @@ const ChartsPage = () => {
     }
     
     // Order By - modified to handle metric columns properly
-    if (config.orderBy) {
+    if (config.orderBy && config.orderBy.column && config.orderBy.direction) {
       // @ts-ignore First try to find any metric by alias
-      const metricByAlias = config.metrics.find(m => m.alias === config.orderBy.column);
+      const metricByAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
       
       const orderColumn = config.orderBy.column === 'created_at' 
         ? 'dato' 
@@ -746,7 +759,29 @@ const ChartsPage = () => {
             ? `\`${config.orderBy.column.replace(/`/g, '')}\`` // Clean and quote
             : config.orderBy.column;
       
-      sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
+      // Only add ORDER BY if the column actually exists in the query
+      const columnExists = config.groupByFields.some(field => 
+        (field === 'created_at' && config.orderBy?.column === 'dato') ||
+        field === config.orderBy?.column
+      ) || config.metrics.some((m, i) => 
+        m.alias === config.orderBy?.column || 
+        `metrikk_${i + 1}` === config.orderBy?.column ||
+        (m.function === 'percentage' && (
+          config.orderBy?.column === 'andel' ||
+          config.orderBy?.column === `andel_${i + 1}`
+        ))
+      );
+
+      if (columnExists) {
+        sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
+      } else {
+        // Fall back to default ordering if the column doesn't exist
+        if (config.groupByFields.includes('created_at')) {
+          sql += 'ORDER BY dato DESC\n';
+        } else {
+          sql += 'ORDER BY 1 DESC\n';
+        }
+      }
     } else if (config.groupByFields.length > 0) {
       // Default ordering
       if (config.groupByFields.includes('created_at')) {
