@@ -30,6 +30,11 @@ const DATE_FORMATS: DateFormat[] = [
     format: '%Y-%m'
   },
   { 
+    label: 'Uke', 
+    value: 'week',
+    format: '%Y-%U'
+  },
+  { 
     label: 'Dag', 
     value: 'day',
     format: '%Y-%m-%d'
