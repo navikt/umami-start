@@ -213,11 +213,6 @@ const ChartFilters = ({
         setSelectedPaths([]);
         setPageViewsMode('all');
         setCustomEventsMode('all');
-        
-        setAlertInfo({
-          show: true,
-          message: `Filter "${suggestion.label}" ble lagt til`
-        });
       }
       setAppliedSuggestion(suggestionId);
     }
