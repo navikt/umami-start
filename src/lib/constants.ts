@@ -32,8 +32,8 @@ export const FILTER_COLUMNS = {
     label: 'Besøksdetaljer',
     table: 'session',
     columns: [
-      { label: 'Person-ID', value: 'session_id' },
-      { label: 'Besøk-ID', value: 'visit_id' },
+      { label: 'Unike personer', value: 'session_id' },
+      { label: 'Unike besøk (økter)', value: 'visit_id' },
       { label: 'Nettlesertype', value: 'browser' },
       { label: 'Operativsystem', value: 'os' },
       { label: 'Enhet (mobil, laptop ++)', value: 'device' },
