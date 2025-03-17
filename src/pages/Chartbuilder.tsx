@@ -57,7 +57,7 @@ const METRICS: MetricOption[] = [
   { label: 'Sum av verdier', value: 'sum' },
   { label: 'Gjennomsnitt', value: 'average' },
   { label: 'Median', value: 'median' },
-  { label: 'Andel (%)', value: 'percentage' },
+  { label: 'Andel av resultatene (%)', value: 'percentage' },
   { label: 'Andel av totalen (%)', value: 'andel' },  // Add the new andel metric
 ];
 
@@ -99,14 +99,14 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
       { label: 'Created At', value: 'created_at' },
     ],
     percentage: [
-      { label: 'Personer', value: 'session_id' },
-      { label: 'Besøk', value: 'visit_id' },
+      { label: 'Besøkende', value: 'session_id' },
+      { label: 'Økter', value: 'visit_id' },
       { label: 'Hendelser', value: 'event_id' },
       { label: 'Rader', value: 'alle_rader_prosent' }
     ],
     andel: [
-      { label: 'Personer (av totale besøkende)', value: 'session_id' },
-      { label: 'Besøk (av totale besøk)', value: 'visit_id' },
+      { label: 'Besøkende (av totale besøkende)', value: 'session_id' },
+      { label: 'Økter (av totale økter)', value: 'visit_id' },
       { label: 'Hendelser (av totale hendelser)', value: 'event_id' }
     ]
   };
