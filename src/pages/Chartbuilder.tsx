@@ -167,7 +167,8 @@ const ChartsPage = () => {
     groupByFields: [],
     orderBy: null,
     dateFormat: 'day',
-    paramAggregation: 'unique'
+    paramAggregation: 'unique',
+    limit: null
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);
@@ -873,6 +874,11 @@ const ChartsPage = () => {
       }
     }
 
+    // Add LIMIT clause if specified
+    if (config.limit && config.limit > 0) {
+      sql += `LIMIT ${config.limit}\n`;
+    }
+
     return sql;
   }, [getMetricSQL]);
 
@@ -942,6 +948,15 @@ const ChartsPage = () => {
     }));
   };
 
+  // Add function to set the limit
+  const setLimit = (limit: number | null) => {
+    // @ts-ignore
+    setConfig(prev => ({
+      ...prev,
+      limit
+    }));
+  };
+
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
@@ -1001,6 +1016,7 @@ const ChartsPage = () => {
                       dateFormat={config.dateFormat}
                       orderBy={config.orderBy}
                       paramAggregation={config.paramAggregation}
+                      limit={config.limit}
                       METRICS={METRICS}
                       DATE_FORMATS={DATE_FORMATS}
                       COLUMN_GROUPS={FILTER_COLUMNS}
@@ -1016,6 +1032,7 @@ const ChartsPage = () => {
                       setOrderBy={setOrderBy}
                       clearOrderBy={clearOrderBy}
                       setParamAggregation={setParamAggregation}
+                      setLimit={setLimit}
                       setDateFormat={(format) => setConfig(prev => ({
                         ...prev,
                         dateFormat: format as DateFormat['value']

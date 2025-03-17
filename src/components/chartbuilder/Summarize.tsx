@@ -17,6 +17,7 @@ interface SummarizeProps {
   dateFormat: string | null;
   orderBy: OrderBy | null;
   paramAggregation: 'representative' | 'unique';
+  limit: number | null;
   METRICS: MetricOption[];
   DATE_FORMATS: DateFormat[];
   COLUMN_GROUPS: Record<string, ColumnGroup>;
@@ -28,11 +29,12 @@ interface SummarizeProps {
   addGroupByField: (field: string) => void;
   removeGroupByField: (field: string) => void;
   moveGroupField: (index: number, direction: 'up' | 'down') => void;
-  moveMetric: (index: number, direction: 'up' | 'down') => void; // Add this prop
+  moveMetric: (index: number, direction: 'up' | 'down') => void;
   setOrderBy: (column: string, direction: 'ASC' | 'DESC') => void;
   clearOrderBy: () => void;
   setDateFormat: (format: string) => void;
   setParamAggregation: (strategy: 'representative' | 'unique') => void;
+  setLimit: (limit: number | null) => void;
 }
 
 const Summarize = ({
@@ -41,6 +43,7 @@ const Summarize = ({
   parameters,
   dateFormat,
   orderBy,
+  limit,
   METRICS,
   DATE_FORMATS,
   COLUMN_GROUPS,
@@ -52,10 +55,11 @@ const Summarize = ({
   addGroupByField,
   removeGroupByField,
   moveGroupField,
-  moveMetric, // Add this prop
+  moveMetric,
   setOrderBy,
   clearOrderBy,
-  setDateFormat
+  setDateFormat,
+  setLimit
 }: SummarizeProps) => {
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -398,7 +402,7 @@ const Summarize = ({
         </p>
       )}
             
-        <div className="space-y-4">
+        <div className="mb-6 space-y-4">
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
             <Select
               label="Sorter etter"
@@ -456,6 +460,49 @@ const Summarize = ({
               </Select>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Result Limit section */}
+      <div className="border-t pt-4">
+        <Heading level="3" size="xsmall" spacing>
+          Maks rader
+        </Heading>
+        <p className="text-sm text-gray-600 mb-4">
+          Sett øvre grense for antall rader i resultatet.
+        </p>
+        
+        <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+          <TextField
+            label="Maksimalt antall rader"
+            type="number"
+            value={limit ? limit.toString() : ""}
+            onChange={(e) => {
+              const value = e.target.value.trim();
+              if (value === "") {
+                setLimit(null);
+              } else {
+                const numValue = parseInt(value, 10);
+                if (!isNaN(numValue) && numValue > 0) {
+                  setLimit(numValue);
+                }
+              }
+            }}
+            placeholder="Ubegrenset"
+            min="1"
+            size="small"
+            className="flex-grow"
+          />
+          {limit && (
+            <Button
+              variant="tertiary-neutral"
+              size="small"
+              onClick={() => setLimit(null)}
+              className="mb-1"
+            >
+              Fjern grense
+            </Button>
+          )}
         </div>
       </div>
     </div>

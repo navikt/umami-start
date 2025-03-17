@@ -65,4 +65,5 @@ export interface ChartConfig {
   orderBy: { column: string; direction: 'ASC' | 'DESC' } | null;
   dateFormat: DateFormat['value'];
   paramAggregation: 'representative' | 'unique'; // New property for controlling parameter aggregation
+  limit: null
 }
