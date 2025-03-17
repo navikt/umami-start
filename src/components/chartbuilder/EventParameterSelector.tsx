@@ -272,7 +272,7 @@ const getGroupedParameters = () => {
 
           {!isLoading && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
             <Alert variant="info" inline className="mt-3">
-              Ingen egendefinerte hendelser eller detaljer funnet. Du kan fortsatt legge til detaljer manuelt.
+              Ingen egendefinerte hendelser eller detaljer funnet.
             </Alert>
           )}
 
