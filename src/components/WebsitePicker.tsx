@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { UNSAFE_Combobox, Button, ReadMore, TextField, Loader, Alert } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Button, ReadMore, TextField, Alert, ProgressBar } from '@navikt/ds-react';
 import AlertWithCloseButton from './chartbuilder/AlertWithCloseButton';
 
 interface Website {
@@ -58,13 +58,43 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   // @ts-ignore
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showLoading, setShowLoading] = useState<boolean>(false);
+  const loadingTimerRef = useRef<number | null>(null);
+
+  const handleLoadingState = useCallback((loading: boolean) => {
+    if (loading) {
+      setIsLoading(true);
+      loadingTimerRef.current = window.setTimeout(() => {
+        setShowLoading(true);
+      }, 600);
+    } else {
+      // Clear both loading states
+      setIsLoading(false);
+      setShowLoading(false);
+      
+      // Clear any pending timers
+      if (loadingTimerRef.current) {
+        window.clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    }
+  }, []); // Remove showLoading dependency since we handle it directly
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingTimerRef.current) {
+        window.clearTimeout(loadingTimerRef.current);
+      }
+    };
+  }, []);
 
   // @ts-ignore
   const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false) => {
     if (fetchInProgress.current[websiteId]) return;
     
     fetchInProgress.current[websiteId] = true;
-    setIsLoading(true); // Set loading state when fetching starts
+    handleLoadingState(true); // Set loading state when fetching starts
     setError(null); // Clear any previous errors
     
     try {
@@ -131,6 +161,10 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       if (onEventsLoad) {
         onEventsLoad(uniqueEventNames, paramsByEvent, totalDays);
       }
+      
+      // Move loading cleanup here after all processing is done
+      handleLoadingState(false);
+      
     } catch (error) {
       console.error("Error fetching event data:", error);
       if (error instanceof Error) {
@@ -139,11 +173,12 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
           : 'Det oppstod en feil ved lasting av data. Forsøk å laste siden inn på nytt.';
         setError(message);
       }
+      handleLoadingState(false);
     } finally {
       fetchInProgress.current[websiteId] = false;
-      setIsLoading(false); // Clear loading state when done
+      // Removed handleLoadingState(false) from here
     }
-  }, [dateRangeInDays, onEventsLoad, setMaxDaysAvailable]);
+  }, [dateRangeInDays, onEventsLoad, setMaxDaysAvailable, handleLoadingState]);
 
   useEffect(() => {
     if (websitesLoaded.current) {
@@ -294,12 +329,24 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
             </div>
           )}
         </div>
-        {isLoading && (
-                    <div className="flex items-center gap-2 my-2">
-                      <Loader size="small" /> 
-                      <span>Laster inn hendelser og detaljer...</span>
-                    </div>
-                  )}
+        {showLoading && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span>Laster inn hendelser og detaljer...</span>
+            </div>
+            <ProgressBar 
+              size="small"
+              simulated={{
+                seconds: 30,
+                onTimeout: () => {
+                  setError('Forespørselen tok for lang tid. Prøv igjen senere.');
+                  setIsLoading(false);
+                }
+              }}
+              aria-label="Laster inn data"
+            />
+          </div>
+        )}
     </div>
   );
 };
