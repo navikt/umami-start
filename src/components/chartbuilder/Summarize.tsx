@@ -392,10 +392,12 @@ const Summarize = ({
         <Heading level="3" size="xsmall" spacing>
           Sortering
         </Heading>
+        {!orderBy && (
         <p className="text-sm text-gray-600 mb-4">
-          Standard sorterer etter den første kolonnen i synkende rekkefølge.
+          Standard sorterer etter første kolonne i synkende rekkefølge.
         </p>
-        
+      )}
+            
         <div className="space-y-4">
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
             <Select

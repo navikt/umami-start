@@ -5,7 +5,7 @@ export const FILTER_COLUMNS = {
     columns: [
       { label: 'Hendelsesnavn', value: 'event_name' },
       { label: 'Hendelsestype', value: 'event_type' },
-      { label: 'Hendelses-ID', value: 'event_id' },
+      { label: 'Unike hendelser (ID)', value: 'event_id' },
       { label: 'Dato', value: 'created_at' },
       { label: 'Nettside-ID', value: 'website_id' },
       { label: 'Nettside-domene', value: 'website_domain' },
@@ -32,8 +32,8 @@ export const FILTER_COLUMNS = {
     label: 'Besøksdetaljer',
     table: 'session',
     columns: [
-      { label: 'Unike personer', value: 'session_id' },
-      { label: 'Unike besøk (økter)', value: 'visit_id' },
+      { label: 'Unike personer (ID)', value: 'session_id' },
+      { label: 'Unike besøk / økter (ID)', value: 'visit_id' },
       { label: 'Nettlesertype', value: 'browser' },
       { label: 'Operativsystem', value: 'os' },
       { label: 'Enhet (mobil, laptop ++)', value: 'device' },

@@ -240,10 +240,21 @@ const ChartsPage = () => {
   // Add helper functions for group by fields
   const addGroupByField = (field: string) => {
     if (!config.groupByFields.includes(field)) {
-      setConfig(prev => ({
-        ...prev,
-        groupByFields: [...prev.groupByFields, field]
-      }));
+      setConfig(prev => {
+        // If adding 'created_at' as the first field or as the only field, update orderBy
+        if (field === 'created_at' && (prev.groupByFields.length === 0)) {
+          return {
+            ...prev,
+            groupByFields: [field, ...prev.groupByFields],
+            orderBy: { column: 'dato', direction: 'ASC' }
+          };
+        }
+        
+        return {
+          ...prev,
+          groupByFields: [...prev.groupByFields, field]
+        };
+      });
     }
   };
 
@@ -262,6 +273,15 @@ const ChartsPage = () => {
       
       if (newIndex >= 0 && newIndex < newFields.length) {
         [newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
+        
+        // Auto-change sort to date ONLY when date field is moved to first position
+        if (newIndex === 0 && newFields[0] === 'created_at') {
+          return {
+            ...prev,
+            groupByFields: newFields,
+            orderBy: { column: 'dato', direction: 'ASC' }
+          };
+        }
       }
       
       return {
@@ -750,7 +770,7 @@ const ChartsPage = () => {
       }
     }
     
-    // Order By - modified to handle metric columns properly
+    // Order By - modified to handle metric columns properly and respect user's choice
     if (config.orderBy && config.orderBy.column && config.orderBy.direction) {
       // @ts-ignore First try to find any metric by alias
       const metricByAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
@@ -783,15 +803,15 @@ const ChartsPage = () => {
       } else {
         // Fall back to default ordering if the column doesn't exist
         if (config.groupByFields.includes('created_at')) {
-          sql += 'ORDER BY dato DESC\n';
+          sql += 'ORDER BY dato ASC\n';
         } else {
           sql += 'ORDER BY 1 DESC\n';
         }
       }
     } else if (config.groupByFields.length > 0) {
-      // Default ordering
-      if (config.groupByFields.includes('created_at')) {
-        sql += 'ORDER BY dato DESC\n';
+      // Default ordering - only use date if it's the first field
+      if (config.groupByFields[0] === 'created_at') {
+        sql += 'ORDER BY dato ASC\n';
       } else {
         sql += 'ORDER BY 1 DESC\n';
       }
