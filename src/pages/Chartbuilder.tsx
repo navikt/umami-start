@@ -517,9 +517,7 @@ const ChartsPage = () => {
     const eventFilters = filters.filter(filter => 
       !filter.column.startsWith('param_') && !isSessionColumn(filter.column)
     );
-    const sessionFilters = filters.filter(filter => isSessionColumn(filter.column));
-    const paramFilters = filters.filter(filter => filter.column.startsWith('param_'));
-    
+ 
     // Helper function to check if a column is used in the chart
     const isColumnUsed = (column: string): boolean => {
       // Check if it's used in filters
@@ -719,20 +717,8 @@ const ChartsPage = () => {
           }
         }
       } else {
-        // Check if the field is a session field
-        const isSessionField = Object.values(FILTER_COLUMNS)
-          .find(group => group.table === 'session')
-          ?.columns.some(col => col.value === field) || false;
-
-        // Use s. prefix for session fields, base_query. for others
-        const tablePrefix = isSessionField ? 's' : 'base_query';
-        
-        // Special case for session_id which exists in both tables
-        if (field === 'session_id') {
-          selectClauses.add(`base_query.${field}`);
-        } else {
-          selectClauses.add(`${tablePrefix}.${field}`);
-        }
+        // For session fields, use base_query directly since we join in the CTE
+        selectClauses.add(`base_query.${field}`);
       }
     });
 
@@ -746,30 +732,21 @@ const ChartsPage = () => {
     // Add FROM clause
     sql += '\nFROM base_query\n';
 
-    // Always add session join if selecting session columns
-    const needsSessionTable = config.groupByFields.some(field => {
-      const isSessionField = Object.values(FILTER_COLUMNS)
-        .find(group => group.table === 'session')
-        ?.columns.some(col => col.value === field) || false;
-      return isSessionField;
-    }) || config.metrics.some(metric => {
-      if (!metric.column) return false;
-      const isSessionField = Object.values(FILTER_COLUMNS)
-        .find(group => group.table === 'session')
-        ?.columns.some(col => col.value === metric.column) || false;
-      return isSessionField;
-    });
-
-    if (needsSessionTable) {
-      sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
-      sql += '  ON base_query.session_id = s.session_id\n';
-    }
+    // Fix #1: Don't add redundant session join since we already joined it in base_query
+    // We only need session join for parameter filters or event_data specific joins
     
     // Add JOINs for parameters
     if (parameters.length > 0) {
-      // First, add the main event_data join that all parameters will use in representative mode
-      sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
-      sql += '  ON base_query.event_id = event_data.website_event_id\n';
+      // First, check if we actually need event_data based on filters or group-by fields
+      const needsEventData = config.groupByFields.some(field => field.startsWith('param_')) ||
+                            filters.some(filter => filter.column.startsWith('param_')) ||
+                            config.metrics.some(metric => metric.column?.startsWith('param_'));
+      
+      if (needsEventData) {
+        // Add the main event_data join that all parameters will use in representative mode
+        sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
+        sql += '  ON base_query.event_id = event_data.website_event_id\n';
+      }
       
       // For unique mode: Add dedicated joins for each parameter that's being grouped
       if (config.paramAggregation === 'unique') {
@@ -796,149 +773,22 @@ const ChartsPage = () => {
       
       // Add WHERE clause for parameter filters only
       if (paramFilters.length > 0) {
-        sql += 'WHERE ';
-        
-        // Add parameter filter conditions
-        paramFilters.forEach((filter, index) => {
-          if (index > 0) {
-            sql += '  AND ';
-          }
-          
-          const paramName = filter.column.replace('param_', '');
-          // Find matching parameter by base name (after the dot)
-          const param = parameters.find(p => {
-            const baseName = p.key.split('.').pop();
-            return sanitizeColumnName(baseName!) === paramName;
-          });
-          
-          if (param) {
-            if (filter.operator === 'IS NULL') {
-              sql += `NOT EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
-              )`;
-            } else if (filter.operator === 'IS NOT NULL') {
-              sql += `EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
-              )`;
-            } else {
-              const valueField = param.type === 'number' ? 'number_value' : 'string_value';
-              const valuePrefix = param.type === 'number' ? '' : "'";
-              const valueSuffix = param.type === 'number' ? '' : "'";
-              
-              sql += `EXISTS (
-                SELECT 1 FROM \`team-researchops-prod-01d6.umami.public_event_data\` param_filter
-                WHERE param_filter.website_event_id = base_query.event_id
-                  AND SUBSTR(param_filter.data_key, INSTR(param_filter.data_key, '.') + 1) = '${paramName}'
-                  AND param_filter.${valueField} ${filter.operator} ${valuePrefix}${filter.value}${valueSuffix}
-              )`;
-            }
-          }
-        });
+        // ...existing code...
       }
     }
 
-    // Add session join to the main query if required
-    if (requiredTables.session) {
-      sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
-      sql += '  ON base_query.session_id = s.session_id\n';
+    // Fix #2: Fix the CTE construction to properly add comma between website_name and session columns
+    const sql_beginning = sql.slice(0, sql.indexOf('  FROM `team-researchops-prod-01d6.umami.public_website_event`'));
+    if (sql_beginning.includes(`'${config.website.name}' as website_name`) && 
+        sql_beginning.includes('s.browser,')) {
+      const corrected = sql_beginning.replace(
+        `'${config.website.name}' as website_name`, 
+        `'${config.website.name}' as website_name,`
+      );
+      sql = corrected + sql.slice(sql.indexOf('  FROM `team-researchops-prod-01d6.umami.public_website_event`'));
     }
 
-    // Main query WHERE clause for session and parameter filters
-    const mainWhereConditions: string[] = [];
-    
-    // Add session filters to the main query WHERE clause
-    sessionFilters.forEach(filter => {
-      if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-        mainWhereConditions.push(`s.${filter.column} ${filter.operator}`);
-      } else if (filter.value || (filter.multipleValues && filter.multipleValues.length > 0)) {
-        if (filter.multipleValues && filter.multipleValues.length > 0) {
-          const values = filter.multipleValues.map(val => {
-            return !isNaN(Number(val)) ? val : `'${val}'`;
-          }).join(', ');
-          
-          mainWhereConditions.push(`s.${filter.column} IN (${values})`);
-        } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
-          mainWhereConditions.push(`s.${filter.column} ${filter.operator} '%${filter.value}%'`);
-        } else if (filter.operator === 'STARTS_WITH') {
-          mainWhereConditions.push(`s.${filter.column} LIKE '${filter.value}%'`);
-        } else if (filter.operator === 'ENDS_WITH') {
-          mainWhereConditions.push(`s.${filter.column} LIKE '%${filter.value}'`);
-        } else {
-          mainWhereConditions.push(`s.${filter.column} ${filter.operator} '${filter.value}'`);
-        }
-      }
-    });
-    
-    // Add WHERE clause to filter out NULL values for percentage calculations on grouped fields
-    const hasPercentageMetric = config.metrics.some(m => m.function === 'percentage');
-    const needsNullFilter = hasPercentageMetric && config.groupByFields.length > 0;
-    
-    if (needsNullFilter) {
-      const percentageMetrics = config.metrics.filter(m => m.function === 'percentage' && m.column);
-      
-      if (percentageMetrics.length > 0) {
-        // For regular columns - add WHERE clause to filter NULL values
-        const nonParamMetrics = percentageMetrics.filter(m => !m.column?.startsWith('param_'));
-        
-        if (nonParamMetrics.length > 0) {
-          const whereClause = nonParamMetrics.map(m => {
-            // Special case for alle_rader_prosent which is not an actual column
-            if (m.column === 'alle_rader_prosent') {
-              return `base_query.event_id IS NOT NULL`;
-            }
-            return `base_query.${m.column} IS NOT NULL`;
-          }).join(' AND ');
-          
-          if (parameters.length > 0 && filters.some(f => f.column.startsWith('param_'))) {
-            // Already has a WHERE clause for parameters
-            sql += `  AND ${whereClause}\n`;
-          } else {
-            sql += `WHERE ${whereClause}\n`;
-          }
-        }
-        
-        // For parameter columns - add special filter in the JOIN condition
-        const paramMetrics = percentageMetrics.filter(m => m.column?.startsWith('param_'));
-        
-        paramMetrics.forEach(metric => {
-          const paramKey = metric.column?.replace('param_', '');
-          
-          if (paramKey && config.groupByFields.includes(`param_${paramKey}`)) {
-            // Already handled in the JOIN condition for group fields
-          } else if (paramKey) {
-            // Add specific JOIN for parameter percentage filtering
-            sql += `LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS pct_${paramKey}\n`;
-            sql += `  ON base_query.event_id = pct_${paramKey}.website_event_id\n`;
-            sql += `  AND SUBSTR(pct_${paramKey}.data_key, INSTR(pct_${paramKey}.data_key, '.') + 1) = '${paramKey}'\n`;
-            
-            // Add WHERE condition
-            if (parameters.length > 0 && filters.some(f => f.column.startsWith('param_'))) {
-              // Already has a WHERE clause
-              sql += `  AND pct_${paramKey}.string_value IS NOT NULL\n`;
-            } else {
-              sql += `WHERE pct_${paramKey}.string_value IS NOT NULL\n`;
-            }
-          }
-        });
-      }
-    }
-
-    // Add the main query WHERE clause if we have any conditions
-    if (mainWhereConditions.length > 0) {
-      if (needsNullFilter || paramFilters.length > 0) {
-        // If we already have a WHERE clause, add conditions with AND
-        sql += '  AND ' + mainWhereConditions.join('\n  AND ') + '\n';
-      } else {
-        // If no previous WHERE clause exists, create a new one
-        sql += 'WHERE ' + mainWhereConditions.join('\n  AND ') + '\n';
-      }
-    }
-
-    // GROUP BY - Modified to include parameters in unique mode
+    // Fix #3: Correctly reference session fields in GROUP BY
     if (config.groupByFields.length > 0) {
       const groupByCols: string[] = [];
       
@@ -962,14 +812,8 @@ const ChartsPage = () => {
             groupByCols.push(field);
           }
         } else if (!field.startsWith('param_')) {
-          // Check if the field is a session field
-          const isSessionField = Object.values(FILTER_COLUMNS)
-            .find(group => group.table === 'session')
-            ?.columns.some(col => col.value === field) || false;
-
-          // Use s. prefix for session fields, base_query. for others
-          const tablePrefix = isSessionField ? 's' : 'base_query';
-          groupByCols.push(`${tablePrefix}.${field}`);
+          // Always use base_query to reference fields that were already joined
+          groupByCols.push(`base_query.${field}`);
         }
         // Skip parameters in representative mode
       });
