@@ -285,9 +285,9 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
                 
                 <div className="space-y-4 mt-2">
                   <div className="text-sm">
-                    Velg tidsperiode for å se tilgjengelige hendelser og detaljer.
+                      Endre tidsperioden for å hente hendelser og detaljer fra en tidligere dato.
                     {maxDaysAvailable > 0 && 
-                      ` Data er tilgjengelig for de siste ${maxDaysAvailable} dagene.`
+                      ` Du har tilgang til data fra de siste ${maxDaysAvailable} dagene.`
                     }
                   </div>
                   
@@ -320,10 +320,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
                       Tilgjengelige hendelser og parametere ble lastet inn
                     </AlertWithCloseButton>
                   )}
-                  
-                  <div className="text-sm text-gray-600">
-                    Viser tilgjengelige hendelser for de siste {dateRangeInDays} dagene
-                  </div>
+                
                 </div>
               </ReadMore>
             </div>
