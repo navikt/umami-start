@@ -1184,7 +1184,7 @@ const ChartsPage = () => {
           </div>
 
           {/* Right column - SQL preview */}
-          <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-screen lg:flex lg:flex-col">
+          <div className="lg:sticky lg:top-4 lg:self-start lg:flex lg:flex-col">
             {config.website && (
               <div className="mb-8 overflow-y-auto">
                 <SQLPreview sql={generatedSQL} />
