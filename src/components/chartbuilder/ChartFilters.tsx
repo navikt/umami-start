@@ -171,11 +171,6 @@ const ChartFilters = ({
         !(f.column === 'url_path' && f.operator === 'IN')
       );
       setFilters(finalFilters);
-
-      setAlertInfo({
-        show: true,
-        message: 'Filtrering opphevet - alle hendelser vises nå'
-      });
     } else {
       // Remove any existing suggestion filters first
       const cleanFilters = filters.filter(existingFilter => {
