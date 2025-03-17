@@ -7,11 +7,11 @@ import {
   Accordion,
   BodyShort,
   Alert,
-  Heading,
   Modal,
   Box,
   Tag,
-  ReadMore
+  ReadMore,
+  ExpansionCard
 } from '@navikt/ds-react';
 import { 
   PlusCircleIcon
@@ -258,153 +258,181 @@ const getGroupedParameters = () => {
   const getEventDisplayName = (eventName: string): string => {
     return eventName === MANUAL_EVENT_NAME ? MANUAL_EVENT_DISPLAY_NAME : eventName;
   };
-  
+
+  // Add helper function to get total event count
+  const getEventCount = () => {
+    const uniqueEvents = new Set();
+    parameters.forEach(param => {
+      if (param.key.includes('.')) {
+        const [eventName] = param.key.split('.');
+        uniqueEvents.add(eventName);
+      }
+    });
+    return uniqueEvents.size;
+  };
+
+  const getDetailCount = () => {
+    const uniqueParams = new Set();
+    parameters.forEach(param => {
+      const baseName = param.key.split('.')[1]; // Get parameter name without event prefix
+      uniqueParams.add(baseName);
+    });
+    return uniqueParams.size;
+  };
+
   return (
-    <VStack gap="6">
-      {/* Parameters Section - Only shown when events are selected and not loading */}
-      {!isLoading && (
-        <Box background="surface-subtle" borderRadius="medium">
-          <div className="flex justify-between items-center pb-2">
-            <Heading level="3" size="small" className="text-blue-600">
-              Utforsk egendefinerte hendelser og detaljer
-            </Heading>
-          </div>
+        <ExpansionCard
+          aria-label="Hendelsesdetaljer"
+          defaultOpen={false}
+          size="small"
+        >
+          <ExpansionCard.Header>
+            <ExpansionCard.Title as="h3" size="small">
+            {getEventCount()} egendefinerte hendelser – {getDetailCount()} unike detaljer
+            </ExpansionCard.Title>
+          </ExpansionCard.Header>
+          <ExpansionCard.Content>
+            <VStack gap="6">
+              {/* Parameters Section - Only shown when events are selected and not loading */}
+              {!isLoading && (
+                <Box borderRadius="medium">
+                  {!isLoading && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
+                    <Alert variant="info" inline className="mt-3">
+                      Ingen egendefinerte hendelser eller detaljer funnet. Savner noen? Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
+                    </Alert>
+                  )}
 
-          {!isLoading && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
-            <Alert variant="info" inline className="mt-3">
-              Ingen egendefinerte hendelser eller detaljer funnet. Savner noen? Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
-            </Alert>
-          )}
+                  {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                    <BodyShort size="small" spacing className="text-gray-600 pt-1 pb-3">
+                      Detaljer er forhåndsatt som tekst. Du kan endre til tall der det er relevant.
+                    </BodyShort>
+                  )}
+              
+                  {!isLoading && availableEvents.length > 0 && (
+                    <Accordion>
+                      {Object.keys(groupedParameters).map(eventName => (
+                        <Accordion.Item key={eventName}>
+                          <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
+                            <span className="flex items-center gap-2">
+                            {
+                                (eventName && getEventDisplayName(eventName) && 
+                                getEventDisplayName(eventName) !== "null") ? 
+                                  getEventDisplayName(eventName) : 
+                                  <>
+                                  sidevisning
+                                  <Tag size="xsmall" variant="info" className="whitespace-nowrap">standard</Tag>
+                                </>
+                              }
+                              <span className="text-sm text-gray-600">
+                                ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
+                              </span>
+                            </span>
+                          </Accordion.Header>
+                          <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
+                            <VStack gap="3" className="-ml-8 mt-5">
+                              {groupedParameters[eventName]?.map((param) => {
+                                const displayName = getParameterDisplayName(param);
+                                
+                                return (
+                                  <div 
+                                    key={param.key}
+                                    className="flex items-center justify-between p-3 bg-white rounded border"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{displayName}</span>
+                                    </div>
+                                    <HStack gap="2">
+                                      <Button
+                                        variant="secondary"
+                                        size="small"
+                                        onClick={() => toggleParameterType(param.key, param.type)}
+                                        className="min-w-[80px]"
+                                      >
+                                        {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
+                                      </Button>
+                                      {parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
+                                      <Button
+                                        variant="tertiary"
+                                        size="small"
+                                        onClick={() => removeParameter(param.key)}
+                                      >Fjern</Button>
+                                      )}
+                                    </HStack>
+                                  </div>
+                                );
+                              })}
+                            </VStack>
+                          </Accordion.Content>
+                        </Accordion.Item>
+                      ))}
+                    </Accordion>
+                  )}
+                </Box>
+              )}
 
-          {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-            <BodyShort size="small" spacing className="text-gray-600 pt-1 pb-3">
-              Detaljer er forhåndsatt som tekst. Du kan endre til tall der det er relevant.
-            </BodyShort>
-          )}
-  
-          {!isLoading && availableEvents.length > 0 && (
-            <Accordion>
-              {Object.keys(groupedParameters).map(eventName => (
-                <Accordion.Item key={eventName}>
-                  <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
-                    <span className="flex items-center gap-2">
-                     {
-                        (eventName && getEventDisplayName(eventName) && 
-                        getEventDisplayName(eventName) !== "null") ? 
-                          getEventDisplayName(eventName) : 
-                          <>
-                          sidevisning
-                          <Tag size="xsmall" variant="info" className="whitespace-nowrap">standard</Tag>
-                        </>
-                      }
-                      <span className="text-sm text-gray-600">
-                        ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
-                      </span>
-                    </span>
-                  </Accordion.Header>
-                  <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
-                    <VStack gap="3" className="-ml-8 mt-5">
-                      {groupedParameters[eventName]?.map((param) => {
-                        const displayName = getParameterDisplayName(param);
-                        
-                        return (
-                          <div 
-                            key={param.key}
-                            className="flex items-center justify-between p-3 bg-white rounded border"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{displayName}</span>
-                            </div>
-                            <HStack gap="2">
-                              <Button
-                                variant="secondary"
-                                size="small"
-                                onClick={() => toggleParameterType(param.key, param.type)}
-                                className="min-w-[80px]"
-                              >
-                                {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
-                              </Button>
-                              {parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
-                              <Button
-                                variant="tertiary"
-                                size="small"
-                                onClick={() => removeParameter(param.key)}
-                              >Fjern</Button>
-                              )}
-                            </HStack>
-                          </div>
-                        );
-                      })}
+              {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                <BodyShort size="small" spacing className="text-gray-600 pt-1">
+                  <strong>Savner noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
+                </BodyShort>
+              )}
+              
+              {/* Add Custom Parameters Section - Only when not loading */}
+              {!isLoading && (
+                <div className="-mt-3">
+                  <ReadMore 
+                    header="Legg til hendelsesdetaljer manuelt" 
+                    defaultOpen={customParamAccordionOpen}
+                    onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
+                  >
+                    <VStack gap="4">      
+                      <div className="flex gap-2 mt-4 items-end">
+                        <TextField 
+                          label="Hendelsesdetalj"
+                          description="Du kan legge til flere med komma"
+                          value={newParamKey}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
+                          onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
+                          style={{ width: '100%' }}
+                        />
+                        <Button 
+                          variant="secondary" 
+                          onClick={addParameter}
+                          icon={<PlusCircleIcon aria-hidden />}
+                          style={{ height: '50px' }}
+                        >
+                          Legg til
+                        </Button>
+                      </div>
                     </VStack>
-                  </Accordion.Content>
-                </Accordion.Item>
-              ))}
-            </Accordion>
-          )}
-        </Box>
-      )}
+                  </ReadMore>
+                </div>
+              )}
 
-{!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-            <BodyShort size="small" spacing className="text-gray-600 pt-1">
-              <strong>Savner noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
-            </BodyShort>
-          )}
-      
-      {/* Add Custom Parameters Section - Only when not loading */}
-      {!isLoading && (
-        <div className="-mt-3">
-          <ReadMore 
-            header="Legg til hendelsesdetaljer manuelt" 
-            defaultOpen={customParamAccordionOpen}
-            onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
-          >
-            <VStack gap="4">      
-              <div className="flex gap-2 mt-4 items-end">
-                <TextField 
-                  label="Hendelsesdetalj"
-                  description="Du kan legge til flere med komma"
-                  value={newParamKey}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
-                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addParameter()}
-                  style={{ width: '100%' }}
-                />
-                <Button 
-                  variant="secondary" 
-                  onClick={addParameter}
-                  icon={<PlusCircleIcon aria-hidden />}
-                  style={{ height: '50px' }}
-                >
-                  Legg til
-                </Button>
-              </div>
+              {/* Confirmation Modal for removing manual parameters */}
+              <Modal
+                open={showConfirmModal}
+                onClose={() => setShowConfirmModal(false)}
+                header={{ heading: "Fjerne manuelt lagt til parametere?" }}
+                width="small"
+              >
+                <Modal.Body>
+                  <p>
+                    Ved å fjerne denne gruppen vil alle manuelt lagt til parametere bli slettet.
+                    Er du sikker på at du vil fortsette?
+                  </p>
+                </Modal.Body>
+                <Modal.Footer>
+                  <Button variant="danger" onClick={confirmRemoveManualParameters}>
+                    Ja, fjern parametere
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
+                    Avbryt
+                  </Button>
+                </Modal.Footer>
+              </Modal>
             </VStack>
-          </ReadMore>
-        </div>
-      )}
-
-      {/* Confirmation Modal for removing manual parameters */}
-      <Modal
-        open={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        header={{ heading: "Fjerne manuelt lagt til parametere?" }}
-        width="small"
-      >
-        <Modal.Body>
-          <p>
-            Ved å fjerne denne gruppen vil alle manuelt lagt til parametere bli slettet.
-            Er du sikker på at du vil fortsette?
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="danger" onClick={confirmRemoveManualParameters}>
-            Ja, fjern parametere
-          </Button>
-          <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
-            Avbryt
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </VStack>
+          </ExpansionCard.Content>
+        </ExpansionCard>
   );
 };
 

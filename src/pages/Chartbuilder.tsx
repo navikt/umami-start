@@ -1127,13 +1127,11 @@ const ChartsPage = () => {
                     <Heading level="2" size="small" spacing>
                       Datautforsker
                     </Heading>
-                    <div className="bg-gray-50 p-5 rounded-md border">
-                      <EventParameterSelector
-                        availableEvents={availableEvents}
-                        parameters={parameters}
-                        setParameters={setParameters}
-                      />
-                    </div>
+                    <EventParameterSelector
+                      availableEvents={availableEvents}
+                      parameters={parameters}
+                      setParameters={setParameters}
+                    />
                   </section>
 
                   {/* Replace the Filter section with the new component */}
