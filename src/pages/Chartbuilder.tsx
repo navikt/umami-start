@@ -58,6 +58,7 @@ const METRICS: MetricOption[] = [
   { label: 'Gjennomsnitt', value: 'average' },
   { label: 'Median', value: 'median' },
   { label: 'Andel (%)', value: 'percentage' },
+  { label: 'Andel av totalen (%)', value: 'andel' },  // Add the new andel metric
 ];
 
 // Add the sanitizeColumnName helper function BEFORE it's used
@@ -102,6 +103,11 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
       { label: 'Besøk', value: 'visit_id' },
       { label: 'Hendelser', value: 'event_id' },
       { label: 'Rader', value: 'alle_rader_prosent' }
+    ],
+    andel: [
+      { label: 'Personer (av totale besøkende)', value: 'session_id' },
+      { label: 'Besøk (av totale besøk)', value: 'visit_id' },
+      { label: 'Hendelser (av totale hendelser)', value: 'event_id' }
     ]
   };
 
@@ -290,6 +296,212 @@ const ChartsPage = () => {
       };
     });
   };
+
+  // Helper function to get date filter conditions for the total count query
+  const getDateFilterConditions = useCallback((): string => {
+    // Extract just the date-related filters
+    const dateFilters = filters.filter(f => 
+      f.column === 'created_at' || 
+      (f.column === 'custom_column' && f.customColumn?.includes('created_at'))
+    );
+    
+    if (dateFilters.length === 0) return '';
+    
+    let conditions = '';
+    
+    dateFilters.forEach(filter => {
+      if (filter.value) {
+        const column = filter.column === 'custom_column' ? filter.customColumn : filter.column;
+        conditions += ` AND ${column} ${filter.operator} ${filter.value}`;
+      }
+    });
+    
+    return conditions;
+  }, [filters]);
+
+  // Helper function to determine required table joins
+  const getRequiredTables = (): { session: boolean, eventData: boolean } => {
+    const tables = { session: false, eventData: false };
+    
+    // Check group by fields
+    if (config.groupByFields.some(field => isSessionColumn(field))) {
+      tables.session = true;
+    }
+    
+    // Check filters
+    if (filters.some(filter => isSessionColumn(filter.column))) {
+      tables.session = true;
+    }
+
+    // Check metrics
+    if (config.metrics.some(metric => 
+      metric.column && isSessionColumn(metric.column)
+    )) {
+      tables.session = true;
+    }
+    
+    // Always include event_data table for custom metrics/parameters
+    tables.eventData = true;
+    
+    return tables;
+  };
+
+  // Helper function to generate the actual SQL
+  const getMetricSQLByType = useCallback((func: string, column?: string, alias: string = 'metric'): string => {
+    // Ensure the alias is properly quoted with backticks for BigQuery
+    const quotedAlias = `\`${alias}\``;
+    
+    // Get website ID with a check to ensure it's not undefined
+    const websiteId = config.website?.id || '';
+    
+    // If it's a custom parameter metric
+    if (column?.startsWith('param_')) {
+      const paramKey = column.replace('param_', '');
+      
+      switch (func) {
+        case 'distinct':
+          return `COUNT(DISTINCT CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
+        case 'sum':
+        case 'average':
+        case 'median':
+          return `${func === 'average' ? 'AVG' : func.toUpperCase()}(
+            CASE 
+              WHEN event_data.data_key = '${paramKey}'
+              THEN CAST(event_data.number_value AS NUMERIC)
+            END
+          ) as ${quotedAlias}`;
+        case 'min':
+          return `MIN(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
+        case 'max':
+          return `MAX(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
+        case 'percentage':
+          // Use window function for more accurate percentages
+          return `ROUND(
+            100.0 * COUNT(*) / (
+              SUM(COUNT(*)) OVER()
+            )
+          , 2) as ${quotedAlias}`;
+        case 'andel':
+          // For parameter-based andel, calculate percentage against total
+          return `ROUND(
+            100.0 * COUNT(*) / (
+              SELECT COUNT(*) FROM base_query
+            )
+          , 2) as ${quotedAlias}`;
+        default:
+          return `COUNT(*) as ${quotedAlias}`;
+      }
+    }
+
+    // For regular columns
+    switch (func) {
+      case 'count':
+        return `COUNT(*) as ${quotedAlias}`;
+      case 'distinct':
+        // Fix ambiguous column reference by explicitly specifying the table
+        if (column === 'session_id') {
+          return `COUNT(DISTINCT base_query.session_id) as ${quotedAlias}`;
+        }
+        return `COUNT(DISTINCT ${column || 'base_query.session_id'}) as ${quotedAlias}`;
+      case 'sum':
+        return column ? `SUM(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
+      case 'average':
+        return column ? `AVG(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
+      case 'min':
+        return column ? `MIN(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
+      case 'max':
+        return column ? `MAX(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
+      case 'percentage':
+        if (column) {
+          // Special case for the "Rader" (all rows percentage)
+          // This is a special key, not an actual column name
+          if (column === 'alle_rader_prosent') {
+            return `ROUND(
+              100.0 * COUNT(*) / (
+                SUM(COUNT(*)) OVER()
+              )
+            , 2) as ${quotedAlias}`;
+          }
+          
+          // For specific columns (session_id, visit_id, event_id), use COUNT(DISTINCT)
+          // This ensures we're calculating percentages based on unique entities
+          return `ROUND(
+            100.0 * COUNT(DISTINCT base_query.${column}) / (
+              SUM(COUNT(DISTINCT base_query.${column})) OVER()
+            )
+          , 2) as ${quotedAlias}`;
+        }
+        // Default percentage calculation if no column specified
+        return `ROUND(
+          100.0 * COUNT(*) / (
+            SUM(COUNT(*)) OVER()
+          )
+        , 2) as ${quotedAlias}`;
+      case 'andel':
+        if (column && websiteId) {
+          // Now use the websiteId variable which we've ensured is not empty
+          if (column === 'session_id') {
+            return `ROUND(
+              100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
+                SELECT COUNT(DISTINCT ${column}) 
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = '${websiteId}'
+                ${getDateFilterConditions()}
+              ), 0)
+            , 2) as ${quotedAlias}`;
+          } else if (column === 'visit_id') {
+            return `ROUND(
+              100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
+                SELECT COUNT(DISTINCT ${column})
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = '${websiteId}'
+                ${getDateFilterConditions()}
+              ), 0)
+            , 2) as ${quotedAlias}`;
+          } else if (column === 'event_id') {
+            return `ROUND(
+              100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
+                SELECT COUNT(DISTINCT ${column})
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = '${websiteId}'
+                ${getDateFilterConditions()}
+              ), 0)
+            , 2) as ${quotedAlias}`;
+          }
+        }
+        
+        // If we don't have a valid website ID or column, return a default message
+        return `COUNT(*) as ${quotedAlias} /* Andel calculation skipped */`;
+      
+      // ...existing code...
+      default:
+        return `COUNT(*) as ${quotedAlias}`;
+    }
+  }, [config.website?.id, getDateFilterConditions]);
+
+  // IMPORTANT: Move this function before generateSQLCore to fix the reference error
+  // Update the getMetricSQL function to handle aliases and indices
+  const getMetricSQL = useCallback((metric: Metric, index: number): string => {
+    // For percentage metrics, standardize the alias to 'andel' if not specified
+    if (metric.function === 'percentage' && !metric.alias) {
+      // If there are multiple percentage metrics, add an index
+      const percentageCount = config.metrics
+        .filter(m => m.function === 'percentage')
+        .length;
+      
+      const alias = percentageCount > 1 ? `andel_${index + 1}` : 'andel';
+      return getMetricSQLByType(metric.function, metric.column, alias);
+    }
+    
+    // If user has set a custom alias, use that
+    if (metric.alias) {
+      return getMetricSQLByType(metric.function, metric.column, metric.alias);
+    }
+
+    // Always use metrikk_N format for consistency
+    const defaultAlias = `metrikk_${index + 1}`;
+    return getMetricSQLByType(metric.function, metric.column, defaultAlias);
+  }, [getMetricSQLByType, config.metrics]);
 
   // Update the SQL generation to handle parameters better
   const generateSQLCore = useCallback((
@@ -818,120 +1030,18 @@ const ChartsPage = () => {
     }
 
     return sql;
-  }, []);
+  }, [getMetricSQL]);
 
-  const generateSQL = () => {
+  // Update the generateSQL function to check for website ID at the top level
+  const generateSQL = useCallback(() => {
+    if (!config.website || !config.website.id) {
+      setGeneratedSQL('-- Please select a website to generate SQL');
+      return;
+    }
+    
+    // Only proceed with SQL generation if we have a valid website ID
     setGeneratedSQL(generateSQLCore(config, filters, parameters));
-  };
-
-  // Update the getMetricSQL function to handle aliases and indices
-  const getMetricSQL = (metric: Metric, index: number): string => {
-    // For percentage metrics, standardize the alias to 'andel' if not specified
-    if (metric.function === 'percentage' && !metric.alias) {
-      // If there are multiple percentage metrics, add an index
-      const percentageCount = config.metrics
-        .filter(m => m.function === 'percentage')
-        .length;
-      
-      const alias = percentageCount > 1 ? `andel_${index + 1}` : 'andel';
-      return getMetricSQLByType(metric.function, metric.column, alias);
-    }
-    
-    // If user has set a custom alias, use that
-    if (metric.alias) {
-      return getMetricSQLByType(metric.function, metric.column, metric.alias);
-    }
-  
-    // Always use metrikk_N format for consistency
-    const defaultAlias = `metrikk_${index + 1}`;
-    return getMetricSQLByType(metric.function, metric.column, defaultAlias);
-  };
-
-  // Helper function to generate the actual SQL
-  const getMetricSQLByType = (func: string, column?: string, alias: string = 'metric'): string => {
-    // Ensure the alias is properly quoted with backticks for BigQuery
-    const quotedAlias = `\`${alias}\``;
-    
-    // If it's a custom parameter metric
-    if (column?.startsWith('param_')) {
-      const paramKey = column.replace('param_', '');
-      
-      switch (func) {
-        case 'distinct':
-          return `COUNT(DISTINCT CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
-        case 'sum':
-        case 'average':
-        case 'median':
-          return `${func === 'average' ? 'AVG' : func.toUpperCase()}(
-            CASE 
-              WHEN event_data.data_key = '${paramKey}'
-              THEN CAST(event_data.number_value AS NUMERIC)
-            END
-          ) as ${quotedAlias}`;
-        case 'min':
-          return `MIN(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
-        case 'max':
-          return `MAX(CASE WHEN event_data.data_key = '${paramKey}' THEN event_data.string_value END) as ${quotedAlias}`;
-        case 'percentage':
-          // Use window function for more accurate percentages
-          return `ROUND(
-            100.0 * COUNT(*) / (
-              SUM(COUNT(*)) OVER()
-            )
-          , 2) as ${quotedAlias}`;
-        default:
-          return `COUNT(*) as ${quotedAlias}`;
-      }
-    }
-  
-    // For regular columns
-    switch (func) {
-      case 'count':
-        return `COUNT(*) as ${quotedAlias}`;
-      case 'distinct':
-        // Fix ambiguous column reference by explicitly specifying the table
-        if (column === 'session_id') {
-          return `COUNT(DISTINCT base_query.session_id) as ${quotedAlias}`;
-        }
-        return `COUNT(DISTINCT ${column || 'base_query.session_id'}) as ${quotedAlias}`;
-      case 'sum':
-        return column ? `SUM(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
-      case 'average':
-        return column ? `AVG(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
-      case 'min':
-        return column ? `MIN(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
-      case 'max':
-        return column ? `MAX(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
-      case 'percentage':
-        if (column) {
-          // Special case for the "Rader" (all rows percentage)
-          // This is a special key, not an actual column name
-          if (column === 'alle_rader_prosent') {
-            return `ROUND(
-              100.0 * COUNT(*) / (
-                SUM(COUNT(*)) OVER()
-              )
-            , 2) as ${quotedAlias}`;
-          }
-          
-          // For specific columns (session_id, visit_id, event_id), use COUNT(DISTINCT)
-          // This ensures we're calculating percentages based on unique entities
-          return `ROUND(
-            100.0 * COUNT(DISTINCT base_query.${column}) / (
-              SUM(COUNT(DISTINCT base_query.${column})) OVER()
-            )
-          , 2) as ${quotedAlias}`;
-        }
-        // Default percentage calculation if no column specified
-        return `ROUND(
-          100.0 * COUNT(*) / (
-            SUM(COUNT(*)) OVER()
-          )
-        , 2) as ${quotedAlias}`;
-      default:
-        return `COUNT(*) as ${quotedAlias}`;
-    }
-  };
+  }, [config, filters, parameters, generateSQLCore]);
 
   // Add orderBy management functions
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
@@ -966,33 +1076,6 @@ const ChartsPage = () => {
       ...prev,
       orderBy: null
     }));
-  };
-
-  // Helper function to determine required table joins
-  const getRequiredTables = (): { session: boolean, eventData: boolean } => {
-    const tables = { session: false, eventData: false };
-    
-    // Check group by fields
-    if (config.groupByFields.some(field => isSessionColumn(field))) {
-      tables.session = true;
-    }
-    
-    // Check filters
-    if (filters.some(filter => isSessionColumn(filter.column))) {
-      tables.session = true;
-    }
-
-    // Check metrics
-    if (config.metrics.some(metric => 
-      metric.column && isSessionColumn(metric.column)
-    )) {
-      tables.session = true;
-    }
-    
-    // Always include event_data table for custom metrics/parameters
-    tables.eventData = true;
-    
-    return tables;
   };
 
   // Update handleEventsLoad to not handle date range information

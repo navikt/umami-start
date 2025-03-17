@@ -274,9 +274,9 @@ const Summarize = ({
                 >
                   <option value="">Velg kolonne</option>
                   
-                  {/* For percentage, use the simplified dropdown */}
-                  {metric.function === 'percentage' ? (
-                    getMetricColumns(parameters, 'percentage').map(col => (
+                  {/* For percentage and andel, use the simplified dropdown */}
+                  {(metric.function === 'percentage' || metric.function === 'andel') ? (
+                    getMetricColumns(parameters, metric.function).map(col => (
                       <option key={col.value} value={col.value}>
                         {col.label}
                       </option>
