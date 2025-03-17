@@ -298,7 +298,7 @@ const getGroupedParameters = () => {
                 <Box borderRadius="medium">
                   {!isLoading && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
                     <Alert variant="info" inline className="mt-3">
-                      Ingen egendefinerte hendelser eller detaljer funnet. Savner noen? Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
+                      Ingen egendefinerte hendelser eller detaljer funnet. Mangler noen? Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                     </Alert>
                   )}
 
@@ -372,7 +372,7 @@ const getGroupedParameters = () => {
 
               {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
                 <BodyShort size="small" spacing className="text-gray-600 pt-1">
-                  <strong>Savner noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
+                  <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                 </BodyShort>
               )}
               
