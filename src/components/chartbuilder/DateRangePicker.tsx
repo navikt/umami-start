@@ -82,8 +82,8 @@ const DYNAMIC_DATE_RANGES = [
   {
     id: 'last_week',
     label: 'Forrige uke',
-    fromSQL: "DATE_TRUNC(DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 WEEK), WEEK(MONDAY))",
-    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY)), INTERVAL 1 SECOND)"
+    fromSQL: "TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 WEEK))",
+    toSQL: "TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)))"
   },
   {
     id: 'last7days',
@@ -106,8 +106,8 @@ const DYNAMIC_DATE_RANGES = [
   {
     id: 'lastmonth_dynamic',
     label: 'Forrige måned',
-    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 MONTH), MONTH)",
-    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH), INTERVAL 1 SECOND)"
+    fromSQL: "TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 1 MONTH))",
+    toSQL: "TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), MONTH))"
   },
   {
     id: 'thisyear_dynamic',
@@ -118,8 +118,8 @@ const DYNAMIC_DATE_RANGES = [
   {
     id: 'lastyear_dynamic',
     label: 'I fjor',
-    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 YEAR), YEAR)",
-    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), YEAR), INTERVAL 1 SECOND)"
+    fromSQL: "TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), YEAR), INTERVAL 1 YEAR))",
+    toSQL: "TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), YEAR))"
   }
 ];
 
@@ -131,7 +131,6 @@ const TIME_UNITS = [
   { value: 'week', label: 'Uke' },
   { value: 'month', label: 'Måned' },
   { value: 'quarter', label: 'Kvartal' },
-  { value: 'tertial', label: 'Tertial' },
   { value: 'year', label: 'År' }
 ];
 
@@ -165,12 +164,6 @@ const CURRENT_PERIODS = [
     id: 'current_quarter',
     label: 'Kvartalet',
     fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), QUARTER)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'current_tertial',
-    label: 'Tertial',
-    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH)",
     toSQL: "CURRENT_TIMESTAMP()"
   },
   {
