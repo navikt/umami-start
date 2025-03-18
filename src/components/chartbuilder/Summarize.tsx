@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
 import { 
   Parameter, 
@@ -35,6 +35,7 @@ interface SummarizeProps {
   setDateFormat: (format: string) => void;
   setParamAggregation: (strategy: 'representative' | 'unique') => void;
   setLimit: (limit: number | null) => void;
+  availableEvents?: string[];
 }
 
 const Summarize = ({
@@ -59,7 +60,8 @@ const Summarize = ({
   setOrderBy,
   clearOrderBy,
   setDateFormat,
-  setLimit
+  setLimit,
+  availableEvents = []
 }: SummarizeProps) => {
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -81,6 +83,28 @@ const Summarize = ({
 
   // Get deduplicated parameters once
   const uniqueParameters = getUniqueParameters(parameters);
+  
+  // Helper function to extract unique event names
+  const getUniqueEventNames = (): string[] => {
+    return availableEvents
+      .filter(event => event != null)
+      .filter((event, index, self) => self.indexOf(event) === index)
+      .sort();
+  };
+  
+  // Filter for operators relevant to count_where
+  const OPERATORS = [
+    { value: '=', label: 'Er lik' },
+    { value: '!=', label: 'Er ikke lik' },
+    { value: '>', label: 'Større enn' },
+    { value: '<', label: 'Mindre enn' },
+    { value: '>=', label: 'Større eller lik' },
+    { value: '<=', label: 'Mindre eller lik' },
+    { value: 'LIKE', label: 'Inneholder' },
+    { value: 'NOT LIKE', label: 'Inneholder ikke' },
+    { value: 'IN', label: 'Er en av' },
+    { value: 'NOT IN', label: 'Er ikke en av' }
+  ];
 
   return (
     <div className="bg-gray-50 p-5 rounded-md border"> 
@@ -269,25 +293,18 @@ const Summarize = ({
                 ))}
               </Select>
               
-              {metric.function !== 'count' && (
-                <Select
-                  label="Kolonne"
-                  value={metric.column || ''}
-                  onChange={(e) => updateMetric(index, { column: e.target.value })}
-                  size="small"
-                >
-                  <option value="">Velg kolonne</option>
-                  
-                  {/* For percentage and andel, use the simplified dropdown */}
-                  {(metric.function === 'percentage' || metric.function === 'andel') ? (
-                    getMetricColumns(parameters, metric.function).map(col => (
-                      <option key={col.value} value={col.value}>
-                        {col.label}
-                      </option>
-                    ))
-                  ) : (
-                    /* For all other functions, use the original grouped dropdowns */
-                    <>
+              {/* Add special case for count_where */}
+              {metric.function === 'count_where' ? (
+                <div className="flex-grow flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Select
+                      label="Kolonne"
+                      value={metric.whereColumn || 'event_name'}
+                      onChange={(e) => updateMetric(index, { whereColumn: e.target.value })}
+                      size="small"
+                      className="flex-grow"
+                    >
+                      <option value="event_name">Hendelsesnavn</option>
                       {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
                         <optgroup key={groupKey} label={group.label}>
                           {group.columns.map(col => (
@@ -301,15 +318,112 @@ const Summarize = ({
                       {uniqueParameters.length > 0 && (
                         <optgroup label="Egendefinerte">
                           {uniqueParameters.map(param => (
-                            <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                            <option 
+                              key={`param_${param.key}`} 
+                              value={`param_${sanitizeColumnName(param.key)}`}
+                            >
                               {param.key}
                             </option>
                           ))}
                         </optgroup>
                       )}
-                    </>
-                  )}
-                </Select>
+                    </Select>
+
+                    <Select
+                      label="Operator"
+                      value={metric.whereOperator || '='}
+                      onChange={(e) => updateMetric(index, { whereOperator: e.target.value })}
+                      size="small"
+                    >
+                      {OPERATORS.map(op => (
+                        <option key={op.value} value={op.value}>
+                          {op.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  
+                  {/* Use Combobox for values - similar to ChartFilters.tsx */}
+                  <UNSAFE_Combobox
+                    label="Verdi"
+                    description={
+                      metric.whereColumn === 'event_name' ? "Velg eller skriv inn hendelsesnavn" :
+                      metric.whereColumn === 'url_path' ? "Velg eller skriv inn URL-sti" :
+                      "Velg eller skriv inn verdi"
+                    }
+                    options={(metric.whereColumn === 'event_name' ? getUniqueEventNames() : [])
+                      .map(val => ({ label: val, value: val }))}
+                    selectedOptions={metric.whereMultipleValues?.map(v => v || '') || 
+                                    (metric.whereValue ? [metric.whereValue] : [])}
+                    onToggleSelected={(option, isSelected) => {
+                      if (option) {
+                        const currentValues = metric.whereMultipleValues || 
+                                           (metric.whereValue ? [metric.whereValue] : []);
+                        const newValues = isSelected 
+                          ? [...currentValues, option]
+                          : currentValues.filter(val => val !== option);
+                        
+                        const newOperator = newValues.length > 1 && ['IN', 'NOT IN'].includes(metric.whereOperator || '=') 
+                          ? metric.whereOperator 
+                          : newValues.length > 1 ? 'IN' : metric.whereOperator || '=';
+                        
+                        updateMetric(index, {
+                          whereMultipleValues: newValues.length > 0 ? newValues : undefined,
+                          whereValue: newValues.length > 0 ? newValues[0] : '',
+                          whereOperator: newOperator
+                        });
+                      }
+                    }}
+                    isMultiSelect={['IN', 'NOT IN'].includes(metric.whereOperator || '=')}
+                    size="small"
+                    clearButton
+                    allowNewValues
+                  />
+                </div>
+              ) : (
+                // Original metric column selection
+                metric.function !== 'count' && (
+                  <Select
+                    label="Kolonne"
+                    value={metric.column || ''}
+                    onChange={(e) => updateMetric(index, { column: e.target.value })}
+                    size="small"
+                  >
+                    <option value="">Velg kolonne</option>
+                    
+                    {/* For percentage and andel, use the simplified dropdown */}
+                    {(metric.function === 'percentage' || metric.function === 'andel') ? (
+                      getMetricColumns(parameters, metric.function).map(col => (
+                        <option key={col.value} value={col.value}>
+                          {col.label}
+                        </option>
+                      ))
+                    ) : (
+                      /* For all other functions, use the original grouped dropdowns */
+                      <>
+                        {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                          <optgroup key={groupKey} label={group.label}>
+                            {group.columns.map(col => (
+                              <option key={col.value} value={col.value}>
+                                {col.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                        
+                        {uniqueParameters.length > 0 && (
+                          <optgroup label="Egendefinerte">
+                            {uniqueParameters.map(param => (
+                              <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                {param.key}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    )}
+                  </Select>
+                )
               )}
               
               <TextField

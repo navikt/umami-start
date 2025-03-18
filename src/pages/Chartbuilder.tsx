@@ -53,6 +53,7 @@ const DATE_FORMATS: DateFormat[] = [
 
 const METRICS: MetricOption[] = [
   { label: 'Antall rader', value: 'count' },
+  { label: 'Antall rader hvor', value: 'count_where' }, // Add new metric type
   { label: 'Antall unike verdier', value: 'distinct' },
   { label: 'Sum av verdier', value: 'sum' },
   { label: 'Gjennomsnitt', value: 'average' },
@@ -348,12 +349,44 @@ const ChartsPage = () => {
   };
 
   // Helper function to generate the actual SQL
-  const getMetricSQLByType = useCallback((func: string, column?: string, alias: string = 'metric'): string => {
+  const getMetricSQLByType = useCallback((func: string, column?: string, alias: string = 'metric', metric?: Metric): string => {
     // Ensure the alias is properly quoted with backticks for BigQuery
     const quotedAlias = `\`${alias}\``;
     
     // Get website ID with a check to ensure it's not undefined
     const websiteId = config.website?.id || '';
+    
+    // Special handling for count_where
+    if (func === 'count_where' && metric) {
+      const whereColumn = metric.whereColumn || 'event_name';
+      const whereOperator = metric.whereOperator || '=';
+      
+      // Handle different operator types
+      if (['IN', 'NOT IN'].includes(whereOperator) && metric.whereMultipleValues && metric.whereMultipleValues.length > 0) {
+        const valueList = metric.whereMultipleValues
+          .map(val => {
+            // Determine if we should quote the value based on column and value type
+            const needsQuotes = isNaN(Number(val)) || whereColumn === 'event_name' || whereColumn === 'url_path';
+            return needsQuotes ? `'${val.replace(/'/g, "''")}'` : val;
+          })
+          .join(', ');
+        
+        return `COUNT(CASE WHEN base_query.${whereColumn} ${whereOperator} (${valueList}) THEN 1 ELSE NULL END) as ${quotedAlias}`;
+      } 
+      else if (['LIKE', 'NOT LIKE'].includes(whereOperator) && metric.whereValue) {
+        return `COUNT(CASE WHEN base_query.${whereColumn} ${whereOperator} '%${metric.whereValue.replace(/'/g, "''")}%' THEN 1 ELSE NULL END) as ${quotedAlias}`;
+      }
+      else if (metric.whereValue) {
+        // Determine if we should quote the value based on column and value type
+        const needsQuotes = isNaN(Number(metric.whereValue)) || whereColumn === 'event_name' || whereColumn === 'url_path';
+        const formattedValue = needsQuotes ? `'${metric.whereValue.replace(/'/g, "''")}'` : metric.whereValue;
+        
+        return `COUNT(CASE WHEN base_query.${whereColumn} ${whereOperator} ${formattedValue} THEN 1 ELSE NULL END) as ${quotedAlias}`;
+      }
+      
+      // Fallback to regular count if no conditions specified
+      return `COUNT(*) as ${quotedAlias} /* count_where missing conditions */`;
+    }
     
     // If it's a custom parameter metric
     if (column?.startsWith('param_')) {
@@ -496,12 +529,12 @@ const ChartsPage = () => {
     
     // If user has set a custom alias, use that
     if (metric.alias) {
-      return getMetricSQLByType(metric.function, metric.column, metric.alias);
+      return getMetricSQLByType(metric.function, metric.column, metric.alias, metric);
     }
 
     // Always use metrikk_N format for consistency
     const defaultAlias = `metrikk_${index + 1}`;
-    return getMetricSQLByType(metric.function, metric.column, defaultAlias);
+    return getMetricSQLByType(metric.function, metric.column, defaultAlias, metric);
   }, [getMetricSQLByType, config.metrics]);
 
   // Update the SQL generation to handle parameters better
@@ -1037,6 +1070,7 @@ const ChartsPage = () => {
                         ...prev,
                         dateFormat: format as DateFormat['value']
                       }))}
+                      availableEvents={availableEvents}
                     />
                   </section>
                 </>

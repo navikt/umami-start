@@ -17,6 +17,11 @@ export interface Metric {
   function: string;
   column?: string;
   alias?: string;
+  // New properties for count_where
+  whereColumn?: string;
+  whereOperator?: string;
+  whereValue?: string;
+  whereMultipleValues?: string[];
 }
 
 export interface DateFormat {
