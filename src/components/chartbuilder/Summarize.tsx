@@ -275,14 +275,14 @@ const Summarize = ({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   {metrics.length > 0 && (
-                    <span className="text-sm bg-gray-100 px-2 py-1 rounded-md text-gray-500 font-medium">
+                    <span className="text-sm bg-gray-100 px-2 py-1 rounded-md text-blue-900 font-medium">
                       {index + 1}
                     </span>
                   )}
                   
                   {/* Replace function dropdown with static label */}
                   <div className="flex items-center gap-2">
-                    <span className="font-small text-blue-800">
+                    <span className="font-small text-blue-900">
                       {METRICS.find(m => m.value === metric.function)?.label || 'Beregning'}
                     </span>
                   </div>
