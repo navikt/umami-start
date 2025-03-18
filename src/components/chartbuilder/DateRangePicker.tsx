@@ -92,27 +92,9 @@ const DYNAMIC_DATE_RANGES = [
     toSQL: "CURRENT_TIMESTAMP()"
   },
   {
-    id: 'last14days',
-    label: 'Siste 14 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
     id: 'last30days',
     label: 'Siste 30 dager',
     fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last60days',
-    label: 'Siste 60 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 60 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last90days',
-    label: 'Siste 90 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)",
     toSQL: "CURRENT_TIMESTAMP()"
   },
   {
@@ -128,40 +110,74 @@ const DYNAMIC_DATE_RANGES = [
     toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH), INTERVAL 1 SECOND)"
   },
   {
-    id: 'last2months',
-    label: 'Siste 2 måneder',
-    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 MONTH), MONTH)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last3months',
-    label: 'Siste 3 måneder',
-    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 MONTH), MONTH)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last6months',
-    label: 'Siste 6 måneder',
-    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 6 MONTH), MONTH)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last12months',
-    label: 'Siste 12 måneder',
-    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 12 MONTH), MONTH)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
     id: 'thisyear_dynamic',
-    label: 'Dette året',
+    label: 'I år',
     fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), YEAR)",
     toSQL: "CURRENT_TIMESTAMP()"
   },
   {
     id: 'lastyear_dynamic',
-    label: 'Forrige år',
+    label: 'I fjor',
     fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 YEAR), YEAR)",
     toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), YEAR), INTERVAL 1 SECOND)"
+  }
+];
+
+// Add time unit options
+const TIME_UNITS = [
+  { value: 'minute', label: 'Minutt' },
+  { value: 'hour', label: 'Time' },
+  { value: 'day', label: 'Dag' },
+  { value: 'week', label: 'Uke' },
+  { value: 'month', label: 'Måned' },
+  { value: 'quarter', label: 'Kvartal' },
+  { value: 'tertial', label: 'Tertial' },
+  { value: 'year', label: 'År' }
+];
+
+// Add current period options
+const CURRENT_PERIODS = [
+  {
+    id: 'current_hour',
+    label: 'Time',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), HOUR)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'current_day',
+    label: 'Dag',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'current_week',
+    label: 'Uke',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY))",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'current_month',
+    label: 'Måned',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'current_quarter',
+    label: 'Kvartalet',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), QUARTER)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'current_tertial',
+    label: 'Tertial',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'current_year',
+    label: 'År',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), YEAR)",
+    toSQL: "CURRENT_TIMESTAMP()"
   }
 ];
 
@@ -191,7 +207,10 @@ const DateRangePicker = ({
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
   // Add state for date mode (fixed vs dynamic)
-  const [dateMode, setDateMode] = useState<'dynamic' | 'fixed'>('dynamic');
+  const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed'>('frequent');
+  const [relativeMode, setRelativeMode] = useState<'current' | 'previous'>('current');
+  const [selectedUnit, setSelectedUnit] = useState('day');
+  const [numberOfUnits, setNumberOfUnits] = useState('1');
 
   const hasDateFilter = (): boolean => {
     return filters.some(filter => filter.column === 'created_at');
@@ -211,6 +230,15 @@ const DateRangePicker = ({
     const fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
     const toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
     return { fromSQL: fromSql, toSQL: toSql };
+  };
+
+  // Function to generate SQL for previous periods
+  const generatePreviousPeriodSQL = (amount: string, unit: string): { fromSQL: string, toSQL: string } => {
+    const normalizedUnit = unit.toUpperCase();
+    return {
+      fromSQL: `DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} ${normalizedUnit}), ${normalizedUnit})`,
+      toSQL: `DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), ${normalizedUnit}), INTERVAL 1 SECOND)`
+    };
   };
 
   // Apply a custom date range picked from the calendar
@@ -338,8 +366,18 @@ const DateRangePicker = ({
       </Heading>
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
-        {/* Add toggle between fixed and dynamic dates */}
+        {/* Date mode toggle buttons */}
         <div className="flex gap-2 mb-6">
+          <button 
+            className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              dateMode === 'frequent'
+                ? 'bg-blue-600 text-white border-blue-700' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+            }`}
+            onClick={() => setDateMode('frequent')}
+          >
+            Ofte brukte
+          </button>
           <button 
             className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
               dateMode === 'dynamic'
@@ -362,53 +400,166 @@ const DateRangePicker = ({
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button 
-            className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-              !hasDateFilter() || selectedDateRange === 'all'
-                ? 'bg-blue-600 text-white border-blue-700' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-            }`}
-            onClick={() => applyDateRange('all')}
-          >
-            Alt
-          </button>
-
-          {/* Show different date range options based on mode */}
-          {dateMode === 'fixed' ? (
-            // Fixed date options
-            DATE_RANGE_SUGGESTIONS.map((dateRange) => (
+        {/* Content for each mode */}
+        {dateMode === 'frequent' && (
+          <div className="flex flex-wrap gap-2">
+            <button 
+              className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                !hasDateFilter() || selectedDateRange === 'all'
+                  ? 'bg-blue-600 text-white border-blue-700' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+              }`}
+              onClick={() => applyDateRange('all')}
+            >
+              Alt
+            </button>
+            {DYNAMIC_DATE_RANGES.map((period) => (
               <button
-                key={dateRange.id}
+                key={period.id}
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                  selectedDateRange === dateRange.id 
-                    ? 'bg-blue-600 text-white border-blue-700' 
+                  selectedDateRange === period.id
+                    ? 'bg-blue-600 text-white border-blue-700'
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
                 }`}
-                onClick={() => applyDateRange(dateRange.id)}
+                onClick={() => {
+                  const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+                  setFilters([
+                    ...filtersWithoutDate,
+                    {
+                      column: 'created_at',
+                      operator: '>=',
+                      value: period.fromSQL,
+                      dateRangeType: 'dynamic'
+                    },
+                    {
+                      column: 'created_at',
+                      operator: '<=',
+                      value: period.toSQL,
+                      dateRangeType: 'dynamic'
+                    }
+                  ]);
+                  setSelectedDateRange(period.id);
+                }}
               >
-                {dateRange.label}
+                {period.label}
               </button>
-            ))
-          ) : (
-            // Dynamic date options
-            DYNAMIC_DATE_RANGES.map((dateRange) => (
+            ))}
+          </div>
+        )}
+
+        {dateMode === 'dynamic' && (
+          <div className="mb-2">
+            <div className="flex gap-2 mb-6">
               <button
-                key={dateRange.id}
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                  selectedDateRange === dateRange.id 
-                    ? 'bg-blue-600 text-white border-blue-700' 
+                  relativeMode === 'current'
+                    ? 'bg-blue-600 text-white border-blue-700'
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
                 }`}
-                onClick={() => applyDateRange(dateRange.id)}
+                onClick={() => setRelativeMode('current')}
               >
-                {dateRange.label}
+                Nåværende
               </button>
-            ))
-          )}
-        </div>
+              <button
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                  relativeMode === 'previous'
+                    ? 'bg-blue-600 text-white border-blue-700'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}
+                onClick={() => setRelativeMode('previous')}
+              >
+                Tidligere
+              </button>
+            </div>
 
-        {/* Only show calendar picker in 'fixed' mode */}
+            {relativeMode === 'current' ? (
+              <div className="flex flex-wrap gap-2">
+                {CURRENT_PERIODS.map((period) => (
+                  <button
+                    key={period.id}
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      selectedDateRange === period.id
+                        ? 'bg-blue-600 text-white border-blue-700'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+                      setFilters([
+                        ...filtersWithoutDate,
+                        {
+                          column: 'created_at',
+                          operator: '>=',
+                          value: period.fromSQL,
+                          dateRangeType: 'dynamic'
+                        },
+                        {
+                          column: 'created_at',
+                          operator: '<=',
+                          value: period.toSQL,
+                          dateRangeType: 'dynamic'
+                        }
+                      ]);
+                      setSelectedDateRange(period.id);
+                    }}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-end gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Antall
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={numberOfUnits}
+                    onChange={(e) => setNumberOfUnits(e.target.value)}
+                    className="w-20 px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Periode
+                  </label>
+                  <select
+                    value={selectedUnit}
+                    onChange={(e) => {
+                      setSelectedUnit(e.target.value);
+                      const sql = generatePreviousPeriodSQL(numberOfUnits, e.target.value);
+                      const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+                      setFilters([
+                        ...filtersWithoutDate,
+                        {
+                          column: 'created_at',
+                          operator: '>=',
+                          value: sql.fromSQL,
+                          dateRangeType: 'dynamic'
+                        },
+                        {
+                          column: 'created_at',
+                          operator: '<=',
+                          value: sql.toSQL,
+                          dateRangeType: 'dynamic'
+                        }
+                      ]);
+                    }}
+                    className="w-full px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {TIME_UNITS.map(unit => (
+                      <option key={unit.value} value={unit.value}>
+                        {unit.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {dateMode === 'fixed' && (
           <DatePicker className="pt-4"
             mode="range"
@@ -445,7 +596,7 @@ const DateRangePicker = ({
           </DatePicker>
         )}
 
-        <div className="mt-2 text-xs text-gray-600">
+        <div className="mt-3 text-xs text-gray-600">
           {getStartDateDisplay()}
         </div>
       </div>
