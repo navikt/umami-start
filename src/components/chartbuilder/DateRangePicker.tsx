@@ -59,6 +59,112 @@ const DATE_RANGE_SUGGESTIONS = [
   }
 ];
 
+// Add dynamic date range options
+const DYNAMIC_DATE_RANGES = [
+  {
+    id: 'today_dynamic',
+    label: 'I dag',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'yesterday_dynamic',
+    label: 'I går',
+    fromSQL: "DATE_TRUNC(DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY), DAY)",
+    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), DAY), INTERVAL 1 SECOND)"
+  },
+  {
+    id: 'this_week',
+    label: 'Denne uken',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY))",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last_week',
+    label: 'Forrige uke',
+    fromSQL: "DATE_TRUNC(DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 WEEK), WEEK(MONDAY))",
+    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY)), INTERVAL 1 SECOND)"
+  },
+  {
+    id: 'last7days',
+    label: 'Siste 7 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last14days',
+    label: 'Siste 14 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last30days',
+    label: 'Siste 30 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last60days',
+    label: 'Siste 60 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 60 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last90days',
+    label: 'Siste 90 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'thismonth_dynamic',
+    label: 'Denne måneden',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'lastmonth_dynamic',
+    label: 'Forrige måned',
+    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 MONTH), MONTH)",
+    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH), INTERVAL 1 SECOND)"
+  },
+  {
+    id: 'last2months',
+    label: 'Siste 2 måneder',
+    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 MONTH), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last3months',
+    label: 'Siste 3 måneder',
+    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 MONTH), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last6months',
+    label: 'Siste 6 måneder',
+    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 6 MONTH), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last12months',
+    label: 'Siste 12 måneder',
+    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 12 MONTH), MONTH)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'thisyear_dynamic',
+    label: 'Dette året',
+    fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), YEAR)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'lastyear_dynamic',
+    label: 'Forrige år',
+    fromSQL: "DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 YEAR), YEAR)",
+    toSQL: "DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), YEAR), INTERVAL 1 SECOND)"
+  }
+];
+
 interface DateRangePickerProps {
   filters: Filter[];
   setFilters: (filters: Filter[]) => void;
@@ -84,6 +190,8 @@ const DateRangePicker = ({
   // Calculate available date range
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
+  // Add state for date mode (fixed vs dynamic)
+  const [dateMode, setDateMode] = useState<'dynamic' | 'fixed'>('dynamic');
 
   const hasDateFilter = (): boolean => {
     return filters.some(filter => filter.column === 'created_at');
@@ -151,22 +259,57 @@ const DateRangePicker = ({
       return;
     }
     
-    const dateRange = DATE_RANGE_SUGGESTIONS.find(dr => dr.id === rangeId);
-    if (!dateRange) return;
-    
-    setSelectedDateRange(rangeId);
-    
-    // Get date range from the suggestion
-    const range = dateRange.getRange();
-    
-    // Apply the range
-    applyCustomDateRange(range.from, range.to);
-    
-    // Update the date picker UI
-    setSelectedRange({
-      from: range.from,
-      to: range.to
-    });
+    // Handle fixed date ranges
+    if (dateMode === 'fixed') {
+      const dateRange = DATE_RANGE_SUGGESTIONS.find(dr => dr.id === rangeId);
+      if (!dateRange) return;
+      
+      setSelectedDateRange(rangeId);
+      
+      // Get date range from the suggestion
+      const range = dateRange.getRange();
+      
+      // Apply the range
+      applyCustomDateRange(range.from, range.to);
+      
+      // Update the date picker UI
+      setSelectedRange({
+        from: range.from,
+        to: range.to
+      });
+    } 
+    // Handle dynamic date ranges
+    else {
+      const dynamicRange = DYNAMIC_DATE_RANGES.find(dr => dr.id === rangeId);
+      if (!dynamicRange) return;
+      
+      setSelectedDateRange(rangeId);
+      
+      // Find existing date filters
+      const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+      
+      // Create new dynamic date range filters
+      const newFilters = [
+        {
+          column: 'created_at',
+          operator: '>=',
+          value: dynamicRange.fromSQL,
+          dateRangeType: 'dynamic'
+        },
+        {
+          column: 'created_at',
+          operator: '<=',
+          value: dynamicRange.toSQL,
+          dateRangeType: 'dynamic'
+        }
+      ];
+      
+      // Update filters
+      setFilters([...filtersWithoutDate, ...newFilters]);
+      
+      // Clear the date picker UI since it's not relevant for dynamic dates
+      setSelectedRange(undefined);
+    }
   };
 
   // Get message about available data range
@@ -195,6 +338,30 @@ const DateRangePicker = ({
       </Heading>
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+        {/* Add toggle between fixed and dynamic dates */}
+        <div className="flex gap-2 mb-6">
+          <button 
+            className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              dateMode === 'dynamic'
+                ? 'bg-blue-600 text-white border-blue-700' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+            }`}
+            onClick={() => setDateMode('dynamic')}
+          >
+            Relative datoer
+          </button>
+          <button 
+            className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              dateMode === 'fixed'
+                ? 'bg-blue-600 text-white border-blue-700' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+            }`}
+            onClick={() => setDateMode('fixed')}
+          >
+            Bestemte datoer
+          </button>
+        </div>
+
         <div className="flex flex-wrap gap-2 mb-4">
           <button 
             className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
@@ -206,54 +373,77 @@ const DateRangePicker = ({
           >
             Alt
           </button>
-          {DATE_RANGE_SUGGESTIONS.map((dateRange) => (
-            <button
-              key={dateRange.id}
-              className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                selectedDateRange === dateRange.id 
-                  ? 'bg-blue-600 text-white border-blue-700' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-              }`}
-              onClick={() => applyDateRange(dateRange.id)}
-            >
-              {dateRange.label}
-            </button>
-          ))}
+
+          {/* Show different date range options based on mode */}
+          {dateMode === 'fixed' ? (
+            // Fixed date options
+            DATE_RANGE_SUGGESTIONS.map((dateRange) => (
+              <button
+                key={dateRange.id}
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                  selectedDateRange === dateRange.id 
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}
+                onClick={() => applyDateRange(dateRange.id)}
+              >
+                {dateRange.label}
+              </button>
+            ))
+          ) : (
+            // Dynamic date options
+            DYNAMIC_DATE_RANGES.map((dateRange) => (
+              <button
+                key={dateRange.id}
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                  selectedDateRange === dateRange.id 
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}
+                onClick={() => applyDateRange(dateRange.id)}
+              >
+                {dateRange.label}
+              </button>
+            ))
+          )}
         </div>
 
-        <DatePicker className="pt-4"
-          mode="range"
-          selected={selectedRange}
-          onSelect={(range) => {
-            if (range) {
-              setSelectedRange(range);
-              if (range.from && range.to) {
-                applyCustomDateRange(range.from, range.to);
+        {/* Only show calendar picker in 'fixed' mode */}
+        {dateMode === 'fixed' && (
+          <DatePicker className="pt-4"
+            mode="range"
+            selected={selectedRange}
+            onSelect={(range) => {
+              if (range) {
+                setSelectedRange(range);
+                if (range.from && range.to) {
+                  applyCustomDateRange(range.from, range.to);
+                }
               }
-            }
-          }}
-          fromDate={fromDate}
-          showWeekNumber
-        >
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <DatePicker.Input
-                label="Fra dato"
-                id="date-from"
-                value={formatDate(selectedRange?.from)}
-                size="small"
-              />
+            }}
+            fromDate={fromDate}
+            showWeekNumber
+          >
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <DatePicker.Input
+                  label="Fra dato"
+                  id="date-from"
+                  value={formatDate(selectedRange?.from)}
+                  size="small"
+                />
+              </div>
+              <div>
+                <DatePicker.Input
+                  label="Til dato"
+                  id="date-to"
+                  value={formatDate(selectedRange?.to)}
+                  size="small"
+                />
+              </div>
             </div>
-            <div>
-              <DatePicker.Input
-                label="Til dato"
-                id="date-to"
-                value={formatDate(selectedRange?.to)}
-                size="small"
-              />
-            </div>
-          </div>
-        </DatePicker>
+          </DatePicker>
+        )}
 
         <div className="mt-2 text-xs text-gray-600">
           {getStartDateDisplay()}
