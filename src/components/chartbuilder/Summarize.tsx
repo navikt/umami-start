@@ -270,137 +270,74 @@ const Summarize = ({
           </div>
 
           {metrics.map((metric, index) => (
-            <div key={index} className="flex gap-2 items-end bg-white p-3 rounded-md border">
-              {/* Only show row number if there are multiple metrics */}
-              {metrics.length > 1 && (
-                <div className="flex flex-col justify-center mr-2 w-6 text-center">
-                  <span className="text-sm text-gray-500">
-                    {index + 1}.
-                  </span>
+            <div key={index} className="flex flex-col bg-white p-3 rounded-md border">
+              {/* Metric header with function label instead of dropdown */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {metrics.length > 0 && (
+                    <span className="text-sm bg-gray-100 px-2 py-1 rounded-md text-gray-500 font-medium">
+                      {index + 1}
+                    </span>
+                  )}
+                  
+                  {/* Replace function dropdown with static label */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-small text-blue-800">
+                      {METRICS.find(m => m.value === metric.function)?.label || 'Beregning'}
+                    </span>
+                  </div>
                 </div>
-              )}
-              
-              <Select
-                label="Funksjon"
-                value={metric.function}
-                onChange={(e) => updateMetric(index, { function: e.target.value })}
-                size="small"
-              >
-                {METRICS.map(m => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-              
-              {/* Add special case for count_where */}
-              {metric.function === 'count_where' ? (
-                <div className="flex-grow flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <Select
-                      label="Kolonne"
-                      value={metric.whereColumn || 'event_name'}
-                      onChange={(e) => updateMetric(index, { whereColumn: e.target.value })}
-                      size="small"
-                      className="flex-grow"
-                    >
-                      <option value="event_name">Hendelsesnavn</option>
-                      {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                        <optgroup key={groupKey} label={group.label}>
-                          {group.columns.map(col => (
-                            <option key={col.value} value={col.value}>
-                              {col.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                      
-                      {uniqueParameters.length > 0 && (
-                        <optgroup label="Egendefinerte">
-                          {uniqueParameters.map(param => (
-                            <option 
-                              key={`param_${param.key}`} 
-                              value={`param_${sanitizeColumnName(param.key)}`}
-                            >
-                              {param.key}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </Select>
-
-                    <Select
-                      label="Operator"
-                      value={metric.whereOperator || '='}
-                      onChange={(e) => updateMetric(index, { whereOperator: e.target.value })}
-                      size="small"
-                    >
-                      {OPERATORS.map(op => (
-                        <option key={op.value} value={op.value}>
-                          {op.label}
-                        </option>
-                      ))}
-                    </Select>
+                
+                {/* Control buttons in the header */}
+                <div className="flex items-center gap-1">
+                  <div className="flex gap-1">
+                    {index > 0 && (
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        icon={<MoveUp size={16} />}
+                        onClick={() => moveMetric(index, 'up')}
+                        title="Flytt opp"
+                      />
+                    )}
+                    {index < metrics.length - 1 && (
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        icon={<MoveDown size={16} />}
+                        onClick={() => moveMetric(index, 'down')}
+                        title="Flytt ned"
+                      />
+                    )}
+                    {(index === 0 || index === metrics.length - 1) && metrics.length > 1 && (
+                      <div className="w-8"></div>
+                    )}
                   </div>
                   
-                  {/* Use Combobox for values - similar to ChartFilters.tsx */}
-                  <UNSAFE_Combobox
-                    label="Verdi"
-                    description={
-                      metric.whereColumn === 'event_name' ? "Velg eller skriv inn hendelsesnavn" :
-                      metric.whereColumn === 'url_path' ? "Velg eller skriv inn URL-sti" :
-                      "Velg eller skriv inn verdi"
-                    }
-                    options={(metric.whereColumn === 'event_name' ? getUniqueEventNames() : [])
-                      .map(val => ({ label: val, value: val }))}
-                    selectedOptions={metric.whereMultipleValues?.map(v => v || '') || 
-                                    (metric.whereValue ? [metric.whereValue] : [])}
-                    onToggleSelected={(option, isSelected) => {
-                      if (option) {
-                        const currentValues = metric.whereMultipleValues || 
-                                           (metric.whereValue ? [metric.whereValue] : []);
-                        const newValues = isSelected 
-                          ? [...currentValues, option]
-                          : currentValues.filter(val => val !== option);
-                        
-                        const newOperator = newValues.length > 1 && ['IN', 'NOT IN'].includes(metric.whereOperator || '=') 
-                          ? metric.whereOperator 
-                          : newValues.length > 1 ? 'IN' : metric.whereOperator || '=';
-                        
-                        updateMetric(index, {
-                          whereMultipleValues: newValues.length > 0 ? newValues : undefined,
-                          whereValue: newValues.length > 0 ? newValues[0] : '',
-                          whereOperator: newOperator
-                        });
-                      }
-                    }}
-                    isMultiSelect={['IN', 'NOT IN'].includes(metric.whereOperator || '=')}
+                  <Button
+                    variant="tertiary-neutral"
                     size="small"
-                    clearButton
-                    allowNewValues
-                  />
-                </div>
-              ) : (
-                // Original metric column selection
-                metric.function !== 'count' && (
-                  <Select
-                    label="Kolonne"
-                    value={metric.column || ''}
-                    onChange={(e) => updateMetric(index, { column: e.target.value })}
-                    size="small"
+                    onClick={() => removeMetric(index)}
                   >
-                    <option value="">Velg kolonne</option>
-                    
-                    {/* For percentage and andel, use the simplified dropdown */}
-                    {(metric.function === 'percentage' || metric.function === 'andel') ? (
-                      getMetricColumns(parameters, metric.function).map(col => (
-                        <option key={col.value} value={col.value}>
-                          {col.label}
-                        </option>
-                      ))
-                    ) : (
-                      /* For all other functions, use the original grouped dropdowns */
-                      <>
+                    Fjern
+                  </Button>
+                </div>
+              </div>
+          
+              {/* Metric configuration - different for each type */}
+              <div className="mt-2">
+                {/* Add special case for count_where */}
+                {metric.function === 'count_where' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Column select */}
+                    <div className="flex flex-col gap-1">
+                      <Select
+                        label="Kolonne"
+                        value={metric.whereColumn || 'event_name'}
+                        onChange={(e) => updateMetric(index, { whereColumn: e.target.value })}
+                        size="small"
+                        className="w-full"
+                      >
                         {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
                           <optgroup key={groupKey} label={group.label}>
                             {group.columns.map(col => (
@@ -414,61 +351,148 @@ const Summarize = ({
                         {uniqueParameters.length > 0 && (
                           <optgroup label="Egendefinerte">
                             {uniqueParameters.map(param => (
-                              <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                              <option 
+                                key={`param_${param.key}`} 
+                                value={`param_${sanitizeColumnName(param.key)}`}
+                              >
                                 {param.key}
                               </option>
                             ))}
                           </optgroup>
                         )}
-                      </>
+                      </Select>
+                    </div>
+          
+                    {/* Operator select */}
+                    <div className="flex flex-col gap-1">
+                      <Select
+                        value={metric.whereOperator || '='}
+                        onChange={(e) => updateMetric(index, { whereOperator: e.target.value })}
+                        size="small"
+                        label="Operator"
+                        className="w-full"
+                      >
+                        {OPERATORS.map(op => (
+                          <option key={op.value} value={op.value}>
+                            {op.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+          
+                    {/* Value combobox - full width across */}
+                    <div className="flex flex-col gap-1 col-span-1 md:col-span-2">
+                      <UNSAFE_Combobox
+                        label="Verdi"
+                        description={
+                          metric.whereColumn === 'event_name' ? "Velg eller skriv inn hendelsesnavn" :
+                          metric.whereColumn === 'url_path' ? "Velg eller skriv inn URL-sti" :
+                          null
+                        }
+                        options={(metric.whereColumn === 'event_name' ? getUniqueEventNames() : [])
+                          .map(val => ({ label: val, value: val }))}
+                        selectedOptions={metric.whereMultipleValues?.map(v => v || '') || 
+                                        (metric.whereValue ? [metric.whereValue] : [])}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            const currentValues = metric.whereMultipleValues || 
+                                                (metric.whereValue ? [metric.whereValue] : []);
+                            const newValues = isSelected 
+                              ? [...currentValues, option]
+                              : currentValues.filter(val => val !== option);
+                            
+                            const newOperator = newValues.length > 1 && ['IN', 'NOT IN'].includes(metric.whereOperator || '=') 
+                              ? metric.whereOperator 
+                              : newValues.length > 1 ? 'IN' : metric.whereOperator || '=';
+                            
+                            updateMetric(index, {
+                              whereMultipleValues: newValues.length > 0 ? newValues : undefined,
+                              whereValue: newValues.length > 0 ? newValues[0] : '',
+                              whereOperator: newOperator
+                            });
+                          }
+                        }}
+                        isMultiSelect={['IN', 'NOT IN'].includes(metric.whereOperator || '=')}
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
+                    </div>
+          
+                    {/* Alias - at the bottom */}
+                    <div className="flex flex-col gap-1 col-span-1 md:col-span-2">
+                      <TextField
+                        label="Alias (valgfritt)"
+                        value={metric.alias || ''}
+                        onChange={(e) => updateMetric(index, { alias: e.target.value })}
+                        placeholder={`metrikk_${index + 1}`}
+                        size="small"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Original metric column selection */}
+                    {metric.function !== 'count' && (
+                      <div className="flex-grow">
+                        <Select
+                          label="Kolonne"
+                          value={metric.column || ''}
+                          onChange={(e) => updateMetric(index, { column: e.target.value })}
+                          size="small"
+                          className="w-full"
+                        >
+                          <option value="">Velg kolonne</option>
+                          
+                          {/* For percentage and andel, use the simplified dropdown */}
+                          {(metric.function === 'percentage' || metric.function === 'andel') ? (
+                            getMetricColumns(parameters, metric.function).map(col => (
+                              <option key={col.value} value={col.value}>
+                                {col.label}
+                              </option>
+                            ))
+                          ) : (
+                            /* For all other functions, use the original grouped dropdowns */
+                            <>
+                              {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                                <optgroup key={groupKey} label={group.label}>
+                                  {group.columns.map(col => (
+                                    <option key={col.value} value={col.value}>
+                                      {col.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                              
+                              {uniqueParameters.length > 0 && (
+                                <optgroup label="Egendefinerte">
+                                  {uniqueParameters.map(param => (
+                                    <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                      {param.key}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </>
+                          )}
+                        </Select>
+                      </div>
                     )}
-                  </Select>
-                )
-              )}
-              
-              <TextField
-                label="Alias (valgfritt)"
-                value={metric.alias || ''}
-                onChange={(e) => updateMetric(index, { alias: e.target.value })}
-                placeholder={`metrikk_${index + 1}`}
-                size="small"
-              />
-              
-              {/* Group the control buttons together in a fixed width container */}
-              <div className="flex items-center gap-1 min-w-[90px] justify-end mb-1">
-                {/* Move arrows before remove button for more consistent UI */}
-                <div className="flex gap-1">
-                  {index > 0 && (
-                    <Button
-                      variant="tertiary"
-                      size="small"
-                      icon={<MoveUp size={16} />}
-                      onClick={() => moveMetric(index, 'up')}
-                      title="Flytt opp"
-                    />
-                  )}
-                  {index < metrics.length - 1 && (
-                    <Button
-                      variant="tertiary"
-                      size="small"
-                      icon={<MoveDown size={16} />}
-                      onClick={() => moveMetric(index, 'down')}
-                      title="Flytt ned"
-                    />
-                  )}
-                  {/* Add invisible placeholder button when only one arrow is showing */}
-                  {(index === 0 || index === metrics.length - 1) && metrics.length > 1 && (
-                    <div className="w-8"></div>
-                  )}
-                </div>
-                
-                <Button
-                  variant="tertiary-neutral"
-                  size="small"
-                  onClick={() => removeMetric(index)}
-                >
-                  Fjern
-                </Button>
+                    
+                    {/* Alias field */}
+                    <div className="md:w-1/3">
+                      <TextField
+                        label="Alias (valgfritt)"
+                        value={metric.alias || ''}
+                        onChange={(e) => updateMetric(index, { alias: e.target.value })}
+                        placeholder={`metrikk_${index + 1}`}
+                        size="small"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
