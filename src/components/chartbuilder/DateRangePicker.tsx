@@ -125,12 +125,12 @@ const DYNAMIC_DATE_RANGES = [
 
 // Add time unit options
 const TIME_UNITS = [
-  { value: 'minute', label: 'Minutt' },
-  { value: 'hour', label: 'Time' },
-  { value: 'day', label: 'Dag' },
-  { value: 'week', label: 'Uke' },
-  { value: 'month', label: 'Måned' },
-  { value: 'quarter', label: 'Kvartal' },
+  { value: 'minute', label: 'Minutter' },
+  { value: 'hour', label: 'Timeer' },
+  { value: 'day', label: 'Dager' },
+  { value: 'week', label: 'Ukeer' },
+  { value: 'month', label: 'Måneder' },
+  { value: 'quarter', label: 'Kvartaler' },
   { value: 'year', label: 'År' }
 ];
 
@@ -229,8 +229,8 @@ const DateRangePicker = ({
   const generatePreviousPeriodSQL = (amount: string, unit: string): { fromSQL: string, toSQL: string } => {
     const normalizedUnit = unit.toUpperCase();
     return {
-      fromSQL: `DATE_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} ${normalizedUnit}), ${normalizedUnit})`,
-      toSQL: `DATE_SUB(DATE_TRUNC(CURRENT_TIMESTAMP(), ${normalizedUnit}), INTERVAL 1 SECOND)`
+      fromSQL: `TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), ${normalizedUnit}), INTERVAL ${amount} ${normalizedUnit}))`,
+      toSQL: `TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), ${normalizedUnit}))`
     };
   };
 
