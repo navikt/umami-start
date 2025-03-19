@@ -29,17 +29,23 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
                 </Accordion.Item>
                 <Accordion.Item>
                     <Accordion.Header>
-                        Umami-sporingskode for Astro.js-apper
+                        Umami-sporingskode for Next.js-apper
                     </Accordion.Header>
                     <Accordion.Content>
                         <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', marginBottom: '15px'}}>
                             <code>
-                                &lt;script is:inline defer data-astro-rerun src="https://cdn.nav.no/team-researchops/sporing/sporing.js"
-                                        data-host-url="https://umami.nav.no" data-website-id="{selectedItem.id}"&gt;&lt;/script&gt;
+                                &lt;Script defer strategy="afterInteractive" src="https://cdn.nav.no/team-researchops/sporing/sporing.js"
+                                        data-host-url="https://umami.nav.no" data-website-id="{selectedItem.id}"&gt;&lt;/Script&gt;
                             </code>
                         </pre>
-                        <Link target="_blank" href={`https://github.com/navikt/docs/blob/main/src/components/BaseHead.astro`}>
-                            Kodeeksempel for Astro.js-apper
+                        <p style={{ marginBottom: '15px' }}>
+                        Benytter next.js sin innebygde import Script from 'next/script';
+                        </p>
+                        <p style={{ marginBottom: '15px' }}>
+                            Trigges ikke koden? Forsøk å legger til export const dynamic = 'force-dynamic'; i en layout.tsx fil.
+                        </p>
+                        <Link target="_blank" href={`https://github.com/navikt/delta-frontend/blob/main/src/app/layout.tsx`}>
+                            Kodeeksempel for Next.js-apper
                         </Link>
                     </Accordion.Content>
                 </Accordion.Item>
@@ -58,6 +64,22 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
                         </pre>
                         <Link target="_blank" href={`https://github.com/navikt/reops-felgen/blob/master/src/App.tsx`}>
                             Kodeeksempel for React med Vite.js
+                        </Link>
+                    </Accordion.Content>
+                </Accordion.Item>
+                <Accordion.Item>
+                    <Accordion.Header>
+                        Umami-sporingskode for Astro.js-apper
+                    </Accordion.Header>
+                    <Accordion.Content>
+                        <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', marginBottom: '15px'}}>
+                            <code>
+                                &lt;script is:inline defer data-astro-rerun src="https://cdn.nav.no/team-researchops/sporing/sporing.js"
+                                        data-host-url="https://umami.nav.no" data-website-id="{selectedItem.id}"&gt;&lt;/script&gt;
+                            </code>
+                        </pre>
+                        <Link target="_blank" href={`https://github.com/navikt/docs/blob/main/src/components/BaseHead.astro`}>
+                            Kodeeksempel for Astro.js-apper
                         </Link>
                     </Accordion.Content>
                 </Accordion.Item>
