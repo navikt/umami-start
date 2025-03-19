@@ -35,6 +35,15 @@ interface EventParams {
 const MANUAL_EVENT_NAME = '_manual_parameters_';
 const MANUAL_EVENT_DISPLAY_NAME = 'manuelt lagt til';
 
+// Add this constant near the top of the file with other constants
+const EXCLUDED_PARAMS = [
+  'url_fullpath',
+  'url_fullurl',
+  'referrer_fullpath',
+  'referrer_fullurl',
+  'website_domain'
+];
+
 const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   availableEvents,
   parameters,
@@ -297,14 +306,10 @@ const getGroupedParameters = () => {
       // Page details
       case 'url_path': return 'Sidens relative adresse';
       case 'url_query': return 'Parametre etter ? i adressefeltet';
-      case 'url_fullpath': return 'Full adressesti med parametre';
-      case 'url_fullurl': return 'Komplett adresse inkl. domene';
       case 'page_title': return 'Tittelen på siden fra HTML';
       case 'referrer_domain': return 'Henvisningsdomene';
       case 'referrer_path': return 'Henvisningssti';
       case 'referrer_query': return 'Henvisningsspørring';
-      case 'referrer_fullpath': return 'Komplett henvisningssti';
-      case 'referrer_fullurl': return 'Komplett henvisnings-URL';
       
       // Visitor details
       case 'session_id': return 'Unik ID for hver bruker';
@@ -343,17 +348,22 @@ const getGroupedParameters = () => {
         >
           <ExpansionCard.Header>
             <ExpansionCard.Title as="h3" size="small">
-            {getEventCount()} egendefinerte hendelser – {getDetailCount()} unike detaljer
+            {getEventCount()} egendefinerte hendelser {getDetailCount() > 0 && (<>– {getDetailCount()} unike detaljer</>)}
             </ExpansionCard.Title>
           </ExpansionCard.Header>
           <ExpansionCard.Content>
             <VStack gap="6">
+            
               {/* Parameters Section - Only shown when events are selected and not loading */}
               {!isLoading && (
                 <Box borderRadius="medium">
                   <Heading level="3" size="xsmall" spacing>
                      Standard hendelser og detaljer
                   </Heading>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sidevisninger spores automatisk med mindre dette er skrudd av. 
+                  </p>
+          
                   <ExpansionCard 
                     border={false}
                     size="small"
@@ -361,9 +371,12 @@ const getGroupedParameters = () => {
                   >
                     <ExpansionCard.Header>
                       <span className="items-center gap-2">
-                        <BodyShort weight="semibold">sidevisning</BodyShort>
+                        <BodyShort weight="semibold">Detaljer som sendes med hendelser</BodyShort>
                         <span className="text-sm text-gray-600">
-                          {Object.values(FILTER_COLUMNS).reduce((sum, group) => sum + group.columns.length, 0)} detaljer
+                          {Object.values(FILTER_COLUMNS).reduce((sum, group) => {
+                            const filteredColumns = group.columns.filter(col => !EXCLUDED_PARAMS.includes(col.value));
+                            return sum + filteredColumns.length;
+                          }, 0)} detaljer
                         </span>
                       </span>
                     </ExpansionCard.Header>
@@ -376,20 +389,22 @@ const getGroupedParameters = () => {
                               <div className="mb-2">
                                 <BodyShort weight="semibold">{group.label}</BodyShort>
                               </div>
-                              {group.columns.map(column => (
-                                <div 
-                                  key={column.value}
-                                  className="flex items-center justify-between p-3 bg-white rounded border mb-2"
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{column.label}</span>
-                                    <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
+                              {group.columns
+                                .filter(column => !EXCLUDED_PARAMS.includes(column.value))
+                                .map(column => (
+                                  <div 
+                                    key={column.value}
+                                    className="flex items-center justify-between p-3 bg-white rounded border mb-2"
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{column.label}</span>
+                                      <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
+                                    </div>
+                                    <HStack gap="2">
+                                      <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
+                                    </HStack>
                                   </div>
-                                  <HStack gap="2">
-                                    <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
-                                  </HStack>
-                                </div>
-                              ))}
+                                ))}
                             </div>
                           ))}
                         </div>
