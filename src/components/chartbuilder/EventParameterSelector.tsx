@@ -364,11 +364,11 @@ const getGroupedParameters = () => {
                     Sidevisninger spores automatisk med mindre dette er skrudd av. 
                   </p>
           
-                  <ExpansionCard aria-label="Detaljer som sendes med alle hendelser" size="small">
+                  <ExpansionCard aria-label="Detaljer som følger med hendelser" size="small">
                     <ExpansionCard.Header>
                     <ExpansionCard.Title as="h3" size="small">
                       <span className="items-center gap-2">
-                        <BodyShort weight="semibold">Detaljer som sendes med hendelser</BodyShort>
+                        <BodyShort weight="semibold">Detaljer som følger med hendelser</BodyShort>
                         <span className="text-sm text-gray-600">
                           {Object.values(FILTER_COLUMNS).reduce((sum, group) => {
                             const filteredColumns = group.columns.filter(col => !EXCLUDED_PARAMS.includes(col.value));
