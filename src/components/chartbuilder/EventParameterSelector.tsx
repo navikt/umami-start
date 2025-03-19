@@ -365,7 +365,8 @@ const getGroupedParameters = () => {
                   </p>
           
                   <ExpansionCard aria-label="Detaljer som sendes med alle hendelser" size="small">
-                    <ExpansionCard.Header as="h4" size="small">
+                    <ExpansionCard.Header>
+                    <ExpansionCard.Title as="h3" size="small">
                       <span className="items-center gap-2">
                         <BodyShort weight="semibold">Detaljer som sendes med hendelser</BodyShort>
                         <span className="text-sm text-gray-600">
@@ -375,6 +376,7 @@ const getGroupedParameters = () => {
                           }, 0)} detaljer
                         </span>
                       </span>
+                      </ExpansionCard.Title>
                     </ExpansionCard.Header>
                     <ExpansionCard.Content>
                       <VStack gap="3">
