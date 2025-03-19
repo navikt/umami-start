@@ -64,7 +64,7 @@ const SQLPreview = ({ sql }: SQLPreviewProps) => {
                     <div className="bg-blue-600 text-white rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
                       2
                     </div>
-                    <p>Velg en gruppering og/eller beregning (f.eks. Antall rader)</p>
+                    <p>Velg en gruppering og/eller beregning (f.eks. antall rader)</p>
                   </li>
                   <li className="flex gap-2">
                     <div className="bg-blue-600 text-white rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
