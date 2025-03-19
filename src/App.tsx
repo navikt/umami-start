@@ -11,16 +11,18 @@ function App() {
     <>
         <Helmet>
             <script defer src="https://cdn.nav.no/team-researchops/sporing/sporing.js" data-host-url="https://umami.nav.no" data-domains="startumami.ansatt.nav.no" data-website-id="8e935f84-fb1e-4d07-be28-410eb2ab8cb9"></script>
-            <script>
+            <script type="text/javascript">
+        {`
             var script = document.createElement('script');
             script.src = 'https://survey.skyra.no/skyra-survey.js';
-            script.onload = function () {
-            window.skyra.start({
-                org: 'arbeids-og-velferdsetaten-nav',
-            });
+            script.onload = function() {
+                window.skyra.start({
+                    org: 'arbeids-og-velferdsetaten-nav'
+                });
             };
             document.body.appendChild(script);
-            </script>
+        `}
+    </script>
         </Helmet>
         <Page>
             <Header />
