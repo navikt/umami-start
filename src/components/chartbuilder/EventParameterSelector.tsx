@@ -364,9 +364,7 @@ const getGroupedParameters = () => {
                     Sidevisninger spores automatisk med mindre dette er skrudd av. 
                   </p>
           
-                  <ExpansionCard 
-                    className="mb-6"
-                  >
+                  <ExpansionCard>
                     <ExpansionCard.Header>
                       <span className="items-center gap-2">
                         <BodyShort weight="semibold">Detaljer som sendes med hendelser</BodyShort>
@@ -410,7 +408,7 @@ const getGroupedParameters = () => {
                     </ExpansionCard.Content>
                   </ExpansionCard>
 
-                  <Heading level="3" size="xsmall" spacing>
+                  <Heading level="3" size="xsmall" spacing className="mt-6">
                      Egendefinerte hendelser og detaljer
                   </Heading>
 
