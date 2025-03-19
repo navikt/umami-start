@@ -366,7 +366,6 @@ const getGroupedParameters = () => {
           
                   <ExpansionCard 
                     border={false}
-                    size="small"
                     className="mb-6"
                   >
                     <ExpansionCard.Header>
