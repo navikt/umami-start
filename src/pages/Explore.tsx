@@ -169,12 +169,10 @@ ORDER BY
       </p>
 
       <div className="space-y-8">
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
           <WebsitePicker
             selectedWebsite={selectedWebsite}
             onWebsiteChange={setSelectedWebsite}
           />
-        </div>
 
         {selectedWebsite && (
           <div className="space-y-8">
