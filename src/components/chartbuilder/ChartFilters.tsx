@@ -15,13 +15,13 @@ const EVENT_TYPES = [
 const FILTER_SUGGESTIONS = [
   { 
     id: 'pageviews',
-    label: 'Filtrer på sidevisninger', 
+    label: 'Kun sidevisninger', 
     filters: [{ column: 'event_type', operator: '=', value: '1' }],
     description: 'Skjuler egendefinerte hendelser'
   },
   { 
     id: 'custom_events',
-    label: 'Filtrer på egendefinerte hendelser', 
+    label: 'Kun egendefinerte hendelser', 
     filters: [{ column: 'event_type', operator: '=', value: '2' }],
     description: 'Skuler sidevisninger'
   },
