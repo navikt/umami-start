@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
 import { 
   Parameter, 
@@ -606,43 +606,41 @@ const Summarize = ({
         <Heading level="3" size="xsmall" spacing>
           Maks rader
         </Heading>
-        <p className="text-sm text-gray-600 mb-4">
-          Sett øvre grense for antall rader i resultatet.
-        </p>
-        
-        <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-          <TextField
-            label="Maksimalt antall rader"
-            type="number"
-            value={limit ? limit.toString() : ""}
-            onChange={(e) => {
-              const value = e.target.value.trim();
-              if (value === "") {
-                setLimit(null);
-              } else {
-                const numValue = parseInt(value, 10);
-                if (!isNaN(numValue) && numValue > 0) {
-                  setLimit(numValue);
-                }
-              }
-            }}
-            placeholder="Ubegrenset"
-            min="1"
+        <div className="flex flex-col gap-4">
+          <Switch 
             size="small"
-            className="flex-grow"
-          />
-          {limit && (
-            <Button
-              variant="tertiary-neutral"
-              size="small"
-              onClick={() => setLimit(null)}
-              className="mb-1"
-            >
-              Fjern grense
-            </Button>
+            checked={limit !== null}
+            onChange={() => setLimit(limit === null ? 10 : null)}
+          >
+            Begrens antall rader
+          </Switch>
+          
+          {limit !== null && (
+            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+              <TextField
+                label="Maksimalt antall rader"
+                type="number"
+                value={limit.toString()}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  if (value === "") {
+                    setLimit(null);
+                  } else {
+                    const numValue = parseInt(value, 10);
+                    if (!isNaN(numValue) && numValue > 0) {
+                      setLimit(numValue);
+                    }
+                  }
+                }}
+                min="1"
+                size="small"
+                className="flex-grow"
+              />
+            </div>
           )}
         </div>
       </div>
+
     </div>
   );
 };
