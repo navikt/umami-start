@@ -90,6 +90,9 @@ function Komigang() {
                     <strong><Link
                         href={"/grafbygger"}>Grafbyggeren:</Link></strong> Bygg grafer og modeller for Metabase.
                 </List.Item>
+            </List>
+
+            <List as="ul" title="Flere Metabase verktøy" className="pt-4">
                 <List.Item>
                     <strong><Link
                         href={"/datastruktur"}>Datastruktur-utforsker:</Link></strong> Utforsk struktur til Umami-data i Metabase.
