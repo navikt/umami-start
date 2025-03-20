@@ -156,7 +156,7 @@ const SQLPreview = ({
                         icon={<Copy size={18} />}
                         className="w-full md:w-auto"
                       >
-                        Kopier spørringen
+                        Kopier grafen/tabellen
                       </Button>
                     ) : (
                       <Alert variant="success" className="w-fit p-2 flex items-center">
@@ -172,7 +172,7 @@ const SQLPreview = ({
                   4
                 </div>
                 <div>
-                  <p className="font-medium">Trykk på ▶️ "vis tabell/graf"-knappen</p>
+                  <p className="font-medium">Trykk på ▶️ "vis graf/tabell"-knappen</p>
                   <p className="text-sm text-gray-600 mt-1">Metabase viseer nå tabell. Trykk "visualiser/visualize" for å endre til graf</p>
                 </div>
               </div>
