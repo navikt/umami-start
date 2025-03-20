@@ -1026,10 +1026,10 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Bygg grafer og tabeller for Metabase
+        Lag grafer og tabeller for Metabase
       </Heading>
         <p className="text-gray-600 mb-10 prose">
-              Gode beslutninger starter med innsikt. Med Grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
+              Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
             </p>
 
         <div className="lg:grid lg:grid-cols-2 lg:gap-8">

@@ -59,7 +59,7 @@ const SQLPreview = ({
         // Show getting started guidance
         <div className="space-y-4">
                       <Heading level="2" size="small">
-              Lag en graf eller tabell
+              Lag graf eller tabell
             </Heading>
           {/*
           <div className="space-y-2">
