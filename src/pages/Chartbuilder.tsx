@@ -187,6 +187,39 @@ const ChartsPage = () => {
     }
   }, [debouncedConfig, filters, parameters]);
 
+  // Add state to track the current step
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  
+  // Create a function to calculate the current step based on selections
+  const calculateCurrentStep = useCallback(() => {
+    if (!config.website) {
+      return 1; // Step 1: Choose website
+    }
+    
+    if (filters.length === 0 && config.metrics.length === 0 && config.groupByFields.length === 0) {
+      return 2; // Step 2: Apply filters
+    }
+    
+    if (config.metrics.length === 0 && config.groupByFields.length === 0) {
+      return 3; // Step 3: Add metrics/groupings
+    }
+    
+    return 4; // Step 4: Insert in Metabase
+  }, [config.website, filters.length, config.metrics.length, config.groupByFields.length]);
+  
+  // Update the step whenever relevant data changes
+  useEffect(() => {
+    setCurrentStep(calculateCurrentStep());
+  }, [calculateCurrentStep]);
+
+  // Add state to manage FormProgress open state
+  const [formProgressOpen, setFormProgressOpen] = useState<boolean>(true);
+  
+  // Create a handler for FormProgress open state changes
+  const handleFormProgressOpenChange = (open: boolean) => {
+    setFormProgressOpen(open);
+  };
+
   // Add helper functions for metrics
   const addMetric = (functionType?: string) => {
     setConfig(prev => ({
@@ -992,17 +1025,17 @@ const ChartsPage = () => {
 
   return (
     <div className="w-full max-w-[1600px]">
-      <Heading spacing level="1" size="medium" className="pt-12 pb-6">
+      <Heading spacing level="1" size="medium" className="pt-12 pb-4">
         Bygg grafer og tabeller for Metabase
       </Heading>
-      <p className="text-gray-600 mb-10 prose">
-      Gode beslutninger starter med innsikt. Med Grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
-        </p>
+        <p className="text-gray-600 mb-10 prose">
+              Gode beslutninger starter med innsikt. Med Grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
+            </p>
 
         <div className="lg:grid lg:grid-cols-2 lg:gap-8">
           {/* Left column - Form controls */}
           <div className="mb-8 space-y-8">
-            <VStack gap="8">
+            <VStack gap="4">  {/* Reduce gap to prevent too much spacing */}
               {/* Data section - Website picker */}
               <section>
                 {/* @ts-ignore Data section - Website picker */}
@@ -1015,7 +1048,7 @@ const ChartsPage = () => {
               {config.website && dateRangeReady && (
                 <>
                   {/* Parameters section - Remove AdvancedOptions */}
-                  <section>
+                  <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
                     <Heading level="2" size="small" spacing>
                       Datautforsker
                     </Heading>
@@ -1027,7 +1060,7 @@ const ChartsPage = () => {
                   </section>
 
                   {/* Replace the Filter section with the new component */}
-                  <section>
+                  <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
                     <ChartFilters
                       filters={filters}
                       parameters={parameters}
@@ -1038,7 +1071,7 @@ const ChartsPage = () => {
                   </section>
 
                   {/* Summarize section with new parameter aggregation toggle */}
-                  <section>
+                  <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
                     <Heading level="2" size="small" spacing>
                       Tilpass visning
                     </Heading>
@@ -1076,19 +1109,25 @@ const ChartsPage = () => {
                 </>
               )}
             </VStack>
+
+            <Kontaktboks />
           </div>
 
           {/* Right column - SQL preview */}
           <div className="lg:sticky lg:top-4 lg:self-start lg:flex lg:flex-col">
-            {config.website && (
               <div className="mb-8 overflow-y-auto">
-                <SQLPreview sql={generatedSQL} />
+                <SQLPreview 
+                  sql={generatedSQL} 
+                  activeStep={currentStep} 
+                  openFormprogress={formProgressOpen}
+                  onOpenChange={handleFormProgressOpenChange}
+                />
               </div>
-            )}
           </div>
+
         </div>
 
-        <Kontaktboks />
+      
       </div>
   );
 };
