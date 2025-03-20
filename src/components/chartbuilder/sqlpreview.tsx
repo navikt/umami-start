@@ -173,7 +173,7 @@ const SQLPreview = ({
                 </div>
                 <div>
                   <p className="font-medium">Trykk på ▶️ "vis graf/tabell"-knappen</p>
-                  <p className="text-sm text-gray-600 mt-1">Metabase viseer nå tabell. Trykk "visualiser/visualize" for å endre til graf</p>
+                  <p className="text-sm text-gray-600 mt-1">Nå vises en tabell. Trykk "visualisering/visualization" for å endre til graf</p>
                 </div>
               </div>
             </div>
