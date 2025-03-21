@@ -46,12 +46,37 @@ const SQLPreview = ({
   // Calculate if form progress should start open based on step
   const defaultOpen = activeStep < 4 && openFormprogress;
 
-  // Used useEffect to set initial state when step changes
+  // Track previous step to detect transitions
+  const [prevStep, setPrevStep] = useState(activeStep);
+  // Track if we've done the initial auto-close on step 4
+  const [autoClosedStep4, setAutoClosedStep4] = useState(false);
+
   useEffect(() => {
     if (onOpenChange) {
-      onOpenChange(defaultOpen);
+      // Auto-close when initially moving to step 4, but only once
+      if (activeStep === 4 && prevStep !== 4 && !autoClosedStep4) {
+        onOpenChange(false);
+        setAutoClosedStep4(true);
+      } 
+      // Reopen when moving from step 4 back to earlier steps
+      else if (prevStep === 4 && activeStep < 4) {
+        onOpenChange(true);
+        setAutoClosedStep4(false);
+      }
+      // Initial setup on first render
+      else if (prevStep === activeStep && !autoClosedStep4) {
+        onOpenChange(activeStep < 4 && openFormprogress);
+      }
+      // If parent explicitly sets openFormprogress, respect that even at step 4
+      else if (openFormprogress !== undefined && openFormprogress !== (activeStep === 4 ? false : openFormprogress)) {
+        // This means user manually toggled it, so respect that
+        onOpenChange(openFormprogress);
+      }
     }
-  }, [activeStep]);
+    
+    // Update previous step
+    setPrevStep(activeStep);
+  }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedStep4]);
 
   return (
     <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
