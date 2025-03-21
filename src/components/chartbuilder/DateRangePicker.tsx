@@ -86,18 +86,6 @@ const DYNAMIC_DATE_RANGES = [
     toSQL: "TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)))"
   },
   {
-    id: 'last7days',
-    label: 'Siste 7 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last30days',
-    label: 'Siste 30 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
     id: 'thismonth_dynamic',
     label: 'Denne måneden',
     fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), MONTH)",
@@ -120,6 +108,18 @@ const DYNAMIC_DATE_RANGES = [
     label: 'I fjor',
     fromSQL: "TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), YEAR), INTERVAL 1 YEAR))",
     toSQL: "TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), YEAR))"
+  },
+  {
+    id: 'last7days',
+    label: 'Siste 7 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last30days',
+    label: 'Siste 30 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
   }
 ];
 
