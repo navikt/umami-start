@@ -67,6 +67,12 @@ const ChartFilters = ({
     show: false,
     message: ''
   });
+  
+  // Add a separate alert state for staging area
+  const [stagingAlertInfo, setStagingAlertInfo] = useState<{show: boolean, message: string}>({
+    show: false,
+    message: ''
+  });
 
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -109,11 +115,16 @@ const ChartFilters = ({
       setFilters([...filters, stagingFilter]);
       setStagingFilter(null);
       
-      // Show alert
-      setAlertInfo({
+      // Show alert in the staging area
+      setStagingAlertInfo({
         show: true,
         message: `Filter lagt til under aktive filter`
       });
+      
+      // Auto-hide staging alert after 5 seconds
+      setTimeout(() => {
+        setStagingAlertInfo(prev => ({...prev, show: false}));
+      }, 5000);
     }
   };
 
@@ -361,14 +372,62 @@ const ChartFilters = ({
     }
   };
 
+  // Add this new function to reset all filters
+  const resetFilters = () => {
+    // Clear filters array
+    setFilters([]);
+    
+    // Reset all filter-related state
+    setAppliedSuggestion('');
+    setSelectedDateRange('');
+    setCustomEvents([]);
+    setSelectedPaths([]);
+    setPageViewsMode('all');
+    setCustomEventsMode('all');
+    setCustomPeriodInputs({});
+    setStagingFilter(null);
+    
+    // Show alert at the top only
+    setAlertInfo({
+      show: true,
+      message: 'Alle filtre ble tilbakestilt'
+    });
+    
+    // Auto-hide alert after 5 seconds
+    setTimeout(() => {
+      setAlertInfo(prev => ({...prev, show: false}));
+    }, 7000);
+  };
+
   return (
     <section>
-      <Heading level="2" size="small" spacing>
-        Filtervalg
-      </Heading>
+      <div className="flex justify-between items-center">
+        <Heading level="2" size="small" spacing>
+          Filtervalg
+        </Heading>
+        
+        {/* Add reset button next to the heading */}
+        <Button 
+          variant="tertiary" 
+          size="small" 
+          onClick={resetFilters}
+          className="mb-2"
+        >
+          Tilbakestill filtre
+        </Button>
+      </div>
 
       <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative"> 
         <div>
+          {/* Show alert if it's active - move it to the top level for better visibility */}
+          {alertInfo.show && (
+            <div className="mb-4">
+              <AlertWithCloseButton variant="success">
+                {alertInfo.message}
+              </AlertWithCloseButton>
+            </div>
+          )}
+          
           {/* Improved Filter Suggestions */}
           <div className="mb-6">
             <Heading level="3" size="xsmall" spacing>
@@ -692,7 +751,9 @@ const ChartFilters = ({
                       onChange={(e) => {
                         if (e.target.value) {
                           addFilter(e.target.value);
+                          // Clear both alerts when adding a new filter
                           setAlertInfo({ show: false, message: '' });
+                          setStagingAlertInfo({ show: false, message: '' });
                           (e.target as HTMLSelectElement).value = '';
                         }
                       }}
@@ -727,11 +788,11 @@ const ChartFilters = ({
                     </Select>
                   </div>
 
-                  {/* Show alert if it's active */}
-                  {alertInfo.show && (
+                  {/* Show staging alert if it's active */}
+                  {stagingAlertInfo.show && (
                     <div className="mb-4 mt-4">
                       <AlertWithCloseButton variant="success">
-                        {alertInfo.message}
+                        {stagingAlertInfo.message}
                       </AlertWithCloseButton>
                     </div>
                   )}
@@ -873,9 +934,11 @@ const ChartFilters = ({
               size="small"
             >
               <ExpansionCard.Header>
-                <ExpansionCard.Title as="h3" size="small">
-                  Aktive filter ({getActiveFilterCount()})
-                </ExpansionCard.Title>
+                <div className="flex justify-between items-center w-full">
+                  <ExpansionCard.Title as="h3" size="small">
+                    Aktive filter ({getActiveFilterCount()})
+                  </ExpansionCard.Title>
+                </div>
               </ExpansionCard.Header>
               <ExpansionCard.Content>
               {filters.length === 0 && (
