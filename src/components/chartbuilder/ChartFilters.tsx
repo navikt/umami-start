@@ -744,6 +744,9 @@ const ChartFilters = ({
                 <Heading level="3" size="xsmall" spacing className='mt-2'>
                   Filter
                 </Heading>
+                <p className="text-sm text-gray-600 mb-4">
+                  Legg til et filter for å velge hvilke data grafen / tabellen baseres på.
+                </p>
             
                  <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3">
                     <Select
