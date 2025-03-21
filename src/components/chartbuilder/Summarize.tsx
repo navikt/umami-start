@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
 import { useState } from 'react'; // Add useState
 import { 
@@ -179,13 +179,16 @@ const Summarize = ({
           </div>
         )}
         
-        {/* Group By section - remove the reset button here */} 
-        <Heading level="3" size="xsmall" spacing>
+        {/* Group By section */} 
+
+        <div className="flex items-center gap-2 mb-4">
+        <Heading level="3" size="xsmall" >
           Gruppering
         </Heading>
-        <p className="text-sm text-gray-600 mb-4">
+        <HelpText title="Hva er en gruppering?">
           Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
-        </p>
+        </HelpText>
+      </div>
         
         <div className="space-y-4 mb-6">
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
@@ -315,12 +318,14 @@ const Summarize = ({
 
       {/* Metrics section */}
       <div className="border-t pt-4">
-        <Heading level="3" size="xsmall" spacing>
+      <div className="flex items-center gap-2 mb-4">
+        <Heading level="3" size="xsmall" >
           Beregninger
         </Heading>
-         <p className="text-sm text-gray-600 mb-4">
+        <HelpText title="Hva er en beregning?">
           Legg til en eller flere beregninger, disse vises som kolonner i tabeller.
-        </p>
+        </HelpText>
+      </div>
         
         <div className="space-y-4 mb-6">
           {/* Move dropdown to the top */}
@@ -583,58 +588,62 @@ const Summarize = ({
       {/* Order By section */}
       <div className="border-t pt-4">
         <Heading level="3" size="xsmall" spacing>
-          Sortering
+          Visning
         </Heading>
-        {!orderBy && (
-        <p className="text-sm text-gray-600 mb-4">
-          Standard sorterer etter første kolonne i synkende rekkefølge.
-        </p>
-      )}
-            
-        <div className="mb-6 space-y-4">
-          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-            <Select
-              label="Sorter etter"
-              value={orderBy?.column || ""}
-              onChange={(e) => {
-                if (e.target.value) {
-                  // Use ascending order for dates, descending for other metrics
-                  const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
-                  setOrderBy(e.target.value, direction);
-                } else {
-                  clearOrderBy();
-                }
-              }}
-              size="small"
-              className="flex-grow"
-            >
-              <option value="">Standard sortering</option>
-              <optgroup label="Grupperinger">
-                {groupByFields.map((field) => {
-                  const column = Object.values(COLUMN_GROUPS)
-                    .flatMap(group => group.columns)
-                    .find(col => col.value === field);
-                  
-                  return (
-                    <option key={field} value={field === 'created_at' ? 'dato' : field}>
-                      {field === "created_at" ? "Dato" : column?.label || field}
-                    </option>
-                  );
-                })}
-              </optgroup>
-              <optgroup label="Metrikker">
-                {metrics.map((metric, index) => (
-                  <option 
-                    key={`metrikk_${index}`} 
-                    value={metric.alias || `metrikk_${index + 1}`}
-                  >
-                    {metric.alias || `metrikk_${index + 1}`}
-                  </option>
-                ))}
-              </optgroup>
-            </Select>
+        <div className="flex flex-col gap-4 pb-4">
+          <Switch 
+            className="mt-1"
+            size="small"
+            checked={orderBy !== null}
+            onChange={() => orderBy ? clearOrderBy() : setOrderBy('dato', 'DESC')}
+          >
+            Tilpass sortering
+          </Switch>
 
-            {orderBy && (
+          {orderBy && (
+            <>
+            <div className="flex gap-2 items-center bg-white p-3 rounded-md border"> 
+              <Select
+                label="Sorter etter"
+                value={orderBy?.column || ""}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // Use ascending order for dates, descending for other metrics
+                    const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
+                    setOrderBy(e.target.value, direction);
+                  } else {
+                    clearOrderBy();
+                  }
+                }}
+                size="small"
+                className="flex-grow"
+              >
+                <option value="">Standard sortering</option>
+                <optgroup label="Grupperinger">
+                  {groupByFields.map((field) => {
+                    const column = Object.values(COLUMN_GROUPS)
+                      .flatMap(group => group.columns)
+                      .find(col => col.value === field);
+                    
+                    return (
+                      <option key={field} value={field === 'created_at' ? 'dato' : field}>
+                        {field === "created_at" ? "Dato" : column?.label || field}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+                <optgroup label="Metrikker">
+                  {metrics.map((metric, index) => (
+                    <option 
+                      key={`metrikk_${index}`} 
+                      value={metric.alias || `metrikk_${index + 1}`}
+                    >
+                      {metric.alias || `metrikk_${index + 1}`}
+                    </option>
+                  ))}
+                </optgroup>
+              </Select>
+
               <Select
                 label="Retning"
                 value={orderBy.direction}
@@ -647,16 +656,18 @@ const Summarize = ({
                 <option value="ASC">Stigende (A-Å, 0-9)</option>
                 <option value="DESC">Synkende (Å-A, 9-0)</option>
               </Select>
-            )}
-          </div>
+            </div>
+            <p className="text-sm text-gray-600">
+                <strong>Standard:</strong> sorterer etter første kolonne i synkende rekkefølge.
+              </p>
+              
+            </>
+          )}
         </div>
       </div>
 
       {/* Result Limit section */}
-      <div className="border-t pt-4">
-        <Heading level="3" size="xsmall" spacing>
-          Maks rader
-        </Heading>
+      <div>
         <div className="flex flex-col gap-4">
           <Switch 
             size="small"
@@ -667,6 +678,7 @@ const Summarize = ({
           </Switch>
           
           {limit !== null && (
+            <>
             <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
               <TextField
                 label="Maksimalt antall rader"
@@ -688,13 +700,12 @@ const Summarize = ({
                 className="flex-grow"
               />
             </div>
+              <p className="text-sm text-gray-600">
+                <strong>Eksempel:</strong> for en topp 10-liste
+              </p>
+            </>
           )}
         </div>
-        {limit == null && (
-        <p className="text-sm text-gray-600 mt-4">
-              <strong>Eksempel:</strong> for en topp 10-liste
-          </p>
-        )}
       </div>
     </div>
     </>
