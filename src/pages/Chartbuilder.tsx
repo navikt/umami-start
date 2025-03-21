@@ -160,6 +160,54 @@ const isSessionColumn = (column: string): boolean => {
   return sessionColumns.includes(column);
 };
 
+// Modified function to accept params instead of using closure variables
+const getRequiredTables = (
+  chartConfig: ChartConfig,
+  filtersList: Filter[]
+): { session: boolean, eventData: boolean } => {
+  const tables = { session: false, eventData: false };
+  
+  // Check group by fields
+  if (chartConfig.groupByFields.some(field => isSessionColumn(field))) {
+    tables.session = true;
+  }
+  
+  // Check filters
+  if (filtersList.some(filter => isSessionColumn(filter.column))) {
+    tables.session = true;
+  }
+
+  // Improved check for metrics that need session table
+  if (chartConfig.metrics.some(metric => {
+    // Check the main column
+    if (metric.column && isSessionColumn(metric.column)) {
+      return true;
+    }
+    
+    // Check count_where conditions
+    if (metric.function === 'count_where' && 
+        metric.whereColumn && isSessionColumn(metric.whereColumn)) {
+      return true;
+    }
+    
+    // For percentage and andel metrics with session columns
+    if ((metric.function === 'percentage' || metric.function === 'andel') && 
+        metric.column && 
+        ['session_id', 'visit_id'].includes(metric.column)) {
+      return true;
+    }
+    
+    return false;
+  })) {
+    tables.session = true;
+  }
+  
+  // Always include event_data table for custom metrics/parameters
+  tables.eventData = true;
+  
+  return tables;
+};
+
 const ChartsPage = () => {
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
@@ -353,33 +401,6 @@ const ChartsPage = () => {
     
     return conditions;
   }, [filters]);
-
-  // Helper function to determine required table joins
-  const getRequiredTables = (): { session: boolean, eventData: boolean } => {
-    const tables = { session: false, eventData: false };
-    
-    // Check group by fields
-    if (config.groupByFields.some(field => isSessionColumn(field))) {
-      tables.session = true;
-    }
-    
-    // Check filters
-    if (filters.some(filter => isSessionColumn(filter.column))) {
-      tables.session = true;
-    }
-
-    // Check metrics
-    if (config.metrics.some(metric => 
-      metric.column && isSessionColumn(metric.column)
-    )) {
-      tables.session = true;
-    }
-    
-    // Always include event_data table for custom metrics/parameters
-    tables.eventData = true;
-    
-    return tables;
-  };
 
   // Helper function to generate the actual SQL
   const getMetricSQLByType = useCallback((func: string, column?: string, alias: string = 'metric', metric?: Metric): string => {
@@ -578,7 +599,8 @@ const ChartsPage = () => {
   ): string => {
     if (!config.website) return '';
 
-    const requiredTables = getRequiredTables();
+    // Updated to pass parameters to the function
+    const requiredTables = getRequiredTables(config, filters);
     
     // Split filters into event and session filters
     const eventFilters = filters.filter(filter => 
