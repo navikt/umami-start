@@ -282,15 +282,6 @@ const getGroupedParameters = () => {
     return uniqueEvents.size;
   };
 
-  const getDetailCount = () => {
-    const uniqueParams = new Set();
-    parameters.forEach(param => {
-      const baseName = param.key.split('.')[1]; // Get parameter name without event prefix
-      uniqueParams.add(baseName);
-    });
-    return uniqueParams.size;
-  };
-
   // Helper function to get parameter descriptions
   const getParamDescription = (key: string): string => {
     switch(key) {
