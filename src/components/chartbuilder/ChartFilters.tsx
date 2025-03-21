@@ -1,4 +1,4 @@
-import { Button, ExpansionCard, Heading, Select, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, ExpansionCard, Heading, Select, Switch, UNSAFE_Combobox } from '@navikt/ds-react';
 import { useMemo, useState, useEffect } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -56,6 +56,8 @@ const ChartFilters = ({
   const [urlPathOperator, setUrlPathOperator] = useState<string>('IN'); // Add this state
   // Add this near other state declarations
   const [stagingFilter, setStagingFilter] = useState<Filter | null>(null);
+  const [advancedFilters, setAdvancedFilters] = useState<boolean>(false);
+  const [activeFilters, setActiveFilters] = useState<boolean>(false);
   // Add a new state for the event operator (near other state variables)
   const [eventNameOperator, setEventNameOperator] = useState<string>('IN');
   // Add these new state variables
@@ -741,9 +743,14 @@ const ChartFilters = ({
           />
 
                 <div>
-                <Heading level="3" size="xsmall" spacing className='mt-2'>
+                <Heading level="3" size="xsmall" className='mt-2'>
                   Filter
                 </Heading>
+
+                <Switch className="mt-1" checked={advancedFilters} onChange={() => setAdvancedFilters(!advancedFilters)}>Legg til flere filter</Switch>
+            
+                {advancedFilters && (
+                  <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-4">
                   Legg til et filter for å velge hvilke data grafen / tabellen baseres på.
                 </p>
@@ -927,13 +934,19 @@ const ChartFilters = ({
                       </div>
                     </div>
                   )}
+                  </div>
+                )}
                 </div>
 
+            <Switch className="-mt-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>Vis aktive filter</Switch>
+
+            {activeFilters && (
+              <>
           {/* Static Filters in ExpansionCard */}
           <div className="mt-4">
             <ExpansionCard
               aria-label="Aktive filtre"
-              defaultOpen={false}
+              defaultOpen={true}
               size="small"
             >
               <ExpansionCard.Header>
@@ -1006,7 +1019,6 @@ const ChartFilters = ({
                                   ))}
                                 </Select>
                               )}
-                              {/* ...rest of existing filter input code... */}
                             </div>
                             {/* Event name combobox on its own row */}
                             {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && (
@@ -1060,6 +1072,8 @@ const ChartFilters = ({
               </ExpansionCard.Content>
             </ExpansionCard>
           </div>
+          </>
+          )}
         </div>
       </div>
     </section>

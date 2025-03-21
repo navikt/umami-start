@@ -281,7 +281,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
           
           {selectedWebsite && (
             <div className="mt-4">
-              <ReadMore header="Innstillinger for hendelsesinnlasting">
+              <ReadMore size="small" header="Innstillinger for hendelsesinnlasting">
                 
                 <div className="space-y-4 mt-2">
                   <div className="text-sm">

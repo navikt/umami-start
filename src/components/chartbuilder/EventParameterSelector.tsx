@@ -353,7 +353,7 @@ const getGroupedParameters = () => {
                 Sporer kun sidevisninger
               </>
             ): (
-              <>{getEventCount()} egendefinerte hendelser {getDetailCount() > 0 && (<>– {getDetailCount()} unike detaljer</>)}</>
+              <>Sporer {getEventCount()} egendefinerte hendelser</>
             )}
             </ExpansionCard.Title>
           </ExpansionCard.Header>
