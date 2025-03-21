@@ -63,7 +63,6 @@ const Summarize = ({
   clearOrderBy,
   setDateFormat,
   setLimit,
-  setParamAggregation,
   availableEvents = []
 }: SummarizeProps) => {
   // Add alert state
@@ -122,7 +121,7 @@ const Summarize = ({
     
     // Clear all metrics (create a temporary copy to avoid modification during iteration)
     const metricsCopy = [...metrics];
-    metricsCopy.forEach((_, index) => {
+    metricsCopy.forEach((_) => {
       // Always remove the first one as the array shifts each time
       removeMetric(0);
     });

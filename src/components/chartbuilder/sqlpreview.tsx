@@ -43,9 +43,6 @@ const SQLPreview = ({
     return true;
   };
 
-  // Calculate if form progress should start open based on step
-  const defaultOpen = activeStep < 4 && openFormprogress;
-
   // Track previous step to detect transitions
   const [prevStep, setPrevStep] = useState(activeStep);
   // Track if we've done the initial auto-close on step 4
