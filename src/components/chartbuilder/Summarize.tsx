@@ -113,7 +113,7 @@ const Summarize = ({
           Gruppering
         </Heading>
         <p className="text-sm text-gray-600 mb-4">
-          Du kan legge til en eller flere grupperinger, disse vises som kolonner i tabeller.
+          Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
         </p>
         
         <div className="space-y-4 mb-6">
@@ -235,6 +235,11 @@ const Summarize = ({
               </div>
             </div>
           )}
+          {groupByFields.length == 0 && (
+          <p className="text-sm text-gray-600 mt-4">
+              <strong>Eksempel:</strong> dato (dag, uker, måneder), enhet, nettlesertype, etc.
+          </p>
+          )}
       </div>
 
       {/* Metrics section */}
@@ -243,7 +248,7 @@ const Summarize = ({
           Beregninger
         </Heading>
          <p className="text-sm text-gray-600 mb-4">
-          Du kan legge til en eller flere beregninger, disse vises som kolonner i tabeller.
+          Legg til en eller flere beregninger, disse vises som kolonner i tabeller.
         </p>
         
         <div className="space-y-4 mb-6">
@@ -496,6 +501,11 @@ const Summarize = ({
               </div>
             </div>
           ))}
+          {metrics.length == 0 && (
+          <p className="text-sm text-gray-600 mt-4">
+              <strong>Eksempel:</strong> antall, andel, sum, gjennomsnitt, etc.
+          </p>
+          )}
         </div>
       </div>
 
@@ -639,6 +649,11 @@ const Summarize = ({
             </div>
           )}
         </div>
+        {limit == null && (
+        <p className="text-sm text-gray-600 mt-4">
+              <strong>Eksempel:</strong> for en topp 10-liste
+          </p>
+        )}
       </div>
 
     </div>
