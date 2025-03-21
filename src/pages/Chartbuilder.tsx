@@ -1072,9 +1072,6 @@ const ChartsPage = () => {
 
                   {/* Summarize section with new parameter aggregation toggle */}
                   <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
-                    <Heading level="2" size="small" spacing>
-                      Tilpass visning
-                    </Heading>
                     <Summarize
                       metrics={config.metrics}
                       groupByFields={config.groupByFields}

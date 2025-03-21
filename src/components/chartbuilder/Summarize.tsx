@@ -1,5 +1,6 @@
 import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
+import { useState } from 'react'; // Add useState
 import { 
   Parameter, 
   Metric, 
@@ -9,6 +10,7 @@ import {
   OrderBy,
   ColumnOption
 } from '../../types/chart';
+import AlertWithCloseButton from './AlertWithCloseButton'; // Import AlertWithCloseButton
 
 interface SummarizeProps {
   metrics: Metric[];
@@ -61,8 +63,15 @@ const Summarize = ({
   clearOrderBy,
   setDateFormat,
   setLimit,
+  setParamAggregation,
   availableEvents = []
 }: SummarizeProps) => {
+  // Add alert state
+  const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
+    show: false,
+    message: ''
+  });
+
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
@@ -106,9 +115,72 @@ const Summarize = ({
     { value: 'NOT IN', label: 'Er ikke en av' }
   ];
 
+  // Add a reset function that clears all configurations
+  const resetConfig = () => {
+    // Instead of a while loop, which might not work with state updates,
+    // reset everything at once to avoid race conditions
+    
+    // Clear all metrics (create a temporary copy to avoid modification during iteration)
+    const metricsCopy = [...metrics];
+    metricsCopy.forEach((_, index) => {
+      // Always remove the first one as the array shifts each time
+      removeMetric(0);
+    });
+    
+    // Clear all group by fields (create a temporary copy to avoid modification during iteration)
+    const fieldsCopy = [...groupByFields];
+    fieldsCopy.forEach(field => {
+      removeGroupByField(field);
+    });
+    
+    // Reset orderBy
+    clearOrderBy();
+    
+    // Reset date format to default
+    setDateFormat('day');
+    
+    // Reset limit
+    setLimit(null);
+    
+    // Show alert
+    setAlertInfo({
+      show: true,
+      message: 'Alle innstillinger ble tilbakestilt'
+    });
+    
+    // Auto-hide alert after 7 seconds
+    setTimeout(() => {
+      setAlertInfo(prev => ({...prev, show: false}));
+    }, 7000);
+  };
+
   return (
+    <>
+    <div className="flex justify-between items-center mb-4">
+      <Heading level="2" size="small">
+        Tilpass visning
+      </Heading>
+      
+      {/* Add reset button next to the heading */}
+      <Button 
+        variant="tertiary" 
+        size="small" 
+        onClick={resetConfig}
+      >
+        Tilbakestill tilpasninger
+      </Button>
+    </div>
     <div className="bg-gray-50 p-5 rounded-md border"> 
-        {/* Group By section */} 
+        {/* Add alert at the top if it's visible */}
+        {alertInfo.show && (
+          <div className="mb-4">
+            <AlertWithCloseButton variant="success">
+              {alertInfo.message}
+            </AlertWithCloseButton>
+          </div>
+        )}
+        
+        {/* Group By section - remove the reset button here */} 
         <Heading level="3" size="xsmall" spacing>
           Gruppering
         </Heading>
@@ -509,36 +581,6 @@ const Summarize = ({
         </div>
       </div>
 
-      {/* Add new Parameter Aggregation section 
-      {parameters.length > 0 && parameters.some(p => p.type === 'string') && (
-        <div className="mt-4 pb-4 border-b border-gray-200">
-          <Box paddingBlock="4">
-            <Heading level="3" size="xsmall" spacing>
-              Parameter aggregering
-            </Heading>
-            <div className="flex items-center mt-2">
-              <Switch
-                size="small"
-                checked={paramAggregation === 'unique'}
-                onChange={() => setParamAggregation(
-                  paramAggregation === 'unique' ? 'representative' : 'unique'
-                )}
-              >
-                Vis sammendrag
-              </Switch>
-              <span className="ml-2 text-sm">
-                Vis alle unike verdier (standard) eller sammendrag
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Som standard vises alle unike verdier for tekst-parametere.
-              Når deaktivert vil spørringen vise én representativ verdi per gruppering.
-            </p>
-          </Box>
-        </div>
-      )}
-      */}
-
       {/* Order By section */}
       <div className="border-t pt-4">
         <Heading level="3" size="xsmall" spacing>
@@ -655,8 +697,8 @@ const Summarize = ({
           </p>
         )}
       </div>
-
     </div>
+    </>
   );
 };
 
