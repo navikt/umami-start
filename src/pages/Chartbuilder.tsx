@@ -16,6 +16,7 @@ import {
   ChartConfig,
   Filter
 } from '../types/chart';
+import CopyButton from '../components/theme/CopyButton/CopyButton';
 
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [
@@ -1154,6 +1155,12 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
+      {currentStep == 4 && (
+      <CopyButton 
+        textToCopy={generatedSQL} 
+        visible={!!generatedSQL && generatedSQL !== '-- Please select a website to generate SQL'}
+      />
+      )}
     </div>
   );
 };
