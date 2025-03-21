@@ -1,10 +1,22 @@
 import {Page} from "@navikt/ds-react";
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import routes from './routes';
 import Footer from "./components/theme/Footer/Footer.tsx";
 import ScrollToTop from "./components/theme/ScrollToTop/ScrollToTop.tsx";
 import Header from "./components/theme/Header/Header.tsx";
 import { Helmet } from "react-helmet";
+
+// Create a wrapper component for ScrollToTop
+const ScrollToTopWrapper = () => {
+  const location = useLocation();
+  
+  // Don't show on /grafbygger route
+  if (location.pathname === '/grafbygger') {
+    return null;
+  }
+  
+  return <ScrollToTop />;
+};
 
 function App() {
   return (
@@ -33,11 +45,11 @@ function App() {
                             <Route key={path} path={path} element={component} />
                         ))}
                     </Routes>
+                    <ScrollToTopWrapper />
                 </Router>
             </Page.Block>
         </Page>
         <Footer />
-        <ScrollToTop />
     </>
   )
 }
