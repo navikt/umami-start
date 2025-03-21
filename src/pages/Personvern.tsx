@@ -26,13 +26,11 @@ function Personvern() {
                         </p>
                         
                         <h3 className="pb-4 text-lg">skyra.state</h3>
-
                         <p className="mb-4 leading-normal">
                         Brukes av verktøyet Skyra for å huske brukeren og hvorvidt undersøkelser er åpnet, lukket eller fullført.
                         </p>
 
                         <h3 className="pb-4 text-lg">Umami</h3>
-
                         <p className="mb-4 leading-normal">
                         Umami brukes til statistikk og analyse av hvordan nav.no brukes. Unami bruker ikke informasjonskapsler, men henter inn opplysninger om nettleseren din for å lage en unik ID. Denne ID-en brukes for å skille deg fra andre brukere. For å hindre identifisering, bruker vi en egenutviklet proxy som vasker bort deler av IP-adressen din før dataene sendes til verktøyet.
                         </p>
