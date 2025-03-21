@@ -341,10 +341,10 @@ const getGroupedParameters = () => {
             <ExpansionCard.Title as="h3" size="small">
             {getEventCount() === 0 ? (
               <>
-                Sporer kun sidevisninger
+                Ingen egendefinerte hendelser
               </>
             ): (
-              <>Sporer {getEventCount()} egendefinerte hendelser</>
+              <>{getEventCount()} egendefinerte hendelser</>
             )}
             </ExpansionCard.Title>
           </ExpansionCard.Header>
