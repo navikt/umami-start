@@ -1050,104 +1050,111 @@ const ChartsPage = () => {
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
         Lag grafer og tabeller for Metabase
       </Heading>
-        <p className="text-gray-600 mb-10 prose">
-              Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
-            </p>
+      <p className="text-gray-600 mb-10 prose">
+        Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
+      </p>
 
-        <div className="lg:grid lg:grid-cols-2 lg:gap-8">
-          {/* Left column - Form controls */}
-          <div className="mb-8 space-y-8">
-            <VStack gap="4">  {/* Reduce gap to prevent too much spacing */}
-              {/* Data section - Website picker */}
-              <section>
-                {/* @ts-ignore Data section - Website picker */}
-                <WebsitePicker selectedWebsite={config.website}
-                  onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
-                  onEventsLoad={handleEventsLoad}
-                />
-              </section>
+      {/* Modified grid structure for better mobile layout */}
+      <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-8">
+        {/* Left column - Form controls */}
+        <div className="mb-8 order-1 lg:order-none">
+          <VStack gap="4">
+            {/* Data section - Website picker */}
+            <section>
+              {/* @ts-ignore Data section - Website picker */}
+              <WebsitePicker 
+                selectedWebsite={config.website}
+                onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
+                onEventsLoad={handleEventsLoad}
+              />
+            </section>
 
-              {config.website && dateRangeReady && (
-                <>
-                  {/* Parameters section - Remove AdvancedOptions */}
-                  <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
-                    <Heading level="2" size="small" spacing>
-                      Datautforsker
-                    </Heading>
-                    <EventParameterSelector
-                      availableEvents={availableEvents}
-                      parameters={parameters}
-                      setParameters={setParameters}
-                    />
-                  </section>
+            {config.website && dateRangeReady && (
+              <>
+                {/* Parameters section - Remove AdvancedOptions */}
+                <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
+                  <Heading level="2" size="small" spacing>
+                    Datautforsker
+                  </Heading>
+                  <EventParameterSelector
+                    availableEvents={availableEvents}
+                    parameters={parameters}
+                    setParameters={setParameters}
+                  />
+                </section>
 
-                  {/* Replace the Filter section with the new component */}
-                  <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
-                    <ChartFilters
-                      filters={filters}
-                      parameters={parameters}
-                      setFilters={setFilters}
-                      availableEvents={availableEvents}
-                      maxDaysAvailable={maxDaysAvailable}
-                    />
-                  </section>
+                {/* Replace the Filter section with the new component */}
+                <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
+                  <ChartFilters
+                    filters={filters}
+                    parameters={parameters}
+                    setFilters={setFilters}
+                    availableEvents={availableEvents}
+                    maxDaysAvailable={maxDaysAvailable}
+                  />
+                </section>
 
-                  {/* Summarize section with new parameter aggregation toggle */}
-                  <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
-                    <Summarize
-                      metrics={config.metrics}
-                      groupByFields={config.groupByFields}
-                      parameters={parameters}
-                      dateFormat={config.dateFormat}
-                      orderBy={config.orderBy}
-                      paramAggregation={config.paramAggregation}
-                      limit={config.limit}
-                      METRICS={METRICS}
-                      DATE_FORMATS={DATE_FORMATS}
-                      COLUMN_GROUPS={FILTER_COLUMNS}
-                      getMetricColumns={getMetricColumns}
-                      sanitizeColumnName={sanitizeColumnName}
-                      updateMetric={(index, updates) => updateMetric(index, updates)}
-                      removeMetric={removeMetric}
-                      addMetric={addMetric}
-                      addGroupByField={addGroupByField}
-                      removeGroupByField={removeGroupByField}
-                      moveGroupField={moveGroupField}
-                      moveMetric={moveMetric}
-                      setOrderBy={setOrderBy}
-                      clearOrderBy={clearOrderBy}
-                      setParamAggregation={setParamAggregation}
-                      setLimit={setLimit}
-                      setDateFormat={(format) => setConfig(prev => ({
-                        ...prev,
-                        dateFormat: format as DateFormat['value']
-                      }))}
-                      availableEvents={availableEvents}
-                    />
-                  </section>
-                </>
-              )}
-            </VStack>
+                {/* Summarize section with new parameter aggregation toggle */}
+                <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
+                  <Summarize
+                    metrics={config.metrics}
+                    groupByFields={config.groupByFields}
+                    parameters={parameters}
+                    dateFormat={config.dateFormat}
+                    orderBy={config.orderBy}
+                    paramAggregation={config.paramAggregation}
+                    limit={config.limit}
+                    METRICS={METRICS}
+                    DATE_FORMATS={DATE_FORMATS}
+                    COLUMN_GROUPS={FILTER_COLUMNS}
+                    getMetricColumns={getMetricColumns}
+                    sanitizeColumnName={sanitizeColumnName}
+                    updateMetric={(index, updates) => updateMetric(index, updates)}
+                    removeMetric={removeMetric}
+                    addMetric={addMetric}
+                    addGroupByField={addGroupByField}
+                    removeGroupByField={removeGroupByField}
+                    moveGroupField={moveGroupField}
+                    moveMetric={moveMetric}
+                    setOrderBy={setOrderBy}
+                    clearOrderBy={clearOrderBy}
+                    setParamAggregation={setParamAggregation}
+                    setLimit={setLimit}
+                    setDateFormat={(format) => setConfig(prev => ({
+                      ...prev,
+                      dateFormat: format as DateFormat['value']
+                    }))}
+                    availableEvents={availableEvents}
+                  />
+                </section>
+              </>
+            )}
+          </VStack>
 
+          {/* Kontaktboks visible only on desktop */}
+          <div className="mt-8 hidden lg:block">
             <Kontaktboks />
           </div>
-
-          {/* Right column - SQL preview */}
-          <div className="lg:sticky lg:top-4 lg:self-start lg:flex lg:flex-col">
-              <div className="mb-8 overflow-y-auto">
-                <SQLPreview 
-                  sql={generatedSQL} 
-                  activeStep={currentStep} 
-                  openFormprogress={formProgressOpen}
-                  onOpenChange={handleFormProgressOpenChange}
-                />
-              </div>
-          </div>
-
         </div>
 
-      
+        {/* Right column - SQL preview */}
+        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start">
+          <div className="overflow-y-auto">
+            <SQLPreview 
+              sql={generatedSQL} 
+              activeStep={currentStep} 
+              openFormprogress={formProgressOpen}
+              onOpenChange={handleFormProgressOpenChange}
+            />
+          </div>
+        </div>
+
+        {/* Kontaktboks for mobile - shown below SQL preview */}
+        <div className="order-3 lg:hidden">
+          <Kontaktboks />
+        </div>
       </div>
+    </div>
   );
 };
 
