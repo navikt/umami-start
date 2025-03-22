@@ -63,6 +63,23 @@ export interface WebsitePickerProps {
   onWebsiteChange: (website: Website | null) => void;
 }
 
+// Add MetabaseVariable type
+export interface MetabaseVariable {
+  name: string;
+  displayName: string;
+  type: 'text' | 'number' | 'date' | 'field_filter';
+  isRequired: boolean;
+  isOptionalClause: boolean;
+  widgetType: 'input' | 'dropdown' | 'search';
+  column?: string; // For field_filter
+  fieldName?: string; // For field_filter
+  defaultValue?: string;
+  valuesSource?: 'connected_field' | 'custom_list' | 'from_data';
+  customValues?: string[];
+  dataSource?: 'event_names' | 'url_paths';
+}
+
+// Update ChartConfig interface to include variables
 export interface ChartConfig {
   website: Website | null;
   filters: Filter[];
@@ -71,5 +88,6 @@ export interface ChartConfig {
   orderBy: { column: string; direction: 'ASC' | 'DESC' } | null;
   dateFormat: DateFormat['value'];
   paramAggregation: 'representative' | 'unique'; // New property for controlling parameter aggregation
-  limit: null
+  limit: null;
+  variables?: MetabaseVariable[]; // Add this line
 }
