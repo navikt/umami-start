@@ -593,23 +593,13 @@ const ChartsPage = () => {
   // IMPORTANT: Move this function before generateSQLCore to fix the reference error
   // Update the getMetricSQL function to handle aliases and indices
   const getMetricSQL = useCallback((metric: Metric, index: number): string => {
-    // For percentage metrics, standardize the alias to 'andel' if not specified
-    if (metric.function === 'percentage' && !metric.alias) {
-      // If there are multiple percentage metrics, add an index
-      const percentageCount = config.metrics
-        .filter(m => m.function === 'percentage')
-        .length;
-      
-      const alias = percentageCount > 1 ? `andel_${index + 1}` : 'andel';
-      return getMetricSQLByType(metric.function, metric.column, alias);
-    }
-    
-    // If user has set a custom alias, use that
+    // If user has set a custom alias, always use that first, regardless of metric type
     if (metric.alias) {
       return getMetricSQLByType(metric.function, metric.column, metric.alias, metric);
     }
-
-    // Always use metrikk_N format for consistency
+    
+    // Always use metrikk_N format for consistency with all metric types
+    // This change ensures all metrics, including percentage metrics, use the same naming pattern
     const defaultAlias = `metrikk_${index + 1}`;
     return getMetricSQLByType(metric.function, metric.column, defaultAlias, metric);
   }, [getMetricSQLByType, config.metrics]);
