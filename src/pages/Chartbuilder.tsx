@@ -14,7 +14,8 @@ import {
   MetricOption,
   ColumnOption,
   ChartConfig,
-  Filter
+  Filter,
+  Website // Add the missing Website type
 } from '../types/chart';
 import CopyButton from '../components/theme/CopyButton/CopyButton';
 
@@ -1086,6 +1087,43 @@ const ChartsPage = () => {
     }
   }, [tempDateRangeInDays, maxDaysAvailable, config.website]);
 
+  // Modify website change handler to handle URL sharing
+  const handleWebsiteChange = useCallback((website: Website | null) => {
+    setConfig(prev => ({ 
+      ...prev, 
+      website 
+    }));
+    
+    // Reset filters and selections when the website changes
+    if (website && website.id !== config.website?.id) {
+      setFilters([]);
+      setConfig(prev => ({
+        ...prev,
+        website,
+        metrics: [],
+        groupByFields: [],
+        orderBy: null
+      }));
+    }
+  }, [config.website?.id]);
+
+  // Check if the page is loaded via a shared URL with preset website
+  useEffect(() => {
+    // This will only handle URL parameters not related to website ID
+    // Website ID is handled directly in WebsitePicker component
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // You could add more URL parameters here like date range
+    const dateRange = urlParams.get('dateRange');
+    if (dateRange && !isNaN(Number(dateRange))) {
+      const days = Number(dateRange);
+      if (days > 0 && days <= 90) { // Add reasonable limits
+        setDateRangeInDays(days);
+        setTempDateRangeInDays(days);
+      }
+    }
+  }, []);
+
   // Modify handleEventsLoad to update loading state
   const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
     setAvailableEvents(events);
@@ -1135,7 +1173,7 @@ const ChartsPage = () => {
               {/* @ts-ignore Data section - Website picker */}
               <WebsitePicker 
                 selectedWebsite={config.website}
-                onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
+                onWebsiteChange={handleWebsiteChange}
                 onEventsLoad={handleEventsLoad}
                 dateRangeInDays={dateRangeInDays} // Pass dateRangeInDays to WebsitePicker
                 shouldReload={forceReload}        // Pass the reload flag

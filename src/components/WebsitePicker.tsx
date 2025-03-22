@@ -61,12 +61,73 @@ const WebsitePicker = ({
   const websitesLoaded = useRef<boolean>(false);
   const prevExternalDateRange = useRef<number>(externalDateRange || 3);
   const prevShouldReload = useRef<boolean>(shouldReload);
+  const initialUrlChecked = useRef<boolean>(false);
 
   // @ts-ignore
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState<boolean>(false);
   const loadingTimerRef = useRef<number | null>(null);
+
+  // Function to update URL with website ID
+  const updateUrlWithWebsiteId = useCallback((website: Website | null) => {
+    const url = new URL(window.location.href);
+    
+    if (website && website.id) {
+      url.searchParams.set('websiteId', website.id);
+    } else {
+      url.searchParams.delete('websiteId');
+    }
+    
+    // Update URL without full page reload
+    window.history.pushState({}, '', url.toString());
+  }, []);
+
+  // Handle website selection and update URL
+  const handleWebsiteChange = useCallback((website: Website | null) => {
+    onWebsiteChange(website);
+    updateUrlWithWebsiteId(website);
+  }, [onWebsiteChange, updateUrlWithWebsiteId]);
+
+  // Check for website ID in URL on initial load
+  useEffect(() => {
+    if (websitesLoaded.current && !initialUrlChecked.current && websites.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const websiteIdFromUrl = urlParams.get('websiteId');
+      
+      if (websiteIdFromUrl) {
+        const website = websites.find(w => w.id === websiteIdFromUrl);
+        if (website && !selectedWebsite) {
+          onWebsiteChange(website);
+        }
+      }
+      
+      initialUrlChecked.current = true;
+    }
+  }, [websites, selectedWebsite, onWebsiteChange]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      if (websitesLoaded.current) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const websiteIdFromUrl = urlParams.get('websiteId');
+        
+        if (websiteIdFromUrl) {
+          const website = websites.find(w => w.id === websiteIdFromUrl);
+          if (website && (!selectedWebsite || website.id !== selectedWebsite.id)) {
+            onWebsiteChange(website);
+          }
+        } else if (selectedWebsite) {
+          // No website ID in URL, but we have a selected website, clear it
+          onWebsiteChange(null);
+        }
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [websites, selectedWebsite, onWebsiteChange]);
 
   const handleLoadingState = useCallback((loading: boolean) => {
     if (loading) {
@@ -287,9 +348,9 @@ const WebsitePicker = ({
             onToggleSelected={(option: string, isSelected: boolean) => {
               if (isSelected) {
                 const website = websites.find(w => w.name === option);
-                onWebsiteChange(website || null);
+                handleWebsiteChange(website || null); // Use the new handler
               } else {
-                onWebsiteChange(null);
+                handleWebsiteChange(null); // Use the new handler
               }
             }}
             clearButton
