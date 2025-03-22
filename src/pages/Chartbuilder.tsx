@@ -278,10 +278,25 @@ const ChartsPage = () => {
 
   // Add helper functions for metrics
   const addMetric = (functionType?: string) => {
-    setConfig(prev => ({
-      ...prev,
-      metrics: [...prev.metrics, { function: functionType || 'count' }]
-    }));
+    setConfig(prev => {
+      const newMetrics = [...prev.metrics, { function: functionType || 'count' }];
+      const updatedConfig = {
+        ...prev,
+        metrics: newMetrics
+      };
+      
+      // Auto-set sort order when adding the first metric if there's no date grouping
+      if (newMetrics.length === 1 && !prev.groupByFields.includes('created_at') && 
+          (!prev.orderBy || prev.orderBy.column === 'dato')) {
+        // Use default name for first metric based on function
+        updatedConfig.orderBy = { 
+          column: 'metrikk_1', 
+          direction: 'DESC' 
+        };
+      }
+      
+      return updatedConfig;
+    });
   };
 
   const removeMetric = (index: number) => {
@@ -965,11 +980,17 @@ const ChartsPage = () => {
           sql += 'ORDER BY 1 DESC\n';
         }
       }
-    } else if (config.groupByFields.length > 0) {
-      // Default ordering - only use date if it's the first field
-      if (config.groupByFields[0] === 'created_at') {
+    } else if (config.groupByFields.length > 0 || config.metrics.length > 0) {
+      // Improved default ordering logic
+      if (config.groupByFields.includes('created_at')) {
+        // If we have date grouping, sort by date ascending
         sql += 'ORDER BY dato ASC\n';
+      } else if (config.metrics.length > 0) {
+        // If we have metrics but no date, sort by first metric descending
+        const firstMetricAlias = config.metrics[0].alias || 'metrikk_1';
+        sql += `ORDER BY \`${firstMetricAlias}\` DESC\n`;
       } else {
+        // Fallback to ordering by first column
         sql += 'ORDER BY 1 DESC\n';
       }
     }

@@ -1,6 +1,6 @@
 import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
 import { MoveUp, MoveDown } from 'lucide-react';
-import { useState } from 'react'; // Add useState
+import { useState, useEffect } from 'react'; // Add useState and useEffect
 import { 
   Parameter, 
   Metric, 
@@ -62,6 +62,7 @@ const Summarize = ({
   setOrderBy,
   clearOrderBy,
   setDateFormat,
+  setParamAggregation, // Add this missing prop
   setLimit,
   availableEvents = []
 }: SummarizeProps) => {
@@ -141,6 +142,9 @@ const Summarize = ({
     // Reset limit
     setLimit(null);
     
+    // Reset parameter aggregation
+    setParamAggregation('representative');
+    
     // Show alert
     setAlertInfo({
       show: true,
@@ -152,6 +156,29 @@ const Summarize = ({
       setAlertInfo(prev => ({...prev, show: false}));
     }, 7000);
   };
+
+  // Helper function to set sort order based on the state of metrics and groupByFields
+  const updateSortOrderIfNeeded = () => {
+    // If no metrics yet, nothing to do
+    if (metrics.length === 0) return;
+    
+    // Check if we have a date grouping
+    const hasDateGrouping = groupByFields.includes('created_at');
+    
+    // If no date grouping and either no sort order or current sort is date
+    if (!hasDateGrouping && 
+        (!orderBy || orderBy.column === 'dato')) {
+      // Sort by the first metric descending
+      const firstMetric = metrics[0];
+      const metricName = firstMetric.alias || `metrikk_1`;
+      setOrderBy(metricName, 'DESC');
+    }
+  };
+
+  // Call this function whenever metrics are added in the parent component
+  useEffect(() => {
+    updateSortOrderIfNeeded();
+  }, [metrics.length]);
 
   return (
     <>
