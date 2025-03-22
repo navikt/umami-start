@@ -512,14 +512,14 @@ const ChartsPage = () => {
             100.0 * COUNT(*) / (
               SUM(COUNT(*)) OVER()
             )
-          , 2) as ${quotedAlias}`;
+          , 1) as ${quotedAlias}`;
         case 'andel':
           // For parameter-based andel, calculate percentage against total
           return `ROUND(
             100.0 * COUNT(*) / (
               SELECT COUNT(*) FROM base_query
             )
-          , 2) as ${quotedAlias}`;
+          , 1) as ${quotedAlias}`;
         default:
           return `COUNT(*) as ${quotedAlias}`;
       }
@@ -552,7 +552,7 @@ const ChartsPage = () => {
               100.0 * COUNT(*) / (
                 SUM(COUNT(*)) OVER()
               )
-            , 2) as ${quotedAlias}`;
+            , 1) as ${quotedAlias}`;
           }
           
           // For specific columns (session_id, visit_id, event_id), use COUNT(DISTINCT)
@@ -561,14 +561,14 @@ const ChartsPage = () => {
             100.0 * COUNT(DISTINCT base_query.${column}) / (
               SUM(COUNT(DISTINCT base_query.${column})) OVER()
             )
-          , 2) as ${quotedAlias}`;
+          , 1) as ${quotedAlias}`;
         }
         // Default percentage calculation if no column specified
         return `ROUND(
           100.0 * COUNT(*) / (
             SUM(COUNT(*)) OVER()
           )
-        , 2) as ${quotedAlias}`;
+        , 1) as ${quotedAlias}`;
       case 'andel':
         if (column && websiteId) {
           // Now use the websiteId variable which we've ensured is not empty
@@ -580,7 +580,7 @@ const ChartsPage = () => {
                 WHERE website_id = '${websiteId}'
                 ${getDateFilterConditions()}
               ), 0)
-            , 2) as ${quotedAlias}`;
+            , 1) as ${quotedAlias}`;
           } else if (column === 'visit_id') {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
@@ -589,7 +589,7 @@ const ChartsPage = () => {
                 WHERE website_id = '${websiteId}'
                 ${getDateFilterConditions()}
               ), 0)
-            , 2) as ${quotedAlias}`;
+            , 1) as ${quotedAlias}`;
           } else if (column === 'event_id') {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
@@ -598,7 +598,7 @@ const ChartsPage = () => {
                 WHERE website_id = '${websiteId}'
                 ${getDateFilterConditions()}
               ), 0)
-            , 2) as ${quotedAlias}`;
+            , 1) as ${quotedAlias}`;
           }
         }
         
