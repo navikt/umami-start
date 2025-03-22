@@ -19,13 +19,23 @@ import {
 } from '@navikt/aksel-icons';
 import { Parameter } from '../../types/chart';
 import { FILTER_COLUMNS } from '../../lib/constants';
+import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
 
 interface EventParameterSelectorProps {
   availableEvents: string[];
   parameters: Parameter[];
   setParameters: (parameters: Parameter[]) => void;
   initiallySelectAll?: boolean; // New optional prop to control initial selection
+  // New props for date range settings
+  maxDaysAvailable?: number;
+  dateRangeInDays?: number;
+  tempDateRangeInDays?: number;
+  setTempDateRangeInDays?: (days: number) => void;
+  handleDateRangeChange?: () => void;
+  dateChanged?: boolean;
+  isLoading?: boolean;
 }
+
 // Enhanced structure to maintain event-parameter relationships
 interface EventParams {
   [eventName: string]: string[];
@@ -48,7 +58,13 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   availableEvents,
   parameters,
   setParameters,
-  initiallySelectAll = true // Default to true to select all events initially
+  initiallySelectAll = true, // Default to true to select all events initially
+  // Add new props with default values
+  maxDaysAvailable = 0,
+  tempDateRangeInDays = 3,
+  setTempDateRangeInDays = () => {},
+  handleDateRangeChange = () => {},
+  dateChanged = false,
 }) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>(
     initiallySelectAll ? availableEvents : []
@@ -61,8 +77,8 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   // @ts-ignore Store event-parameter mapping to ensure proper relationship
   const [eventParamsMap, setEventParamsMap] = useState<EventParams>({});
   
-  // Add loading state
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Rename isLoading state to isLoadingParameters to avoid conflict with prop
+  const [isLoadingParameters, setIsLoadingParameters] = useState<boolean>(true);
   
   // Extract event-parameter map from the input parameters list
   useEffect(() => {
@@ -129,7 +145,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     
     
     // Indicate we're done loading after initial parameters are processed
-    setIsLoading(false);
+    setIsLoadingParameters(false);
   }, [parameters]);
 
   // Check if we already have manual parameters on component mount
@@ -352,7 +368,7 @@ const getGroupedParameters = () => {
             <VStack gap="6">
             
               {/* Parameters Section - Only shown when events are selected and not loading */}
-              {!isLoading && (
+              {!isLoadingParameters && (
                 <Box borderRadius="medium">
                   <Heading level="3" size="xsmall" spacing>
                      Standard hendelser og detaljer
@@ -407,25 +423,25 @@ const getGroupedParameters = () => {
                     </ExpansionCard.Content>
                   </ExpansionCard>
 
-                  <Heading level="3" size="xsmall" spacing className="mt-6">
+                  <Heading level="3" size="xsmall" spacing className="mt-8">
                      Egendefinerte hendelser og detaljer
                   </Heading>
 
-                  {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                  {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
                     <BodyShort size="small" spacing className="text-gray-600 pt-1 pb-3">
                       Detaljer er forhåndsatt som tekst. Du kan endre til tall der det er relevant.
                     </BodyShort>
                   )}
 
                   {/* Continue with existing Alert for no events */}
-                  {!isLoading && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
+                  {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
                     <Alert variant="info" inline className="mt-3">
                       Ingen egendefinerte hendelser eller detaljer funnet. Mangler noen? Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                     </Alert>
                   )}
 
                   {/* Continue with existing Accordion for custom parameters */}
-                  {!isLoading && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
+                  {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
                     <Accordion>
                       {/* Standard Umami parameters section - as an accordion item */}
                       {/*
@@ -528,7 +544,7 @@ const getGroupedParameters = () => {
                     </Accordion>
                   )}
 
-                  {!isLoading && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                  {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
                     <BodyShort size="small" spacing className="text-gray-600 mt-6">
                       <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                     </BodyShort>
@@ -537,9 +553,53 @@ const getGroupedParameters = () => {
                 </Box>
               )}
 
+              {/* Date Range Settings - Moved from WebsitePicker */}
+              <div className="mt-0">
+                <ReadMore header="Innstillinger for hendelsesinnlasting">
+                  <div className="space-y-4 mt-2">
+                    <div className="text-sm">
+                      Endre tidsperioden for å hente hendelser og detaljer fra en tidligere dato.
+                      {maxDaysAvailable > 0 && 
+                        ` Du har tilgang til data fra de siste ${maxDaysAvailable} dagene.`
+                      }
+                    </div>
+                    
+                    <div className="flex items-end gap-2">
+                      <TextField
+                        label="Antall dager"
+                        type="number"
+                        size="small"
+                        value={tempDateRangeInDays}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          const val = parseInt(e.target.value, 10);
+                          setTempDateRangeInDays(isNaN(val) ? 1 : val);
+                        }}
+                        min={1}
+                        max={maxDaysAvailable}
+                        className="w-24"
+                      />
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={handleDateRangeChange}
+                        className="h-[33px]"
+                      >
+                        Oppdater
+                      </Button>
+                    </div>
+                    
+                    {dateChanged && !isLoadingParameters && (
+                      <AlertWithCloseButton variant="success">
+                        Tilgjengelige hendelser og parametere ble lastet inn
+                      </AlertWithCloseButton>
+                    )}
+                  </div>
+                </ReadMore>
+              </div>
+
               {/* Add Custom Parameters Section - Only when not loading */}
-              {!isLoading && (
-                <div className="-mt-3">
+              {!isLoadingParameters && (
+                <div className="-mt-4">
                   <ReadMore 
                     header="Legg til hendelsesdetaljer manuelt" 
                     defaultOpen={customParamAccordionOpen}

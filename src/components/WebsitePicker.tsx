@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, ChangeEvent, useCallback } from 'react';
-import { UNSAFE_Combobox, Button, ReadMore, TextField, Alert, ProgressBar } from '@navikt/ds-react';
-import AlertWithCloseButton from './chartbuilder/AlertWithCloseButton';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { UNSAFE_Combobox, Alert, ProgressBar } from '@navikt/ds-react';
 
 interface Website {
   id: string;
@@ -13,6 +12,8 @@ interface WebsitePickerProps {
   selectedWebsite: Website | null;
   onWebsiteChange: (website: Website | null) => void;
   onEventsLoad?: (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => void;
+  dateRangeInDays?: number; // Add this prop to accept date range from parent
+  shouldReload?: boolean;   // Add flag to force reload
 }
 
 interface EventProperty {
@@ -44,17 +45,23 @@ const timeoutPromise = (ms: number) => {
   });
 };
 
-const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: WebsitePickerProps) => {
+const WebsitePicker = ({ 
+  selectedWebsite, 
+  onWebsiteChange, 
+  onEventsLoad,
+  dateRangeInDays: externalDateRange, // Accept date range from props
+  shouldReload = false                // Flag to force reload 
+}: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
-  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(30);
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3); // Changed from 7 to 3
-  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3); // Changed from 7 to 3
+  const [setMaxDaysAvailable] = useState<number>(30);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 3);
   const apiCache = useRef<ApiCache>({});
   const fetchInProgress = useRef<{[key: string]: boolean}>({});
-  const websitesLoaded = useRef<boolean>(false); // New flag to prevent repeated fetching
-  const [dateChanged, setDateChanged] = useState(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const websitesLoaded = useRef<boolean>(false);
+  const prevExternalDateRange = useRef<number>(externalDateRange || 3);
+  const prevShouldReload = useRef<boolean>(shouldReload);
+
   // @ts-ignore
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,13 +70,11 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
 
   const handleLoadingState = useCallback((loading: boolean) => {
     if (loading) {
-      setIsLoading(true);
       loadingTimerRef.current = window.setTimeout(() => {
         setShowLoading(true);
       }, 600);
     } else {
       // Clear both loading states
-      setIsLoading(false);
       setShowLoading(false);
       
       // Clear any pending timers
@@ -90,7 +95,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
   }, []);
 
   // @ts-ignore
-  const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false) => {
+  const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false, daysToFetch = dateRangeInDays) => {
     if (fetchInProgress.current[websiteId]) return;
     
     fetchInProgress.current[websiteId] = true;
@@ -116,15 +121,16 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       const endDate = new Date(dateRange.maxdate);
       const startDate = new Date(dateRange.mindate);
       const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      setMaxDaysAvailable(totalDays);
 
-      // Always get fresh properties when date range changes
+      // Use the daysToFetch parameter instead of the state variable
       const calculatedEndDate = new Date(dateRange.maxdate);
       const calculatedStartDate = new Date(calculatedEndDate);
-      calculatedStartDate.setDate(calculatedStartDate.getDate() - dateRangeInDays);
+      calculatedStartDate.setDate(calculatedStartDate.getDate() - daysToFetch);
       
       const startAt = calculatedStartDate.getTime();
       const endAt = calculatedEndDate.getTime();
+      
+      console.log(`Fetching data for ${daysToFetch} days from ${new Date(startAt).toLocaleDateString()} to ${new Date(endAt).toLocaleDateString()}`);
       
       // Add timeout to properties fetch
       const propertiesResponse = await Promise.race([
@@ -135,6 +141,8 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
         timeoutPromise(API_TIMEOUT_MS)
       ]);// @ts-ignore
       const properties: EventProperty[] = await propertiesResponse.json();
+      
+      console.log(`Fetched ${properties.length} properties from the API`);
       
       // Process events and parameters
       const eventMap = new Map<string, string[]>();
@@ -158,6 +166,8 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
         });
       });
       
+      console.log(`Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+      
       if (onEventsLoad) {
         onEventsLoad(uniqueEventNames, paramsByEvent, totalDays);
       }
@@ -176,9 +186,8 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
       handleLoadingState(false);
     } finally {
       fetchInProgress.current[websiteId] = false;
-      // Removed handleLoadingState(false) from here
     }
-  }, [dateRangeInDays, onEventsLoad, setMaxDaysAvailable, handleLoadingState]);
+  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState]);
 
   useEffect(() => {
     if (websitesLoaded.current) {
@@ -224,33 +233,40 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
     if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
       // Clear cache when website changes
       apiCache.current = {};
-      fetchEventNames(selectedWebsite.id, true)
+      fetchEventNames(selectedWebsite.id, true, dateRangeInDays)
         .finally(() => {
           setLoadedWebsiteId(selectedWebsite.id);
         });
     }
-  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames]);
+  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
 
-  // Wrap handleDateRangeChange in useCallback
-  const handleDateRangeChange = useCallback(() => {
-    if (tempDateRangeInDays < 1) {
-      setTempDateRangeInDays(1);
-      setDateRangeInDays(1);
-    } else if (tempDateRangeInDays > maxDaysAvailable && maxDaysAvailable > 0) {
-      setTempDateRangeInDays(maxDaysAvailable);
-      setDateRangeInDays(maxDaysAvailable);
-    } else {
-      setDateRangeInDays(tempDateRangeInDays);
-    }
-
-    // If we have a selected website, refresh the data with the new date range
-    if (selectedWebsite) {
-      // Clear cache and fetch fresh data when changing days
+  // Combine the reload effects to avoid loops
+  useEffect(() => {
+    // Only proceed if we have a selected website
+    if (!selectedWebsite) return;
+    
+    const dateRangeChanged = externalDateRange !== prevExternalDateRange.current;
+    const reloadFlagChanged = shouldReload !== prevShouldReload.current;
+    
+    // Update the refs to track current values
+    prevExternalDateRange.current = externalDateRange || 3;
+    prevShouldReload.current = shouldReload;
+    
+    // Only reload if something actually changed
+    if (dateRangeChanged || reloadFlagChanged) {
+      console.log(`Reload triggered - dateRange: ${dateRangeChanged}, reloadFlag: ${reloadFlagChanged}`);
+      
+      if (dateRangeChanged) {
+        // Update the internal state
+        setDateRangeInDays(externalDateRange || 3);
+      }
+      
+      // Clear cache and force a fresh fetch
       apiCache.current[selectedWebsite.id] = {};
-      fetchEventNames(selectedWebsite.id, true);
-      setDateChanged(true); // Set dateChanged to true after updating
+      fetchEventNames(selectedWebsite.id, true, externalDateRange || dateRangeInDays);
     }
-  }, [tempDateRangeInDays, maxDaysAvailable, selectedWebsite, fetchEventNames, setDateRangeInDays, setTempDateRangeInDays]);
+  }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays]);
+
 
   return (
     <div className="space-y-4">
@@ -279,52 +295,7 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
             clearButton
           />
           
-          {selectedWebsite && (
-            <div className="mt-4">
-              <ReadMore size="small" header="Innstillinger for hendelsesinnlasting">
-                
-                <div className="space-y-4 mt-2">
-                  <div className="text-sm">
-                      Endre tidsperioden for å hente hendelser og detaljer fra en tidligere dato.
-                    {maxDaysAvailable > 0 && 
-                      ` Du har tilgang til data fra de siste ${maxDaysAvailable} dagene.`
-                    }
-                  </div>
-                  
-                  <div className="flex items-end gap-2">
-                    <TextField
-                      label="Antall dager"
-                      type="number"
-                      size="small"
-                      value={tempDateRangeInDays}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        const val = parseInt(e.target.value, 10);
-                        setTempDateRangeInDays(isNaN(val) ? 1 : val);
-                      }}
-                      min={1}
-                      max={maxDaysAvailable}
-                      className="w-24"
-                    />
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={handleDateRangeChange}
-                      className="h-[33px]"
-                    >
-                      Oppdater
-                    </Button>
-                  </div>
-                  
-                  {dateChanged && !isLoading && (
-                    <AlertWithCloseButton variant="success">
-                      Tilgjengelige hendelser og parametere ble lastet inn
-                    </AlertWithCloseButton>
-                  )}
-                
-                </div>
-              </ReadMore>
-            </div>
-          )}
+          {/* The ReadMore component has been moved to EventParameterSelector */}
         </div>
         {showLoading && (
           <div className="space-y-2">
@@ -337,7 +308,6 @@ const WebsitePicker = ({ selectedWebsite, onWebsiteChange, onEventsLoad }: Websi
                 seconds: 30,
                 onTimeout: () => {
                   setError('Forespørselen tok for lang tid. Prøv igjen senere.');
-                  setIsLoading(false);
                 }
               }}
               aria-label="Laster inn data"

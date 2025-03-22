@@ -226,6 +226,13 @@ const ChartsPage = () => {
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
   const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
+  
+  // Add missing state variables for date range settings
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3);
+  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3);
+  const [dateChanged, setDateChanged] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
 
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
@@ -1017,7 +1024,33 @@ const ChartsPage = () => {
     }));
   };
 
-  // Update handleEventsLoad to not handle date range information
+  // Add handleDateRangeChange function
+  const handleDateRangeChange = useCallback(() => {
+    if (tempDateRangeInDays < 1) {
+      setTempDateRangeInDays(1);
+      setDateRangeInDays(1);
+    } else if (tempDateRangeInDays > maxDaysAvailable && maxDaysAvailable > 0) {
+      setTempDateRangeInDays(maxDaysAvailable);
+      setDateRangeInDays(maxDaysAvailable);
+    } else {
+      setDateRangeInDays(tempDateRangeInDays);
+    }
+
+    // When website is selected, reload events with the new date range
+    if (config.website) {
+      setIsLoading(true);
+      // Toggle forceReload to trigger the WebsitePicker to refresh
+      setForceReload(prev => !prev);
+      setDateChanged(true);
+      
+      // Reset dateChanged after a delay to allow the alert to be visible
+      setTimeout(() => {
+        setDateChanged(false);
+      }, 5000);
+    }
+  }, [tempDateRangeInDays, maxDaysAvailable, config.website]);
+
+  // Modify handleEventsLoad to update loading state
   const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
     setAvailableEvents(events);
     if (autoParameters) {
@@ -1026,7 +1059,8 @@ const ChartsPage = () => {
     if (maxDays !== undefined) {
       setMaxDaysAvailable(maxDays);
     }
-    setDateRangeReady(true); // Just set this to true when events are loaded
+    setDateRangeReady(true);
+    setIsLoading(false); // Clear loading state after events load
   };
 
   // Add function to update parameter aggregation strategy
@@ -1067,6 +1101,8 @@ const ChartsPage = () => {
                 selectedWebsite={config.website}
                 onWebsiteChange={(website) => setConfig(prev => ({ ...prev, website }))}
                 onEventsLoad={handleEventsLoad}
+                dateRangeInDays={dateRangeInDays} // Pass dateRangeInDays to WebsitePicker
+                shouldReload={forceReload}        // Pass the reload flag
               />
             </section>
 
@@ -1081,6 +1117,14 @@ const ChartsPage = () => {
                     availableEvents={availableEvents}
                     parameters={parameters}
                     setParameters={setParameters}
+                    // Pass date range props from WebsitePicker to EventParameterSelector
+                    maxDaysAvailable={maxDaysAvailable}
+                    dateRangeInDays={dateRangeInDays}
+                    tempDateRangeInDays={tempDateRangeInDays}
+                    setTempDateRangeInDays={setTempDateRangeInDays}
+                    handleDateRangeChange={handleDateRangeChange}
+                    dateChanged={dateChanged}
+                    isLoading={isLoading}
                   />
                 </section>
 
