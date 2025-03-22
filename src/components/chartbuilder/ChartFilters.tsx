@@ -938,7 +938,9 @@ const ChartFilters = ({
                 )}
                 </div>
 
-            <Switch className="-mt-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>Vis aktive filter ({getActiveFilterCount()})</Switch>
+            <Switch className="-mt-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>
+            {getActiveFilterCount() === 0 ? 'Vis aktive filter ' : `Vis aktive filter (${getActiveFilterCount()})`}
+            </Switch>
 
             {activeFilters && (
               <>
