@@ -324,12 +324,33 @@ const ChartsPage = () => {
   };
 
   const updateMetric = (index: number, updates: Partial<Metric>) => {
-    setConfig((prev: ChartConfig) => ({
-      ...prev,
-      metrics: prev.metrics.map((metric: Metric, i: number): Metric => 
-        i === index ? { ...metric, ...updates } : metric
-      )
-    }));
+    setConfig((prev: ChartConfig) => {
+      // Get the current metric before changes
+      const currentMetric = prev.metrics[index];
+      const oldAlias = currentMetric.alias || `metrikk_${index + 1}`;
+      
+      // Apply the updates
+      const updatedConfig = {
+        ...prev,
+        metrics: prev.metrics.map((metric: Metric, i: number): Metric => 
+          i === index ? { ...metric, ...updates } : metric
+        )
+      };
+      
+      // If we're changing the alias and the current metric is being used for sorting
+      if (updates.alias !== undefined && 
+          prev.orderBy && 
+          prev.orderBy.column === oldAlias) {
+        
+        // Update the sort to use the new alias
+        updatedConfig.orderBy = {
+          column: updates.alias || `metrikk_${index + 1}`,
+          direction: prev.orderBy.direction
+        };
+      }
+      
+      return updatedConfig;
+    });
   };
 
   // Add move metric function
