@@ -649,6 +649,7 @@ const ChartsPage = () => {
         sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
         sql += '        THEN CONCAT(\'?\', e.url_query)\n';
         sql += '        ELSE \'\'\n';
+        sql += '      END\n';
         sql += '    ) AS url_fullpath,\n';
       }
       
@@ -660,6 +661,7 @@ const ChartsPage = () => {
         sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
         sql += '        THEN CONCAT(\'?\', e.url_query)\n';
         sql += '        ELSE \'\'\n';
+        sql += '      END\n';
         sql += '    ) AS url_fullurl,\n';
       }
     }
@@ -673,6 +675,7 @@ const ChartsPage = () => {
         sql += '        WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
         sql += '        THEN CONCAT(\'?\', e.referrer_query)\n';
         sql += '        ELSE \'\'\n';
+        sql += '      END\n';
         sql += '    ) AS referrer_fullpath';
         
         // Only add comma if referrer_fullurl is also used
@@ -690,6 +693,7 @@ const ChartsPage = () => {
         sql += '          WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
         sql += '          THEN CONCAT(\'?\', e.referrer_query)\n';
         sql += '          ELSE \'\'\n';
+        sql += '      END\n';
         sql += '    )\n';
         sql += '      ELSE NULL\n';
         sql += '    END AS referrer_fullurl\n';
