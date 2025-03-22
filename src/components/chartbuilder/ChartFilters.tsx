@@ -1,4 +1,4 @@
-import { Button, ExpansionCard, Heading, Select, Switch, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, Heading, Select, Switch, UNSAFE_Combobox } from '@navikt/ds-react';
 import { useMemo, useState, useEffect } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -938,25 +938,13 @@ const ChartFilters = ({
                 )}
                 </div>
 
-            <Switch className="-mt-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>Vis aktive filter</Switch>
+            <Switch className="-mt-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>Vis aktive filter ({getActiveFilterCount()})</Switch>
 
             {activeFilters && (
               <>
           {/* Static Filters in ExpansionCard */}
-          <div className="mt-4">
-            <ExpansionCard
-              aria-label="Aktive filtre"
-              defaultOpen={true}
-              size="small"
-            >
-              <ExpansionCard.Header>
-                <div className="flex justify-between items-center w-full">
-                  <ExpansionCard.Title as="h3" size="small">
-                    Aktive filter ({getActiveFilterCount()})
-                  </ExpansionCard.Title>
-                </div>
-              </ExpansionCard.Header>
-              <ExpansionCard.Content>
+          <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+
               {filters.length === 0 && (
                 <div className="text-sm text-gray-600">
                   Ingen aktive filter. Legg til et filter for å få mer spesifikke data.
@@ -1069,8 +1057,6 @@ const ChartFilters = ({
                     ))}
                   </div>
                 )}
-              </ExpansionCard.Content>
-            </ExpansionCard>
           </div>
           </>
           )}
