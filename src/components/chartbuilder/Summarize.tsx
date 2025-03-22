@@ -144,7 +144,7 @@ const Summarize = ({
     // Show alert
     setAlertInfo({
       show: true,
-      message: 'Alle innstillinger ble tilbakestilt'
+      message: 'Alle visningstilpasninger ble tilbakestilt'
     });
     
     // Auto-hide alert after 7 seconds
