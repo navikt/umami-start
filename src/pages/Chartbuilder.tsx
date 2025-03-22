@@ -1111,7 +1111,7 @@ const ChartsPage = () => {
                 {/* Parameters section - Remove AdvancedOptions */}
                 <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
                   <Heading level="2" size="small" spacing>
-                    Utforsker
+                    Utforsk
                   </Heading>
                   <EventParameterSelector
                     availableEvents={availableEvents}
