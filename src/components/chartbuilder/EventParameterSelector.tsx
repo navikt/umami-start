@@ -443,48 +443,6 @@ const getGroupedParameters = () => {
                   {/* Continue with existing Accordion for custom parameters */}
                   {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
                     <Accordion>
-                      {/* Standard Umami parameters section - as an accordion item */}
-                      {/*
-                      <Accordion.Item>
-                        <Accordion.Header className="bg-white">
-                          <span className="flex items-center gap-2">
-                            sidevisning
-                            <Tag size="xsmall" variant="info" className="whitespace-nowrap">standard</Tag>
-                            <span className="text-sm text-gray-600">
-                              ({Object.values(FILTER_COLUMNS).reduce((sum, group) => sum + group.columns.length, 0)} standarddetaljer)
-                            </span>
-                          </span>
-                        </Accordion.Header>
-                        <Accordion.Content>
-                          <VStack gap="3" className="-ml-8 mt-5">
-                            <div className="flex flex-col gap-3">
-                              {Object.entries(FILTER_COLUMNS).map(([key, group]) => (
-                                <div key={key}>
-                                  <div className="mb-2 pt-2">
-                                    <BodyShort weight="semibold">{group.label}</BodyShort>
-                                  </div>
-                                  {group.columns.map(column => (
-                                    <div 
-                                      key={column.value}
-                                      className="flex items-center justify-between p-3 bg-white rounded border mb-2"
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">{column.label}</span>
-                                        <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
-                                      </div>
-                                      <HStack gap="2">
-                                        <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
-                                      </HStack>
-                                    </div>
-                                  ))}
-                                </div>
-                              ))}
-                            </div>
-                          </VStack>
-                        </Accordion.Content>
-                      </Accordion.Item>
-                      */}
-
                       {/* Existing custom parameter accordion items */}
                       {Object.keys(groupedParameters).map(eventName => (
                         <Accordion.Item key={eventName}>
@@ -554,9 +512,9 @@ const getGroupedParameters = () => {
               )}
 
               {/* Date Range Settings - Moved from WebsitePicker */}
-              <div className="mt-0">
-                <ReadMore header="Innstillinger for hendelsesinnlasting">
-                  <div className="space-y-4 mt-2">
+              <div>
+                <ReadMore className="-mt-4" header="Innstillinger for hendelsesinnlasting">
+                  <div className="space-y-4 mt-4">
                     <div className="text-sm">
                       Endre tidsperioden for å hente hendelser og detaljer fra en tidligere dato.
                       {maxDaysAvailable > 0 && 
