@@ -361,7 +361,20 @@ const Summarize = ({
               label="Legg til beregning"
               onChange={(e) => {
                 if (e.target.value) {
+                  // Add the metric
                   addMetric(e.target.value);
+                  
+                  // If it's a percentage metric, set default column to 'visitors' (Besøkende)
+                  if (e.target.value === 'percentage' || e.target.value === 'andel') {
+                    // Get the index of the newly added metric (it will be the last one)
+                    const newIndex = metrics.length; // This will be the index after addMetric completes
+                    
+                    // Set timeout to let the addMetric finish processing
+                    setTimeout(() => {
+                      updateMetric(newIndex, { column: 'session_id' });
+                    }, 0);
+                  }
+                  
                   (e.target as HTMLSelectElement).value = '';
                 }
               }}
