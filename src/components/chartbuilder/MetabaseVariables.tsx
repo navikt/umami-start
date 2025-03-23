@@ -1,10 +1,9 @@
-import { Button, Heading, Switch, TextField, Select, UNSAFE_Combobox, HelpText, Tag, Table } from '@navikt/ds-react';
+import { Button, Heading,  TextField, HelpText, Tag, Table } from '@navikt/ds-react';
 import { useState, useEffect, useRef } from 'react';
 import { Filter, Parameter, MetabaseVariable } from '../../types/chart';
-import { Trash2, Plus, Wand2, Check } from 'lucide-react';
+import { Trash2, Plus, Check } from 'lucide-react';
 import AlertWithCloseButton from './AlertWithCloseButton';
 import { FILTER_COLUMNS } from '../../lib/constants';
-import { replaceFilterWithVariable } from '../../lib/sqlUtils';
 
 interface MetabaseVariablesProps {
   variables: MetabaseVariable[];
@@ -22,14 +21,12 @@ const MetabaseVariables = ({
   variables,
   setVariables,
   parameters,
-  availableEvents = [],
   filters,
   groupByFields,
   sanitizeColumnName,
   generatedSQL,
   setGeneratedSQL
 }: MetabaseVariablesProps) => {
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
     show: false,
     message: ''
@@ -70,28 +67,6 @@ const MetabaseVariables = ({
     // Store current variables for comparison
     lastVariables.current = variables;
   }, [generatedSQL, variables]);
-
-  // Filter types
-  const VARIABLE_TYPES = [
-    { label: 'Tekst', value: 'text' },
-    { label: 'Tall', value: 'number' },
-    { label: 'Dato', value: 'date' },
-    { label: 'Feltfilter', value: 'field_filter' }
-  ];
-
-  // Widget types
-  const WIDGET_TYPES = [
-    { label: 'Inntastingsfelt', value: 'input' },
-    { label: 'Rullegardinmeny', value: 'dropdown' },
-    { label: 'Søkefelt', value: 'search' }
-  ];
-
-  // Values source options
-  const VALUES_SOURCES = [
-    { label: 'Tilkoblet felt', value: 'connected_field' },
-    { label: 'Egendefinert liste', value: 'custom_list' },
-    { label: 'Fra data', value: 'from_data' }
-  ];
 
   // Get suggested variables based on chart configuration
   const getSuggestedVariables = (): {
@@ -231,20 +206,40 @@ const MetabaseVariables = ({
   const addSuggestedVariable = (suggestion: { 
     type: string; 
     name: string; 
-    displayName: string; 
     source: string;
   }) => {
-    let newVariable: MetabaseVariable;
+    let newVariable: MetabaseVariable = {
+      name: suggestion.name,
+      type: suggestion.type as 'text' | 'number' | 'date' | 'field_filter',
+      widgetType: 'input',
+      defaultValue: '',
+      valuesSource: 'custom_list',
+      customValues: []
+    };
+
+    // Set up variable based on type
+    if (suggestion.type === 'field_filter') {
+      newVariable = {
+        ...newVariable,
+        type: 'field_filter',
+        column: suggestion.name.replace('filter_', ''),
+        widgetType: 'dropdown',
+        valuesSource: 'from_data',
+        dataSource: suggestion.name.includes('event') ? 'event_names' : 'url_paths'
+      };
+    }
+
+    // Add the variable to the state
+    setVariables([...variables, newVariable]);
+    
+    // Rest of the function remains the same
     let sqlTransformation: { search: RegExp | string, replace: string } | null = null;
     
     // Set up variable based on type
     if (suggestion.type === 'date') {
       newVariable = {
         name: 'date_range',
-        displayName: 'Datoperiode',
         type: 'date',
-        isRequired: false,
-        isOptionalClause: true,
         widgetType: 'input',
         defaultValue: '',
         valuesSource: 'custom_list',
@@ -262,12 +257,9 @@ const MetabaseVariables = ({
       // Create a field filter for event name
       newVariable = {
         name: 'event_name_filter',
-        displayName: 'Hendelsestype',
         type: 'field_filter',
         column: 'event_name',
         fieldName: 'Hendelsesnavn',
-        isRequired: false,
-        isOptionalClause: true,
         widgetType: 'dropdown',
         defaultValue: '',
         valuesSource: 'from_data',
@@ -286,12 +278,9 @@ const MetabaseVariables = ({
       // Create a field filter for URL path
       newVariable = {
         name: 'url_path_filter',
-        displayName: 'URL-sti',
         type: 'field_filter',
         column: 'url_path',
         fieldName: 'URL-sti',
-        isRequired: false,
-        isOptionalClause: true,
         widgetType: 'dropdown',
         defaultValue: '',
         valuesSource: 'from_data',
@@ -309,12 +298,8 @@ const MetabaseVariables = ({
       // Create a field filter for the group by field
       newVariable = {
         name: suggestion.name,
-        displayName: suggestion.displayName,
         type: 'field_filter',
         column: suggestion.source === 'groupby' ? suggestion.name.replace('filter_', '') : suggestion.name,
-        fieldName: suggestion.displayName,
-        isRequired: false,
-        isOptionalClause: true,
         widgetType: 'dropdown',
         defaultValue: '',
         valuesSource: 'connected_field',
@@ -333,10 +318,7 @@ const MetabaseVariables = ({
       // Default for parameters and other types
       newVariable = {
         name: suggestion.name,
-        displayName: suggestion.displayName,
         type: suggestion.type === 'number' ? 'number' : 'text',
-        isRequired: false,
-        isOptionalClause: true,
         widgetType: 'input',
         defaultValue: '',
         valuesSource: 'custom_list',
@@ -392,12 +374,6 @@ const MetabaseVariables = ({
       setGeneratedSQL(newSQL);
     }
     
-    // Show inline alert (don't scroll)
-    setAlertInfo({
-      show: true,
-      message: `Variabel "${newVariable.displayName}" ble lagt til i SQL-koden`
-    });
-    
     // Auto-hide alert after 5 seconds
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
@@ -410,51 +386,6 @@ const MetabaseVariables = ({
     return parts[parts.length - 1]; // Get last part after dot
   };
 
-  // Helper function to get unique parameters
-  const getUniqueParameters = (params: Parameter[]): Parameter[] => {
-    const uniqueParams = new Map<string, Parameter>();
-    
-    params.forEach(param => {
-      const baseName = param.key.split('.').pop()!;
-      if (!uniqueParams.has(baseName)) {
-        uniqueParams.set(baseName, {
-          key: baseName,
-          type: param.type
-        });
-      }
-    });
-    
-    return Array.from(uniqueParams.values());
-  };
-
-  // Add a variable
-  const addVariable = () => {
-    const newVariable: MetabaseVariable = {
-      name: `variable_${variables.length + 1}`,
-      displayName: `Variabel ${variables.length + 1}`,
-      type: 'text',
-      isRequired: false,
-      isOptionalClause: true,
-      widgetType: 'input',
-      column: '',
-      defaultValue: '',
-      valuesSource: 'custom_list',
-      customValues: []
-    };
-    
-    setVariables([...variables, newVariable]);
-    
-    // Show alert
-    setAlertInfo({
-      show: true,
-      message: 'Ny variabel lagt til'
-    });
-    
-    // Auto-hide alert after 5 seconds
-    setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
-    }, 5000);
-  };
 
   // Remove a variable and update SQL
   const removeVariable = (index: number) => {
@@ -548,8 +479,8 @@ const MetabaseVariables = ({
   return (
     <section>
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Heading level="2" size="small" spacing>
+        <div className="mb-4 flex items-center gap-2">
+          <Heading level="2" size="small">
             Gjør grafen/tabellen interaktiv
           </Heading>
           <HelpText title="Hva betyr interaktiv?">
@@ -568,13 +499,6 @@ const MetabaseVariables = ({
             </AlertWithCloseButton>
           </div>
         )}
-
-        <div>
-          <p className="text-sm text-gray-600 mb-4">
-            Legg til interaktive filtre i Metabase ved å klikke på "Legg til" for de foreslåtte variablene under.
-            Dette erstatter faste filterverdier med variable filtre som kan endres av brukere.
-          </p>
-        </div>
 
         {/* Suggested variables section */}
         {suggestedVariables.length > 0 && (
@@ -643,20 +567,10 @@ const MetabaseVariables = ({
         {/* Active variables list */}
         {variables.length > 0 && (
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
+            <div className="mb-3">
               <Heading level="3" size="xsmall">
                 Aktive variabler
               </Heading>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  icon={<Wand2 size={16} />}
-                >
-                  {showAdvanced ? 'Skjul avanserte innstillinger' : 'Vis avanserte innstillinger'}
-                </Button>
-              </div>
             </div>
             
             <div className="space-y-4">
@@ -667,9 +581,7 @@ const MetabaseVariables = ({
                       <span className="text-sm bg-gray-100 px-2 py-1 rounded-md text-blue-900 font-medium mr-2">
                         {index + 1}
                       </span>
-                      <Heading size="xsmall" level="3">
-                        {variable.displayName || variable.name}
-                      </Heading>
+                      {variable.name}
                     </div>
                     <Button
                       variant="tertiary-neutral"
@@ -681,74 +593,28 @@ const MetabaseVariables = ({
                     </Button>
                   </div>
 
-                  {showAdvanced ? (
-                    // Show advanced editing options if enabled
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Variable name */}
-                      <TextField
+                  <div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Tag variant="info" size="small">
+                        {variable.type === 'field_filter' ? 'Feltfilter' : 
+                         variable.type === 'date' ? 'Dato' : 
+                         variable.type === 'number' ? 'Tall' : 'Tekst'}
+                      </Tag>
+                      
+                      {variable.type === 'field_filter' && variable.column && (
+                        <Tag variant="neutral" size="small">
+                          Koblet til: {variable.fieldName || variable.column}
+                        </Tag>
+                      )}
+                    </div>
+                    
+                    <TextField
                         label="Variabelnavn"
-                        description="Brukes i SQL-spørringen {{navn}}"
                         value={variable.name}
                         onChange={(e) => updateVariable(index, { name: e.target.value })}
                         size="small"
                       />
-
-                      {/* Display name */}
-                      <TextField
-                        label="Visningsnavn"
-                        description="Vises i filter-widgeten"
-                        value={variable.displayName}
-                        onChange={(e) => updateVariable(index, { displayName: e.target.value })}
-                        size="small"
-                      />
-
-                      {/* Options for variable behavior */}
-                      <div className="mt-4 flex flex-col gap-2 md:col-span-2">
-                        <Switch 
-                          size="small" 
-                          checked={variable.isRequired || false}
-                          onChange={(e) => updateVariable(index, { isRequired: e.target.checked })}
-                        >
-                          Krev en verdi (må fylles ut)
-                        </Switch>
-                        
-                        <Switch 
-                          size="small" 
-                          checked={variable.isOptionalClause || false}
-                          onChange={(e) => updateVariable(index, { isOptionalClause: e.target.checked })}
-                        >
-                          Valgfri betingelse (kjør spørring uten filteret hvis tom)
-                        </Switch>
-                      </div>
-                    </div>
-                  ) : (
-                    // Show simplified view
-                    <div>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <Tag variant="info" size="small">
-                          {variable.type === 'field_filter' ? 'Feltfilter' : 
-                           variable.type === 'date' ? 'Dato' : 
-                           variable.type === 'number' ? 'Tall' : 'Tekst'}
-                        </Tag>
-                        
-                        {variable.type === 'field_filter' && variable.column && (
-                          <Tag variant="neutral" size="small">
-                            Koblet til: {variable.fieldName || variable.column}
-                          </Tag>
-                        )}
-                        
-                        {variable.isRequired && (
-                          <Tag variant="warning" size="small">
-                            Påkrevd
-                          </Tag>
-                        )}
-                      </div>
-                      
-                      <div className="font-mono text-xs bg-blue-50 p-2 rounded-md border border-blue-100">
-                        <code>{`{{${variable.name}}}`}</code>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -760,21 +626,7 @@ const MetabaseVariables = ({
             <p>Ingen interaktive filter-variabler kunne opprettes automatisk. Legg til flere filtre for å generere forslag.</p>
           </div>
         )}
-
-        {/* Show instructions for adding to Metabase */}
-        {variables.length > 0 && (
-          <div className="bg-blue-50 p-4 rounded-md border border-blue-100 mt-4">
-            <Heading size="xsmall" level="3" spacing>
-              Hvordan fungerer dette i Metabase?
-            </Heading>
-            <ol className="list-decimal pl-5 space-y-2 text-sm">
-              <li>Interaktive variabler er automatisk lagt til i SQL-koden</li>
-              <li>Variabler som <code className="bg-blue-100 px-1 rounded">{'{{variabel}}'}</code> blir til filtre i Metabase</li>
-              <li>Metabase vil lage interaktive filter-widgets for disse variablene</li>
-              <li>Disse filtrene kan kobles til dashboard-filtre i Metabase</li>
-            </ol>
-          </div>
-        )}
+        
       </div>
     </section>
   );
