@@ -114,7 +114,28 @@ const ChartFilters = ({
   // Add helper function to commit staging filter
   const commitStagingFilter = () => {
     if (stagingFilter) {
-      setFilters([...filters, stagingFilter]);
+      // Check if this is an interactive filter
+      if (stagingFilter.operator === 'INTERACTIVE') {
+        // Generate parameter name based on column name
+        const paramName = stagingFilter.column === 'url_path' ? 'url_sti' : 
+                          stagingFilter.column === 'event_name' ? 'hendelse' :
+                          stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        
+        // Create interactive filter
+        const interactiveFilter = {
+          ...stagingFilter,
+          operator: '=',
+          value: `{{${paramName}}}`,
+          metabaseParam: true,
+          interactive: true
+        };
+        
+        setFilters([...filters, interactiveFilter]);
+      } else {
+        // Regular filter
+        setFilters([...filters, stagingFilter]);
+      }
+      
       setStagingFilter(null);
       
       // Show alert in the staging area
@@ -399,6 +420,32 @@ const ChartFilters = ({
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
     }, 7000);
+  };
+
+  // Add function to handle setting a filter as interactive
+  const handleSetInteractiveFilter = (index: number, column: string) => {
+    // Generate parameter name based on column name
+    const paramName = column === 'url_path' ? 'url_sti' : 
+                      column === 'event_name' ? 'hendelse' :
+                      column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    
+    updateFilter(index, {
+      operator: '=',
+      value: `{{${paramName}}}`,
+      metabaseParam: true,
+      interactive: true
+    });
+    
+    // Show success alert
+    setAlertInfo({
+      show: true,
+      message: `Filter for ${column} satt til interaktiv modus.`
+    });
+    
+    // Auto-hide alert after 5 seconds
+    setTimeout(() => {
+      setAlertInfo(prev => ({...prev, show: false}));
+    }, 5000);
   };
 
   return (
@@ -898,6 +945,7 @@ const ChartFilters = ({
                               onChange={(e) => setStagingFilter({ ...stagingFilter, operator: e.target.value })}
                               size="small"
                             >
+                              {/* Add the interactive operator option at the top */}
                               {OPERATORS.map(op => (
                                 <option key={op.value} value={op.value}>
                                   {op.label}
@@ -909,8 +957,22 @@ const ChartFilters = ({
                         
                         {/* Value inputs based on column type */}
                         <div className="mt-3">
+                          {/* Show info for interactive filters */}
+                          {stagingFilter.operator === 'INTERACTIVE' && (
+                            <div className="mt-3 bg-blue-50 p-3 rounded text-sm">
+                              <p>
+                                <strong>Interaktiv filter:</strong> Dette filteret vil bli kontrollert av Metabase-dashbordet.
+                              </p>
+                              <p className="mt-1 text-xs text-gray-600">
+                                Parameter vil være {stagingFilter.column === 'url_path' ? 'url_sti' : 
+                                                  stagingFilter.column === 'event_name' ? 'hendelse' :
+                                                  stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_')}
+                              </p>
+                            </div>
+                          )}
+                          
                           {/* Event type dropdown */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
+                          {!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator || '') && 
                           stagingFilter.column === 'event_type' && (
                             <Select
                               label="Hendelsestype"
@@ -928,7 +990,7 @@ const ChartFilters = ({
                           )}
 
                           {/* Replace all other value inputs with Combobox */}
-                          {!['IS NULL', 'IS NOT NULL'].includes(stagingFilter.operator || '') && 
+                          {!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator || '') && 
                           stagingFilter.column !== 'event_type' && 
                           stagingFilter.column !== 'created_at' && (
                             <UNSAFE_Combobox
@@ -1045,8 +1107,26 @@ const ChartFilters = ({
                                   </optgroup>
                                 )}
                               </Select>
-                              {/* Rest of the filter inputs */}
-                              {filter.column !== 'created_at' && (
+                              
+                              {/* Add interactive toggle button */}
+                              {filter.interactive ? (
+                                <div className="ml-2 mb-1">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Interaktiv
+                                  </span>
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="tertiary"
+                                  size="small"
+                                  className="ml-2 mb-1"
+                                  onClick={() => handleSetInteractiveFilter(index, filter.column)}
+                                >
+                                  Gjør interaktiv
+                                </Button>
+                              )}
+                              
+                              {filter.column !== 'created_at' && !filter.interactive && (
                                 <Select
                                   label="Operator"
                                   value={filter.operator || '='}
@@ -1061,40 +1141,54 @@ const ChartFilters = ({
                                 </Select>
                               )}
                             </div>
-                            {/* Event name combobox on its own row */}
-                            {!['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && (
-                              <div className="mt-3">
-                                <UNSAFE_Combobox
-                                  label="Verdi"
-                                  description={filter.column === 'url_path' ? "Velg eller skriv inn URL-stier" : 
-                                              filter.column === 'event_name' ? "Velg eller skriv inn hendelser" : 
-                                              "Velg eller skriv inn verdier"}
-                                  options={getOptionsForColumn(filter.column, availableEvents, availablePaths)}
-                                  selectedOptions={filter.multipleValues?.map(v => v || '') || 
-                                                  (filter.value ? [filter.value] : [])}
-                                  onToggleSelected={(option, isSelected) => {
-                                    if (option) {
-                                      const currentValues = filter.multipleValues || 
-                                                          (filter.value ? [filter.value] : []);
-                                      const newValues = isSelected 
-                                        ? [...currentValues, option]
-                                        : currentValues.filter(val => val !== option);
-                                      
-                                      const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
-                                      
-                                      updateFilter(index, {
-                                        multipleValues: newValues.length > 0 ? newValues : undefined,
-                                        value: newValues.length > 0 ? newValues[0] : '',
-                                        operator: newOperator
-                                      });
-                                    }
-                                  }}
-                                  isMultiSelect
-                                  size="small"
-                                  clearButton
-                                  allowNewValues={filter.column !== 'event_type'}
-                                />
+                            
+                            {/* Show parameter name for interactive filters */}
+                            {filter.interactive ? (
+                              <div className="mt-3 bg-blue-50 p-3 rounded text-sm">
+                                <p>
+                                  <strong>Parameter:</strong> {filter.value?.replace('{{', '').replace('}}', '')}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-600">
+                                  Denne filteret vil bli kontrollert av Metabase-dashbordet.
+                                </p>
                               </div>
+                            ) : (
+                              // Existing value inputs for non-interactive filters
+                              // ...existing value input code...
+                              !['IS NULL', 'IS NOT NULL'].includes(filter.operator || '') && (
+                                <div className="mt-3">
+                                  <UNSAFE_Combobox
+                                    label="Verdi"
+                                    description={filter.column === 'url_path' ? "Velg eller skriv inn URL-stier" : 
+                                                filter.column === 'event_name' ? "Velg eller skriv inn hendelser" : 
+                                                "Velg eller skriv inn verdier"}
+                                    options={getOptionsForColumn(filter.column, availableEvents, availablePaths)}
+                                    selectedOptions={filter.multipleValues?.map(v => v || '') || 
+                                                    (filter.value ? [filter.value] : [])}
+                                    onToggleSelected={(option, isSelected) => {
+                                      if (option) {
+                                        const currentValues = filter.multipleValues || 
+                                                            (filter.value ? [filter.value] : []);
+                                        const newValues = isSelected 
+                                          ? [...currentValues, option]
+                                          : currentValues.filter(val => val !== option);
+                                        
+                                        const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
+                                        
+                                        updateFilter(index, {
+                                          multipleValues: newValues.length > 0 ? newValues : undefined,
+                                          value: newValues.length > 0 ? newValues[0] : '',
+                                          operator: newOperator
+                                        });
+                                      }
+                                    }}
+                                    isMultiSelect
+                                    size="small"
+                                    clearButton
+                                    allowNewValues={filter.column !== 'event_type'}
+                                  />
+                                </div>
+                              )
                             )}
                           </div>
                           <Button

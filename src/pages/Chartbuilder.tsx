@@ -740,8 +740,8 @@ const ChartsPage = () => {
     
     // Process ALL filters, not just event filters
     eventFilters.forEach(filter => {
-      // Skip only the interactive date filter - it's handled separately
-      if (filter.interactive && filter.column === 'created_at') {
+      // Skip any interactive filter since they're handled separately
+      if (filter.interactive) {
         return;
       }
 
@@ -797,6 +797,16 @@ const ChartsPage = () => {
     
     if (interactiveDateFilter) {
       sql += `  [[AND ${interactiveDateFilter.value} ]]\n`;
+    }
+
+    // Add all interactive filters as special clauses with double brackets
+    const interactiveFilters = filters.filter(f => f.interactive && f.metabaseParam);
+    if (interactiveFilters.length > 0) {
+      interactiveFilters.forEach(filter => {
+        const columnPrefix = isSessionColumn(filter.column) ? sessionTablePrefix : tablePrefix;
+        const columnName = filter.column === 'custom_column' ? filter.customColumn : filter.column;
+        sql += `  [[AND ${columnPrefix}${columnName} = ${filter.value} ]]\n`;
+      });
     }
     
     sql += ')\n\n';

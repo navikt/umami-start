@@ -6,10 +6,7 @@ export const FILTER_COLUMNS = {
       { label: 'Hendelsesnavn', value: 'event_name' },
       { label: 'Hendelsestype', value: 'event_type' },
       { label: 'Unike hendelser (ID)', value: 'event_id' },
-      { label: 'Dato', value: 'created_at' },
-      { label: 'Nettside-ID', value: 'website_id' },
-      { label: 'Nettside-domene', value: 'website_domain' },
-      { label: 'Nettsidenavn', value: 'website_name' }
+      { label: 'Dato', value: 'created_at' }
     ]
   },
   pageDetails: {
@@ -32,7 +29,7 @@ export const FILTER_COLUMNS = {
     label: 'Besøksdetaljer',
     table: 'session',
     columns: [
-      { label: 'Unike personer (ID)', value: 'session_id' },
+      { label: 'Unike besøkende / personer (ID)', value: 'session_id' },
       { label: 'Unike besøk / økter (ID)', value: 'visit_id' },
       { label: 'Nettlesertype', value: 'browser' },
       { label: 'Operativsystem', value: 'os' },
