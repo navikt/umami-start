@@ -61,8 +61,8 @@ const ChartFilters = ({
   // Add a new state for the event operator (near other state variables)
   const [eventNameOperator, setEventNameOperator] = useState<string>('IN');
   // Add these new state variables
-  const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific'>('all');
-  const [customEventsMode, setCustomEventsMode] = useState<'all' | 'specific'>('all');
+  const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific' | 'interactive'>('all');
+  const [customEventsMode, setCustomEventsMode] = useState<'all' | 'specific' | 'interactive'>('all');
   
   // Add alert state
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
@@ -494,6 +494,32 @@ const ChartFilters = ({
                   >
                     Bestemte sider
                   </button>
+                  <button 
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      pageViewsMode === 'interactive' 
+                        ? 'bg-blue-600 text-white border-blue-700' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      setPageViewsMode('interactive');
+                      // Add Metabase parameter filter
+                      const filtersWithoutPaths = filters.filter(f => 
+                        !(f.column === 'url_path')
+                      );
+                      setFilters([
+                        ...filtersWithoutPaths,
+                        { 
+                          column: 'url_path', 
+                          operator: '=', 
+                          value: '{{url_sti}}',
+                          metabaseParam: true
+                        }
+                      ]);
+                      setSelectedPaths([]);
+                    }}
+                  >
+                    Interaktiv
+                  </button>
                 </div>
                 
                 {pageViewsMode === 'specific' && (
@@ -585,13 +611,13 @@ const ChartFilters = ({
                   </>
                 )}
                 
-                {/* 
-                {pageViewsMode === 'all' && (
-                  <div className="text-sm text-gray-600">
-                    Viser alle sidevisninger for valgt tidsperiode.
+                {pageViewsMode === 'interactive' && (
+                  <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
+                    <p>
+                      <strong>Interaktiv modus:</strong>  Lar deg filtrere på URL-stier direkte i Metabase-dashbord.
+                    </p>
                   </div>
-                )} 
-                */}
+                )}
               </div>
             )}
             
@@ -624,6 +650,30 @@ const ChartFilters = ({
                     onClick={() => setCustomEventsMode('specific')}
                   >
                     Bestemte hendelser
+                  </button>
+                  <button 
+                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      customEventsMode === 'interactive' 
+                        ? 'bg-blue-600 text-white border-blue-700' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      setCustomEventsMode('interactive');
+                      // Add Metabase parameter filter
+                      const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
+                      setFilters([
+                        ...filtersWithoutEventNames,
+                        { 
+                          column: 'event_name', 
+                          operator: '=', 
+                          value: '{{hendelse}}',
+                          metabaseParam: true
+                        }
+                      ]);
+                      setCustomEvents([]);
+                    }}
+                  >
+                    Interaktiv
                   </button>
                 </div>
                 
@@ -720,13 +770,14 @@ const ChartFilters = ({
                     )}
                   </>
                 )}
-                {/* 
-                {customEventsMode === 'all' && (
-                  <div className="text-sm text-gray-600">
-                    Viser alle egendefinerte hendelser for valgt tidsperiode.
+                
+                {customEventsMode === 'interactive' && (
+                  <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
+                    <p>
+                      <strong>Interaktiv modus:</strong> Lar deg filtrere på hendelser direkte i Metabase-dashbord.
+                    </p>
                   </div>
                 )}
-                */}
               </div>
             )}
           </div>

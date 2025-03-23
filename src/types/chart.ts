@@ -1,10 +1,11 @@
 export interface Filter {
   column: string;
-  operator: string;
+  operator?: string;
   value?: string;
   customColumn?: string;
   multipleValues?: string[];
   dateRangeType?: string; // For tracking which date range type is selected
+  metabaseParam?: boolean; // Add this line
 }
 
 export interface Parameter {

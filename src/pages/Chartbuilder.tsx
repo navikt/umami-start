@@ -771,6 +771,9 @@ const ChartsPage = () => {
           sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
         } else if (filter.column === 'event_type') {
           sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
+        } else if (filter.metabaseParam) {
+          // Handle Metabase parameter syntax directly
+          sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
         } else if (filter.multipleValues && filter.multipleValues.length > 0 && filter.operator === 'IN') {
           // Only use IN for multiple values when operator is explicitly IN
           const values = filter.multipleValues.map(val => {
