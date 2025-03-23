@@ -437,7 +437,7 @@ const DateRangePicker = forwardRef(({
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
         {interactiveMode ? (
-          <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded border">
+          <>
             <p className="mb-4">
               <strong>Interaktiv modus:</strong> Datofiltrering vil bli håndtert av Metabase.
             </p>
@@ -476,7 +476,7 @@ const DateRangePicker = forwardRef(({
                 </div>
               </ExpansionCard.Content>
             </ExpansionCard>
-          </div>
+          </>
         ) : (
           <>
             {/* Replace button-based navigation with Tabs */}
