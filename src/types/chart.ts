@@ -66,7 +66,10 @@ export interface WebsitePickerProps {
 // Add MetabaseVariable type
 export interface MetabaseVariable {
   name: string;
+  displayName: string;
   type: 'text' | 'number' | 'date' | 'field_filter';
+  isRequired: boolean;
+  isOptionalClause: boolean;
   widgetType: 'input' | 'dropdown' | 'search';
   column?: string; // For field_filter
   fieldName?: string; // For field_filter

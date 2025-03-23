@@ -254,6 +254,7 @@ const ChartsPage = () => {
 
   // Add this useEffect to handle variable application
   useEffect(() => {
+    // When variables change and SQL exists, make sure they're applied
     if (generatedSQL && config.variables && config.variables.length > 0) {
       // Apply variables to SQL
       let processedSQL = generatedSQL;
@@ -1053,7 +1054,7 @@ const ChartsPage = () => {
       sql += '-- The following variables can be used as filters in Metabase dashboards:\n';
       
       config.variables.forEach(variable => {
-        sql += `-- {{${variable.name}}} - (${variable.type})\n`;
+        sql += `-- {{${variable.name}}} - ${variable.displayName} (${variable.type})\n`;
       });
       
       // Add examples of how to use these variables in WHERE clauses
