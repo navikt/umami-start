@@ -1,7 +1,7 @@
-import { Heading, DatePicker, Tabs, Switch, ExpansionCard } from '@navikt/ds-react';
+import { Heading, DatePicker, Tabs, Switch, ExpansionCard, Button } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
 import { Filter } from '../../types/chart';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 // Date range suggestions for quick date filtering
 const DATE_RANGE_SUGGESTIONS = [
@@ -192,7 +192,7 @@ interface DateRange {
 }
 
 // Update the component parameters to include the new props
-const DateRangePicker = ({
+const DateRangePicker = forwardRef(({
   filters,
   setFilters,
   maxDaysAvailable,
@@ -200,7 +200,7 @@ const DateRangePicker = ({
   setSelectedDateRange,
   interactiveMode,
   setInteractiveMode,
-}: DateRangePickerProps) => {
+}: DateRangePickerProps, ref) => {
   // Calculate available date range
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
@@ -378,6 +378,25 @@ const DateRangePicker = ({
     }
   };
 
+  // Add function to clear date range
+  const clearDateRange = () => {
+    setSelectedRange(undefined);
+    setSelectedDateRange('all');
+    setDateMode('frequent'); // Reset to default tab
+    setFilters(filters.filter(f => f.column !== 'created_at'));
+    setRelativeMode('current'); // Reset relative mode
+    setSelectedUnit('day'); // Reset unit selection
+    setNumberOfUnits('1'); // Reset number of units
+  };
+
+  // Add useEffect to watch for filter changes
+  useEffect(() => {
+    // If there are no date filters, reset the date picker state
+    if (!filters.some(f => f.column === 'created_at')) {
+      setSelectedRange(undefined);
+    }
+  }, [filters]);
+
   // Get message about available data range
   const getStartDateDisplay = (): string => {
     if (!maxDaysAvailable) return 'Velg nettside for å se tilgjengelig data.';
@@ -396,6 +415,19 @@ const DateRangePicker = ({
   const formatDate = (date: Date | undefined): string => {
     return date ? format(date, 'dd.MM.yyyy') : '';
   };
+
+  // Expose clearDateRange to parent through ref
+  useImperativeHandle(ref, () => ({
+    clearDateRange: () => {
+      setSelectedRange(undefined);
+      setSelectedDateRange('all');
+      setDateMode('frequent');
+      setFilters(filters.filter(f => f.column !== 'created_at'));
+      setRelativeMode('current');
+      setSelectedUnit('day');
+      setNumberOfUnits('1');
+    }
+  }));
 
   return (
     <div className="mb-6">
@@ -649,6 +681,16 @@ const DateRangePicker = ({
                         size="small"
                       />
                     </div>
+                    {selectedRange?.from && (
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={clearDateRange}
+                        className="mb-[2px]"
+                      >
+                        Fjern datoer
+                      </Button>
+                    )}
                   </div>
                 </DatePicker>
               </Tabs.Panel>
@@ -682,6 +724,6 @@ const DateRangePicker = ({
       </div>
     </div>
   );
-};
+});
 
 export default DateRangePicker;

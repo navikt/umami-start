@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Switch, UNSAFE_Combobox } from '@navikt/ds-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 import DateRangePicker from './DateRangePicker';
@@ -395,12 +395,12 @@ const ChartFilters = ({
     }
   };
 
-  // Add this new function to reset all filters
+  // Create a reference to the DateRangePicker component
+  const dateRangePickerRef = useRef<{ clearDateRange: () => void }>(null);
+
+  // Update resetFilters function
   const resetFilters = () => {
-    // Clear filters array
     setFilters([]);
-    
-    // Reset all filter-related state
     setAppliedSuggestion('');
     setSelectedDateRange('');
     setCustomEvents([]);
@@ -409,17 +409,16 @@ const ChartFilters = ({
     setCustomEventsMode('all');
     setCustomPeriodInputs({});
     setStagingFilter(null);
-    
-    // Turn off interactive mode
     setInteractiveMode(false);
     
-    // Show alert at the top only
+    // Clear date picker state through ref
+    dateRangePickerRef.current?.clearDateRange();
+    
     setAlertInfo({
       show: true,
       message: 'Alle filtre ble tilbakestilt'
     });
     
-    // Auto-hide alert after 5 seconds
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
     }, 7000);
@@ -837,6 +836,7 @@ const ChartFilters = ({
 
           {/* Replace the date range section with the new component */}
           <DateRangePicker
+            ref={dateRangePickerRef}
             filters={filters}
             setFilters={setFilters}
             maxDaysAvailable={maxDaysAvailable}
