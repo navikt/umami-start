@@ -661,20 +661,6 @@ const ChartsPage = () => {
       !filter.column.startsWith('param_')
     );
 
-    // Helper function to check if a column is used in the chart
-    const isColumnUsed = (column: string): boolean => {
-      // Check if it's used in filters
-      if (filters.some(f => f.column === column)) return true;
-      
-      // Check if it's used in group by
-      if (config.groupByFields.includes(column)) return true;
-      
-      // Check if it's used in metrics
-      if (config.metrics.some(m => m.column === column)) return true;
-      
-      return false;
-    };
-    
     // Start building the SQL with a CTE (Common Table Expression)
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';

@@ -1,4 +1,4 @@
-import { Heading, DatePicker, Tabs, Switch } from '@navikt/ds-react';
+import { Heading, DatePicker, Tabs, Switch, ExpansionCard } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
 import { Filter } from '../../types/chart';
 import { useState, useEffect } from 'react';
@@ -373,11 +373,6 @@ const DateRangePicker = ({
     }
   };
 
-  // Helper function to check if interactive date filter is active
-  const hasInteractiveDateFilter = () => {
-    return filters.some(f => f.column === 'created_at' && f.interactive === true);
-  };
-
   // Get message about available data range
   const getStartDateDisplay = (): string => {
     if (!maxDaysAvailable) return 'Velg nettside for å se tilgjengelig data.';
@@ -406,28 +401,34 @@ const DateRangePicker = ({
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
         {interactiveMode ? (
           <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded border">
-            <p className="mb-2">
+            <p className="mb-4">
               <strong>Interaktiv modus:</strong> Datofiltrering vil bli håndtert av Metabase.
             </p>
-            <div className="mt-4 space-y-3">
-    <p className="font-medium">Slik kobler du til datofilteret i Metabase:</p>
-    <ol className="list-decimal pl-5 space-y-2">
-      <li>Klikk på variabel-ikonet <code>{'{x}'}</code> i Metabase</li>
-      <li>Finn variabel med navn <code>created_at</code></li>
-      <li>Velg <strong>Felt filter</strong> som variabeltype</li>
-      <li>Under "Felt å koble til":
-        <ul className="list-disc pl-5 mt-1">
-          <li>Tabell: <code>public_website_event</code></li>
-          <li>Kolonne: <code>created_at</code></li>
-        </ul>
-      </li>
-      <li>Velg ønsket datoformat under "Filter type"</li>
-      <li>Valgfritt: Legg til en beskrivende etikett og standardverdi (f.eks. "Siste 30 dager")</li>
-    </ol>
-    <p className="text-sm text-gray-600 mt-2">
-      Etter oppsett kan du teste filteret direkte i dashbordet.
-    </p>
-  </div>
+            <ExpansionCard aria-label="Guide for Metabase-integrasjon" size="small">
+              <ExpansionCard.Header>
+                <ExpansionCard.Title size="small">Slik kobler du til datofilteret i Metabase</ExpansionCard.Title>
+              </ExpansionCard.Header>
+              <ExpansionCard.Content>
+                <div className="space-y-3">
+                  <ol className="list-decimal pl-5 space-y-2">
+                    <li>Klikk på variabel-ikonet <code>{'{x}'}</code> i Metabase</li>
+                    <li>Finn variabel med navn <code>created_at</code></li>
+                    <li>Velg <strong>Felt filter</strong> som variabeltype</li>
+                    <li>Under "Felt å koble til":
+                      <ul className="list-disc pl-5 mt-1">
+                        <li>Tabell: <code>public_website_event</code></li>
+                        <li>Kolonne: <code>created_at</code></li>
+                      </ul>
+                    </li>
+                    <li>Velg ønsket datoformat under "Filter type"</li>
+                    <li>Valgfritt: Legg til en beskrivende etikett og standardverdi (f.eks. "Siste 30 dager")</li>
+                  </ol>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Etter oppsett kan du teste filteret direkte i dashbordet.
+                  </p>
+                </div>
+              </ExpansionCard.Content>
+            </ExpansionCard>
           </div>
         ) : (
           <>
@@ -518,7 +519,6 @@ const DateRangePicker = ({
                           onClick={() => {
                             if (!interactiveMode) {
                               // Create a synthetic ID to apply this date range
-                              const syntheticId = `${period.id}_synthetic`;
                               setSelectedDateRange(period.id);
                               
                               // Apply the date filters directly and consistently
