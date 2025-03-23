@@ -410,6 +410,9 @@ const ChartFilters = ({
     setCustomPeriodInputs({});
     setStagingFilter(null);
     
+    // Turn off interactive mode
+    setInteractiveMode(false);
+    
     // Show alert at the top only
     setAlertInfo({
       show: true,
@@ -447,6 +450,9 @@ const ChartFilters = ({
       setAlertInfo(prev => ({...prev, show: false}));
     }, 5000);
   };
+
+  // Add state for interactive mode at the top with other state declarations
+  const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 
   return (
     <section>
@@ -838,6 +844,8 @@ const ChartFilters = ({
             setSelectedDateRange={setSelectedDateRange}
             customPeriodInputs={customPeriodInputs}
             setCustomPeriodInputs={setCustomPeriodInputs}
+            interactiveMode={interactiveMode} // Add this
+            setInteractiveMode={setInteractiveMode} // Add this
           />
 
                 <div>

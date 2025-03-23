@@ -182,6 +182,8 @@ interface DateRangePickerProps {
   setSelectedDateRange: (range: string) => void;
   customPeriodInputs: Record<number, {amount: string, unit: string}>;
   setCustomPeriodInputs: (inputs: Record<number, {amount: string, unit: string}>) => void;
+  interactiveMode: boolean;
+  setInteractiveMode: (mode: boolean) => void;
 }
 
 interface DateRange {
@@ -189,23 +191,26 @@ interface DateRange {
   to?: Date | undefined;
 }
 
+// Update the component parameters to include the new props
 const DateRangePicker = ({
   filters,
   setFilters,
   maxDaysAvailable,
   selectedDateRange,
   setSelectedDateRange,
+  interactiveMode,
+  setInteractiveMode,
 }: DateRangePickerProps) => {
   // Calculate available date range
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
   // Add state for date mode (fixed vs dynamic)
-  const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed'>('frequent');
+  const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed' | 'interactive'>('frequent');
   const [relativeMode, setRelativeMode] = useState<'current' | 'previous'>('current');
   const [selectedUnit, setSelectedUnit] = useState('day');
   const [numberOfUnits, setNumberOfUnits] = useState('1');
   // Add state for interactive mode
-  const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
+  // const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 
   const hasDateFilter = (): boolean => {
     return filters.some(filter => filter.column === 'created_at');
@@ -404,6 +409,16 @@ const DateRangePicker = ({
             <p className="mb-4">
               <strong>Interaktiv modus:</strong> Datofiltrering vil bli håndtert av Metabase.
             </p>
+            <div className="flex items-center justify-between -mt-1">
+          <div className="mb-4 flex items-center">
+            <Switch size='small'
+              checked={interactiveMode}
+              onChange={(e) => handleInteractiveModeToggle(e.target.checked)}
+            >
+              Interaktiv modus
+            </Switch>
+          </div>
+        </div>
             <ExpansionCard aria-label="Guide for Metabase-integrasjon" size="small">
               <ExpansionCard.Header>
                 <ExpansionCard.Title size="small">Slik kobler du til datofilteret i Metabase</ExpansionCard.Title>
@@ -435,13 +450,14 @@ const DateRangePicker = ({
             {/* Replace button-based navigation with Tabs */}
             <Tabs 
               value={dateMode} 
-              onChange={(value) => setDateMode(value as 'frequent' | 'dynamic' | 'fixed')}
+              onChange={(value) => setDateMode(value as 'frequent' | 'dynamic' | 'fixed' | 'interactive')}
               size="small"
             >
               <Tabs.List>
                 <Tabs.Tab value="frequent" label="Ofte brukte" />
-                <Tabs.Tab value="dynamic" label="Relative datoer" />
-                <Tabs.Tab value="fixed" label="Bestemte datoer" />
+                <Tabs.Tab value="dynamic" label="Relative" />
+                <Tabs.Tab value="fixed" label="Bestemte" />
+                <Tabs.Tab value="interactive" label="Interaktiv" />
               </Tabs.List>
               
               {/* Frequent dates panel */}
@@ -636,6 +652,24 @@ const DateRangePicker = ({
                   </div>
                 </DatePicker>
               </Tabs.Panel>
+              <Tabs.Panel value="interactive" className="pt-6">
+              <p>
+                Skru på interaktiv modusen for å la Metabase håndtere
+                datofiltreringen. Dette er nyttig for å gi brukere
+                muligheten til å velge datoer direkte i dashbordet.
+              </p>
+          {/* Add interactive mode toggle */}
+          <div className="flex items-center justify-between mt-5 pb-2">
+          <div className="flex items-center">
+            <Switch size='small'
+              checked={interactiveMode}
+              onChange={(e) => handleInteractiveModeToggle(e.target.checked)}
+            >
+              Interaktiv modus
+            </Switch>
+          </div>
+        </div>
+        </Tabs.Panel>
             </Tabs>
 
             <div className="mt-3 text-xs text-gray-600">
@@ -643,17 +677,7 @@ const DateRangePicker = ({
             </div>   
           </>
         )}
-          {/* Add interactive mode toggle */}
-          <div className="flex items-center justify-between mt-5 pt-4 border-t">
-          <div className="flex items-center">
-            <Switch size='small'
-              checked={interactiveMode}
-              onChange={(e) => handleInteractiveModeToggle(e.target.checked)}
-            >
-              Interaktiv
-            </Switch>
-          </div>
-        </div>
+
         
       </div>
     </div>
