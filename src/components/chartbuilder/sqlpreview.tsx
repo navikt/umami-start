@@ -9,130 +9,6 @@ interface SQLPreviewProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-// Enhance the highlightVariables function to make variables more visible
-const highlightVariables = (sql: string): React.ReactNode => {
-  if (!sql) return '';
-  
-  // Regular expression to find {{variable}} patterns
-  const varRegex = /\{\{([^}]+)\}\}/g;
-  
-  // Regular expression to find [[optional clauses]]
-  const optionalRegex = /\[\[(.*?)\]\]/gs;
-  
-  // Split the SQL by variables and optional clauses
-  const parts: Array<string | React.ReactNode> = [];
-  let match;
-  
-  // Process the SQL in multiple passes to handle nested patterns
-  let workingSql = sql;
-  
-  // First find all variables and create mapping of positions
-  const variables: Array<{
-    start: number,
-    end: number,
-    content: string,
-    fullMatch: string
-  }> = [];
-  
-  while ((match = varRegex.exec(workingSql)) !== null) {
-    variables.push({
-      start: match.index,
-      end: match.index + match[0].length,
-      content: match[1],
-      fullMatch: match[0]
-    });
-  }
-  
-  // Then find all optional clauses
-  const optionalClauses: Array<{
-    start: number,
-    end: number,
-    content: string,
-    fullMatch: string
-  }> = [];
-  
-  while ((match = optionalRegex.exec(workingSql)) !== null) {
-    optionalClauses.push({
-      start: match.index,
-      end: match.index + match[0].length,
-      content: match[1],
-      fullMatch: match[0]
-    });
-  }
-  
-  // Now build the parts array by processing in order
-  let allMatches = [...variables, ...optionalClauses].sort((a, b) => a.start - b.start);
-  
-  // If no matches, just return the original SQL
-  if (allMatches.length === 0) {
-    return workingSql;
-  }
-  
-  // Process each match in order
-  let currentIndex = 0;
-  
-  for (const match of allMatches) {
-    // Add text before the match
-    if (match.start > currentIndex) {
-      parts.push(workingSql.substring(currentIndex, match.start));
-    }
-    
-    // Add the match with appropriate styling
-    if (match.fullMatch.startsWith('{{')) {
-      // It's a variable
-      parts.push(
-        <span key={`var-${match.start}`} className="bg-blue-100 text-blue-800 px-1 rounded font-bold">
-          {match.fullMatch}
-        </span>
-      );
-    } else {
-      // It's an optional clause
-      // First find any variables inside the optional clause
-      let innerVarMatch;
-      const innerVarRegex = /\{\{([^}]+)\}\}/g;
-      let lastInnerIndex = 0;
-      const innerParts = [];
-      
-      while ((innerVarMatch = innerVarRegex.exec(match.content)) !== null) {
-        // Add text before the variable
-        if (innerVarMatch.index > lastInnerIndex) {
-          innerParts.push(match.content.substring(lastInnerIndex, innerVarMatch.index));
-        }
-        
-        // Add the variable
-        innerParts.push(
-          <span key={`inner-var-${innerVarMatch.index}`} className="bg-blue-100 text-blue-800 px-1 rounded font-bold">
-            {innerVarMatch[0]}
-          </span>
-        );
-        
-        lastInnerIndex = innerVarMatch.index + innerVarMatch[0].length;
-      }
-      
-      // Add any remaining text
-      if (lastInnerIndex < match.content.length) {
-        innerParts.push(match.content.substring(lastInnerIndex));
-      }
-      
-      // Add the full optional clause
-      parts.push(
-        <span key={`opt-${match.start}`} className="bg-purple-50 text-purple-800 px-1 rounded border border-purple-200">
-          [[ {innerParts.length > 0 ? innerParts : match.content} ]]
-        </span>
-      );
-    }
-    
-    currentIndex = match.end;
-  }
-  
-  // Add any remaining text
-  if (currentIndex < workingSql.length) {
-    parts.push(workingSql.substring(currentIndex));
-  }
-  
-  return <>{parts}</>;
-};
-
 const SQLPreview = ({ 
   sql, 
   activeStep = 1, 
@@ -143,7 +19,7 @@ const SQLPreview = ({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(sql.replace(/\n\n-- Metabase Variables[\s\S]*$/, ''));
+    navigator.clipboard.writeText(sql);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
   };
@@ -231,11 +107,11 @@ const SQLPreview = ({
               {showCode && (
                 <div className="relative">
                   <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
-                    {sql.replace(/\n\n-- Metabase Variables[\s\S]*$/, '')}
+                    {sql}
                   </pre>
                   <div className="absolute top-2 right-2">
                     <CopyButton
-                      copyText={sql.replace(/\n\n-- Metabase Variables[\s\S]*$/, '')}
+                      copyText={sql}
                       text="Kopier"
                       activeText="Kopiert!"
                       size="small"
@@ -340,28 +216,23 @@ const SQLPreview = ({
               {showCode && (
                 <div className="relative">
                   <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
-                    <code>
-                      {sql ? highlightVariables(sql.replace(/\n\n-- Metabase Variables[\s\S]*$/, '')) : 'Velg en nettside for å generere SQL'}
-                    </code>
+                    {sql}
                   </pre>
                   <div className="absolute top-2 right-2">
                     <CopyButton
-                      copyText={sql.replace(/\n\n-- Metabase Variables[\s\S]*$/, '')}
+                      copyText={sql}
                       text="Kopier"
                       activeText="Kopiert!"
                       size="small"
                     />
                   </div>
 
-                  {/* Add enhanced variables quick reference if present */}
-                  {sql && sql.includes('{{') && (
-                    <div className="mt-2 mb-8 text-sm bg-blue-50 p-3 rounded-md border border-blue-100">
-                      <p>
-                        <strong>Tips:</strong> Interaktive variabler er lagt til i SQL-koden (vist i <span className="bg-blue-100 text-blue-800 px-1 rounded font-bold">blått</span>). 
-                        Disse blir automatisk til filtre i Metabase som brukerne kan justere.
-                      </p>
-                    </div>
-                  )}
+                  <div className="mt-2 mb-8 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-100">
+                  <p>
+                    <strong>Tips:</strong> Du trenger ikke å forstå koden! Den er generert basert på valgene dine, 
+                    og vil fungere når du kopierer og limer inn i Metabase.
+                  </p>
+                </div>
                 </div>
               )}
             </div>

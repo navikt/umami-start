@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Heading, VStack } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
@@ -15,11 +15,9 @@ import {
   ColumnOption,
   ChartConfig,
   Filter,
-  Website, // Add the missing Website type
-  MetabaseVariable
+  Website // Add the missing Website type
 } from '../types/chart';
 import CopyButton from '../components/theme/CopyButton/CopyButton';
-import MetabaseVariables from '../components/chartbuilder/MetabaseVariables';
 
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [
@@ -221,11 +219,9 @@ const ChartsPage = () => {
     orderBy: null,
     dateFormat: 'day',
     paramAggregation: 'unique',
-    limit: null,
-    variables: [] // Initialize variables as empty array
+    limit: null
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
-  const [displaySQL, setDisplaySQL] = useState<string>(''); // Add this new state variable
   const [filters, setFilters] = useState<Filter[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
@@ -242,42 +238,11 @@ const ChartsPage = () => {
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
 
-  // Add a ref to track last variables applied
-  const lastAppliedVariables = useRef<MetabaseVariable[]>([]);
-
-  // Add a mechanism to ensure variables are preserved in SQL generation
   useEffect(() => {
     if (debouncedConfig.website) {
       generateSQL();
     }
   }, [debouncedConfig, filters, parameters]);
-
-  // Add this useEffect to handle variable application
-  useEffect(() => {
-    // When variables change and SQL exists, make sure they're applied
-    if (generatedSQL && config.variables && config.variables.length > 0) {
-      // Apply variables to SQL
-      let processedSQL = generatedSQL;
-      
-      config.variables.forEach(variable => {
-        if (variable.type === 'field_filter' && variable.column === 'url_path') {
-          const urlPattern = /AND\s+e\.url_path\s+(IN\s*\([^)]+\)|=\s*'[^']+'|LIKE\s+'%[^']+')\s*/g;
-          if (urlPattern.test(processedSQL)) {
-            processedSQL = processedSQL.replace(
-              urlPattern, 
-                `AND e.url_path = {{${variable.name}}}\n`
-            );
-          }
-        }
-        // Handle other variable types as needed
-      });
-      
-      // Only update if changes were made
-      if (processedSQL !== generatedSQL) {
-        setDisplaySQL(processedSQL);
-      }
-    }
-  }, [generatedSQL, config.variables]);
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1047,22 +1012,6 @@ const ChartsPage = () => {
       sql += `LIMIT ${config.limit}\n`;
     }
 
-    // Process SQL to include variables
-    if (config.variables && config.variables.length > 0) {
-      // Add comment explaining the variables
-      sql += '\n-- Metabase Variables\n';
-      sql += '-- The following variables can be used as filters in Metabase dashboards:\n';
-      
-      config.variables.forEach(variable => {
-        sql += `-- {{${variable.name}}} - ${variable.displayName} (${variable.type})\n`;
-      });
-      
-      // Add examples of how to use these variables in WHERE clauses
-      sql += '\n-- Example usage:\n';
-      sql += '-- WHERE column = {{variable_name}}\n';
-      sql += '-- [[WHERE column = {{optional_variable}}]]\n';
-    }
-
     return sql;
   }, [getMetricSQL]);
 
@@ -1070,91 +1019,12 @@ const ChartsPage = () => {
   const generateSQL = useCallback(() => {
     if (!config.website || !config.website.id) {
       setGeneratedSQL('-- Please select a website to generate SQL');
-      setDisplaySQL('-- Please select a website to generate SQL');
       return;
     }
     
     // Only proceed with SQL generation if we have a valid website ID
-    const newSQL = generateSQLCore(config, filters, parameters);
-    setGeneratedSQL(newSQL);
-    
-    // Apply any variables transformations to the display SQL
-    applyVariablesToSQL(newSQL, config.variables || []);
+    setGeneratedSQL(generateSQLCore(config, filters, parameters));
   }, [config, filters, parameters, generateSQLCore]);
-
-  // Add a new function to apply variables to SQL
-  const applyVariablesToSQL = useCallback((baseSQL: string, variables: MetabaseVariable[]) => {
-    // If no variables, just use the base SQL
-    if (!variables || variables.length === 0) {
-      setDisplaySQL(baseSQL);
-      return;
-    }
-    
-    // Process each variable and apply its transformations
-    let processedSQL = baseSQL;
-    
-    // Store the current variables for future comparison
-    lastAppliedVariables.current = variables;
-    
-    // Apply transformations for each variable type
-    variables.forEach(variable => {
-      if (variable.type === 'field_filter' && variable.column) {
-        // Handle field filters
-        if (variable.column === 'url_path') {
-          const urlPattern = /AND\s+e\.url_path\s+(IN\s+\([^)]+\)|=|LIKE)\s+([^)\n]+)/g;
-          if (urlPattern.test(processedSQL)) {
-            processedSQL = processedSQL.replace(
-              urlPattern, 
-              `AND e.url_path = {{${variable.name}}}`
-            );
-          } else {
-            // If no direct match, try to add it before GROUP BY
-            const insertPoint = processedSQL.search(/(GROUP BY|ORDER BY|LIMIT|\n\n)/i);
-            if (insertPoint > 0) {
-              const optionalClause = `\n[[AND e.url_path = {{${variable.name}}}]]\n`;
-              processedSQL = processedSQL.slice(0, insertPoint) + 
-                            optionalClause + 
-                            processedSQL.slice(insertPoint);
-            }
-          }
-        } else if (variable.column === 'event_name') {
-          const eventPattern = /AND\s+e\.event_name\s+(IN\s+\([^)]+\)|=|LIKE)\s+([^)\n]+)/g;
-          if (eventPattern.test(processedSQL)) {
-            processedSQL = processedSQL.replace(
-              eventPattern, 
-              `AND e.event_name = {{${variable.name}}}`
-            );
-          } else {
-            // If no direct match, try to add it before GROUP BY
-            const insertPoint = processedSQL.search(/(GROUP BY|ORDER BY|LIMIT|\n\n)/i);
-            if (insertPoint > 0) {
-              const optionalClause = `\n[[AND e.event_name = {{${variable.name}}}]]\n`;
-              processedSQL = processedSQL.slice(0, insertPoint) + 
-                            optionalClause + 
-                            processedSQL.slice(insertPoint);
-            }
-          }
-        }
-        // Add other column types as needed
-      } else if (variable.type === 'date') {
-        const dateRangePattern = /AND e\.created_at (>=|<=|>|<) '([^']+)'/g;
-        if (dateRangePattern.test(processedSQL)) {
-          processedSQL = processedSQL.replace(
-            dateRangePattern, 
-            `AND e.created_at $1 {{${variable.name}}}`
-          );
-        }
-      }
-      // Handle other variable types as needed
-    });
-    
-    setDisplaySQL(processedSQL);
-  }, []);
-
-  // Create a function specifically for the MetabaseVariables component to modify SQL
-  const updateSQLWithVariables = useCallback((newSQL: string) => {
-    setDisplaySQL(newSQL);
-  }, []);
 
   // Add orderBy management functions
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
@@ -1284,14 +1154,6 @@ const ChartsPage = () => {
     }));
   };
 
-  // Add a function to manage variables
-  const setVariables = (variables: MetabaseVariable[]) => {
-    setConfig(prev => ({
-      ...prev,
-      variables
-    }));
-  };
-
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
@@ -1384,21 +1246,6 @@ const ChartsPage = () => {
                     availableEvents={availableEvents}
                   />
                 </section>
-
-                {/* Add MetabaseVariables component after Summarize */}
-                <section className="mt-6 border-t pt-6">
-                  <MetabaseVariables
-                    variables={config.variables || []}
-                    setVariables={setVariables}
-                    parameters={parameters}
-                    availableEvents={availableEvents}
-                    filters={filters}
-                    groupByFields={config.groupByFields} // Add this line
-                    sanitizeColumnName={sanitizeColumnName}
-                    generatedSQL={generatedSQL}  // Pass the SQL to the component
-                    setGeneratedSQL={updateSQLWithVariables}  // Allow direct SQL updates
-                  />
-                </section>
               </>
             )}
           </VStack>
@@ -1413,7 +1260,7 @@ const ChartsPage = () => {
         <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start">
           <div className="overflow-y-auto">
             <SQLPreview 
-              sql={displaySQL} // Use displaySQL instead of generatedSQL
+              sql={generatedSQL} 
               activeStep={currentStep} 
               openFormprogress={formProgressOpen}
               onOpenChange={handleFormProgressOpenChange}
@@ -1426,10 +1273,10 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
-      {currentStep === 4 && (
+      {currentStep == 4 && (
       <CopyButton 
-        textToCopy={displaySQL} 
-        visible={!!displaySQL && displaySQL !== '-- Please select a website to generate SQL'}
+        textToCopy={generatedSQL} 
+        visible={!!generatedSQL && generatedSQL !== '-- Please select a website to generate SQL'}
       />
       )}
     </div>
