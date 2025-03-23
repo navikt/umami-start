@@ -626,7 +626,7 @@ const ChartsPage = () => {
     return getMetricSQLByType(metric.function, metric.column, defaultAlias, metric);
   }, [getMetricSQLByType, config.metrics]);
 
-  // Update the SQL generation to handle parameters better
+  // Update the SQL generation to handle different operator types
   const generateSQLCore = useCallback((
     config: ChartConfig,
     filters: Filter[],
@@ -634,14 +634,33 @@ const ChartsPage = () => {
   ): string => {
     if (!config.website) return '';
 
+    // Check if interactive date mode is enabled
+    const hasInteractiveDateFilter = filters.some(f => 
+      f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
+    );
+    
+    // Get fully qualified table names
+    const fullWebsiteTable = '`team-researchops-prod-01d6.umami.public_website_event`';
+    const fullSessionTable = '`team-researchops-prod-01d6.umami.public_session`';
+    
+    // Define table alias usage based on interactive date mode
+    const tablePrefix = hasInteractiveDateFilter ? 
+      `${fullWebsiteTable}.` : // Use full table name for interactive mode
+      'e.'; // Use alias for normal mode
+    
+    const sessionTablePrefix = hasInteractiveDateFilter ?
+      `${fullSessionTable}.` :
+      's.';
+
     // Updated to pass parameters to the function
     const requiredTables = getRequiredTables(config, filters);
     
-    // Split filters into event and session filters
+    // IMPORTANT: Only filter out param_ filters, not all filters!
+    // This was causing filters to not appear in SQL
     const eventFilters = filters.filter(filter => 
-      !filter.column.startsWith('param_') && !isSessionColumn(filter.column)
+      !filter.column.startsWith('param_')
     );
- 
+
     // Helper function to check if a column is used in the chart
     const isColumnUsed = (column: string): boolean => {
       // Check if it's used in filters
@@ -659,90 +678,52 @@ const ChartsPage = () => {
     // Start building the SQL with a CTE (Common Table Expression)
     let sql = 'WITH base_query AS (\n';
     sql += '  SELECT\n';
-    sql += '    e.*,\n';
+    
+    // If using interactive date mode, use fully qualified table name references
+    if (hasInteractiveDateFilter) {
+      sql += `    ${fullWebsiteTable}.*,\n`;
+    } else {
+      sql += '    e.*,\n';
+    }
     
     // Add computed columns only if they're used
     sql += `    '${config.website.domain}' as website_domain,\n`;
-    sql += `    '${config.website.name}' as website_name,\n`;
-    
-    // URL path calculations - only add if needed
-    if (isColumnUsed('url_fullpath') || isColumnUsed('url_fullurl')) {
-      sql += '    -- URL path calculations\n';
-      
-      if (isColumnUsed('url_fullpath')) {
-        sql += '    CONCAT(\n';
-        sql += '      e.url_path,\n';
-        sql += '      CASE\n';
-        sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
-        sql += '        THEN CONCAT(\'?\', e.url_query)\n';
-        sql += '        ELSE \'\'\n';
-        sql += '      END\n';
-        sql += '    ) AS url_fullpath,\n';
-      }
-      
-      if (isColumnUsed('url_fullurl')) {
-        sql += '    CONCAT(\n';
-        sql += `      'https://${config.website.domain}',\n`;
-        sql += '      e.url_path,\n';
-        sql += '      CASE\n';
-        sql += '        WHEN e.url_query IS NOT NULL AND e.url_query != \'\'\n';
-        sql += '        THEN CONCAT(\'?\', e.url_query)\n';
-        sql += '        ELSE \'\'\n';
-        sql += '      END\n';
-        sql += '    ) AS url_fullurl,\n';
-      }
-    }
-    
-    // Referrer calculations - only add if needed
-    if (isColumnUsed('referrer_fullpath') || isColumnUsed('referrer_fullurl')) {
-      if (isColumnUsed('referrer_fullpath')) {
-        sql += '    CONCAT(\n';
-        sql += '      e.referrer_path,\n';
-        sql += '      CASE\n';
-        sql += '        WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
-        sql += '        THEN CONCAT(\'?\', e.referrer_query)\n';
-        sql += '        ELSE \'\'\n';
-        sql += '      END\n';
-        sql += '    ) AS referrer_fullpath';
-        
-        // Only add comma if referrer_fullurl is also used
-        sql += isColumnUsed('referrer_fullurl') ? ',\n' : '\n';
-      }
-      
-      if (isColumnUsed('referrer_fullurl')) {
-        sql += '    CASE\n';
-        sql += '      WHEN e.referrer_domain IS NOT NULL AND e.referrer_domain != \'\'\n';
-        sql += '      THEN CONCAT(\n';
-        sql += '        \'https://\',\n';
-        sql += '        e.referrer_domain,\n';
-        sql += '        e.referrer_path,\n';
-        sql += '        CASE\n';
-        sql += '          WHEN e.referrer_query IS NOT NULL AND e.referrer_query != \'\'\n';
-        sql += '          THEN CONCAT(\'?\', e.referrer_query)\n';
-        sql += '          ELSE \'\'\n';
-        sql += '      END\n';
-        sql += '    )\n';
-        sql += '      ELSE NULL\n';
-        sql += '    END AS referrer_fullurl\n';
+    sql += `    '${config.website.name}' as website_name`;
+
+    // Add a comma after website_name ONLY if we have session columns AND we're in interactive mode
+    // For non-interactive mode, the comma is already added in the s.browser line
+    if (requiredTables.session) {
+      if (hasInteractiveDateFilter) {
+        sql += ',\n';  // Only add comma for interactive mode
+      } else {
+        sql += '\n';   // No comma needed for regular mode since s.browser line has a comma
       }
     } else {
-      // Remove trailing comma from the last column
-      sql = sql.trimRight();
-      if (sql.endsWith(',')) {
-        sql = sql.slice(0, -1) + '\n';
-      }
+      sql += '\n';   // No comma if no session columns follow
     }
 
     // Add session columns if needed
     if (requiredTables.session) {
-      sql += '    s.browser,\n';
-      sql += '    s.os,\n';
-      sql += '    s.device,\n';
-      sql += '    s.screen,\n';
-      sql += '    s.language,\n';
-      sql += '    s.country,\n';
-      sql += '    s.subdivision1,\n';
-      sql += '    s.city\n';
+      if (hasInteractiveDateFilter) {
+        sql += `    ${fullSessionTable}.browser,\n`;
+        sql += `    ${fullSessionTable}.os,\n`;
+        sql += `    ${fullSessionTable}.device,\n`;
+        sql += `    ${fullSessionTable}.screen,\n`;
+        sql += `    ${fullSessionTable}.language,\n`;
+        sql += `    ${fullSessionTable}.country,\n`;
+        sql += `    ${fullSessionTable}.subdivision1,\n`;
+        sql += `    ${fullSessionTable}.city\n`;
+      } else {
+        // Remove the comma from the first session column!
+        sql += '    s.browser,\n';
+        sql += '    s.os,\n';
+        sql += '    s.device,\n';
+        sql += '    s.screen,\n';
+        sql += '    s.language,\n';
+        sql += '    s.country,\n';
+        sql += '    s.subdivision1,\n';
+        sql += '    s.city\n';
+      }
     } else {
       // Remove trailing comma if there are no session columns
       sql = sql.trimRight();
@@ -751,57 +732,86 @@ const ChartsPage = () => {
       }
     }
     
-    // FROM and JOIN clauses
-    sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event` e\n';
-    
-    if (requiredTables.session) {
-      sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
-      sql += '    ON e.session_id = s.session_id\n';
+    // FROM and JOIN clauses - adapt based on interactive mode
+    if (hasInteractiveDateFilter) {
+      sql += `  FROM ${fullWebsiteTable}\n`;
+      
+      if (requiredTables.session) {
+        sql += `  LEFT JOIN ${fullSessionTable}\n`;
+        sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
+      }
+    } else {
+      sql += `  FROM ${fullWebsiteTable} e\n`;
+      
+      if (requiredTables.session) {
+        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+        sql += '    ON e.session_id = s.session_id\n';
+      }
     }
     
-    // WHERE clause for the CTE - only apply event filters here
-    sql += `  WHERE e.website_id = '${config.website.id}'\n`;
+    // WHERE clause for the CTE - handle table aliases correctly
+    sql += `  WHERE ${tablePrefix}website_id = '${config.website.id}'\n`;
     
-    // Update the SQL generation for event filters to handle different operator types
+    // Process ALL filters, not just event filters
     eventFilters.forEach(filter => {
+      // Skip only the interactive date filter - it's handled separately
+      if (filter.interactive && filter.column === 'created_at') {
+        return;
+      }
+
+      const columnPrefix = isSessionColumn(filter.column) ? sessionTablePrefix : tablePrefix;
+      
       if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-        sql += `  AND e.${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
+        sql += `  AND ${columnPrefix}${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
       } else if (filter.value || (filter.multipleValues && filter.multipleValues.length > 0)) {
         if (filter.column === 'custom_column') {
-          sql += `  AND e.${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
+          sql += `  AND ${columnPrefix}${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
         } else if (filter.column === 'event_type') {
-          sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
+          sql += `  AND ${columnPrefix}${filter.column} ${filter.operator} ${filter.value}\n`;
         } else if (filter.metabaseParam) {
           // Handle Metabase parameter syntax directly
-          sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
+          sql += `  AND ${columnPrefix}${filter.column} ${filter.operator} ${filter.value}\n`;
         } else if (filter.multipleValues && filter.multipleValues.length > 0 && filter.operator === 'IN') {
-          // Only use IN for multiple values when operator is explicitly IN
+          // Handle multiple values with IN
           const values = filter.multipleValues.map(val => {
             return !isNaN(Number(val)) && filter.column !== 'url_path' && filter.column !== 'event_name'
               ? val
               : `'${val}'`;
           }).join(', ');
           
-          sql += `  AND e.${filter.column} IN (${values})\n`;
-        } else if (filter.column === 'created_at' && filter.dateRangeType && filter.dateRangeType !== 'custom') {
-          sql += `  AND e.${filter.column} ${filter.operator} ${filter.value}\n`;
-        } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
-          sql += `  AND e.${filter.column} ${filter.operator} '%${filter.value}%'\n`;
-        } else if (filter.operator === 'STARTS_WITH') {
-          sql += `  AND e.${filter.column} LIKE '${filter.value}%'\n`;
-        } else if (filter.operator === 'ENDS_WITH') {
-          sql += `  AND e.${filter.column} LIKE '%${filter.value}'\n`;
+          sql += `  AND ${columnPrefix}${filter.column} IN (${values})\n`;
         } else {
-          const needsQuotes = !(
-            filter.column === 'created_at' && 
-            // @ts-ignore
-            (filter.value.includes('TIMESTAMP') || filter.value.includes('CURRENT_'))
-          );
+          // Check if this is a date filter with SQL function
+          const isSqlFunction = filter.column === 'created_at' && 
+                               filter.dateRangeType === 'dynamic' &&
+                               filter.value && 
+                               (filter.value.includes('(') || filter.value.includes('CURRENT_'));
           
-          sql += `  AND e.${filter.column} ${filter.operator} ${needsQuotes ? `'${filter.value}'` : filter.value}\n`;
+          // Handle all other filter types
+          const formattedValue = isSqlFunction ? 
+            // For SQL functions, don't add quotes
+            filter.value : 
+            // For everything else, format as before
+            (!isNaN(Number(filter.value)) && 
+            filter.column !== 'url_path' && 
+            filter.column !== 'event_name' && 
+            !filter.column.startsWith('param_'))
+              ? filter.value
+              : `'${filter.value}'`;
+              
+          sql += `  AND ${columnPrefix}${filter.column} ${filter.operator} ${formattedValue}\n`;
         }
       }
     });
+    
+    // Add the interactive date filter as a special clause if needed
+    const interactiveDateFilter = filters.find(f => 
+      f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
+    );
+    
+    if (interactiveDateFilter) {
+      sql += `  [[AND ${interactiveDateFilter.value} ]]\n`;
+    }
     
     sql += ')\n\n';
     

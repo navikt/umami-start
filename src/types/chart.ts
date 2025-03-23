@@ -6,6 +6,7 @@ export interface Filter {
   multipleValues?: string[];
   dateRangeType?: string; // For tracking which date range type is selected
   metabaseParam?: boolean; // Add this line
+  interactive?: boolean; // Add this for interactive mode filters
 }
 
 export interface Parameter {
