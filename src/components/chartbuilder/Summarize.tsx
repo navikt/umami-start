@@ -221,6 +221,7 @@ const Summarize = ({
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
             <Select
               label="Grupper etter"
+              description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
               onChange={(e) => {
                 if (e.target.value) {
                   addGroupByField(e.target.value);
@@ -336,11 +337,6 @@ const Summarize = ({
               </div>
             </div>
           )}
-          {groupByFields.length == 0 && (
-          <p className="text-sm text-gray-600 mt-4">
-              <strong>Eksempel:</strong> dato (dag, uker, måneder), enhet, nettlesertype, etc.
-          </p>
-          )}
       </div>
 
       {/* Metrics section */}
@@ -356,9 +352,10 @@ const Summarize = ({
         
         <div className="space-y-4 mb-6">
           {/* Move dropdown to the top */}
-          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+          <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
             <Select
               label="Legg til beregning"
+              description="F.eks. antall, andel, sum, gjennomsnitt, etc."
               onChange={(e) => {
                 if (e.target.value) {
                   // Add the metric
@@ -379,9 +376,9 @@ const Summarize = ({
                 }
               }}
               size="small"
-              className="flex-grow"
+              className="w-full"
             >
-              <option value="">Velg utregning...</option>
+              <option value="">Velg beregning...</option>
               {METRICS.map(metric => (
                 <option key={metric.value} value={metric.value}>
                   {metric.label}
@@ -614,14 +611,9 @@ const Summarize = ({
                     </div>
                   </div>
                 )}
-              </div>
+              </div> 
             </div>
           ))}
-          {metrics.length == 0 && (
-          <p className="text-sm text-gray-600 mt-4">
-              <strong>Eksempel:</strong> antall, andel, sum, gjennomsnitt, etc.
-          </p>
-          )}
         </div>
       </div>
 
@@ -642,65 +634,66 @@ const Summarize = ({
 
           {orderBy && (
             <>
-            <div className="flex gap-2 items-center bg-white p-3 rounded-md border"> 
-              <Select
-                label="Sorter etter"
-                value={orderBy?.column || ""}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    // Use ascending order for dates, descending for other metrics
-                    const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
-                    setOrderBy(e.target.value, direction);
-                  } else {
-                    clearOrderBy();
-                  }
-                }}
-                size="small"
-                className="flex-grow"
-              >
-                <option value="">Standard sortering</option>
-                <optgroup label="Grupperinger">
-                  {groupByFields.map((field) => {
-                    const column = Object.values(COLUMN_GROUPS)
-                      .flatMap(group => group.columns)
-                      .find(col => col.value === field);
-                    
-                    return (
-                      <option key={field} value={field === 'created_at' ? 'dato' : field}>
-                        {field === "created_at" ? "Dato" : column?.label || field}
+            <div className="flex flex-col gap-2 bg-white p-3 rounded-md border"> 
+              <div className="flex gap-2">
+                <Select
+                  label="Sorter etter"
+                  value={orderBy?.column || ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
+                      setOrderBy(e.target.value, direction);
+                    } else {
+                      clearOrderBy();
+                    }
+                  }}
+                  size="small"
+                  className="flex-grow"
+                >
+                  <option value="">Standard sortering</option>
+                  <optgroup label="Grupperinger">
+                    {groupByFields.map((field) => {
+                      const column = Object.values(COLUMN_GROUPS)
+                        .flatMap(group => group.columns)
+                        .find(col => col.value === field);
+                      
+                      return (
+                        <option key={field} value={field === 'created_at' ? 'dato' : field}>
+                          {field === "created_at" ? "Dato" : column?.label || field}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                  <optgroup label="Metrikker">
+                    {metrics.map((metric, index) => (
+                      <option 
+                        key={`metrikk_${index}`} 
+                        value={metric.alias || `metrikk_${index + 1}`}
+                      >
+                        {metric.alias || `metrikk_${index + 1}`}
                       </option>
-                    );
-                  })}
-                </optgroup>
-                <optgroup label="Metrikker">
-                  {metrics.map((metric, index) => (
-                    <option 
-                      key={`metrikk_${index}`} 
-                      value={metric.alias || `metrikk_${index + 1}`}
-                    >
-                      {metric.alias || `metrikk_${index + 1}`}
-                    </option>
-                  ))}
-                </optgroup>
-              </Select>
+                    ))}
+                  </optgroup>
+                </Select>
 
-              <Select
-                label="Retning"
-                value={orderBy.direction}
-                onChange={(e) => setOrderBy(
-                  orderBy.column || "", 
-                  e.target.value as 'ASC' | 'DESC'
-                )}
-                size="small"
-              >
-                <option value="ASC">Stigende (A-Å, 0-9)</option>
-                <option value="DESC">Synkende (Å-A, 9-0)</option>
-              </Select>
-            </div>
-            <p className="text-sm text-gray-600">
+                <Select
+                  label="Retning"
+                  value={orderBy.direction}
+                  onChange={(e) => setOrderBy(
+                    orderBy.column || "", 
+                    e.target.value as 'ASC' | 'DESC'
+                  )}
+                  size="small"
+                >
+                  <option value="ASC">Stigende (A-Å, 0-9)</option>
+                  <option value="DESC">Synkende (Å-A, 9-0)</option>
+                </Select>
+              </div>
+              
+              <p className="text-sm text-gray-600">
                 <strong>Standard:</strong> sorterer etter første kolonne i synkende rekkefølge.
               </p>
-              
+            </div>
             </>
           )}
         </div>
@@ -722,6 +715,7 @@ const Summarize = ({
             <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
               <TextField
                 label="Maksimalt antall rader"
+                description="F.eks. for en topp 10-liste"
                 type="number"
                 value={limit.toString()}
                 onChange={(e) => {
@@ -740,9 +734,6 @@ const Summarize = ({
                 className="flex-grow"
               />
             </div>
-              <p className="text-sm text-gray-600">
-                <strong>Eksempel:</strong> for en topp 10-liste
-              </p>
             </>
           )}
         </div>
