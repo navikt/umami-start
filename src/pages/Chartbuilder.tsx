@@ -800,7 +800,13 @@ const ChartsPage = () => {
     }
 
     // Add all interactive filters as special clauses with double brackets
-    const interactiveFilters = filters.filter(f => f.interactive && f.metabaseParam);
+    // Exclude date filters since they're handled separately above
+    const interactiveFilters = filters.filter(f => 
+      f.interactive && 
+      f.metabaseParam && 
+      f.column !== 'created_at'  // Add this condition to exclude date filters
+    );
+    
     if (interactiveFilters.length > 0) {
       interactiveFilters.forEach(filter => {
         const columnPrefix = isSessionColumn(filter.column) ? sessionTablePrefix : tablePrefix;
