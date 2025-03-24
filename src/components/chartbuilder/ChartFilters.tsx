@@ -665,10 +665,29 @@ const ChartFilters = ({
                 
                 {pageViewsMode === 'interactive' && (
                   <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
-                    <p>
-                      <strong>Interaktiv modus:</strong>  Lar deg filtrere på URL-stier direkte i Metabase-dashbord.
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                        <svg 
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 16 16" 
+                          fill="none" 
+                          className="text-green-600"
+                        >
+                          <path 
+                            d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium mb-1">Interaktivt filter for sidevisninger aktivert</p>
+                      <p className="text-gray-600">URL-sti kan velges som et filtervalg i Metabase-dashbord</p>
+                    </div>
                   </div>
+                </div>
                 )}
               </div>
             )}
@@ -824,13 +843,33 @@ const ChartFilters = ({
                 )}
                 
                 {customEventsMode === 'interactive' && (
-                  <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
-                    <p>
-                      <strong>Interaktiv modus:</strong> Lar deg filtrere på hendelser direkte i Metabase-dashbord.
-                    </p>
-                  </div>
-                )}
-              </div>
+                                    <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex-shrink-0">
+                                        <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                          <svg 
+                                            width="16" 
+                                            height="16" 
+                                            viewBox="0 0 16 16" 
+                                            fill="none" 
+                                            className="text-green-600"
+                                          >
+                                            <path 
+                                              d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
+                                              fill="currentColor"
+                                            />
+                                          </svg>
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <p className="font-medium mb-1">Interaktivt filter for egendefinerte hendelser aktivert</p>
+                                        <p className="text-gray-600">Egendefinerte hendelser kan velges via filtervalg i Metabase-dashbord</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  )}
+                                </div>
+
             )}
           </div>
 
