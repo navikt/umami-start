@@ -714,7 +714,7 @@ const DateRangePicker = forwardRef(({
         </Tabs.Panel>
             </Tabs>
 
-            <div className="mt-3 text-xs text-gray-600">
+            <div className="mt-5 text-sm text-gray-700">
               {getStartDateDisplay()}
             </div>   
           </>
