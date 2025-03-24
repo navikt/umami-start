@@ -572,6 +572,11 @@ const ChartsPage = () => {
         , 1) as ${quotedAlias}`;
       case 'andel':
         if (column && websiteId) {
+          // Check if an interactive date filter exists
+          const hasInteractiveDateFilter = filters.some(f => 
+            f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
+          );
+          
           // Now use the websiteId variable which we've ensured is not empty
           if (column === 'session_id') {
             return `ROUND(
@@ -579,7 +584,9 @@ const ChartsPage = () => {
                 SELECT COUNT(DISTINCT ${column}) 
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = '${websiteId}'
-                ${getDateFilterConditions()}
+                ${hasInteractiveDateFilter 
+                  ? '[[AND {{created_at}} ]]' 
+                  : getDateFilterConditions()}
               ), 0)
             , 1) as ${quotedAlias}`;
           } else if (column === 'visit_id') {
@@ -588,16 +595,9 @@ const ChartsPage = () => {
                 SELECT COUNT(DISTINCT ${column})
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = '${websiteId}'
-                ${getDateFilterConditions()}
-              ), 0)
-            , 1) as ${quotedAlias}`;
-          } else if (column === 'event_id') {
-            return `ROUND(
-              100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
-                SELECT COUNT(DISTINCT ${column})
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = '${websiteId}'
-                ${getDateFilterConditions()}
+                ${hasInteractiveDateFilter 
+                  ? '[[AND {{created_at}} ]]' 
+                  : getDateFilterConditions()}
               ), 0)
             , 1) as ${quotedAlias}`;
           }
@@ -796,7 +796,9 @@ const ChartsPage = () => {
     );
     
     if (interactiveDateFilter) {
-      sql += `  [[AND ${interactiveDateFilter.value} ]]\n`;
+      // Fix: Always use proper syntax for interactive date filter
+      // Directly use the double brackets with the template variable
+      sql += `  [[AND {{created_at}} ]]\n`;
     }
 
     // Add all interactive filters as special clauses with double brackets
