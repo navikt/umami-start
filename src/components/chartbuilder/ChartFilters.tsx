@@ -991,6 +991,7 @@ const ChartFilters = ({
                               size="small"
                             >
                               {/* Add the interactive operator option at the top */}
+                              <option value="INTERACTIVE">Interaktiv</option>
                               {OPERATORS.map(op => (
                                 <option key={op.value} value={op.value}>
                                   {op.label}
