@@ -1,4 +1,4 @@
-import { Heading, DatePicker, Tabs, Switch, ExpansionCard, Button } from '@navikt/ds-react';
+import { Heading, DatePicker, Tabs, ExpansionCard, Button } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
 import { Filter } from '../../types/chart';
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -429,6 +429,23 @@ const DateRangePicker = forwardRef(({
     }
   }));
 
+  // Add function to handle tab changes that automatically toggles interactive mode
+  const handleTabChange = (value: string) => {
+    const newDateMode = value as 'frequent' | 'dynamic' | 'fixed' | 'interactive';
+    setDateMode(newDateMode);
+    
+    // Automatically toggle interactive mode based on tab selection
+    if (newDateMode === 'interactive') {
+      // Turn ON interactive mode when interactive tab is selected
+      if (!interactiveMode) {
+        handleInteractiveModeToggle(true);
+      }
+    } else if (interactiveMode) {
+      // Turn OFF interactive mode when any other tab is selected
+      handleInteractiveModeToggle(false);
+    }
+  };
+
   return (
     <div className="mb-6">
       <Heading level="3" size="xsmall" spacing>
@@ -436,21 +453,249 @@ const DateRangePicker = forwardRef(({
       </Heading>
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
-        {interactiveMode ? (
-          <>
-            <p className="mb-4">
-              <strong>Interaktiv modus:</strong> Datofiltrering vil bli håndtert av Metabase.
-            </p>
-            <div className="flex items-center justify-between -mt-1">
-          <div className="mb-4 flex items-center">
-            <Switch size='small'
-              checked={interactiveMode}
-              onChange={(e) => handleInteractiveModeToggle(e.target.checked)}
+        {/* Replace button-based navigation with Tabs */}
+        <Tabs 
+          value={dateMode} 
+          onChange={handleTabChange}
+          size="small"
+        >
+          <Tabs.List>
+            <Tabs.Tab value="frequent" label="Ofte brukte" />
+            <Tabs.Tab value="dynamic" label="Relative" />
+            <Tabs.Tab value="fixed" label="Bestemte" />
+            <Tabs.Tab value="interactive" label="Interaktiv" />
+          </Tabs.List>
+          
+          {/* Frequent dates panel */}
+          <Tabs.Panel value="frequent" className="pt-6">
+            <div className="flex flex-wrap gap-2">
+              <button 
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                  !hasDateFilter() || selectedDateRange === 'all'
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}
+                onClick={() => applyDateRange('all')}
+                disabled={interactiveMode}
+              >
+                Alt
+              </button>
+              {DYNAMIC_DATE_RANGES.map((period) => (
+                <button
+                  key={period.id}
+                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                    selectedDateRange === period.id
+                      ? 'bg-blue-600 text-white border-blue-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  }`}
+                  onClick={() => {
+                    if (!interactiveMode) {
+                      // Use dedicated and verified method to apply date range
+                      applyDateRange(period.id);
+                    }
+                  }}
+                  disabled={interactiveMode}
+                >
+                  {period.label}
+                </button>
+              ))}
+            </div>
+          </Tabs.Panel>
+          
+          {/* Dynamic dates panel */}
+          <Tabs.Panel value="dynamic" className="pt-6">
+            <div className="mb-2">
+              <div className="flex gap-2 mb-6">
+                <button
+                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                    relativeMode === 'current'
+                      ? 'bg-blue-600 text-white border-blue-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setRelativeMode('current')}
+                >
+                  Nåværende
+                </button>
+                <button
+                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                    relativeMode === 'previous'
+                      ? 'bg-blue-600 text-white border-blue-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setRelativeMode('previous')}
+                >
+                  Tidligere
+                </button>
+              </div>
+
+              {relativeMode === 'current' ? (
+                <div className="flex flex-wrap gap-2">
+                  {CURRENT_PERIODS.map((period) => (
+                    <button
+                      key={period.id}
+                      className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                        selectedDateRange === period.id
+                          ? 'bg-blue-600 text-white border-blue-700'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      }`}
+                      onClick={() => {
+                        if (!interactiveMode) {
+                          // Create a synthetic ID to apply this date range
+                          setSelectedDateRange(period.id);
+                          
+                          // Apply the date filters directly and consistently
+                          const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+                          setFilters([
+                            ...filtersWithoutDate,
+                            {
+                              column: 'created_at',
+                              operator: '>=',
+                              value: period.fromSQL,
+                              dateRangeType: 'dynamic'
+                            },
+                            {
+                              column: 'created_at',
+                              operator: '<=',
+                              value: period.toSQL,
+                              dateRangeType: 'dynamic'
+                            }
+                          ]);
+                        }
+                      }}
+                      disabled={interactiveMode}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-end gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Antall
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={numberOfUnits}
+                      onChange={(e) => setNumberOfUnits(e.target.value)}
+                      className="w-20 px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Periode
+                    </label>
+                    <select
+                      value={selectedUnit}
+                      onChange={(e) => {
+                        setSelectedUnit(e.target.value);
+                        const sql = generatePreviousPeriodSQL(numberOfUnits, e.target.value);
+                        const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+                        setFilters([
+                          ...filtersWithoutDate,
+                          {
+                            column: 'created_at',
+                            operator: '>=',
+                            value: sql.fromSQL,
+                            dateRangeType: 'dynamic'
+                          },
+                          {
+                            column: 'created_at',
+                            operator: '<=',
+                            value: sql.toSQL,
+                            dateRangeType: 'dynamic'
+                          }
+                        ]);
+                      }}
+                      className="w-full px-3 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {TIME_UNITS.map(unit => (
+                        <option key={unit.value} value={unit.value}>
+                          {unit.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Tabs.Panel>
+          
+          {/* Fixed dates panel with DatePicker */}
+          <Tabs.Panel value="fixed" className="pt-6">
+            <DatePicker
+              mode="range"
+              selected={selectedRange}
+              onSelect={(range) => {
+                if (range) {
+                  setSelectedRange(range);
+                  if (range.from && range.to) {
+                    applyCustomDateRange(range.from, range.to);
+                  }
+                }
+              }}
+              fromDate={fromDate}
+              showWeekNumber
             >
-              Interaktiv modus
-            </Switch>
-          </div>
-        </div>
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <DatePicker.Input
+                    label="Fra dato"
+                    id="date-from"
+                    value={formatDate(selectedRange?.from)}
+                    size="small"
+                  />
+                </div>
+                <div>
+                  <DatePicker.Input
+                    label="Til dato"
+                    id="date-to"
+                    value={formatDate(selectedRange?.to)}
+                    size="small"
+                  />
+                </div>
+                {selectedRange?.from && (
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={clearDateRange}
+                    className="mb-[2px]"
+                  >
+                    Fjern datoer
+                  </Button>
+                )}
+              </div>
+            </DatePicker>
+          </Tabs.Panel>
+
+          {/* Interactive panel - completely revised */}
+          <Tabs.Panel value="interactive" className="pt-6">
+            <div className="text-sm text-gray-700 p-4 rounded border border-green-200 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                    <svg 
+                      width="16" 
+                      height="16" 
+                      viewBox="0 0 16 16" 
+                      fill="none" 
+                      className="text-green-600"
+                    >
+                      <path 
+                        d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Interaktivt datofilter er aktivert</p>
+                  <p className="text-gray-600">Datoperiode kan velges via filtervalg i Metabase-dashbord</p>
+                </div>
+              </div>
+            </div>
+                
             <ExpansionCard aria-label="Guide for Metabase-integrasjon" size="small">
               <ExpansionCard.Header>
                 <ExpansionCard.Title size="small">Slik kobler du til datofilteret i Metabase</ExpansionCard.Title>
@@ -476,251 +721,14 @@ const DateRangePicker = forwardRef(({
                 </div>
               </ExpansionCard.Content>
             </ExpansionCard>
-          </>
-        ) : (
-          <>
-            {/* Replace button-based navigation with Tabs */}
-            <Tabs 
-              value={dateMode} 
-              onChange={(value) => setDateMode(value as 'frequent' | 'dynamic' | 'fixed' | 'interactive')}
-              size="small"
-            >
-              <Tabs.List>
-                <Tabs.Tab value="frequent" label="Ofte brukte" />
-                <Tabs.Tab value="dynamic" label="Relative" />
-                <Tabs.Tab value="fixed" label="Bestemte" />
-                <Tabs.Tab value="interactive" label="Interaktiv" />
-              </Tabs.List>
-              
-              {/* Frequent dates panel */}
-              <Tabs.Panel value="frequent" className="pt-6">
-                <div className="flex flex-wrap gap-2">
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      !hasDateFilter() || selectedDateRange === 'all'
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                    }`}
-                    onClick={() => applyDateRange('all')}
-                    disabled={interactiveMode}
-                  >
-                    Alt
-                  </button>
-                  {DYNAMIC_DATE_RANGES.map((period) => (
-                    <button
-                      key={period.id}
-                      className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                        selectedDateRange === period.id
-                          ? 'bg-blue-600 text-white border-blue-700'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                      }`}
-                      onClick={() => {
-                        if (!interactiveMode) {
-                          // Use dedicated and verified method to apply date range
-                          applyDateRange(period.id);
-                        }
-                      }}
-                      disabled={interactiveMode}
-                    >
-                      {period.label}
-                    </button>
-                  ))}
-                </div>
-              </Tabs.Panel>
-              
-              {/* Dynamic dates panel */}
-              <Tabs.Panel value="dynamic" className="pt-6">
-                <div className="mb-2">
-                  <div className="flex gap-2 mb-6">
-                    <button
-                      className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                        relativeMode === 'current'
-                          ? 'bg-blue-600 text-white border-blue-700'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                      }`}
-                      onClick={() => setRelativeMode('current')}
-                    >
-                      Nåværende
-                    </button>
-                    <button
-                      className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                        relativeMode === 'previous'
-                          ? 'bg-blue-600 text-white border-blue-700'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                      }`}
-                      onClick={() => setRelativeMode('previous')}
-                    >
-                      Tidligere
-                    </button>
-                  </div>
+          </Tabs.Panel>
+        </Tabs>
 
-                  {relativeMode === 'current' ? (
-                    <div className="flex flex-wrap gap-2">
-                      {CURRENT_PERIODS.map((period) => (
-                        <button
-                          key={period.id}
-                          className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                            selectedDateRange === period.id
-                              ? 'bg-blue-600 text-white border-blue-700'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                          }`}
-                          onClick={() => {
-                            if (!interactiveMode) {
-                              // Create a synthetic ID to apply this date range
-                              setSelectedDateRange(period.id);
-                              
-                              // Apply the date filters directly and consistently
-                              const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
-                              setFilters([
-                                ...filtersWithoutDate,
-                                {
-                                  column: 'created_at',
-                                  operator: '>=',
-                                  value: period.fromSQL,
-                                  dateRangeType: 'dynamic'
-                                },
-                                {
-                                  column: 'created_at',
-                                  operator: '<=',
-                                  value: period.toSQL,
-                                  dateRangeType: 'dynamic'
-                                }
-                              ]);
-                            }
-                          }}
-                          disabled={interactiveMode}
-                        >
-                          {period.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-end gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Antall
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={numberOfUnits}
-                          onChange={(e) => setNumberOfUnits(e.target.value)}
-                          className="w-20 px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Periode
-                        </label>
-                        <select
-                          value={selectedUnit}
-                          onChange={(e) => {
-                            setSelectedUnit(e.target.value);
-                            const sql = generatePreviousPeriodSQL(numberOfUnits, e.target.value);
-                            const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
-                            setFilters([
-                              ...filtersWithoutDate,
-                              {
-                                column: 'created_at',
-                                operator: '>=',
-                                value: sql.fromSQL,
-                                dateRangeType: 'dynamic'
-                              },
-                              {
-                                column: 'created_at',
-                                operator: '<=',
-                                value: sql.toSQL,
-                                dateRangeType: 'dynamic'
-                              }
-                            ]);
-                          }}
-                          className="w-full px-3 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {TIME_UNITS.map(unit => (
-                            <option key={unit.value} value={unit.value}>
-                              {unit.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Tabs.Panel>
-              
-              {/* Fixed dates panel with DatePicker */}
-              <Tabs.Panel value="fixed" className="pt-6">
-                <DatePicker
-                  mode="range"
-                  selected={selectedRange}
-                  onSelect={(range) => {
-                    if (range) {
-                      setSelectedRange(range);
-                      if (range.from && range.to) {
-                        applyCustomDateRange(range.from, range.to);
-                      }
-                    }
-                  }}
-                  fromDate={fromDate}
-                  showWeekNumber
-                >
-                  <div className="flex flex-wrap items-end gap-4">
-                    <div>
-                      <DatePicker.Input
-                        label="Fra dato"
-                        id="date-from"
-                        value={formatDate(selectedRange?.from)}
-                        size="small"
-                      />
-                    </div>
-                    <div>
-                      <DatePicker.Input
-                        label="Til dato"
-                        id="date-to"
-                        value={formatDate(selectedRange?.to)}
-                        size="small"
-                      />
-                    </div>
-                    {selectedRange?.from && (
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        onClick={clearDateRange}
-                        className="mb-[2px]"
-                      >
-                        Fjern datoer
-                      </Button>
-                    )}
-                  </div>
-                </DatePicker>
-              </Tabs.Panel>
-              <Tabs.Panel value="interactive" className="pt-6">
-              <p>
-                Skru på interaktiv modusen for å la Metabase håndtere
-                datofiltreringen. Dette er nyttig for å gi brukere
-                muligheten til å velge datoer direkte i dashbordet.
-              </p>
-          {/* Add interactive mode toggle */}
-          <div className="flex items-center justify-between mt-5 pb-2">
-          <div className="flex items-center">
-            <Switch size='small'
-              checked={interactiveMode}
-              onChange={(e) => handleInteractiveModeToggle(e.target.checked)}
-            >
-              Interaktiv modus
-            </Switch>
+        {dateMode !== 'interactive' && (
+          <div className="mt-5 text-sm text-gray-700">
+            {getStartDateDisplay()}
           </div>
-        </div>
-        </Tabs.Panel>
-            </Tabs>
-
-            <div className="mt-5 text-sm text-gray-700">
-              {getStartDateDisplay()}
-            </div>   
-          </>
         )}
-
-        
       </div>
     </div>
   );
