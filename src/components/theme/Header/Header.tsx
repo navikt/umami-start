@@ -52,6 +52,7 @@ export default function Header() {
               <Dropdown.Menu.List.Item
                 as={Link}
                 href="/grafbygger"
+                target="_blank"
                 className="no-underline"
               >
                 <AreaChartIcon aria-hidden fontSize="1.5rem" />
@@ -83,6 +84,7 @@ export default function Header() {
           <Link
               href="https://metabase.ansatt.nav.no/"
               className={linkButton}
+              target="_blank"
             >
               <BarChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Metabase</span>
