@@ -55,13 +55,13 @@ const DATE_FORMATS: DateFormat[] = [
 
 const METRICS: MetricOption[] = [
   { label: 'Antall rader', value: 'count' },
-  { label: 'Antall rader hvor', value: 'count_where' }, // Add new metric type
   { label: 'Antall unike verdier', value: 'distinct' },
+  { label: 'Antall rader hvor', value: 'count_where' },
   { label: 'Sum av verdier', value: 'sum' },
   { label: 'Gjennomsnitt', value: 'average' },
   { label: 'Median', value: 'median' },
   { label: 'Andel av resultatene (%)', value: 'percentage' },
-  { label: 'Andel av totalen (%)', value: 'andel' },  // Add the new andel metric
+  { label: 'Andel av totalen (%)', value: 'andel' }
 ];
 
 // Add the sanitizeColumnName helper function BEFORE it's used
