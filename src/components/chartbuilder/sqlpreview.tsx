@@ -127,7 +127,7 @@ const SQLPreview = ({
         <div>
           <div className="space-y-2 mb-6">
             <Heading level="2" size="small">
-              Legg til graf eller tabell i Metabase
+              Visualiser grafen eller tabellen i Metabase
             </Heading>
             {/* <p className="text-sm text-gray-600">
             Følg stegene under for å teste spørringen i Metabase. Du kan gjøre dette når som helst 
@@ -143,7 +143,7 @@ const SQLPreview = ({
                   1
                 </div>
                 <div className="flex-grow">
-                  <p className="font-medium">Kopier grafen/tabellen</p>
+                  <p className="font-medium">Kopier det du har laget</p>
                   <div className="mt-2">
                     {!copied ? (
                       <Button 
@@ -168,14 +168,14 @@ const SQLPreview = ({
                 2
               </div>
               <div className="flex-grow">
-                <p className="font-medium mb-2">Lim inn i Metabase grafbyggeren</p>
+                <p className="font-medium mb-2">Lim inn i Metabase</p>
                 <Link 
                   href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0=" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
                 >
-                  Gå til Metabase grafbyggeren <ExternalLink size={14} />
+                  Åpne Metabase <ExternalLink size={14} />
                 </Link>
               </div>
             </div>
@@ -185,8 +185,8 @@ const SQLPreview = ({
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Trykk på ▶️ "vis resultater"-knappen</p>
-                  <p className="text-md text-gray-700 mt-1">Nå vises tabellen. Trykk "visualisering" for å endre til graf</p>
+                  <p className="font-medium">Trykk på ▶️ for å se resultatet</p>
+                  <p className="text-md text-gray-700 mt-1">Trykk "visualisering" for å bytte fra tabell til graf</p>
                 </div>
               </div>
             </div>
