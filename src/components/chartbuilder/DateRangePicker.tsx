@@ -384,7 +384,7 @@ const DateRangePicker = forwardRef(({
     setSelectedDateRange('all');
     setDateMode('frequent'); // Reset to default tab
     setFilters(filters.filter(f => f.column !== 'created_at'));
-    setRelativeMode('current'); // Reset relative mode
+    setRelativeMode('previous'); // Reset relative mode
     setSelectedUnit('day'); // Reset unit selection
     setNumberOfUnits('1'); // Reset number of units
   };
@@ -423,7 +423,7 @@ const DateRangePicker = forwardRef(({
       setSelectedDateRange('all');
       setDateMode('frequent');
       setFilters(filters.filter(f => f.column !== 'created_at'));
-      setRelativeMode('current');
+      setRelativeMode('previous');
       setSelectedUnit('day');
       setNumberOfUnits('1');
     }
