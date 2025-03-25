@@ -137,39 +137,13 @@ const SQLPreview = ({
 
           <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
             <div className="flex flex-col gap-4">
-              <div className="flex items-start gap-3">
+
+            <div className="flex items-start gap-3">
                 <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
                   1
                 </div>
-                <div>
-                  <p className="font-medium">Åpne Metabase</p>
-                  <Link 
-                    href="https://metabase.ansatt.nav.no/dashboard/484" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 mt-1"
-                  >
-                    Klikk her for å gå til Metabase <ExternalLink size={14} />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium">Klikk på "ny/new"-knappen i toppmenyen</p>
-                  <p className="text-sm text-gray-600 mt-1">Velg deretter "SQL-spørring / SQL query"</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  3
-                </div>
                 <div className="flex-grow">
-                  <p className="font-medium">Kopier og lim inn i Metabase</p>
+                  <p className="font-medium">Kopier grafen/tabellen</p>
                   <div className="mt-2">
                     {!copied ? (
                       <Button 
@@ -190,12 +164,29 @@ const SQLPreview = ({
               </div>
 
               <div className="flex items-start gap-3">
+              <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                2
+              </div>
+              <div className="flex-grow">
+                <p className="font-medium mb-2">Lim inn i Metabase grafbyggeren</p>
+                <Link 
+                  href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0=" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                >
+                  Gå til Metabase grafbyggeren <ExternalLink size={14} />
+                </Link>
+              </div>
+            </div>
+
+              <div className="flex items-start gap-3">
                 <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  4
+                  3
                 </div>
                 <div>
-                  <p className="font-medium">Trykk på ▶️ "vis graf/tabell"-knappen</p>
-                  <p className="text-sm text-gray-600 mt-1">Nå vises en tabell. Trykk "visualisering/visualization" for å endre til graf</p>
+                  <p className="font-medium">Trykk på ▶️ "vis resultater"-knappen</p>
+                  <p className="text-md text-gray-700 mt-1">Nå vises tabellen. Trykk "visualisering" for å endre til graf</p>
                 </div>
               </div>
             </div>
