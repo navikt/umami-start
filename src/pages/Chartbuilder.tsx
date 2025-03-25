@@ -767,11 +767,13 @@ const ChartsPage = () => {
           
           sql += `  AND ${columnPrefix}${filter.column} IN (${values})\n`;
         } else {
-          // Check if this is a date filter with SQL function
+          // Check if this is a date filter with SQL function or a TIMESTAMP function
           const isSqlFunction = filter.column === 'created_at' && 
-                               filter.dateRangeType === 'dynamic' &&
-                               filter.value && 
-                               (filter.value.includes('(') || filter.value.includes('CURRENT_'));
+                              filter.value && 
+                              (filter.dateRangeType === 'dynamic' ||
+                               filter.value.startsWith('TIMESTAMP(') ||
+                               filter.value.includes('(') || 
+                               filter.value.includes('CURRENT_'));
           
           // Handle all other filter types
           const formattedValue = isSqlFunction ? 
