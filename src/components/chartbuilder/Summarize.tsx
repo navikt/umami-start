@@ -540,7 +540,7 @@ const Summarize = ({
                     {/* Alias - at the bottom */}
                     <div className="flex flex-col gap-1 col-span-1 md:col-span-2">
                       <TextField
-                        label="Alias (valgfritt)"
+                        label="Kolonnetittel (valgfritt)"
                         value={metric.alias || ''}
                         onChange={(e) => updateMetric(index, { alias: e.target.value })}
                         placeholder={`metrikk_${index + 1}`}
@@ -601,7 +601,7 @@ const Summarize = ({
                     {/* Alias field */}
                     <div className="md:w-1/3">
                       <TextField
-                        label="Alias (valgfritt)"
+                        label="Kolonnetittel (valgfritt)"
                         value={metric.alias || ''}
                         onChange={(e) => updateMetric(index, { alias: e.target.value })}
                         placeholder={`metrikk_${index + 1}`}
