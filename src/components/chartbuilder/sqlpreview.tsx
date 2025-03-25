@@ -242,7 +242,7 @@ const SQLPreview = ({
           <FormProgress.Step>Velg nettside eller app</FormProgress.Step>
           <FormProgress.Step>Avgrens med filtre</FormProgress.Step>
           <FormProgress.Step>Tilpass visningen</FormProgress.Step>
-          <FormProgress.Step>Visualiser i Metabase</FormProgress.Step>
+          <FormProgress.Step>Visualisér i Metabase</FormProgress.Step>
         </FormProgress>
       </div>
 

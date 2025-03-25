@@ -473,7 +473,7 @@ const ChartFilters = ({
     <section>
       <div className="flex justify-between items-center">
         <Heading level="2" size="small" spacing>
-          Filtrer etter
+          Filtrér etter
         </Heading>
         
         {/* Add reset button next to the heading */}
@@ -915,7 +915,7 @@ const ChartFilters = ({
 
                  <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3">
                     <Select
-                      label="Filtrer etter"
+                      label="Filtrér etter"
                       description="Legg til et filter for å velge hvilke data grafen/tabellen baseres på."
                       onChange={(e) => {
                         if (e.target.value) {
