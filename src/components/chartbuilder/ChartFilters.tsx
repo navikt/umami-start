@@ -400,7 +400,10 @@ const ChartFilters = ({
 
   // Update resetFilters function
   const resetFilters = () => {
+    // Ensure filters are completely cleared
     setFilters([]);
+    
+    // Reset all UI state
     setAppliedSuggestion('');
     setSelectedDateRange('');
     setCustomEvents([]);
@@ -410,6 +413,19 @@ const ChartFilters = ({
     setCustomPeriodInputs({});
     setStagingFilter(null);
     setInteractiveMode(false);
+    
+    // Close all filter panels
+    setActiveFilters(false);
+    setAdvancedFilters(false);
+    
+    // Force immediate UI update for filter count by using a setTimeout with 0ms
+    setTimeout(() => {
+      // Double-check that filters are empty
+      if (filters.length > 0) {
+        console.warn('Filters not empty after reset, forcing clear');
+        setFilters([]);
+      }
+    }, 0);
     
     // Clear date picker state through ref
     dateRangePickerRef.current?.clearDateRange();
@@ -1098,7 +1114,7 @@ const ChartFilters = ({
                 </div>
 
             <Switch className="-mt-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>
-            {getActiveFilterCount() === 0 ? 'Vis aktive filter ' : `Vis aktive filter (${getActiveFilterCount()})`}
+            {filters.length === 0 ? 'Vis aktive filter' : `Vis aktive filter (${getActiveFilterCount()})`}
             </Switch>
 
             {activeFilters && (
