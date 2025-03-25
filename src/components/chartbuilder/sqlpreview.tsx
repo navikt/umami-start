@@ -185,7 +185,7 @@ const SQLPreview = ({
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Trykk på ▶️ for å se resultatet</p>
+                  <p className="font-medium">Trykk på <span role="img" aria-label="spill av-knapp">▶️</span> "vis resultater"-knappen</p>
                   <p className="text-md text-gray-700 mt-1">Trykk "visualisering" for å bytte fra tabell til graf</p>
                 </div>
               </div>
