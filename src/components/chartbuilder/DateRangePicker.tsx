@@ -524,7 +524,7 @@ const DateRangePicker = forwardRef(({
                   }`}
                   onClick={() => setRelativeMode('current')}
                 >
-                  Innehverende..
+                  Inneværendee...
                 </button>
               </div>
 
