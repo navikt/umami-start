@@ -690,7 +690,7 @@ const Summarize = ({
                 </Select>
               </div>
               
-              <p className="text-sm text-gray-600">
+              <p className="mt-1 text-sm text-gray-700">
                 <strong>Standard:</strong> sorterer etter første kolonne i synkende rekkefølge.
               </p>
             </div>
