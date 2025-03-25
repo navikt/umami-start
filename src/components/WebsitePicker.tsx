@@ -338,7 +338,7 @@ const WebsitePicker = ({
             </Alert>
           )}
           <UNSAFE_Combobox
-            label="Velg nettside eller app"
+            label={selectedWebsite ? "Nettsider eller app" : "Velg nettside eller app"}
             options={websites.map(website => ({
               label: website.name,
               value: website.name,

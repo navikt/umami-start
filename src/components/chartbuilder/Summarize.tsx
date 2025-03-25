@@ -354,7 +354,7 @@ const Summarize = ({
           {/* Move dropdown to the top */}
           <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
             <Select
-              label="Legg til beregning"
+              label="Målt som"
               description="F.eks. antall, andel, sum, gjennomsnitt, etc."
               onChange={(e) => {
                 if (e.target.value) {
@@ -620,7 +620,7 @@ const Summarize = ({
       {/* Order By section */}
       <div className="border-t pt-4">
         <Heading level="3" size="xsmall" spacing>
-          Visning
+          Visningsvalg
         </Heading>
         <div className="flex flex-col gap-4 pb-4">
           <Switch 
@@ -702,7 +702,7 @@ const Summarize = ({
       {/* Result Limit section */}
       <div>
         <div className="flex flex-col gap-4">
-          <Switch 
+          <Switch className="-mt-1"
             size="small"
             checked={limit !== null}
             onChange={() => setLimit(limit === null ? 10 : null)}

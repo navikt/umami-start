@@ -473,7 +473,7 @@ const ChartFilters = ({
     <section>
       <div className="flex justify-between items-center">
         <Heading level="2" size="small" spacing>
-          Filtervalg
+          Filtrer etter
         </Heading>
         
         {/* Add reset button next to the heading */}
@@ -501,7 +501,7 @@ const ChartFilters = ({
           {/* Improved Filter Suggestions */}
           <div className="mb-6">
             <Heading level="3" size="xsmall" spacing>
-              Type hendelser
+              Type hendelse
             </Heading>
             <div className="flex flex-wrap gap-2 mt-2">
               <button 
@@ -905,7 +905,7 @@ const ChartFilters = ({
 
                 <div>
                 <Heading level="3" size="xsmall" className='mt-2'>
-                  Filter
+                  Filtervalg
                 </Heading>
 
                 <Switch className="mt-1" checked={advancedFilters} onChange={() => setAdvancedFilters(!advancedFilters)}>Legg til flere filter</Switch>
@@ -915,7 +915,7 @@ const ChartFilters = ({
 
                  <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3">
                     <Select
-                      label="Legg til filter"
+                      label="Filtrer etter"
                       description="Legg til et filter for å velge hvilke data grafen/tabellen baseres på."
                       onChange={(e) => {
                         if (e.target.value) {
