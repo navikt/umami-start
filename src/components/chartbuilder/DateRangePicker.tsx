@@ -126,9 +126,9 @@ const DYNAMIC_DATE_RANGES = [
 // Add time unit options
 const TIME_UNITS = [
   { value: 'minute', label: 'Minutter' },
-  { value: 'hour', label: 'Timeer' },
+  { value: 'hour', label: 'Timer' },
   { value: 'day', label: 'Dager' },
-  { value: 'week', label: 'Ukeer' },
+  { value: 'week', label: 'Uker' },
   { value: 'month', label: 'Måneder' },
   { value: 'quarter', label: 'Kvartaler' },
   { value: 'year', label: 'År' }
@@ -206,7 +206,7 @@ const DateRangePicker = forwardRef(({
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
   // Add state for date mode (fixed vs dynamic)
   const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed' | 'interactive'>('frequent');
-  const [relativeMode, setRelativeMode] = useState<'current' | 'previous'>('current');
+  const [relativeMode, setRelativeMode] = useState<'current' | 'previous'>('previous');
   const [selectedUnit, setSelectedUnit] = useState('day');
   const [numberOfUnits, setNumberOfUnits] = useState('1');
   // Add state for interactive mode
@@ -449,7 +449,7 @@ const DateRangePicker = forwardRef(({
   return (
     <div className="mb-6">
       <Heading level="3" size="xsmall" spacing>
-        Datoområde
+        Dato
       </Heading>
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
@@ -506,6 +506,16 @@ const DateRangePicker = forwardRef(({
           <Tabs.Panel value="dynamic" className="pt-6">
             <div className="mb-2">
               <div className="flex gap-2 mb-6">
+              <button
+                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                    relativeMode === 'previous'
+                      ? 'bg-blue-600 text-white border-blue-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setRelativeMode('previous')}
+                >
+                  Forrige...
+                </button>
                 <button
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     relativeMode === 'current'
@@ -514,17 +524,7 @@ const DateRangePicker = forwardRef(({
                   }`}
                   onClick={() => setRelativeMode('current')}
                 >
-                  Nåværende
-                </button>
-                <button
-                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                    relativeMode === 'previous'
-                      ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setRelativeMode('previous')}
-                >
-                  Tidligere
+                  Innehverende..
                 </button>
               </div>
 

@@ -908,7 +908,7 @@ const ChartFilters = ({
                   Filtervalg
                 </Heading>
 
-                <Switch className="mt-1" checked={advancedFilters} onChange={() => setAdvancedFilters(!advancedFilters)}>Legg til flere filter</Switch>
+                <Switch className="mt-1" checked={advancedFilters} onChange={() => setAdvancedFilters(!advancedFilters)}>Legg til flere filtre</Switch>
             
                 {advancedFilters && (
                   <div className="mb-4">
@@ -929,7 +929,7 @@ const ChartFilters = ({
                       size="small"
                       className="flex-grow"
                     >
-                      <option value="">Velg filter...</option>
+                      <option value="">Velg filtre...</option>
                       {Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
                         <optgroup key={groupKey} label={group.label}>
                           {group.columns
@@ -1114,7 +1114,7 @@ const ChartFilters = ({
                 </div>
 
             <Switch className="-mt-1 -mb-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>
-            {filters.length === 0 ? 'Vis aktive filter' : `Vis aktive filter (${getActiveFilterCount()})`}
+            {filters.length === 0 ? 'Vis aktive filtre' : `Vis aktive filter (${getActiveFilterCount()})`}
             </Switch>
 
             {activeFilters && (
@@ -1124,7 +1124,7 @@ const ChartFilters = ({
 
               {filters.length === 0 && (
                 <div className="text-sm text-gray-600">
-                  Ingen aktive filter. Legg til et filter for å få mer spesifikke data.
+                  Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
                 </div>
               )}
 
@@ -1132,7 +1132,7 @@ const ChartFilters = ({
                   <div className="space-y-3">
                     {/* Add a single date range message if any date filters exist */}
                     {filters.some(isDateRangeFilter) && (
-                      <div className="bg-gray-50 p-4 rounded-md border shadow-sm">Datoområde filter er aktivt</div>
+                      <div className="bg-gray-50 p-4 rounded-md border shadow-sm">Datofilter er lagt til</div>
                     )}
                     
                     {/* Only show non-date range filters in the regular filter list */}

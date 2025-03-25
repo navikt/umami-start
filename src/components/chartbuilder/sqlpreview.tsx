@@ -240,9 +240,9 @@ const SQLPreview = ({
           interactiveSteps={false}
         >
           <FormProgress.Step>Velg nettside eller app</FormProgress.Step>
-          <FormProgress.Step>Bruk filtre for å velge data</FormProgress.Step>
-          <FormProgress.Step>Velg gruppering og/eller beregning</FormProgress.Step>
-          <FormProgress.Step>Legg til graf eller tabell i Metabase</FormProgress.Step>
+          <FormProgress.Step>Avgrens med filtre</FormProgress.Step>
+          <FormProgress.Step>Tilpass visningen</FormProgress.Step>
+          <FormProgress.Step>Visualiser i Metabase</FormProgress.Step>
         </FormProgress>
       </div>
 

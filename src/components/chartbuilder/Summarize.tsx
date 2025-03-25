@@ -184,7 +184,7 @@ const Summarize = ({
     <>
     <div className="flex justify-between items-center mb-4">
       <Heading level="2" size="small">
-        Tilpass visning
+        Tilpass visningen
       </Heading>
       
       {/* Add reset button next to the heading */}
