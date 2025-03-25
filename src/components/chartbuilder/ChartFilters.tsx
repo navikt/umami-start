@@ -664,7 +664,7 @@ const ChartFilters = ({
                             handlePathsChange(isSelected ? [option] : [], urlPathOperator);
                           }
                         }}
-                        isMultiSelect={false}
+                        isMultiSelect={true}
                         size="small"
                         clearButton
                         allowNewValues
