@@ -1176,7 +1176,7 @@ const ChartsPage = () => {
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
         Lag grafer og tabeller for Metabase
       </Heading>
-      <p className="text-gray-600 mb-10 prose">
+      <p className="text-gray-600 mb-10 prose text-lg">
         Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
       </p>
 
