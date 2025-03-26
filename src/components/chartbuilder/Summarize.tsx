@@ -447,10 +447,18 @@ const Summarize = ({
               <Button 
                 variant="secondary" 
                 size="small"
+                onClick={() => addConfiguredMetric('distinct', 'event_id', 'Unike hendelser')}
+                icon={<BarChart2 size={16} />}
+              >
+                Unike hendelser
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
                 onClick={() => addConfiguredMetric('count', undefined, 'Totalt antall')}
                 icon={<BarChart2 size={16} />}
               >
-                Totalt antall
+                Hendelser totalt
               </Button>
               <Button 
                 variant="secondary" 
