@@ -786,7 +786,7 @@ const DateRangePicker = forwardRef(({
                     <li>Velg ønsket datoformat under "Filter type"</li>
                     <li>Valgfritt: Legg til en beskrivende etikett og standardverdi (f.eks. "Siste 30 dager")</li>
                   </ol>
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-md text-gray-700 mt-2">
                     Etter oppsett kan du teste filteret direkte i dashbordet.
                   </p>
                 </div>
