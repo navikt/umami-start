@@ -206,15 +206,13 @@ const TaksonomiPage = () => {
               3. Implementer i koden
             </Heading>
             <p>
-              For å implementere sporingen trenger du sporingskoden fra <a href="/teamwebsites" className="text-blue-500 hover:text-blue-700 underline">oversikten over team-nettsider</a>. 
+              For å implementere Umami trenger du en sporingskode. Denne finner du via <a href="/" className="text-blue-500 hover:text-blue-700 underline">Start Umami forsiden</a>. 
               Her er et eksempel på hvordan du kan spore hendelser i tråd med taksonomien:
             </p>
 
             <Box padding="8" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 bg-gray-50">
               <pre className="text-base whitespace-pre-wrap">
-{`// Eksempel med Umamis grensesnitt
-
-// Når en bruker klikker på en knapp
+{`// Når en bruker klikker på en knapp
 function handleKnappKlikk() {
   umami.track('knapp klikket', {
     appNavn: 'dagpengesoknad',
@@ -250,12 +248,9 @@ function handleSkjemaSendt() {
               Sjekk alltid at hendelsene blir registrert riktig i Umami.
             </p>
             
-            <ol className="space-y-3 list-decimal pl-5">
+            <ol className="space-y-3 list-disc pl-5">
               <li>
-                <strong>Se i Metabase</strong> at hendelsene vises med riktige navn og egenskaper
-              </li>
-              <li>
-                <strong>Bruk Grafbygger</strong> til å sjekke at du kan lage de rapportene du trenger
+                <strong><a href="/teamwebsites" className="text-blue-500 hover:text-blue-700 underline">Bruk Grafbygger</a></strong> til å sjekke at du kan lage de rapportene du trenger
               </li>
               <li>
                 <strong>Del med teamet</strong> for å sikre at alle forstår hva som spores og hvorfor
