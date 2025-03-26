@@ -208,9 +208,8 @@ const DateRangePicker = forwardRef(({
   const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed' | 'interactive'>('frequent');
   const [relativeMode, setRelativeMode] = useState<'current' | 'previous'>('previous');
   const [selectedUnit, setSelectedUnit] = useState('day');
-  const [numberOfUnits, setNumberOfUnits] = useState('1');
-  // Add state for interactive mode
-  // const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
+  // Change default value to 30 instead of 1
+  const [numberOfUnits, setNumberOfUnits] = useState('30');
 
   const hasDateFilter = (): boolean => {
     return filters.some(filter => filter.column === 'created_at');
@@ -446,6 +445,19 @@ const DateRangePicker = forwardRef(({
     }
   };
 
+  // Add function to handle relative filter removal
+  const removeRelativeFilter = () => {
+    // Remove date filters
+    const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+    setFilters(filtersWithoutDate);
+    
+    // Reset UI state
+    setSelectedDateRange('all');
+    
+    // Keep the current inputs but don't apply them
+    // We're just removing the active filter
+  };
+
   return (
     <div className="mb-6">
       <Heading level="3" size="xsmall" spacing>
@@ -617,6 +629,43 @@ const DateRangePicker = forwardRef(({
                       ))}
                     </select>
                   </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={() => {
+                        const sql = generatePreviousPeriodSQL(numberOfUnits, selectedUnit);
+                        const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
+                        setFilters([
+                          ...filtersWithoutDate,
+                          {
+                            column: 'created_at',
+                            operator: '>=',
+                            value: sql.fromSQL,
+                            dateRangeType: 'dynamic'
+                          },
+                          {
+                            column: 'created_at',
+                            operator: '<=',
+                            value: sql.toSQL,
+                            dateRangeType: 'dynamic'
+                          }
+                        ]);
+                      }}
+                    >
+                      Bruk
+                    </Button>
+                    <Button
+                      variant="tertiary"
+                      size="small"
+                      onClick={() => {
+                        // Change to clear filters like the "Fjern datoer" button
+                        removeRelativeFilter();
+                      }}
+                    >
+                      Fjern
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -657,12 +706,12 @@ const DateRangePicker = forwardRef(({
                 </div>
                 {selectedRange?.from && (
                   <Button
-                    variant="secondary"
+                    variant="tertiary"
                     size="small"
                     onClick={clearDateRange}
                     className="mb-[2px]"
                   >
-                    Fjern datoer
+                    Fjern
                   </Button>
                 )}
               </div>

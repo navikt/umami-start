@@ -1,6 +1,6 @@
 import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
-import { MoveUp, MoveDown } from 'lucide-react';
-import { useState, useEffect } from 'react'; // Add useState and useEffect
+import { MoveUp, MoveDown, Users, BarChart2, PieChart, Percent } from 'lucide-react'; // Added icon imports
+import { useState, useEffect } from 'react'; 
 import { 
   Parameter, 
   Metric, 
@@ -180,6 +180,23 @@ const Summarize = ({
     updateSortOrderIfNeeded();
   }, [metrics.length]);
 
+  // Add helper function for quick metric addition
+  const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
+    // Get the new metric index (after the metric is added)
+    const newIndex = metrics.length;
+    
+    // First add the basic metric
+    addMetric(metricType);
+    
+    // Then update with specific configuration using setTimeout to ensure the metric was added
+    setTimeout(() => {
+      const updates: Partial<Metric> = {};
+      if (column) updates.column = column;
+      if (alias) updates.alias = alias;
+      updateMetric(newIndex, updates);
+    }, 0);
+  };
+
   return (
     <>
     <div className="flex justify-between items-center mb-4">
@@ -351,10 +368,51 @@ const Summarize = ({
       </div>
         
         <div className="space-y-4 mb-6">
-          {/* Move dropdown to the top */}
+          {/* Add quick metric buttons */}
+          <div className="mb-2">
+            <Label as="p" size="small" className="mb-2">
+              Legg til vanlige beregninger:
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike besøkende')}
+                icon={<Users size={16} />}
+              >
+                Unike besøkende
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addConfiguredMetric('count', undefined, 'Totalt antall')}
+                icon={<BarChart2 size={16} />}
+              >
+                Totalt antall
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel av resultater')}
+                icon={<PieChart size={16} />}
+              >
+                Andel av besøkende 
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel av totalen')}
+                icon={<Percent size={16} />}
+              >
+                Andel besøkende av totalen
+              </Button>
+            </div>
+          </div>
+          
+          {/* Original dropdown for advanced metrics */}
           <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
             <Select
-              label="Målt som"
+              label="Eller velg en annen beregning"
               description="F.eks. antall, andel, sum, gjennomsnitt, etc."
               onChange={(e) => {
                 if (e.target.value) {
