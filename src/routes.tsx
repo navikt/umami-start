@@ -7,6 +7,7 @@ import Combine from "./pages/Combine.tsx";
 import Explore from "./pages/Explore.tsx";
 import Copilot from "./pages/Copilot.tsx";
 import Validator from "./pages/Validator.tsx";
+import Taksonomi from "./pages/Taksonomi.tsx";
 import Charts from "./pages/Chartbuilder.tsx";
 
 const routes = [
@@ -18,6 +19,7 @@ const routes = [
     { path: "/datastruktur", component: <Explore /> },
     { path: "/copilot", component: <Copilot /> },
     { path: "/validator", component: <Validator /> },
+    { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> }
 ];
 

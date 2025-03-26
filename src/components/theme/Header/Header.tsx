@@ -3,6 +3,7 @@ import {
   BookIcon,
   CodeIcon,
   AreaChartIcon,
+  BulletListIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
@@ -60,6 +61,14 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
+                href="/taksonomi"
+                className="no-underline"
+              >
+                <BulletListIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Taksonomi</span>
+              </Dropdown.Menu.List.Item>
+              <Dropdown.Menu.List.Item
+                as={Link}
                 href="https://umami.is/docs"
                 className="no-underline"
               >
@@ -95,6 +104,13 @@ export default function Header() {
             >
               <AreaChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Lag grafer</span>
+            </Link>
+            <Link
+              href="/taksonomi"
+              className={linkButton}
+            >
+              <BulletListIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Taksonomi</span>
             </Link>
             <Link
               href="https://umami.is/docs"
