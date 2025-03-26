@@ -240,7 +240,7 @@ const Summarize = ({
         
         <div className="space-y-4 mb-6">
           {/* Add quick grouping buttons */}
-          <div className="mb-2">
+          <div className="pb-1">
             <Label as="p" size="small" className="mb-2">
               Legg til vanlige grupperinger:
             </Label>
@@ -431,7 +431,7 @@ const Summarize = ({
         
         <div className="space-y-4 mb-6">
           {/* Add quick metric buttons */}
-          <div className="mb-2">
+          <div className="pb-1">
             <Label as="p" size="small" className="mb-2">
               Legg til vanlige beregninger:
             </Label>
