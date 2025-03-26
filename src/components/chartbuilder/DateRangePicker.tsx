@@ -234,13 +234,56 @@ const DateRangePicker = forwardRef(({
     return { fromSQL: fromSql, toSQL: toSql };
   };
 
-  // Function to generate SQL for previous periods
+  // Function to generate SQL for previous periods - updated for better BigQuery compatibility
   const generatePreviousPeriodSQL = (amount: string, unit: string): { fromSQL: string, toSQL: string } => {
-    const normalizedUnit = unit.toUpperCase();
-    return {
-      fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} ${normalizedUnit})`,
-      toSQL: `CURRENT_TIMESTAMP()`
-    };
+    // Handle different time units correctly for BigQuery
+    switch(unit.toLowerCase()) {
+      case 'minute':
+        return {
+          fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} MINUTE)`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      case 'hour':
+        return {
+          fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} HOUR)`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      case 'day':
+        return {
+          fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} DAY)`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      case 'week':
+        // For weeks, we need to use DATE_SUB with DATE_TRUNC
+        return {
+          fromSQL: `TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL ${amount} WEEK))`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      case 'month':
+        // For months, use DATE_SUB with DATE_TRUNC
+        return {
+          fromSQL: `TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL ${amount} MONTH))`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      case 'quarter':
+        // For quarters (3 months)
+        return {
+          fromSQL: `TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL ${Number(amount) * 3} MONTH))`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      case 'year':
+        // For years, use DATE_SUB with DATE_TRUNC
+        return {
+          fromSQL: `TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL ${amount} YEAR))`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+      default:
+        // Default to days if unit not recognized
+        return {
+          fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} DAY)`,
+          toSQL: `CURRENT_TIMESTAMP()`
+        };
+    }
   };
 
   // Apply a custom date range picked from the calendar
