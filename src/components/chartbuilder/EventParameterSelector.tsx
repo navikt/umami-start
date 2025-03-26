@@ -366,64 +366,10 @@ const getGroupedParameters = () => {
           </ExpansionCard.Header>
           <ExpansionCard.Content>
             <VStack gap="6">
-            
-              {/* Parameters Section - Only shown when events are selected and not loading */}
-              {!isLoadingParameters && (
+                        {/* Parameters Section - Only shown when events are selected and not loading */}
+                        {!isLoadingParameters && (
                 <Box borderRadius="medium">
-                  <Heading level="3" size="xsmall" spacing>
-                     Standard hendelser og detaljer
-                  </Heading>
-                  <p className="text-md text-gray-700 mb-4">
-                    Sidevisninger spores automatisk med mindre dette er skrudd av. 
-                  </p>
-          
-                  <ExpansionCard aria-label="Detaljer som følger med hendelser" size="small">
-                    <ExpansionCard.Header>
-                    <ExpansionCard.Title as="h3" size="small">
-                      <span className="items-center gap-2">
-                        <BodyShort weight="semibold">Detaljer som følger med hendelser</BodyShort>
-                        <span className="text-sm text-gray-600">
-                          {Object.values(FILTER_COLUMNS).reduce((sum, group) => {
-                            const filteredColumns = group.columns.filter(col => !EXCLUDED_PARAMS.includes(col.value));
-                            return sum + filteredColumns.length;
-                          }, 0)} detaljer
-                        </span>
-                      </span>
-                      </ExpansionCard.Title>
-                    </ExpansionCard.Header>
-                    <ExpansionCard.Content>
-                      <VStack gap="3">
-                        <div className="flex flex-col gap-3">
-                          {/* Map through FILTER_COLUMNS categories */}
-                          {Object.entries(FILTER_COLUMNS).map(([key, group]) => (
-                            <div key={key}>
-                              <div className="mb-2">
-                                <BodyShort weight="semibold">{group.label}</BodyShort>
-                              </div>
-                              {group.columns
-                                .filter(column => !EXCLUDED_PARAMS.includes(column.value))
-                                .map(column => (
-                                  <div 
-                                    key={column.value}
-                                    className="flex items-center justify-between p-3 bg-white rounded border mb-2"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{column.label}</span>
-                                      <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
-                                    </div>
-                                    <HStack gap="2">
-                                      <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
-                                    </HStack>
-                                  </div>
-                                ))}
-                            </div>
-                          ))}
-                        </div>
-                      </VStack>
-                    </ExpansionCard.Content>
-                  </ExpansionCard>
-
-                  <Heading level="3" size="xsmall" spacing className="mt-8">
+                  <Heading level="3" size="xsmall" spacing className="mt-3">
                      Egendefinerte hendelser og detaljer
                   </Heading>
 
@@ -435,8 +381,8 @@ const getGroupedParameters = () => {
 
                   {/* Continue with existing Alert for no events */}
                   {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
-                    <Alert variant="info" inline className="mt-3">
-                      Ingen egendefinerte hendelser eller detaljer funnet. Mangler noen? Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
+                    <Alert variant="info" className="mt-3">
+                      Ingen egendefinerte hendelser eller detaljer funnet. Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                     </Alert>
                   )}
 
@@ -507,13 +453,67 @@ const getGroupedParameters = () => {
                       <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                     </BodyShort>
                   )}
+
+                  <Heading level="3" size="xsmall" spacing className="mt-6">
+                     Standard hendelser og detaljer
+                  </Heading>
+                  <p className="text-md text-gray-700 mb-4">
+                    Sidevisninger spores automatisk med mindre dette er skrudd av. 
+                  </p>
+          
+                  <ExpansionCard aria-label="Detaljer som følger med hendelser" size="small">
+                    <ExpansionCard.Header>
+                    <ExpansionCard.Title as="h3" size="small">
+                      <span className="items-center gap-2">
+                        <BodyShort weight="semibold">Detaljer som følger med hendelser</BodyShort>
+                        <span className="text-sm text-gray-600">
+                          {Object.values(FILTER_COLUMNS).reduce((sum, group) => {
+                            const filteredColumns = group.columns.filter(col => !EXCLUDED_PARAMS.includes(col.value));
+                            return sum + filteredColumns.length;
+                          }, 0)} detaljer
+                        </span>
+                      </span>
+                      </ExpansionCard.Title>
+                    </ExpansionCard.Header>
+                    <ExpansionCard.Content>
+                      <VStack gap="3">
+                        <div className="flex flex-col gap-3">
+                          {/* Map through FILTER_COLUMNS categories */}
+                          {Object.entries(FILTER_COLUMNS).map(([key, group]) => (
+                            <div key={key}>
+                              <div className="mb-2">
+                                <BodyShort weight="semibold">{group.label}</BodyShort>
+                              </div>
+                              {group.columns
+                                .filter(column => !EXCLUDED_PARAMS.includes(column.value))
+                                .map(column => (
+                                  <div 
+                                    key={column.value}
+                                    className="flex items-center justify-between p-3 bg-white rounded border mb-2"
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{column.label}</span>
+                                      <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
+                                    </div>
+                                    <HStack gap="2">
+                                      <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
+                                    </HStack>
+                                  </div>
+                                ))}
+                            </div>
+                          ))}
+                        </div>
+                      </VStack>
+                    </ExpansionCard.Content>
+                  </ExpansionCard>
+
  
                 </Box>
               )}
 
               {/* Date Range Settings - Moved from WebsitePicker */}
               <div>
-                <ReadMore className="-mt-2" header="Innstillinger for hendelsesinnlasting">
+                <ReadMore className="mt-0" header="Innstillinger for hendelsesinnlasting">
                   <div className="space-y-4 mt-4">
                     <div className="text-sm">
                       Endre tidsperioden for å hente hendelser og detaljer fra en tidligere dato.
