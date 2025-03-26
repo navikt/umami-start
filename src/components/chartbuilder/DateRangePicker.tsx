@@ -1,4 +1,4 @@
-import { Heading, DatePicker, Tabs, ExpansionCard, Button } from '@navikt/ds-react';
+import { Heading, DatePicker, Tabs, ExpansionCard, Button, Alert } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
 import { Filter } from '../../types/chart';
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -210,6 +210,9 @@ const DateRangePicker = forwardRef(({
   const [selectedUnit, setSelectedUnit] = useState('day');
   // Change default value to 30 instead of 1
   const [numberOfUnits, setNumberOfUnits] = useState('30');
+
+  // Add state for filter applied alert
+  const [showFilterApplied, setShowFilterApplied] = useState<boolean>(false);
 
   const hasDateFilter = (): boolean => {
     return filters.some(filter => filter.column === 'created_at');
@@ -458,6 +461,14 @@ const DateRangePicker = forwardRef(({
     // We're just removing the active filter
   };
 
+  // Add function to show the success alert temporarily
+  const showSuccessAlert = () => {
+    setShowFilterApplied(true);
+    setTimeout(() => {
+      setShowFilterApplied(false);
+    }, 7000); // Hide after 7 seconds
+  };
+
   return (
     <div className="mb-6">
       <Heading level="3" size="xsmall" spacing>
@@ -465,6 +476,7 @@ const DateRangePicker = forwardRef(({
       </Heading>
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
+      
         {/* Replace button-based navigation with Tabs */}
         <Tabs 
           value={dateMode} 
@@ -628,6 +640,7 @@ const DateRangePicker = forwardRef(({
                         </option>
                       ))}
                     </select>
+
                   </div>
                   <div className="flex gap-2 mt-2">
                     <Button
@@ -651,6 +664,9 @@ const DateRangePicker = forwardRef(({
                             dateRangeType: 'dynamic'
                           }
                         ]);
+                        
+                        // Show success alert when filter is applied
+                        showSuccessAlert();
                       }}
                     >
                       Bruk
@@ -669,6 +685,12 @@ const DateRangePicker = forwardRef(({
                 </div>
               )}
             </div>
+                    {/* Show success alert when filter is applied */}
+        {showFilterApplied && (
+          <Alert variant="success" size="small" className="mt-4 mb-4">
+            Datovalget er lagt til som et filter
+          </Alert>
+        )}
           </Tabs.Panel>
           
           {/* Fixed dates panel with DatePicker */}
