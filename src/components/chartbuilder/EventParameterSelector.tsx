@@ -373,7 +373,7 @@ const getGroupedParameters = () => {
                   <Heading level="3" size="xsmall" spacing>
                      Standard hendelser og detaljer
                   </Heading>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-md text-gray-700 mb-4">
                     Sidevisninger spores automatisk med mindre dette er skrudd av. 
                   </p>
           
@@ -428,7 +428,7 @@ const getGroupedParameters = () => {
                   </Heading>
 
                   {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <BodyShort size="small" spacing className="text-gray-600 pt-1 pb-3">
+                    <BodyShort size="small" spacing className="text-gray-700 text-md pt-1 pb-3">
                       Detaljer er forhåndsatt som tekst. Du kan endre til tall der det er relevant.
                     </BodyShort>
                   )}
@@ -503,7 +503,7 @@ const getGroupedParameters = () => {
                   )}
 
                   {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <BodyShort size="small" spacing className="text-gray-600 mt-6">
+                    <BodyShort size="small" spacing className="text-md text-gray-700 mt-6">
                       <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
                     </BodyShort>
                   )}
@@ -513,7 +513,7 @@ const getGroupedParameters = () => {
 
               {/* Date Range Settings - Moved from WebsitePicker */}
               <div>
-                <ReadMore className="-mt-4" header="Innstillinger for hendelsesinnlasting">
+                <ReadMore className="-mt-2" header="Innstillinger for hendelsesinnlasting">
                   <div className="space-y-4 mt-4">
                     <div className="text-sm">
                       Endre tidsperioden for å hente hendelser og detaljer fra en tidligere dato.
@@ -557,7 +557,7 @@ const getGroupedParameters = () => {
 
               {/* Add Custom Parameters Section - Only when not loading */}
               {!isLoadingParameters && (
-                <div className="-mt-4">
+                <div className="-mt-4 mb-2">
                   <ReadMore 
                     header="Legg til hendelsesdetaljer manuelt" 
                     defaultOpen={customParamAccordionOpen}
