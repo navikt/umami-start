@@ -235,8 +235,8 @@ const DateRangePicker = forwardRef(({
   const generatePreviousPeriodSQL = (amount: string, unit: string): { fromSQL: string, toSQL: string } => {
     const normalizedUnit = unit.toUpperCase();
     return {
-      fromSQL: `TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), ${normalizedUnit}), INTERVAL ${amount} ${normalizedUnit}))`,
-      toSQL: `TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), ${normalizedUnit}))`
+      fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} ${normalizedUnit})`,
+      toSQL: `CURRENT_TIMESTAMP()`
     };
   };
 
