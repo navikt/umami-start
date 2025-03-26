@@ -71,6 +71,10 @@ const Summarize = ({
     show: false,
     message: ''
   });
+  
+  // Add state for showing advanced options
+  const [showAdvancedGrouping, setShowAdvancedGrouping] = useState<boolean>(false);
+  const [showAdvancedCalculations, setShowAdvancedCalculations] = useState<boolean>(false);
 
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -280,46 +284,58 @@ const Summarize = ({
             </div>
           </div>
           
-          {/* Original dropdown for other groupings */}
-          <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-            <Select
-              label="Eller velg en annen gruppering"
-              description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
-              onChange={(e) => {
-                if (e.target.value) {
-                  addGroupByField(e.target.value);
-                  (e.target as HTMLSelectElement).value = '';
-                }
-              }}
-              size="small"
-              className="flex-grow"
-            >
-              <option value="">Velg gruppering...</option>
-              {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                <optgroup key={groupKey} label={group.label}>
-                  {group.columns
-                    .filter(col => !groupByFields.includes(col.value))
-                    .map(col => (
-                      <option key={col.value} value={col.value}>
-                        {col.label}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-              
-              {uniqueParameters.length > 0 && (
-                <optgroup label="Egendefinerte">
-                  {uniqueParameters
-                    .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
-                    .map(param => (
-                      <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                        {param.key}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </Select>
-          </div>
+          {/* Switch for showing advanced grouping options */}
+          <Switch 
+            className="mt-2"
+            size="small"
+            checked={showAdvancedGrouping} 
+            onChange={() => setShowAdvancedGrouping(!showAdvancedGrouping)}
+          >
+            Vis alle grupperingsvalg
+          </Switch>
+          
+          {/* Original dropdown for other groupings - now conditional */}
+          {showAdvancedGrouping && (
+            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+              <Select
+                label="Grupper etter"
+                description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
+                onChange={(e) => {
+                  if (e.target.value) {
+                    addGroupByField(e.target.value);
+                    (e.target as HTMLSelectElement).value = '';
+                  }
+                }}
+                size="small"
+                className="flex-grow"
+              >
+                <option value="">Velg gruppering...</option>
+                {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                  <optgroup key={groupKey} label={group.label}>
+                    {group.columns
+                      .filter(col => !groupByFields.includes(col.value))
+                      .map(col => (
+                        <option key={col.value} value={col.value}>
+                          {col.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+                
+                {uniqueParameters.length > 0 && (
+                  <optgroup label="Egendefinerte">
+                    {uniqueParameters
+                      .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
+                      .map(param => (
+                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                          {param.key}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </Select>
+            </div>
+          )}
 
           {groupByFields.length > 0 && (
             <div className="space-y-2">
@@ -455,41 +471,53 @@ const Summarize = ({
             </div>
           </div>
           
-          {/* Original dropdown for advanced metrics */}
-          <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
-            <Select
-              label="Eller velg en annen beregning"
-              description="F.eks. antall, andel, sum, gjennomsnitt, etc."
-              onChange={(e) => {
-                if (e.target.value) {
-                  // Add the metric
-                  addMetric(e.target.value);
-                  
-                  // If it's a percentage metric, set default column to 'visitors' (Besøkende)
-                  if (e.target.value === 'percentage' || e.target.value === 'andel') {
-                    // Get the index of the newly added metric (it will be the last one)
-                    const newIndex = metrics.length; // This will be the index after addMetric completes
+          {/* Switch for showing advanced calculation options */}
+          <Switch 
+            className="mt-2"
+            size="small"
+            checked={showAdvancedCalculations} 
+            onChange={() => setShowAdvancedCalculations(!showAdvancedCalculations)}
+          >
+            Vis alle beregningsvalg
+          </Switch>
+          
+          {/* Original dropdown for advanced metrics - now conditional */}
+          {showAdvancedCalculations && (
+            <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
+              <Select
+                label="Målt som"
+                description="F.eks. antall, andel, sum, gjennomsnitt, etc."
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // Add the metric
+                    addMetric(e.target.value);
                     
-                    // Set timeout to let the addMetric finish processing
-                    setTimeout(() => {
-                      updateMetric(newIndex, { column: 'session_id' });
-                    }, 0);
+                    // If it's a percentage metric, set default column to 'visitors' (Besøkende)
+                    if (e.target.value === 'percentage' || e.target.value === 'andel') {
+                      // Get the index of the newly added metric (it will be the last one)
+                      const newIndex = metrics.length; // This will be the index after addMetric completes
+                      
+                      // Set timeout to let the addMetric finish processing
+                      setTimeout(() => {
+                        updateMetric(newIndex, { column: 'session_id' });
+                      }, 0);
+                    }
+                    
+                    (e.target as HTMLSelectElement).value = '';
                   }
-                  
-                  (e.target as HTMLSelectElement).value = '';
-                }
-              }}
-              size="small"
-              className="w-full"
-            >
-              <option value="">Velg beregning...</option>
-              {METRICS.map(metric => (
-                <option key={metric.value} value={metric.value}>
-                  {metric.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+                }}
+                size="small"
+                className="w-full"
+              >
+                <option value="">Velg beregning...</option>
+                {METRICS.map(metric => (
+                  <option key={metric.value} value={metric.value}>
+                    {metric.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
 
           {metrics.map((metric, index) => (
             <div key={index} className="flex flex-col bg-white p-3 rounded-md border">
