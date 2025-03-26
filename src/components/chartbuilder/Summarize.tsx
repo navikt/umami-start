@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
-import { MoveUp, MoveDown, Users, BarChart2, PieChart, Percent } from 'lucide-react'; // Added icon imports
+import { MoveUp, MoveDown, Users, BarChart2, PieChart, Percent, Calendar, Link2, Activity, Smartphone } from 'lucide-react'; // Added more icon imports
 import { useState, useEffect } from 'react'; 
 import { 
   Parameter, 
@@ -226,18 +226,64 @@ const Summarize = ({
         {/* Group By section */} 
 
         <div className="flex items-center gap-2 mb-4">
-        <Heading level="3" size="xsmall" >
-          Gruppering
-        </Heading>
-        <HelpText title="Hva er en gruppering?">
-          Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
-        </HelpText>
-      </div>
+          <Heading level="3" size="xsmall" >
+            Gruppering
+          </Heading>
+          <HelpText title="Hva er en gruppering?">
+            Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
+          </HelpText>
+        </div>
         
         <div className="space-y-4 mb-6">
+          {/* Add quick grouping buttons */}
+          <div className="mb-2">
+            <Label as="p" size="small" className="mb-2">
+              Legg til vanlige grupperinger:
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addGroupByField('created_at')}
+                icon={<Calendar size={16} />}
+                disabled={groupByFields.includes('created_at')}
+              >
+                Dato
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addGroupByField('url_path')}
+                icon={<Link2 size={16} />}
+                disabled={groupByFields.includes('url_path')}
+              >
+                URL-sti
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addGroupByField('event_name')}
+                icon={<Activity size={16} />}
+                disabled={groupByFields.includes('event_name')}
+              >
+                Hendelsesnavn
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addGroupByField('device')}
+                icon={<Smartphone size={16} />}
+                disabled={groupByFields.includes('device')}
+              >
+                Enhet
+              </Button>
+            </div>
+          </div>
+          
+          {/* Original dropdown for other groupings */}
           <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
             <Select
-              label="Grupper etter"
+              label="Eller velg en annen gruppering"
               description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
               onChange={(e) => {
                 if (e.target.value) {
