@@ -176,7 +176,7 @@ const SQLPreview = ({
                   className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
                 >
                   Åpne Metabase <ExternalLink size={14} />
-                </Link>
+                </Link> (Merk: Hvis siden "Velg dine startdata" vises, lukk den og klikk på lenken på nytt.)
               </div>
             </div>
 
