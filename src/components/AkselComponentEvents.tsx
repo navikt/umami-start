@@ -208,9 +208,9 @@ const ComponentAccordion = ({ component }: { component: { component: string; eve
       </Accordion.Header>
       <Accordion.Content>
         {component.events.map((event, eventIndex) => (
-          <div key={event.name} className={eventIndex > 0 ? 'mt-8' : ''}>
-            <Tag variant="info"className="mt-2" size="medium">{event.name}</Tag>
-            <Table className="mt-6" size="small">
+          <div key={event.name} className={eventIndex > 0 ? 'mt-10' : 'mt-2'}>
+            <span className='text-xl '><strong>Hendelse: </strong> {event.name}</span>
+            <Table className="mt-5" size="small">
               <Table.Header>
                 <Table.Row>
                   <Table.HeaderCell>Detalj</Table.HeaderCell>
