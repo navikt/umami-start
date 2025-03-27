@@ -52,7 +52,11 @@ function Komigang() {
                     <strong>Sporingskode:</strong> <Link target="_blank"
                                                          href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Kontakt
                     Team ResearchOps</Link> for å få sporingskode til nettsiden eller appen din.
-                    .
+                </List.Item>
+                <List.Item>
+                    <strong>Taksonomi:</strong> <Link target="_blank"
+                                                         href={`/taksonomi`}>Bruk Navs taksnomi
+                    </Link> for å få forslag til hva man kan kalle hendelser og detaljer.
                 </List.Item>
                 <List.Item>
                     <strong>Målesjekk:</strong> Sjekk at dataene blir samlet inn riktig. Gjør en målesjekk på nettsiden
@@ -91,7 +95,6 @@ function Komigang() {
                         href={"/grafbygger"}>Grafbyggeren:</Link></strong> Bygg grafer og modeller for Metabase.
                 </List.Item>
             </List>
-
             <List as="ul" title="Flere Metabase verktøy" className="pt-4">
                 <List.Item>
                     <strong><Link
