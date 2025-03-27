@@ -41,8 +41,7 @@ const TaksonomiPage = () => {
               tjenestene våre brukes.
             </p>
             
-            <Box 
-              padding="6" 
+            <Box className='px-8'
               borderWidth="1" 
               borderRadius="medium" 
               borderColor="border-info" 
