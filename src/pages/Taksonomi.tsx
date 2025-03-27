@@ -32,7 +32,13 @@ const TaksonomiPage = () => {
               tjenestene våre brukes.
             </p>
             
-            <Alert variant="info">
+            <Box 
+              padding="6" 
+              borderWidth="1" 
+              borderRadius="medium" 
+              borderColor="border-info" 
+              background="surface-info-subtle"
+            >
               <Heading size="small" level="3">
                 Dette får du med taksonomien
               </Heading>
@@ -42,7 +48,7 @@ const TaksonomiPage = () => {
                 <li>Lettere å forstå hva hendelsene betyr</li>
                 <li>Mulig å gjenbruke kode på tvers av team</li>
               </ul>
-            </Alert>
+            </Box>
           </section>
 
           {/* Event Naming Standards - Updated to Norwegian approach */}
