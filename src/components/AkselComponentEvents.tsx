@@ -299,9 +299,7 @@ const AkselComponentEvents = () => {
         Hendelser og detaljer for Aksel-komponenter
       </Heading>
       <p className="mb-6">
-        For å sikre konsistent sporing på tvers av team når du bruker Aksel-komponenter, 
-        anbefaler vi følgende hendelsesnavn og detaljer. Dette gjør det lettere å analysere 
-        hvordan komponentene brukes og fungerer.
+      For enhetlig sporing på tvers av team ved bruk av Aksel-komponenter, anbefaler vi disse hendelsesnavnene og detaljene. Dette forenkler analysearbeidet.
       </p>
 
       <Box 
@@ -316,7 +314,6 @@ const AkselComponentEvents = () => {
           label="Søk" 
           size="medium"
           variant="simple"
-          placeholder="F.eks. Button, Modal, accordion åpnet..."
           onChange={handleSearchChange}
           onClear={() => setSearchTerm("")}
           value={searchTerm}
