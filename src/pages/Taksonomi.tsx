@@ -24,7 +24,7 @@ const TaksonomiPage = () => {
       <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8">
         <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
         <a href="#aksel-komponenter" className="text-blue-500 hover:text-blue-700 underline flex items-center gap-1">
-        Anbefalte hendelser og detaljer for Aksel-komponenter 
+        Anbefalte hendelsesnavn og detaljer for Aksel-komponenter 
           </a>
       </Box>
 
