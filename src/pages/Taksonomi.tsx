@@ -260,7 +260,7 @@ function handleSkjemaSendt() {
           {/* Verification section */}
           <section>
             <Heading level="2" size="medium" spacing>
-              5. Test og verifiser
+              Test og verifiser
             </Heading>
             <p>
               Sjekk alltid at hendelsene blir registrert riktig i Umami.
