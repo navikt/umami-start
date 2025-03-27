@@ -296,7 +296,7 @@ const AkselComponentEvents = () => {
   return (
     <section id="aksel-komponenter">
       <Heading level="2" size="medium" spacing>
-        Hendelser og detaljer for Aksel-komponenter
+        Hendelsesnavn og detaljer for Aksel-komponenter
       </Heading>
       <p className="mb-6">
       For enhetlig sporing på tvers av team ved bruk av Aksel-komponenter, anbefaler vi disse hendelsesnavnene og detaljene. Dette forenkler analysearbeidet.
