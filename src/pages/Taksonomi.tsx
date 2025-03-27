@@ -7,6 +7,7 @@ import {
   ReadMore,
 } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
+import AkselComponentEvents from '../components/AkselComponentEvents';
 
 const TaksonomiPage = () => {
   return (
@@ -18,6 +19,14 @@ const TaksonomiPage = () => {
       <p className="text-gray-600 mb-8 text-xl leading-relaxed">
         En guide til hvordan du navngir hendelser i Umami for å sikre gode analyser.
       </p>
+
+      {/* Add quick links */}
+      <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8">
+        <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
+        <a href="#aksel-komponenter" className="text-blue-500 hover:text-blue-700 underline flex items-center gap-1">
+        Anbefalte hendelser og detaljer for Aksel-komponenter 
+          </a>
+      </Box>
 
       <div className="prose max-w-full prose-lg">
         <VStack gap="12">
@@ -51,10 +60,10 @@ const TaksonomiPage = () => {
             </Box>
           </section>
 
-          {/* Event Naming Standards - Updated to Norwegian approach */}
+          {/* Event Naming Standards */}
           <section>
             <Heading level="2" size="medium" spacing>
-              1. Slik navngir du hendelser
+              Slik navngir du hendelser
             </Heading>
             <p>
               Når du sporer hendelser i Umami, bruk naturlig språk som beskriver hva 
@@ -122,10 +131,10 @@ const TaksonomiPage = () => {
             </ReadMore>
           </section>
 
-          {/* Parameters Section - Updated with better Norwegian */}
+          {/* Parameters Section */}
           <section>
             <Heading level="2" size="medium" spacing>
-              2. Slik navngir du hendelsesdetaljer
+              Slik navngir du hendelsesdetaljer
             </Heading>
             <p>
               For å gi mer kontekst til hendelsene kan du legge til ekstra informasjon. 
@@ -206,10 +215,13 @@ const TaksonomiPage = () => {
             </ReadMore>
           </section>
 
-          {/* Implementation in Umami - Updated to use official Umami approach */}
+          {/* Aksel Components Section - now imported from the separate file */}
+          <AkselComponentEvents />
+
+          {/* Implementation in Umami */}
           <section>
             <Heading level="2" size="medium" spacing>
-              3. Implementer i koden
+              Implementer i koden
             </Heading>
             <p>
               For å implementere Umami trenger du en sporingskode. Denne finner du via <a href="/" className="text-blue-500 hover:text-blue-700 underline">Start Umami forsiden</a>. 
@@ -245,10 +257,10 @@ function handleSkjemaSendt() {
             </Alert>
           </section>
 
-          {/* Updated verification section with better Norwegian terms */}
+          {/* Verification section */}
           <section>
             <Heading level="2" size="medium" spacing>
-              4. Test og verifiser
+              5. Test og verifiser
             </Heading>
             <p>
               Sjekk alltid at hendelsene blir registrert riktig i Umami.
