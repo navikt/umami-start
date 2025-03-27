@@ -2,8 +2,8 @@ import {
   MenuHamburgerIcon,
   BookIcon,
   CodeIcon,
+  ComponentIcon,
   AreaChartIcon,
-  BulletListIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
@@ -64,7 +64,7 @@ export default function Header() {
                 href="/taksonomi"
                 className="no-underline"
               >
-                <BulletListIcon aria-hidden fontSize="1.5rem" />
+                <ComponentIcon aria-hidden fontSize="1.5rem" />
                 <span className="whitespace-nowrap">Taksonomi</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
@@ -109,7 +109,7 @@ export default function Header() {
               href="/taksonomi"
               className={linkButton}
             >
-              <BulletListIcon aria-hidden fontSize="1.5rem" />
+              <ComponentIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Taksonomi</span>
             </Link>
             <Link
