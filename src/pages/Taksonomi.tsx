@@ -159,7 +159,7 @@ const TaksonomiPage = () => {
               Tenk gjennom hvilke spørsmål du vil kunne svare på med dataene.
             </Alert>
             
-            <ReadMore header="Se flere eksempler på ekstra informasjon" className="mt-6 prose-lg">
+            <ReadMore header="Se flere hendelsesdetaljer du kan bruke" className="mt-6 prose-lg">
               <Table size="medium">
                 <Table.Header>
                   <Table.Row>
