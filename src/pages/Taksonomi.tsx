@@ -143,14 +143,14 @@ const TaksonomiPage = () => {
             <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4">
               <p className="font-medium">Navnestruktur:</p>
               <p className="italic">Bruk to eller flere ord der første ordet starter med liten bokstav og de neste med stor.</p>
-              <p className="mt-2">For eksempel: <code>appNavn</code>, <code>skjemaType</code>, <code>knappTekst</code></p>
+              <p className="mt-2">For eksempel: <code>appNavn</code>, <code>skjemaType</code>, <code>tekst</code></p>
             </Box>
             
             <p>Vanlige eksempler:</p>
             <ul className="space-y-2">
               <li><code>appNavn: "dagpengesoknad"</code> - hvilken løsning hendelsen kommer fra</li>
               <li><code>skjemaType: "foreldrepenger"</code> - hvilket skjema det gjelder</li>
-              <li><code>knappTekst: "Send søknad"</code> - teksten på knappen som ble klikket</li>
+              <li><code>tekst: "Send søknad"</code> - teksten på knappen som ble klikket</li>
               <li><code>valgtSvar: "Ja"</code> - hva brukeren svarte</li>
             </ul>
 
@@ -190,8 +190,8 @@ const TaksonomiPage = () => {
                     <Table.DataCell>"hovedmeny"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>knappTekst</Table.DataCell>
-                    <Table.DataCell>Tekst på knappen</Table.DataCell>
+                    <Table.DataCell>tekst</Table.DataCell>
+                    <Table.DataCell>F.eks. tekst på knappen</Table.DataCell>
                     <Table.DataCell>"Send inn søknad"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
@@ -234,7 +234,7 @@ function handleKnappKlikk() {
   umami.track('knapp klikket', {
     appNavn: 'dagpengesoknad',
     komponentNavn: 'soknadsskjema',
-    knappTekst: 'Send inn søknad'
+    tekst: 'Send inn søknad'
   });
 }
 
