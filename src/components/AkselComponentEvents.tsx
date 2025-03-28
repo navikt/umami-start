@@ -15,8 +15,8 @@ const akselComponentEvents = [
   {
     component: "Accordion",
     events: [
-      { name: "accordion åpnet", details: { komponentId: "string", tittelTekst: "string" } },
-      { name: "accordion lukket", details: { komponentId: "string", tittelTekst: "string" } }
+      { name: "accordion åpnet", details: { komponentId: "string", tittel: "string" } },
+      { name: "accordion lukket", details: { komponentId: "string", tittel: "string" } }
     ]
   },
   {
@@ -28,7 +28,7 @@ const akselComponentEvents = [
   {
     component: "Button",
     events: [
-      { name: "knapp klikket", details: { knappTekst: "string", knappType: "string", knappVariant: "string" } }
+      { name: "knapp klikket", details: { tekst: "string", knappType: "string", knappVariant: "string" } }
     ]
   },
   {
@@ -42,34 +42,34 @@ const akselComponentEvents = [
   {
     component: "Checkbox",
     events: [
-      { name: "avkrysningsboks valgt", details: { sjekkboksId: "string", sjekkboksTekst: "string", sjekkboksVerdi: "boolean" } }
+      { name: "avkrysningsboks valgt", details: { sjekkboksId: "string", tekst: "string", sjekkboksVerdi: "boolean" } }
     ]
   },
   {
     component: "Chips",
     events: [
-      { name: "chip valgt", details: { chipTekst: "string", chipVerdi: "string" } },
-      { name: "chip fjernet", details: { chipTekst: "string", chipVerdi: "string" } }
+      { name: "chip valgt", details: { tekst: "string", chipVerdi: "string" } },
+      { name: "chip fjernet", details: { tekst: "string", chipVerdi: "string" } }
     ]
   },
   // More components follow the same pattern
   {
     component: "ComboboxBeta",
     events: [
-      { name: "combobox valg endret", details: { valgtVerdi: "string", valgtTekst: "string" } }
+      { name: "combobox valg endret", details: { valgtVerdi: "string", tekst: "string" } }
     ]
   },
   {
     component: "ConfirmationPanel",
     events: [
-      { name: "bekreftelsespanel huket av", details: { panelId: "string", panelTekst: "string" } },
-      { name: "bekreftelsespanel avhuket", details: { panelId: "string", panelTekst: "string" } }
+      { name: "bekreftelsespanel huket av", details: { panelId: "string", tekst: "string" } },
+      { name: "bekreftelsespanel avhuket", details: { panelId: "string", tekst: "string" } }
     ]
   },
   {
     component: "CopyButton",
     events: [
-      { name: "tekst kopiert", details: { kopieringsTekst: "string" } }
+      { name: "tekst kopiert", details: { tekst: "string" } }
     ]
   },
   {
@@ -83,14 +83,14 @@ const akselComponentEvents = [
     events: [
       { name: "dropdown åpnet", details: { dropdownId: "string" } },
       { name: "dropdown lukket", details: { dropdownId: "string" } },
-      { name: "dropdown valg valgt", details: { valgtVerdi: "string", valgtTekst: "string" } }
+      { name: "dropdown valg valgt", details: { valgtVerdi: "string", tekst: "string" } }
     ]
   },
   {
     component: "ExpansionCard",
     events: [
-      { name: "utvidbart kort åpnet", details: { kortId: "string", kortTittel: "string" } },
-      { name: "utvidbart kort lukket", details: { kortId: "string", kortTittel: "string" } }
+      { name: "utvidbart kort åpnet", details: { kortId: "string", tittel: "string" } },
+      { name: "utvidbart kort lukket", details: { kortId: "string", tittel: "string" } }
     ]
   },
   {
@@ -103,34 +103,34 @@ const akselComponentEvents = [
   {
     component: "Modal",
     events: [
-      { name: "modal åpnet", details: { modalId: "string", modalTittel: "string" } },
-      { name: "modal lukket", details: { modalId: "string", modalTittel: "string", lukkMetode: "string" } }
+      { name: "modal åpnet", details: { modalId: "string", tittel: "string" } },
+      { name: "modal lukket", details: { modalId: "string", tittel: "string", lukkMetode: "string" } }
     ]
   },
   {
     component: "ReadMore",
     events: [
-      { name: "les mer åpnet", details: { lesMerId: "string", lesMerTittel: "string" } },
-      { name: "les mer lukket", details: { lesMerId: "string", lesMerTittel: "string" } }
+      { name: "les mer åpnet", details: { lesMerId: "string", tittel: "string" } },
+      { name: "les mer lukket", details: { lesMerId: "string", tittel: "string" } }
     ]
   },
   {
     component: "Search",
     events: [
-      { name: "søk gjennomført", details: { søkeTekst: "string", søkeResultater: "number" } },
+      { name: "søk gjennomført", details: { tekst: "string", søkeResultater: "number" } },
       { name: "søkeforslag valgt", details: { valgtForslag: "string" } }
     ]
   },
   {
     component: "Select",
     events: [
-      { name: "nedtrekksliste valg endret", details: { valgtVerdi: "string", valgtTekst: "string", listeId: "string" } }
+      { name: "nedtrekksliste valg endret", details: { valgtVerdi: "string", tekst: "string", listeId: "string" } }
     ]
   },
   {
     component: "Tabs",
     events: [
-      { name: "fane byttet", details: { faneId: "string", faneTekst: "string", fraFane: "string", tilFane: "string" } }
+      { name: "fane byttet", details: { faneId: "string", tekst: "string", fraFane: "string", tilFane: "string" } }
     ]
   },
   {
@@ -163,6 +163,7 @@ const getExampleValue = (key: string, componentName: string) => {
     case 'kopieringsTekst': return 'https://nav.no/skjema';
     case 'lesMerTittel': return 'Mer informasjon';
     case 'feltNavn': return 'epost';
+    case 'tekst': return 'Eksempel tekst';
     
     // Values
     case 'valgtVerdi': return 'deltid';
