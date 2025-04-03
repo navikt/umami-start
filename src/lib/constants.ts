@@ -15,8 +15,8 @@ export const FILTER_COLUMNS = {
     columns: [
       { label: 'URL-sti', value: 'url_path' },
       { label: 'URL-spørring', value: 'url_query' },
-      { label: 'URL fullstendig sti', value: 'url_fullpath' },
-      { label: 'URL fullstendig adresse', value: 'url_fullurl' },
+      { label: 'URL-sti og spørring', value: 'url_fullpath' },
+   /*   { label: 'URL fullstendig adresse', value: 'url_fullurl' }, */
       { label: 'Sidetittel', value: 'page_title' },
       { label: 'Henvisningsdomene', value: 'referrer_domain' },
       { label: 'Henvisningssti', value: 'referrer_path' },

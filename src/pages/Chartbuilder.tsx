@@ -667,12 +667,14 @@ const ChartsPage = () => {
     
     // If using interactive date mode, use fully qualified table name references
     if (hasInteractiveDateFilter) {
-      sql += `    ${fullWebsiteTable}.*\n`;
+      sql += `    ${fullWebsiteTable}.*,\n`;
+      // Add derived columns - url_fullpath combines url_path and url_query
+      sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullpath\n`;
     } else {
-      sql += '    e.*\n';
+      sql += '    e.*,\n';
+      // Add derived columns - url_fullpath combines url_path and url_query
+      sql += '    CONCAT(IFNULL(e.url_path, \'\'), IFNULL(e.url_query, \'\')) as url_fullpath\n';
     }
-    
-    // Remove the unnecessary website_domain and website_name literals from both modes
     
     // Add a comma after the main selection ONLY if we have session columns
     if (requiredTables.session) {
