@@ -667,25 +667,19 @@ const ChartsPage = () => {
     
     // If using interactive date mode, use fully qualified table name references
     if (hasInteractiveDateFilter) {
-      sql += `    ${fullWebsiteTable}.*,\n`;
+      sql += `    ${fullWebsiteTable}.*\n`;
     } else {
-      sql += '    e.*,\n';
+      sql += '    e.*\n';
     }
     
-    // Add computed columns only if they're used
-    sql += `    '${config.website.domain}' as website_domain,\n`;
-    sql += `    '${config.website.name}' as website_name`;
-
-    // Add a comma after website_name ONLY if we have session columns AND we're in interactive mode
-    // For non-interactive mode, the comma is already added in the s.browser line
+    // Remove the unnecessary website_domain and website_name literals from both modes
+    
+    // Add a comma after the main selection ONLY if we have session columns
     if (requiredTables.session) {
-      if (hasInteractiveDateFilter) {
-        sql += ',\n';  // Only add comma for interactive mode
-      } else {
-        sql += '\n';   // No comma needed for regular mode since s.browser line has a comma
+      sql = sql.trimRight();
+      if (!sql.endsWith(',')) {
+        sql += ',\n';
       }
-    } else {
-      sql += '\n';   // No comma if no session columns follow
     }
 
     // Add session columns if needed
