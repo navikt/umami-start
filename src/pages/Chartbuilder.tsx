@@ -407,15 +407,6 @@ const ChartsPage = () => {
       
       if (newIndex >= 0 && newIndex < newFields.length) {
         [newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
-        
-        // Auto-change sort to date ONLY when date field is moved to first position
-        if (newIndex === 0 && newFields[0] === 'created_at') {
-          return {
-            ...prev,
-            groupByFields: newFields,
-            orderBy: { column: 'dato', direction: 'ASC' }
-          };
-        }
       }
       
       return {
@@ -1087,10 +1078,10 @@ const ChartsPage = () => {
       } else if (config.metrics.length > 0) {
         // If we have metrics but no date, sort by first metric descending
         const firstMetricAlias = config.metrics[0].alias || 'metrikk_1';
-        sql += `ORDER BY \`${firstMetricAlias}\` DESC\n`;
+        sql += `ORDER BY \`${firstMetricAlias}\` ${config.orderBy?.direction || 'DESC'}\n`;
       } else {
-        // Fallback to ordering by first column
-        sql += 'ORDER BY 1 DESC\n';
+        // Fallback to ordering by first column, but respect user's direction choice
+        sql += `ORDER BY 1 ${config.orderBy?.direction || 'DESC'}\n`;
       }
     }
 

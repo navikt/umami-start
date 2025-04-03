@@ -75,6 +75,7 @@ const Summarize = ({
   // Add state for showing advanced options
   const [showAdvancedGrouping, setShowAdvancedGrouping] = useState<boolean>(false);
   const [showAdvancedCalculations, setShowAdvancedCalculations] = useState<boolean>(false);
+  const [showCustomSort, setShowCustomSort] = useState<boolean>(false); // Add state for custom sort visibility
 
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -766,13 +767,16 @@ const Summarize = ({
           <Switch 
             className="mt-1"
             size="small"
-            checked={orderBy !== null}
-            onChange={() => orderBy ? clearOrderBy() : setOrderBy('dato', 'DESC')}
+            description={orderBy
+              ? `Sorterer etter ${orderBy.column ? orderBy.column.toLowerCase() : 'første kolonne'} i ${orderBy.direction === 'ASC' ? 'stigende' : 'synkende'} rekkefølge`
+              : 'Sorterer etter første kolonne i synkende rekkefølge'}
+            checked={showCustomSort} // Use showCustomSort state
+            onChange={() => setShowCustomSort(!showCustomSort)} // Toggle showCustomSort
           >
             Tilpass sortering
           </Switch>
 
-          {orderBy && (
+          {showCustomSort && ( // Use showCustomSort state
             <>
             <div className="flex flex-col gap-2 bg-white p-3 rounded-md border"> 
               <div className="flex gap-2">
@@ -818,9 +822,9 @@ const Summarize = ({
 
                 <Select
                   label="Retning"
-                  value={orderBy.direction}
+                  value={orderBy?.direction || 'ASC'}
                   onChange={(e) => setOrderBy(
-                    orderBy.column || "", 
+                    orderBy?.column || "", 
                     e.target.value as 'ASC' | 'DESC'
                   )}
                   size="small"
@@ -829,10 +833,6 @@ const Summarize = ({
                   <option value="DESC">Synkende (Å-A, 9-0)</option>
                 </Select>
               </div>
-              
-              <p className="mt-1 text-sm text-gray-700">
-                <strong>Standard:</strong> sorterer etter første kolonne i synkende rekkefølge.
-              </p>
             </div>
             </>
           )}
