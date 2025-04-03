@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
-import { MoveUp, MoveDown, Users, BarChart2, PieChart, Percent, Calendar, Link2, Activity, Smartphone } from 'lucide-react'; // Added more icon imports
+import { MoveUp, MoveDown, Users, BarChart2, PieChart, Percent, Calendar, Link2, Activity, Smartphone, Clock } from 'lucide-react'; // Added Clock iconimports
 import { useState, useEffect } from 'react'; 
 import { 
   Parameter, 
@@ -8,7 +8,8 @@ import {
   ColumnGroup,
   MetricOption,
   OrderBy,
-  ColumnOption
+  ColumnOption,
+  Filter
 } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton'; // Import AlertWithCloseButton
 
@@ -38,6 +39,8 @@ interface SummarizeProps {
   setParamAggregation: (strategy: 'representative' | 'unique') => void;
   setLimit: (limit: number | null) => void;
   availableEvents?: string[];
+  filters: Filter[]; // Add this prop
+  setFilters: (filters: Filter[]) => void; // Add this prop
 }
 
 const Summarize = ({
@@ -282,11 +285,21 @@ const Summarize = ({
               >
                 Enhet
               </Button>
+  {/*  <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addGroupByField('visit_duration')}
+                icon={<Clock size={16} />}
+                disabled={groupByFields.includes('visit_duration')}
+              >
+                Besøkstid
+              </Button>
+              */}
             </div>
           </div>
           
           {/* Switch for showing advanced grouping options */}
-          <Switch 
+          <Switch
             className="mt-2"
             size="small"
             checked={showAdvancedGrouping} 
@@ -294,7 +307,6 @@ const Summarize = ({
           >
             Vis alle grupperingsvalg
           </Switch>
-          
           {/* Original dropdown for other groupings - now conditional */}
           {showAdvancedGrouping && (
             <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
@@ -431,7 +443,7 @@ const Summarize = ({
       </div>
         
         <div className="space-y-4 mb-6">
-          {/* Add quick metric buttons */}
+          {/* Regular metrics section */}
           <div className="mb-2">
             <Label as="p" size="small" className="mb-2">
               Legg til vanlige beregninger:
@@ -476,6 +488,22 @@ const Summarize = ({
                 icon={<Percent size={16} />}
               >
                 Andel besøkende av totalen
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addConfiguredMetric('sum', 'visit_duration', 'Total besøkstid')}
+                icon={<Clock size={16} />}
+              >
+                Total besøkstid
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
+                icon={<Clock size={16} />}
+              >
+                Gj.snitt besøkstid
               </Button>
             </div>
           </div>

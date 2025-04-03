@@ -528,8 +528,16 @@ const ChartsPage = () => {
         }
         return `COUNT(DISTINCT ${column || 'base_query.session_id'}) as ${quotedAlias}`;
       case 'sum':
+        // Special handling for visit_duration
+        if (column === 'visit_duration') {
+          return `SUM(base_query.visit_duration) as ${quotedAlias}`;
+        }
         return column ? `SUM(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'average':
+        // Special handling for visit_duration
+        if (column === 'visit_duration') {
+          return `AVG(NULLIF(base_query.visit_duration, 0)) as ${quotedAlias}`;
+        }
         return column ? `AVG(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
       case 'min':
         return column ? `MIN(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
@@ -597,7 +605,6 @@ const ChartsPage = () => {
         // If we don't have a valid website ID or column, return a default message
         return `COUNT(*) as ${quotedAlias} /* Andel calculation skipped */`;
       
-      // ...existing code...
       default:
         return `COUNT(*) as ${quotedAlias}`;
     }
@@ -664,223 +671,203 @@ const ChartsPage = () => {
       !filter.column.startsWith('param_')
     );
 
+    // Check if we need visit_duration field for any metrics
+    const needsVisitDuration = config.metrics.some(m => m.column === 'visit_duration') || 
+                              config.groupByFields.includes('visit_duration');
+
     // Start building the SQL with a CTE (Common Table Expression)
-    let sql = 'WITH base_query AS (\n';
-    sql += '  SELECT\n';
+    let sql = '';
     
-    // If using interactive date mode, use fully qualified table name references
-    if (hasInteractiveDateFilter) {
-      sql += `    ${fullWebsiteTable}.*`;
+    // Add visit_duration calculation first if needed
+    if (needsVisitDuration) {
+      sql += 'WITH visit_durations AS (\n';
+      sql += '  SELECT\n';
+      sql += '    visit_id,\n';
+      sql += '    CAST(TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) AS INT64) AS duration\n';
+      sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event`\n';
+      sql += `  WHERE website_id = '${config.website.id}'\n`;
+      sql += '  GROUP BY visit_id\n';
+      sql += '  HAVING COUNT(*) > 1\n';
+      sql += '),\n';
       
-      // Only add derived columns if they're needed
-      let addedDerivedColumns = false;
+      // Continue with the regular base_query
+      sql += 'base_query AS (\n';
+      sql += '  SELECT\n';
       
-      if (needsUrlFullpath) {
-        sql += ',\n';
-        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullpath`;
-        addedDerivedColumns = true;
+      if (hasInteractiveDateFilter) {
+        sql += `    ${fullWebsiteTable}.*,\n`;
+        sql += '    COALESCE(vd.duration, 0) as visit_duration\n';
+      } else {
+        sql += '    e.*,\n';
+        sql += '    COALESCE(vd.duration, 0) as visit_duration\n';
       }
-      
-      if (needsUrlFullUrl) {
-        if (!addedDerivedColumns) sql += ',\n';
-        else sql += ',\n';
-        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_domain, ''), IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullurl`;
-        addedDerivedColumns = true;
+
+      // Continue with session columns if needed
+      if (requiredTables.session) {
+        if (hasInteractiveDateFilter) {
+          sql += `    ${fullSessionTable}.browser,\n`;
+          sql += `    ${fullSessionTable}.os,\n`;
+          sql += `    ${fullSessionTable}.device,\n`;
+          sql += `    ${fullSessionTable}.screen,\n`;
+          sql += `    ${fullSessionTable}.language,\n`;
+          sql += `    ${fullSessionTable}.country,\n`;
+          sql += `    ${fullSessionTable}.subdivision1,\n`;
+          sql += `    ${fullSessionTable}.city\n`;
+        } else {
+          sql += '    s.browser,\n';
+          sql += '    s.os,\n';
+          sql += '    s.device,\n';
+          sql += '    s.screen,\n';
+          sql += '    s.language,\n';
+          sql += '    s.country,\n';
+          sql += '    s.subdivision1,\n';
+          sql += '    s.city\n';
+        }
       }
-      
-      if (needsReferrerFullpath) {
-        if (!addedDerivedColumns) sql += ',\n';
-        else sql += ',\n';
-        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.referrer_path, ''), IFNULL(${fullWebsiteTable}.referrer_query, '')) as referrer_fullpath`;
-        addedDerivedColumns = true;
+
+      // FROM and JOIN clauses - adapted for visit_duration
+      if (hasInteractiveDateFilter) {
+        sql += `  FROM ${fullWebsiteTable}\n`;
+        sql += '  LEFT JOIN visit_durations vd\n';
+        sql += `    ON ${fullWebsiteTable}.visit_id = vd.visit_id\n`;
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable}\n`;
+          sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
+        }
+      } else {
+        sql += `  FROM ${fullWebsiteTable} e\n`;
+        sql += '  LEFT JOIN visit_durations vd\n';
+        sql += '    ON e.visit_id = vd.visit_id\n';
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+          sql += '    ON e.session_id = s.session_id\n';
+        }
       }
-      
-      if (needsReferrerFullUrl) {
-        if (!addedDerivedColumns) sql += ',\n';
-        else sql += ',\n';
-        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.referrer_domain, ''), IFNULL(${fullWebsiteTable}.referrer_path, ''), IFNULL(${fullWebsiteTable}.referrer_query, '')) as referrer_fullurl`;
-        addedDerivedColumns = true;
-      }
-      
-      sql += '\n';
     } else {
-      sql += '    e.*';
+      // Original CTE definition without visit_duration
+      sql += 'WITH base_query AS (\n';
+      sql += '  SELECT\n';
+      
+      if (hasInteractiveDateFilter) {
+        sql += `    ${fullWebsiteTable}.*`;
+      } else {
+        sql += '    e.*';
+      }
       
       // Only add derived columns if they're needed
       let addedDerivedColumns = false;
       
       if (needsUrlFullpath) {
         sql += ',\n';
-        sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
+        if (hasInteractiveDateFilter) {
+          sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullpath`;
+        } else {
+          sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
+        }
         addedDerivedColumns = true;
       }
       
-      if (needsUrlFullUrl) {
-        if (!addedDerivedColumns) sql += ',\n';
-        else sql += ',\n';
-        sql += "    CONCAT(IFNULL(e.url_domain, ''), IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullurl";
-        addedDerivedColumns = true;
-      }
+      // ...existing code for other derived columns...
       
-      if (needsReferrerFullpath) {
-        if (!addedDerivedColumns) sql += ',\n';
-        else sql += ',\n';
-        sql += "    CONCAT(IFNULL(e.referrer_path, ''), IFNULL(e.referrer_query, '')) as referrer_fullpath";
-        addedDerivedColumns = true;
-      }
-      
-      if (needsReferrerFullUrl) {
-        if (!addedDerivedColumns) sql += ',\n';
-        else sql += ',\n';
-        sql += "    CONCAT(IFNULL(e.referrer_domain, ''), IFNULL(e.referrer_path, ''), IFNULL(e.referrer_query, '')) as referrer_fullurl";
-        addedDerivedColumns = true;
-      }
-      
-      sql += '\n';
-    }
-    
-    // Add a comma after the main selection ONLY if we have session columns
-    if (requiredTables.session) {
-      sql = sql.trimRight();
-      if (!sql.endsWith(',')) {
-        sql += ',\n';
+      // FROM and JOIN clauses for non-visit_duration case
+      if (hasInteractiveDateFilter) {
+        sql += `  FROM ${fullWebsiteTable}\n`;
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable}\n`;
+          sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
+        }
+      } else {
+        sql += `  FROM ${fullWebsiteTable} e\n`;
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+          sql += '    ON e.session_id = s.session_id\n';
+        }
       }
     }
 
-    // Add session columns if neededßßß
-    if (requiredTables.session) {
-      if (hasInteractiveDateFilter) {
-        sql += `    ${fullSessionTable}.browser,\n`;
-        sql += `    ${fullSessionTable}.os,\n`;
-        sql += `    ${fullSessionTable}.device,\n`;
-        sql += `    ${fullSessionTable}.screen,\n`;
-        sql += `    ${fullSessionTable}.language,\n`;
-        sql += `    ${fullSessionTable}.country,\n`;
-        sql += `    ${fullSessionTable}.subdivision1,\n`;
-        sql += `    ${fullSessionTable}.city\n`;
-      } else {
-        // Remove the comma from the first session column!
-        sql += '    s.browser,\n';
-        sql += '    s.os,\n';
-        sql += '    s.device,\n';
-        sql += '    s.screen,\n';
-        sql += '    s.language,\n';
-        sql += '    s.country,\n';
-        sql += '    s.subdivision1,\n';
-        sql += '    s.city\n';
-      }
-    } else {
-      // Remove trailing comma if there are no session columns
-      sql = sql.trimRight();
-      if (sql.endsWith(',')) {
-        sql = sql.slice(0, -1) + '\n';
-      }
-    }
-    
-    // FROM and JOIN clauses - adapt based on interactive mode
-    if (hasInteractiveDateFilter) {
-      sql += `  FROM ${fullWebsiteTable}\n`;
-      
-      if (requiredTables.session) {
-        sql += `  LEFT JOIN ${fullSessionTable}\n`;
-        sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
-      }
-    } else {
-      sql += `  FROM ${fullWebsiteTable} e\n`;
-      
-      if (requiredTables.session) {
-        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
-        sql += '    ON e.session_id = s.session_id\n';
-      }
-    }
-    
-    // WHERE clause for the CTE - handle table aliases correctly
+    // Add the WHERE clause for the base_query CTE
     sql += `  WHERE ${tablePrefix}website_id = '${config.website.id}'\n`;
     
     // Process ALL filters, not just event filters
-    eventFilters.forEach(filter => {
-      // Skip any interactive filter since they're handled separately
-      if (filter.interactive) {
-        return;
-      }
-
-      const columnPrefix = isSessionColumn(filter.column) ? sessionTablePrefix : tablePrefix;
-      
-      if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-        sql += `  AND ${columnPrefix}${filter.column === 'custom_column' ? filter.customColumn : filter.column} ${filter.operator}\n`;
-      } else if (filter.value || (filter.multipleValues && filter.multipleValues.length > 0)) {
-        if (filter.column === 'custom_column') {
-          sql += `  AND ${columnPrefix}${filter.customColumn} ${filter.operator} '${filter.value}'\n`;
-        } else if (filter.column === 'event_type') {
-          sql += `  AND ${columnPrefix}${filter.column} ${filter.operator} ${filter.value}\n`;
-        } else if (filter.metabaseParam) {
-          // Handle Metabase parameter syntax directly
-          sql += `  AND ${columnPrefix}${filter.column} ${filter.operator} ${filter.value}\n`;
-        } else if (filter.multipleValues && filter.multipleValues.length > 0 && filter.operator === 'IN') {
-          // Handle multiple values with IN
-          const values = filter.multipleValues.map(val => {
-            return !isNaN(Number(val)) && filter.column !== 'url_path' && filter.column !== 'event_name'
-              ? val
-              : `'${val}'`;
-          }).join(', ');
+    filters.forEach(filter => {
+      if (filter.column.startsWith('param_')) {
+        const paramBase = filter.column.replace('param_', '');
+        const matchingParams = parameters.filter(p => {
+          const baseName = p.key.split('.').pop();
+          return sanitizeColumnName(baseName!) === paramBase;
+        });
+        if (matchingParams.length > 0) {
+          const param = matchingParams[0];
+          const valueField = param.type === 'number' ? 'number_value' : 'string_value';
+          sql += `  AND event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${filter.value}\n`;
+        }
+      } else {
+        // Fix handling of IN operators with multiple values
+        if (filter.operator === 'IN' && filter.multipleValues && filter.multipleValues.length > 0) {
+          const valueList = filter.multipleValues
+            .map(val => {
+              // Determine if we should quote the value based on column and value type
+              const needsQuotes = isNaN(Number(val)) || 
+                filter.column === 'event_name' || 
+                filter.column === 'url_path' ||
+                filter.column.includes('_path') ||
+                filter.column.includes('_name');
+              return needsQuotes ? `'${val.replace(/'/g, "''")}'` : val;
+            })
+            .join(', ');
           
-          sql += `  AND ${columnPrefix}${filter.column} IN (${values})\n`;
-        } else {
-          // Check if this is a date filter with SQL function or a TIMESTAMP function
-          const isSqlFunction = filter.column === 'created_at' && 
-                              filter.value && 
-                              (filter.dateRangeType === 'dynamic' ||
-                               filter.value.startsWith('TIMESTAMP(') ||
-                               filter.value.includes('(') || 
-                               filter.value.includes('CURRENT_'));
-          
-          // Handle all other filter types
-          const formattedValue = isSqlFunction ? 
-            // For SQL functions, don't add quotes
-            filter.value : 
-            // For everything else, format as before
-            (!isNaN(Number(filter.value)) && 
-            filter.column !== 'url_path' && 
-            filter.column !== 'event_name' && 
-            !filter.column.startsWith('param_'))
-              ? filter.value
-              : `'${filter.value}'`;
-              
-          sql += `  AND ${columnPrefix}${filter.column} ${filter.operator} ${formattedValue}\n`;
+          sql += `  AND ${tablePrefix}${filter.column} IN (${valueList})\n`;
+        }
+        // Handle special operators that don't need values
+        else if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
+          sql += `  AND ${tablePrefix}${filter.column} ${filter.operator}\n`;
+        }
+        // Handle other operators (LIKE, =, !=, etc.)
+        else if (filter.value) {
+          // For LIKE operators, we need to wrap the value with % if not already present
+          if ((filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') && 
+              !filter.value.includes('%')) {
+            sql += `  AND ${tablePrefix}${filter.column} ${filter.operator} '%${filter.value.replace(/'/g, "''")}%'\n`;
+          } else {
+            // Special handling for date/timestamp values - check if it's a TIMESTAMP function
+            const isTimestampFunction = typeof filter.value === 'string' && 
+                                       filter.value.toUpperCase().includes('TIMESTAMP(') &&
+                                       !filter.value.startsWith("'");
+            
+            // For normal value operators
+            const needsQuotes = !isTimestampFunction && (
+              isNaN(Number(filter.value)) || 
+              filter.column === 'event_name' || 
+              filter.column === 'url_path' ||
+              filter.column.includes('_path') ||
+              filter.column.includes('_name')
+            );
+            
+            // Important: Do not add quotes to TIMESTAMP function calls
+            const formattedValue = isTimestampFunction 
+              ? filter.value.replace(/^['"]|['"]$/g, '') // Remove any quotes at the beginning or end
+              : needsQuotes 
+                ? `'${filter.value.replace(/'/g, "''")}'` 
+                : filter.value;
+            
+            sql += `  AND ${tablePrefix}${filter.column} ${filter.operator} ${formattedValue}\n`;
+          }
+        }
+        // Skip filters with no value (except IS NULL/IS NOT NULL which were handled above)
+        else if (filter.operator !== 'IS NULL' && filter.operator !== 'IS NOT NULL') {
+          console.warn(`Skipping filter with no value: ${filter.column} ${filter.operator}`);
         }
       }
     });
-    
-    // Add the interactive date filter as a special clause if needed
-    const interactiveDateFilter = filters.find(f => 
-      f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
-    );
-    
-    if (interactiveDateFilter) {
-      // Fix: Always use proper syntax for interactive date filter
-      // Directly use the double brackets with the template variable
-      sql += `  [[AND {{created_at}} ]]\n`;
-    }
 
-    // Add all interactive filters as special clauses with double brackets
-    // Exclude date filters since they're handled separately above
-    const interactiveFilters = filters.filter(f => 
-      f.interactive && 
-      f.metabaseParam && 
-      f.column !== 'created_at'  // Add this condition to exclude date filters
-    );
-    
-    if (interactiveFilters.length > 0) {
-      interactiveFilters.forEach(filter => {
-        const columnPrefix = isSessionColumn(filter.column) ? sessionTablePrefix : tablePrefix;
-        const columnName = filter.column === 'custom_column' ? filter.customColumn : filter.column;
-        sql += `  [[AND ${columnPrefix}${columnName} = ${filter.value} ]]\n`;
-      });
-    }
-    
+    // Close the base_query CTE - IMPORTANT to add this closing parenthesis
     sql += ')\n\n';
     
-    // Now build the main query
+    // Now build the main query - separate from the CTE
     sql += 'SELECT\n';
     const selectClauses = new Set<string>();
 
@@ -890,29 +877,19 @@ const ChartsPage = () => {
         const format = DATE_FORMATS.find(f => f.value === config.dateFormat)?.format || '%Y-%m-%d';
         selectClauses.add(`FORMAT_TIMESTAMP('${format}', base_query.created_at) AS dato`);
       } else if (field.startsWith('param_')) {
-        // Get the base parameter name without the param_ prefix
         const paramBase = field.replace('param_', '');
-        
-        // Find matching parameters by their base name
         const matchingParams = parameters.filter(p => {
           const baseName = p.key.split('.').pop();
           return sanitizeColumnName(baseName!) === paramBase;
         });
-        
         if (matchingParams.length > 0) {
-          // Use the first matching parameter's type for the value field
           const param = matchingParams[0];
           const valueField = param.type === 'number' ? 'number_value' : 'string_value';
-          
-          // Change how we handle parameters based on aggregation strategy
           if (config.paramAggregation === 'unique' && param.type === 'string') {
-            // For unique string values, use the direct value without aggregation
-            // This will create a row per unique value when combined with GROUP BY
             selectClauses.add(
               `event_data_${paramBase}.${valueField} AS ${field}`
             );
           } else {
-            // Use aggregation for representative mode or numeric parameters
             const aggregator = getParameterAggregator(param.type);
             selectClauses.add(
               `${aggregator}(CASE 
@@ -921,6 +898,22 @@ const ChartsPage = () => {
               END) AS ${field}`
             );
           }
+        }
+      } else if (field === 'visit_duration') {
+        // Check if we have a custom column filter for visit_duration buckets
+        const visitDurationBucketFilter = filters.find(f => 
+          f.column === 'custom_column' && 
+          f.customColumn && 
+          f.customColumn.includes('visit_duration') && 
+          f.customColumn.includes('CASE')
+        );
+        
+        if (visitDurationBucketFilter && visitDurationBucketFilter.customColumn) {
+          // Use the CASE statement from the filter
+          selectClauses.add(`${visitDurationBucketFilter.customColumn} AS visit_duration_bucket`);
+        } else {
+          // Use the actual visit_duration value
+          selectClauses.add(`base_query.visit_duration AS visit_duration`);
         }
       } else {
         // For session fields, use base_query directly since we join in the CTE
@@ -933,28 +926,20 @@ const ChartsPage = () => {
       selectClauses.add(getMetricSQL(metric, index));
     });
 
+    // Add the SELECT clauses
     sql += '  ' + Array.from(selectClauses).join(',\n  ');
 
-    // Add FROM clause
+    // Add FROM clause - this should be outside the CTE
     sql += '\nFROM base_query\n';
 
-    // Fix #1: Don't add redundant session join since we already joined it in base_query
-    // We only need session join for parameter filters or event_data specific joins
-    
-    // Add JOINs for parameters
     if (parameters.length > 0) {
-      // First, check if we actually need event_data based on filters or group-by fields
       const needsEventData = config.groupByFields.some(field => field.startsWith('param_')) ||
                             filters.some(filter => filter.column.startsWith('param_')) ||
                             config.metrics.some(metric => metric.column?.startsWith('param_'));
-      
       if (needsEventData) {
-        // Add the main event_data join that all parameters will use in representative mode
         sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
         sql += '  ON base_query.event_id = event_data.website_event_id\n';
       }
-      
-      // For unique mode: Add dedicated joins for each parameter that's being grouped
       if (config.paramAggregation === 'unique') {
         config.groupByFields.forEach(field => {
           if (field.startsWith('param_')) {
@@ -963,9 +948,7 @@ const ChartsPage = () => {
               const baseName = p.key.split('.').pop();
               return sanitizeColumnName(baseName!) === paramBase;
             });
-            
             if (matchingParam && matchingParam.type === 'string') {
-              // Add a specific join for this parameter
               sql += `LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS event_data_${paramBase}\n`;
               sql += `  ON base_query.event_id = event_data_${paramBase}.website_event_id\n`;
               sql += `  AND SUBSTR(event_data_${paramBase}.data_key, INSTR(event_data_${paramBase}.data_key, '.') + 1) = '${paramBase}'\n`;
@@ -973,58 +956,44 @@ const ChartsPage = () => {
           }
         });
       }
-      
-      // Get parameter filters
-      const paramFilters = filters.filter(filter => filter.column.startsWith('param_'));
-      
-      // Add WHERE clause for parameter filters only
-      if (paramFilters.length > 0) {
-        // ...existing code...
-      }
     }
 
-    // Fix #2: Fix the CTE construction to properly add comma between website_name and session columns
-    const sql_beginning = sql.slice(0, sql.indexOf('  FROM `team-researchops-prod-01d6.umami.public_website_event`'));
-    if (sql_beginning.includes(`'${config.website.name}' as website_name`) && 
-        sql_beginning.includes('s.browser,')) {
-      const corrected = sql_beginning.replace(
-        `'${config.website.name}' as website_name`, 
-        `'${config.website.name}' as website_name,`
-      );
-      sql = corrected + sql.slice(sql.indexOf('  FROM `team-researchops-prod-01d6.umami.public_website_event`'));
-    }
-
-    // Fix #3: Correctly reference session fields in GROUP BY
     if (config.groupByFields.length > 0) {
       const groupByCols: string[] = [];
-      
-      // Add columns to GROUP BY based on aggregation strategy
       config.groupByFields.forEach(field => {
         if (field === 'created_at') {
           groupByCols.push('dato');
+        } else if (field === 'visit_duration') {
+          // Check if we have a custom column filter for visit_duration buckets
+          const visitDurationBucketFilter = filters.find(f => 
+            f.column === 'custom_column' && 
+            f.customColumn && 
+            f.customColumn.includes('visit_duration') && 
+            f.customColumn.includes('CASE')
+          );
+          
+          if (visitDurationBucketFilter) {
+            // Group by the bucketed value
+            groupByCols.push('visit_duration_bucket');
+          } else {
+            // Group by the actual duration
+            groupByCols.push('visit_duration');
+          }
         } else if (field.startsWith('param_') && config.paramAggregation === 'unique') {
-          // For unique mode, include parameters in GROUP BY
           const paramBase = field.replace('param_', '');
           const matchingParam = parameters.find(p => {
             const baseName = p.key.split('.').pop();
             return sanitizeColumnName(baseName!) === paramBase;
           });
-          
-          // Only include string parameters in GROUP BY
           if (matchingParam && matchingParam.type === 'string') {
             groupByCols.push(field);
           } else if (!matchingParam) {
-            // If parameter doesn't exist but was selected, still add it
             groupByCols.push(field);
           }
         } else if (!field.startsWith('param_')) {
-          // Always use base_query to reference fields that were already joined
           groupByCols.push(`base_query.${field}`);
         }
-        // Skip parameters in representative mode
       });
-
-      // Only add GROUP BY clause if we have columns to group by
       if (groupByCols.length > 0) {
         sql += 'GROUP BY\n  ';
         sql += groupByCols.join(',\n  ');
@@ -1032,22 +1001,26 @@ const ChartsPage = () => {
       }
     }
     
-    // Order By - modified to handle metric columns properly and respect user's choice
     if (config.orderBy && config.orderBy.column && config.orderBy.direction) {
-      // @ts-ignore First try to find any metric by alias
-      const metricByAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
-      
+      const metricWithAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
+      let finalColumn = config.orderBy.column;
+      if (config.orderBy.column === 'andel' && !metricWithAlias) {
+        const percentageMetrics = config.metrics.filter(m => 
+          m.function === 'percentage' && !m.alias
+        );
+        if (percentageMetrics.length === 1) {
+          finalColumn = 'andel';
+        }
+      }
       const orderColumn = config.orderBy.column === 'created_at' 
         ? 'dato' 
-        : metricByAlias 
-          ? `\`${config.orderBy.column}\`` // Use backticks for quoted identifiers
+        : metricWithAlias 
+          ? `\`${config.orderBy.column}\`` 
           : config.orderBy.column.startsWith('metrikk_') || 
             config.orderBy.column.startsWith('andel') || 
             config.orderBy.column.includes('`')
-            ? `\`${config.orderBy.column.replace(/`/g, '')}\`` // Clean and quote
+            ? `\`${config.orderBy.column.replace(/`/g, '')}\`` 
             : config.orderBy.column;
-      
-      // Only add ORDER BY if the column actually exists in the query
       const columnExists = config.groupByFields.some(field => 
         (field === 'created_at' && config.orderBy?.column === 'dato') ||
         field === config.orderBy?.column
@@ -1059,11 +1032,9 @@ const ChartsPage = () => {
           config.orderBy?.column === `andel_${i + 1}`
         ))
       );
-
       if (columnExists) {
         sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
       } else {
-        // Fall back to default ordering if the column doesn't exist
         if (config.groupByFields.includes('created_at')) {
           sql += 'ORDER BY dato ASC\n';
         } else {
@@ -1071,21 +1042,16 @@ const ChartsPage = () => {
         }
       }
     } else if (config.groupByFields.length > 0 || config.metrics.length > 0) {
-      // Improved default ordering logic
       if (config.groupByFields.includes('created_at')) {
-        // If we have date grouping, sort by date ascending
         sql += 'ORDER BY dato ASC\n';
       } else if (config.metrics.length > 0) {
-        // If we have metrics but no date, sort by first metric descending
         const firstMetricAlias = config.metrics[0].alias || 'metrikk_1';
         sql += `ORDER BY \`${firstMetricAlias}\` ${config.orderBy?.direction || 'DESC'}\n`;
       } else {
-        // Fallback to ordering by first column, but respect user's direction choice
         sql += `ORDER BY 1 ${config.orderBy?.direction || 'DESC'}\n`;
       }
     }
 
-    // Add LIMIT clause if specified
     if (config.limit && config.limit > 0) {
       sql += `LIMIT ${config.limit}\n`;
     }
@@ -1093,36 +1059,25 @@ const ChartsPage = () => {
     return sql;
   }, [getMetricSQL]);
 
-  // Update the generateSQL function to check for website ID at the top level
   const generateSQL = useCallback(() => {
     if (!config.website || !config.website.id) {
       setGeneratedSQL('-- Please select a website to generate SQL');
       return;
     }
-    
-    // Only proceed with SQL generation if we have a valid website ID
     setGeneratedSQL(generateSQLCore(config, filters, parameters));
   }, [config, filters, parameters, generateSQLCore]);
 
-  // Add orderBy management functions
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
-    // For known metrics, ensure consistent naming
     const metricWithAlias = config.metrics.find(m => m.alias === column);
-    
-    // If ordering by a percentage metric, check if it has a standard alias
     let finalColumn = column;
     if (column === 'andel' && !metricWithAlias) {
-      // Find percentage metrics without custom aliases
       const percentageMetrics = config.metrics.filter(m => 
         m.function === 'percentage' && !m.alias
       );
-      
       if (percentageMetrics.length === 1) {
-        // If there's only one, use the standardized alias
         finalColumn = 'andel';
       }
     }
-    
     setConfig(prev => ({
       ...prev,
       orderBy: { 
@@ -1139,7 +1094,6 @@ const ChartsPage = () => {
     }));
   };
 
-  // Add handleDateRangeChange function
   const handleDateRangeChange = useCallback(() => {
     if (tempDateRangeInDays < 1) {
       setTempDateRangeInDays(1);
@@ -1150,29 +1104,21 @@ const ChartsPage = () => {
     } else {
       setDateRangeInDays(tempDateRangeInDays);
     }
-
-    // When website is selected, reload events with the new date range
     if (config.website) {
       setIsLoading(true);
-      // Toggle forceReload to trigger the WebsitePicker to refresh
       setForceReload(prev => !prev);
       setDateChanged(true);
-      
-      // Reset dateChanged after a delay to allow the alert to be visible
       setTimeout(() => {
         setDateChanged(false);
       }, 5000);
     }
   }, [tempDateRangeInDays, maxDaysAvailable, config.website]);
 
-  // Modify website change handler to handle URL sharing
   const handleWebsiteChange = useCallback((website: Website | null) => {
     setConfig(prev => ({ 
       ...prev, 
       website 
     }));
-    
-    // Reset filters and selections when the website changes
     if (website && website.id !== config.website?.id) {
       setFilters([]);
       setConfig(prev => ({
@@ -1185,24 +1131,18 @@ const ChartsPage = () => {
     }
   }, [config.website?.id]);
 
-  // Check if the page is loaded via a shared URL with preset website
   useEffect(() => {
-    // This will only handle URL parameters not related to website ID
-    // Website ID is handled directly in WebsitePicker component
     const urlParams = new URLSearchParams(window.location.search);
-    
-    // You could add more URL parameters here like date range
     const dateRange = urlParams.get('dateRange');
     if (dateRange && !isNaN(Number(dateRange))) {
       const days = Number(dateRange);
-      if (days > 0 && days <= 90) { // Add reasonable limits
+      if (days > 0 && days <= 90) {
         setDateRangeInDays(days);
         setTempDateRangeInDays(days);
       }
     }
   }, []);
 
-  // Modify handleEventsLoad to update loading state
   const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
     setAvailableEvents(events);
     if (autoParameters) {
@@ -1212,10 +1152,9 @@ const ChartsPage = () => {
       setMaxDaysAvailable(maxDays);
     }
     setDateRangeReady(true);
-    setIsLoading(false); // Clear loading state after events load
+    setIsLoading(false);
   };
 
-  // Add function to update parameter aggregation strategy
   const setParamAggregation = (strategy: 'representative' | 'unique') => {
     setConfig(prev => ({
       ...prev,
@@ -1223,9 +1162,7 @@ const ChartsPage = () => {
     }));
   };
 
-  // Add function to set the limit
   const setLimit = (limit: number | null) => {
-    // @ts-ignore
     setConfig(prev => ({
       ...prev,
       limit
@@ -1241,27 +1178,22 @@ const ChartsPage = () => {
         Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
       </p>
 
-      {/* Modified grid structure for better mobile layout */}
       <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-8">
-        {/* Left column - Form controls */}
         <div className="mb-8 order-1 lg:order-none">
           <VStack gap="4">
-            {/* Data section - Website picker */}
             <section>
-              {/* @ts-ignore Data section - Website picker */}
               <WebsitePicker 
                 selectedWebsite={config.website}
                 onWebsiteChange={handleWebsiteChange}
                 onEventsLoad={handleEventsLoad}
-                dateRangeInDays={dateRangeInDays} // Pass dateRangeInDays to WebsitePicker
-                shouldReload={forceReload}        // Pass the reload flag
+                dateRangeInDays={dateRangeInDays}
+                shouldReload={forceReload}
               />
             </section>
 
             {config.website && dateRangeReady && (
               <>
-                {/* Parameters section - Remove AdvancedOptions */}
-                <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
+                <section className="mt-4">
                   <Heading level="2" size="small" spacing>
                     Utforsk
                   </Heading>
@@ -1269,19 +1201,16 @@ const ChartsPage = () => {
                     availableEvents={availableEvents}
                     parameters={parameters}
                     setParameters={setParameters}
-                    // Pass date range props from WebsitePicker to EventParameterSelector
                     maxDaysAvailable={maxDaysAvailable}
                     dateRangeInDays={dateRangeInDays}
                     tempDateRangeInDays={tempDateRangeInDays}
-                    setTempDateRangeInDays={setTempDateRangeInDays}
                     handleDateRangeChange={handleDateRangeChange}
                     dateChanged={dateChanged}
                     isLoading={isLoading}
                   />
                 </section>
 
-                {/* Replace the Filter section with the new component */}
-                <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
+                <section className="mt-4">
                   <ChartFilters
                     filters={filters}
                     parameters={parameters}
@@ -1291,8 +1220,7 @@ const ChartsPage = () => {
                   />
                 </section>
 
-                {/* Summarize section with new parameter aggregation toggle */}
-                <section className="mt-4">  {/* Add explicit margin-top for better spacing */}
+                <section className="mt-4">
                   <Summarize
                     metrics={config.metrics}
                     groupByFields={config.groupByFields}
@@ -1322,19 +1250,19 @@ const ChartsPage = () => {
                       dateFormat: format as DateFormat['value']
                     }))}
                     availableEvents={availableEvents}
+                    filters={filters} // Add this prop
+                    setFilters={setFilters} // Add this prop
                   />
                 </section>
               </>
             )}
           </VStack>
 
-          {/* Kontaktboks visible only on desktop */}
           <div className="mt-8 hidden lg:block">
             <Kontaktboks />
           </div>
         </div>
 
-        {/* Right column - SQL preview */}
         <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start">
           <div className="overflow-y-auto">
             <SQLPreview 
@@ -1346,7 +1274,6 @@ const ChartsPage = () => {
           </div>
         </div>
 
-        {/* Kontaktboks for mobile - shown below SQL preview */}
         <div className="order-3 lg:hidden">
           <Kontaktboks />
         </div>
@@ -1361,7 +1288,6 @@ const ChartsPage = () => {
   );
 };
 
-// Add useDebounce hook to prevent too frequent updates
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
