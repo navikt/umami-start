@@ -16,12 +16,12 @@ export const FILTER_COLUMNS = {
       { label: 'URL-sti', value: 'url_path' },
       { label: 'URL-spørring', value: 'url_query' },
       { label: 'URL-sti og spørring', value: 'url_fullpath' },
-   /*   { label: 'URL fullstendig adresse', value: 'url_fullurl' }, */
+     /* { label: 'URL fullstendig adresse', value: 'url_fullurl' },*/
       { label: 'Sidetittel', value: 'page_title' },
       { label: 'Henvisningsdomene', value: 'referrer_domain' },
       { label: 'Henvisningssti', value: 'referrer_path' },
       { label: 'Henvisningsspørring', value: 'referrer_query' },
-      { label: 'Henvisning fullstendig sti', value: 'referrer_fullpath' },
+      { label: 'Henvisning sti og spørring', value: 'referrer_fullpath' },
       { label: 'Henvisning fullstendig URL', value: 'referrer_fullurl' }
     ]
   },

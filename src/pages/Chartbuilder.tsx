@@ -655,8 +655,20 @@ const ChartsPage = () => {
     // Updated to pass parameters to the function
     const requiredTables = getRequiredTables(config, filters);
     
+    // Check which derived columns are actually needed
+    const needsUrlFullpath = filters.some(f => f.column === 'url_fullpath') || 
+                            config.groupByFields.includes('url_fullpath');
+    
+    const needsUrlFullUrl = filters.some(f => f.column === 'url_fullurl') || 
+                           config.groupByFields.includes('url_fullurl');
+    
+    const needsReferrerFullpath = filters.some(f => f.column === 'referrer_fullpath') || 
+                                 config.groupByFields.includes('referrer_fullpath');
+    
+    const needsReferrerFullUrl = filters.some(f => f.column === 'referrer_fullurl') || 
+                                config.groupByFields.includes('referrer_fullurl');
+    
     // IMPORTANT: Only filter out param_ filters, not all filters!
-    // This was causing filters to not appear in SQL
     const eventFilters = filters.filter(filter => 
       !filter.column.startsWith('param_')
     );
@@ -667,13 +679,73 @@ const ChartsPage = () => {
     
     // If using interactive date mode, use fully qualified table name references
     if (hasInteractiveDateFilter) {
-      sql += `    ${fullWebsiteTable}.*,\n`;
-      // Add derived columns - url_fullpath combines url_path and url_query
-      sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullpath\n`;
+      sql += `    ${fullWebsiteTable}.*`;
+      
+      // Only add derived columns if they're needed
+      let addedDerivedColumns = false;
+      
+      if (needsUrlFullpath) {
+        sql += ',\n';
+        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullpath`;
+        addedDerivedColumns = true;
+      }
+      
+      if (needsUrlFullUrl) {
+        if (!addedDerivedColumns) sql += ',\n';
+        else sql += ',\n';
+        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_domain, ''), IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullurl`;
+        addedDerivedColumns = true;
+      }
+      
+      if (needsReferrerFullpath) {
+        if (!addedDerivedColumns) sql += ',\n';
+        else sql += ',\n';
+        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.referrer_path, ''), IFNULL(${fullWebsiteTable}.referrer_query, '')) as referrer_fullpath`;
+        addedDerivedColumns = true;
+      }
+      
+      if (needsReferrerFullUrl) {
+        if (!addedDerivedColumns) sql += ',\n';
+        else sql += ',\n';
+        sql += `    CONCAT(IFNULL(${fullWebsiteTable}.referrer_domain, ''), IFNULL(${fullWebsiteTable}.referrer_path, ''), IFNULL(${fullWebsiteTable}.referrer_query, '')) as referrer_fullurl`;
+        addedDerivedColumns = true;
+      }
+      
+      sql += '\n';
     } else {
-      sql += '    e.*,\n';
-      // Add derived columns - url_fullpath combines url_path and url_query
-      sql += '    CONCAT(IFNULL(e.url_path, \'\'), IFNULL(e.url_query, \'\')) as url_fullpath\n';
+      sql += '    e.*';
+      
+      // Only add derived columns if they're needed
+      let addedDerivedColumns = false;
+      
+      if (needsUrlFullpath) {
+        sql += ',\n';
+        sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
+        addedDerivedColumns = true;
+      }
+      
+      if (needsUrlFullUrl) {
+        if (!addedDerivedColumns) sql += ',\n';
+        else sql += ',\n';
+        sql += "    CONCAT(IFNULL(e.url_domain, ''), IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullurl";
+        addedDerivedColumns = true;
+      }
+      
+      if (needsReferrerFullpath) {
+        if (!addedDerivedColumns) sql += ',\n';
+        else sql += ',\n';
+        sql += "    CONCAT(IFNULL(e.referrer_path, ''), IFNULL(e.referrer_query, '')) as referrer_fullpath";
+        addedDerivedColumns = true;
+      }
+      
+      if (needsReferrerFullUrl) {
+        if (!addedDerivedColumns) sql += ',\n';
+        else sql += ',\n';
+        sql += "    CONCAT(IFNULL(e.referrer_domain, ''), IFNULL(e.referrer_path, ''), IFNULL(e.referrer_query, '')) as referrer_fullurl";
+        addedDerivedColumns = true;
+      }
+      
+      sql += '\n';
     }
     
     // Add a comma after the main selection ONLY if we have session columns
@@ -684,7 +756,7 @@ const ChartsPage = () => {
       }
     }
 
-    // Add session columns if needed
+    // Add session columns if neededßßß
     if (requiredTables.session) {
       if (hasInteractiveDateFilter) {
         sql += `    ${fullSessionTable}.browser,\n`;
