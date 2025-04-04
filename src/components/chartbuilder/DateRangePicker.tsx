@@ -536,25 +536,19 @@ const DateRangePicker = forwardRef(({
           {/* Frequent dates panel */}
           <Tabs.Panel value="frequent" className="pt-6">
             <div className="flex flex-wrap gap-2">
-              <button 
-                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                  !hasDateFilter() || selectedDateRange === 'all'
-                    ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                }`}
+              <Button 
+                variant={!hasDateFilter() || selectedDateRange === 'all' ? "primary" : "secondary"}
+                size="small"
                 onClick={() => applyDateRange('all')}
                 disabled={interactiveMode}
               >
                 Alt
-              </button>
+              </Button>
               {DYNAMIC_DATE_RANGES.map((period) => (
-                <button
+                <Button
                   key={period.id}
-                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                    selectedDateRange === period.id
-                      ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                  }`}
+                  variant={selectedDateRange === period.id ? "primary" : "secondary"}
+                  size="small"
                   onClick={() => {
                     if (!interactiveMode) {
                       applyDateRange(period.id);
@@ -563,7 +557,7 @@ const DateRangePicker = forwardRef(({
                   disabled={interactiveMode}
                 >
                   {period.label}
-                </button>
+                </Button>
               ))}
             </div>
           </Tabs.Panel>
@@ -572,38 +566,29 @@ const DateRangePicker = forwardRef(({
           <Tabs.Panel value="dynamic" className="pt-6">
             <div className="mb-2">
               <div className="flex gap-2 mb-6">
-                <button
-                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                    relativeMode === 'previous'
-                      ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                  }`}
+                <Button
+                  variant={relativeMode === 'previous' ? "primary" : "secondary"}
+                  size="small"
                   onClick={() => setRelativeMode('previous')}
                 >
                   Forrige...
-                </button>
-                <button
-                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                    relativeMode === 'current'
-                      ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                  }`}
+                </Button>
+                <Button
+                  variant={relativeMode === 'current' ? "primary" : "secondary"}
+                  size="small"
                   onClick={() => setRelativeMode('current')}
                 >
                   Inneværendee...
-                </button>
+                </Button>
               </div>
 
               {relativeMode === 'current' && (
                 <div className="flex flex-wrap gap-2">
                   {CURRENT_PERIODS.map((period) => (
-                    <button
+                    <Button
                       key={period.id}
-                      className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                        selectedDateRange === period.id
-                          ? 'bg-blue-600 text-white border-blue-700'
-                          : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                      }`}
+                      variant={selectedDateRange === period.id ? "primary" : "secondary"}
+                      size="small"
                       onClick={() => {
                         if (!interactiveMode) {
                           // Create a synthetic ID to apply this date range
@@ -631,7 +616,7 @@ const DateRangePicker = forwardRef(({
                       disabled={interactiveMode}
                     >
                       {period.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}

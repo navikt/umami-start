@@ -504,29 +504,23 @@ const ChartFilters = ({
               Type hendelse
             </Heading>
             <div className="flex flex-wrap gap-2 mt-2">
-              <button 
-                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                  appliedSuggestion === '' 
-                    ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                }`}
-                onClick={() => toggleFilterSuggestion(appliedSuggestion)} // Clicking active suggestion clears it
+              <Button 
+                variant={appliedSuggestion === '' ? "primary" : "secondary"}
+                size="small"
+                onClick={() => toggleFilterSuggestion(appliedSuggestion)}
               >
                 Alle hendelser
-              </button>
+              </Button>
               {FILTER_SUGGESTIONS.map((suggestion) => (
-                <button
+                <Button
                   key={suggestion.id}
-                  className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                    appliedSuggestion === suggestion.id 
-                      ? 'bg-blue-600 text-white border-blue-700' 
-                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                  }`}
+                  variant={appliedSuggestion === suggestion.id ? "primary" : "secondary"}
+                  size="small"
                   onClick={() => toggleFilterSuggestion(suggestion.id)}
                   title={suggestion.description}
                 >
                   {suggestion.label}
-                </button>
+                </Button>
               ))}
             </div>
             
@@ -534,12 +528,9 @@ const ChartFilters = ({
             {appliedSuggestion === 'pageviews' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
                 <div className="flex flex-wrap gap-2">
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      pageViewsMode === 'all' 
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                    }`}
+                  <Button 
+                    variant={pageViewsMode === 'all' ? "primary" : "secondary"}
+                    size="small"
                     onClick={() => {
                       setPageViewsMode('all');
                       // Clear any specific URL path filters
@@ -551,23 +542,17 @@ const ChartFilters = ({
                     }}
                   >
                     Alle sidevisninger
-                  </button>
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      pageViewsMode === 'specific' 
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                    }`}
+                  </Button>
+                  <Button 
+                    variant={pageViewsMode === 'specific' ? "primary" : "secondary"}
+                    size="small"
                     onClick={() => setPageViewsMode('specific')}
                   >
                     Bestemte sider
-                  </button>
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      pageViewsMode === 'interactive' 
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                    }`}
+                  </Button>
+                  <Button 
+                    variant={pageViewsMode === 'interactive' ? "primary" : "secondary"}
+                    size="small"
                     onClick={() => {
                       setPageViewsMode('interactive');
                       // Add Metabase parameter filter
@@ -587,7 +572,7 @@ const ChartFilters = ({
                     }}
                   >
                     Interaktiv
-                  </button>
+                  </Button>
                 </div>
                 
                 {pageViewsMode === 'specific' && (
@@ -712,12 +697,9 @@ const ChartFilters = ({
             {appliedSuggestion === 'custom_events' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
                 <div className="flex flex-wrap gap-2">
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      customEventsMode === 'all' 
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                    }`}
+                  <Button 
+                    variant={customEventsMode === 'all' ? "primary" : "secondary"}
+                    size="small"
                     onClick={() => {
                       setCustomEventsMode('all');
                       // Clear any specific event name filters
@@ -727,23 +709,17 @@ const ChartFilters = ({
                     }}
                   >
                     Alle hendelser
-                  </button>
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      customEventsMode === 'specific' 
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                    }`}
+                  </Button>
+                  <Button 
+                    variant={customEventsMode === 'specific' ? "primary" : "secondary"}
+                    size="small"
                     onClick={() => setCustomEventsMode('specific')}
                   >
                     Bestemte hendelser
-                  </button>
-                  <button 
-                    className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                      customEventsMode === 'interactive' 
-                        ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
-                    }`}
+                  </Button>
+                  <Button 
+                    variant={customEventsMode === 'interactive' ? "primary" : "secondary"}
+                    size="small"
                     onClick={() => {
                       setCustomEventsMode('interactive');
                       // Add Metabase parameter filter
@@ -761,7 +737,7 @@ const ChartFilters = ({
                     }}
                   >
                     Interaktiv
-                  </button>
+                  </Button>
                 </div>
                 
                 {customEventsMode === 'specific' && (
