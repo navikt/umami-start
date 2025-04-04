@@ -684,7 +684,7 @@ const ChartFilters = ({
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium mb-1">Interaktivt filter for sidevisninger aktivert</p>
+                      <p className="font-medium mb-1">Aktivert som interaktivt filter for sidevisninger</p>
                       <p className="text-gray-600">URL-sti kan velges som et filtervalg i Metabase-dashbord</p>
                     </div>
                   </div>
@@ -854,7 +854,7 @@ const ChartFilters = ({
                                         </span>
                                       </div>
                                       <div>
-                                        <p className="font-medium mb-1">Interaktivt filter for egendefinerte hendelser aktivert</p>
+                                        <p className="font-medium mb-1">Aktivert som interaktivt filter for egendefinerte hendelser</p>
                                         <p className="text-gray-600">Egendefinerte hendelser kan velges via filtervalg i Metabase-dashbord</p>
                                       </div>
                                     </div>
