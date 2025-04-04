@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
+import { Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Calendar, Link2, Activity, Smartphone, Clock } from 'lucide-react'; // Added Clock iconimports
 import { useState, useEffect } from 'react'; 
 import { 
@@ -79,6 +79,10 @@ const Summarize = ({
   const [showAdvancedGrouping, setShowAdvancedGrouping] = useState<boolean>(false);
   const [showAdvancedCalculations, setShowAdvancedCalculations] = useState<boolean>(false);
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false); // Add state for custom sort visibility
+
+  // Add state to track which grouping and calculation buttons are active
+  const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
+  const [activeCalculations, setActiveCalculations] = useState<string[]>([]);
 
   // Add helper function to deduplicate parameters
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
@@ -188,10 +192,13 @@ const Summarize = ({
     updateSortOrderIfNeeded();
   }, [metrics.length]);
 
-  // Add helper function for quick metric addition
+  // Add helper function for quick metric addition with active state tracking
   const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
     // Get the new metric index (after the metric is added)
     const newIndex = metrics.length;
+    
+    // Add to active calculations
+    setActiveCalculations([...activeCalculations, `${metricType}_${column || ''}`]);
     
     // First add the basic metric
     addMetric(metricType);
@@ -205,6 +212,22 @@ const Summarize = ({
     }, 0);
   };
 
+  // Add helper function for adding group fields with active state tracking
+  const handleAddGroupField = (field: string) => {
+    setActiveGroupings([...activeGroupings, field]);
+    addGroupByField(field);
+  };
+
+  // Update effect to sync active states with actual data
+  useEffect(() => {
+    // Sync activeGroupings with groupByFields
+    setActiveGroupings(groupByFields);
+    
+    // Sync activeCalculations based on metrics
+    const calculationIds = metrics.map(m => `${m.function}_${m.column || ''}`);
+    setActiveCalculations(calculationIds);
+  }, [groupByFields, metrics]);
+
   return (
     <>
     <div className="flex justify-between items-center mb-4">
@@ -212,14 +235,13 @@ const Summarize = ({
         Tilpass visningen
       </Heading>
       
-      {/* Add reset button next to the heading */}
-      <Button 
-        variant="tertiary" 
-        size="small" 
+      {/* Update reset button to match style */}
+      <button 
+        className="px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
         onClick={resetConfig}
       >
         Tilbakestill tilpasninger
-      </Button>
+      </button>
     </div>
     <div className="bg-gray-50 p-5 rounded-md border"> 
         {/* Add alert at the top if it's visible */}
@@ -243,58 +265,60 @@ const Summarize = ({
         </div>
         
         <div className="space-y-4 mb-6">
-          {/* Add quick grouping buttons */}
+          {/* Replace quick grouping buttons with consistent styling */}
           <div className="mb-2">
             <Label as="p" size="small" className="mb-2">
               Legg til vanlige grupperinger:
             </Label>
             <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addGroupByField('created_at')}
-                icon={<Calendar size={16} />}
-                disabled={groupByFields.includes('created_at')}
+              <button 
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 ${
+                  activeGroupings.includes('created_at')
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
+                }`}
+                onClick={() => handleAddGroupField('created_at')}
+                disabled={activeGroupings.includes('created_at')}
               >
+                <Calendar size={16} />
                 Dato
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addGroupByField('url_path')}
-                icon={<Link2 size={16} />}
-                disabled={groupByFields.includes('url_path')}
+              </button>
+              <button 
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 ${
+                  activeGroupings.includes('url_path')
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
+                }`}
+                onClick={() => handleAddGroupField('url_path')}
+                disabled={activeGroupings.includes('url_path')}
               >
+                <Link2 size={16} />
                 URL-sti
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addGroupByField('event_name')}
-                icon={<Activity size={16} />}
-                disabled={groupByFields.includes('event_name')}
+              </button>
+              <button 
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 ${
+                  activeGroupings.includes('event_name')
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
+                }`}
+                onClick={() => handleAddGroupField('event_name')}
+                disabled={activeGroupings.includes('event_name')}
               >
+                <Activity size={16} />
                 Hendelsesnavn
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addGroupByField('device')}
-                icon={<Smartphone size={16} />}
-                disabled={groupByFields.includes('device')}
+              </button>
+              <button 
+                className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 ${
+                  activeGroupings.includes('device')
+                    ? 'bg-blue-600 text-white border-blue-700' 
+                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
+                }`}
+                onClick={() => handleAddGroupField('device')}
+                disabled={activeGroupings.includes('device')}
               >
+                <Smartphone size={16} />
                 Enhet
-              </Button>
-  {/*  <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addGroupByField('visit_duration')}
-                icon={<Clock size={16} />}
-                disabled={groupByFields.includes('visit_duration')}
-              >
-                Besøkstid
-              </Button>
-              */}
+              </button>
             </div>
           </div>
           
@@ -396,32 +420,31 @@ const Summarize = ({
                         
                         <div className="flex gap-1">
                           {index > 0 && (
-                            <Button
-                              variant="tertiary"
-                              size="small"
-                              icon={<MoveUp size={16} />}
+                            <button
+                              className="px-2 py-1 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                               onClick={() => moveGroupField(index, 'up')}
                               title="Flytt opp"
-                            />
+                            >
+                              <MoveUp size={16} />
+                            </button>
                           )}
                           {index < groupByFields.length - 1 && (
-                            <Button
-                              variant="tertiary"
-                              size="small"
-                              icon={<MoveDown size={16} />}
+                            <button
+                              className="px-2 py-1 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                               onClick={() => moveGroupField(index, 'down')}
                               title="Flytt ned"
-                            />
+                            >
+                              <MoveDown size={16} />
+                            </button>
                           )}
                         </div>
                         
-                        <Button
-                          variant="tertiary-neutral"
-                          size="small"
+                        <button
+                          className="px-2 py-1 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                           onClick={() => removeGroupByField(field)}
                         >
                           Fjern
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   );
@@ -443,69 +466,47 @@ const Summarize = ({
       </div>
         
         <div className="space-y-4 mb-6">
-          {/* Regular metrics section */}
+          {/* Replace regular metrics buttons with consistent styling */}
           <div className="mb-2">
             <Label as="p" size="small" className="mb-2">
               Legg til vanlige beregninger:
             </Label>
             <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="secondary" 
-                size="small"
+              <button 
+                className="px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                 onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike besøkende')}
-                icon={<Users size={16} />}
               >
+                <Users size={16} />
                 Unike besøkende
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
+              </button>
+              <button 
+                className="px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                 onClick={() => addConfiguredMetric('distinct', 'event_id', 'Unike hendelser')}
-                icon={<BarChart2 size={16} />}
               >
+                <BarChart2 size={16} />
                 Unike hendelser
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
+              </button>
+              <button 
+                className="px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                 onClick={() => addConfiguredMetric('count', undefined, 'Totalt antall')}
-                icon={<BarChart2 size={16} />}
               >
+                <BarChart2 size={16} />
                 Hendelser totalt
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
+              </button>
+              <button 
+                className="px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                 onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel av resultater')}
-                icon={<PieChart size={16} />}
               >
+                <PieChart size={16} />
                 Andel av besøkende 
-              </Button>
-              {/*<Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel av totalen')}
-                icon={<Percent size={16} />}
-              >
-                Andel besøkende av totalen
-              </Button>
-             <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addConfiguredMetric('sum', 'visit_duration', 'Total besøkstid')}
-                icon={<Clock size={16} />}
-              >
-                Total besøkstid
-              </Button>
-              */}
-              <Button 
-                variant="secondary" 
-                size="small"
+              </button>
+              <button 
+                className="px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center gap-1.5 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                 onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
-                icon={<Clock size={16} />}
               >
+                <Clock size={16} />
                 Gjennomsnitt besøkstid
-              </Button>
+              </button>
             </div>
           </div>
           
@@ -576,39 +577,38 @@ const Summarize = ({
                   </div>
                 </div>
                 
-                {/* Control buttons in the header */}
+                {/* Update control buttons in the header */}
                 <div className="flex items-center gap-1">
                   <div className="flex gap-1">
                     {index > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        icon={<MoveUp size={16} />}
+                      <button
+                        className="px-2 py-1 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                         onClick={() => moveMetric(index, 'up')}
                         title="Flytt opp"
-                      />
+                      >
+                        <MoveUp size={16} />
+                      </button>
                     )}
                     {index < metrics.length - 1 && (
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        icon={<MoveDown size={16} />}
+                      <button
+                        className="px-2 py-1 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                         onClick={() => moveMetric(index, 'down')}
                         title="Flytt ned"
-                      />
+                      >
+                        <MoveDown size={16} />
+                      </button>
                     )}
                     {(index === 0 || index === metrics.length - 1) && metrics.length > 1 && (
                       <div className="w-8"></div>
                     )}
                   </div>
                   
-                  <Button
-                    variant="tertiary-neutral"
-                    size="small"
+                  <button
+                    className="px-2 py-1 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm"
                     onClick={() => removeMetric(index)}
                   >
                     Fjern
-                  </Button>
+                  </button>
                 </div>
               </div>
           
