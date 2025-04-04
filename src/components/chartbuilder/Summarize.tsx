@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Label, TextField, UNSAFE_Combobox, Switch, HelpText } from '@navikt/ds-react';
-import { MoveUp, MoveDown, Users, BarChart2, PieChart, Percent, Calendar, Link2, Activity, Smartphone, Clock } from 'lucide-react'; // Added Clock iconimports
+import { MoveUp, MoveDown, Users, BarChart2, PieChart, Calendar, Link2, Activity, Smartphone, Clock } from 'lucide-react'; // Added Clock iconimports
 import { useState, useEffect } from 'react'; 
 import { 
   Parameter, 
@@ -481,7 +481,7 @@ const Summarize = ({
               >
                 Andel av besøkende 
               </Button>
-              <Button 
+              {/*<Button 
                 variant="secondary" 
                 size="small"
                 onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel av totalen')}
@@ -489,7 +489,7 @@ const Summarize = ({
               >
                 Andel besøkende av totalen
               </Button>
-              <Button 
+             <Button 
                 variant="secondary" 
                 size="small"
                 onClick={() => addConfiguredMetric('sum', 'visit_duration', 'Total besøkstid')}
@@ -497,13 +497,14 @@ const Summarize = ({
               >
                 Total besøkstid
               </Button>
+              */}
               <Button 
                 variant="secondary" 
                 size="small"
                 onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
                 icon={<Clock size={16} />}
               >
-                Gj.snitt besøkstid
+                Gjennomsnitt besøkstid
               </Button>
             </div>
           </div>

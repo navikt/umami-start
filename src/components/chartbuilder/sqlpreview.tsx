@@ -7,13 +7,19 @@ interface SQLPreviewProps {
   activeStep?: number;
   openFormprogress?: boolean;
   onOpenChange?: (open: boolean) => void;
+  filters?: Array<{ column: string; interactive?: boolean; metabaseParam?: boolean }>; // Add filters prop
+  metrics?: Array<{ column?: string }>; // Add metrics prop
+  groupByFields?: string[]; // Add groupByFields prop
 }
 
-const SQLPreview = ({ 
-  sql, 
-  activeStep = 1, 
+const SQLPreview = ({
+  sql,
+  activeStep = 1,
   openFormprogress = true,
-  onOpenChange 
+  onOpenChange,
+  filters = [],
+  metrics = [],
+  groupByFields = [],
 }: SQLPreviewProps) => {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -27,7 +33,7 @@ const SQLPreview = ({
   // Check if SQL is just a basic template without metrics or groupings
   const isBasicTemplate = () => {
     if (!sql) return true;
-    
+
     // Check if there are any SELECT columns specified or if it's just the basic structure
     const selectPattern = /SELECT\s+(\s*FROM|\s*$)/i;
     return selectPattern.test(sql);
@@ -36,12 +42,23 @@ const SQLPreview = ({
   // Check if SQL is meaningful enough to display
   const isSQLMeaningful = () => {
     if (!sql) return false;
-    
+
     // Basic template SQL should not be shown, it's not useful yet
     if (isBasicTemplate()) return false;
-    
+
     return true;
   };
+
+  // Check for interactive date filter and visit duration combination
+  const hasInteractiveDateFilter = filters.some(
+    (f) => f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
+  );
+
+  const hasVisitDuration =
+    metrics.some((m) => m.column === 'visit_duration') || groupByFields.includes('visit_duration');
+
+  // Flag to show warning
+  const showIncompatibilityWarning = hasInteractiveDateFilter && hasVisitDuration;
 
   // Track previous step to detect transitions
   const [prevStep, setPrevStep] = useState(activeStep);
@@ -54,7 +71,7 @@ const SQLPreview = ({
       if (activeStep === 4 && prevStep !== 4 && !autoClosedStep4) {
         onOpenChange(false);
         setAutoClosedStep4(true);
-      } 
+      }
       // Reopen when moving from step 4 back to earlier steps
       else if (prevStep === 4 && activeStep < 4) {
         onOpenChange(true);
@@ -65,12 +82,15 @@ const SQLPreview = ({
         onOpenChange(activeStep < 4 && openFormprogress);
       }
       // If parent explicitly sets openFormprogress, respect that even at step 4
-      else if (openFormprogress !== undefined && openFormprogress !== (activeStep === 4 ? false : openFormprogress)) {
+      else if (
+        openFormprogress !== undefined &&
+        openFormprogress !== (activeStep === 4 ? false : openFormprogress)
+      ) {
         // This means user manually toggled it, so respect that
         onOpenChange(openFormprogress);
       }
     }
-    
+
     // Update previous step
     setPrevStep(activeStep);
   }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedStep4]);
@@ -80,9 +100,7 @@ const SQLPreview = ({
       {isBasicTemplate() ? (
         // Show getting started guidance
         <div className="space-y-4">
-                      <Heading level="2" size="small">
-              Lag graf eller tabell
-            </Heading>
+          <Heading level="2" size="small">Lag graf eller tabell</Heading>
           {/*
           <div className="space-y-2">
             <p className="text-sm text-gray-600">
@@ -94,14 +112,14 @@ const SQLPreview = ({
           {/* Only show SQL code button if the SQL is meaningful */}
           {isSQLMeaningful() && (
             <div className="mt-4">
-              <Button 
+              <Button
                 variant="tertiary"
                 size="small"
                 onClick={() => setShowCode(!showCode)}
                 icon={showCode ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 className="mb-2"
               >
-                {showCode ? "Skjul SQL-kode" : "Vis SQL-kode"}
+                {showCode ? 'Skjul SQL-kode' : 'Vis SQL-kode'}
               </Button>
 
               {showCode && (
@@ -110,12 +128,7 @@ const SQLPreview = ({
                     {sql}
                   </pre>
                   <div className="absolute top-2 right-2">
-                    <CopyButton
-                      copyText={sql}
-                      text="Kopier"
-                      activeText="Kopiert!"
-                      size="small"
-                    />
+                    <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
                   </div>
                 </div>
               )}
@@ -125,20 +138,26 @@ const SQLPreview = ({
       ) : (
         // Show the original SQL preview instructions
         <div>
-          <div className="space-y-2 mb-6">
-            <Heading level="2" size="small">
-              Visualiser grafen eller tabellen i Metabase
-            </Heading>
-            {/* <p className="text-sm text-gray-600">
-            Følg stegene under for å teste spørringen i Metabase. Du kan gjøre dette når som helst 
-        underveis mens du jobber med å sette opp grafen / tabellen din.
-            </p> */}
+          <div className="space-y-2 mb-4">
+            <Heading level="2" size="small">Visualiser grafen eller tabellen i Metabase</Heading>
+
+            {/* Add incompatibility warning */}
+            {showIncompatibilityWarning && (
+              <Alert variant="warning" className="mt-3 mb-3">
+                <div>
+                  <p className="font-medium">Interaktiv dato + besøksvarighet = funker ikke</p>
+                  <p className="mt-1">
+                    Du bruker både interaktivt datofilter og besøksvarighet, som ikke fungerer sammen i Metabase.
+                    Vurder å bruke en av de andre datofiltrene i stedet.
+                  </p>
+                </div>
+              </Alert>
+            )}
           </div>
 
           <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
             <div className="flex flex-col gap-4">
-
-            <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3">
                 <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
                   1
                 </div>
@@ -146,9 +165,9 @@ const SQLPreview = ({
                   <p className="font-medium">Kopier det du har laget</p>
                   <div className="mt-2">
                     {!copied ? (
-                      <Button 
-                        variant="primary" 
-                        onClick={handleCopy} 
+                      <Button
+                        variant="primary"
+                        onClick={handleCopy}
                         icon={<Copy size={18} />}
                         className="w-full md:w-auto"
                       >
@@ -164,29 +183,34 @@ const SQLPreview = ({
               </div>
 
               <div className="flex items-start gap-3">
-              <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                2
+                <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  2
+                </div>
+                <div className="flex-grow">
+                  <p className="font-medium mb-2">Lim inn i Metabase</p>
+                  <Link
+                    href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                  >
+                    Åpne Metabase <ExternalLink size={14} />
+                  </Link>{' '}
+                  (Merk: Hvis siden "Velg dine startdata" vises, lukk den og klikk på lenken på nytt.)
+                </div>
               </div>
-              <div className="flex-grow">
-                <p className="font-medium mb-2">Lim inn i Metabase</p>
-                <Link 
-                  href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0=" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
-                >
-                  Åpne Metabase <ExternalLink size={14} />
-                </Link> (Merk: Hvis siden "Velg dine startdata" vises, lukk den og klikk på lenken på nytt.)
-              </div>
-            </div>
 
               <div className="flex items-start gap-3">
                 <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Trykk på <span role="img" aria-label="spill av-knapp">▶️</span> "vis resultater"-knappen</p>
-                  <p className="text-md text-gray-700 mt-1">Trykk "visualisering" for å bytte fra tabell til graf</p>
+                  <p className="font-medium">
+                    Trykk på <span role="img" aria-label="spill av-knapp">▶️</span> "vis resultater"-knappen
+                  </p>
+                  <p className="text-md text-gray-700 mt-1">
+                    Trykk "visualisering" for å bytte fra tabell til graf
+                  </p>
                 </div>
               </div>
             </div>
@@ -194,14 +218,14 @@ const SQLPreview = ({
 
           {sql && (
             <div className="mt-4">
-              <Button 
+              <Button
                 variant="tertiary"
                 size="small"
                 onClick={() => setShowCode(!showCode)}
                 icon={showCode ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 className="mb-2"
               >
-                {showCode ? "Skjul SQL-kode" : "Vis SQL-kode"}
+                {showCode ? 'Skjul SQL-kode' : 'Vis SQL-kode'}
               </Button>
 
               {showCode && (
@@ -210,31 +234,25 @@ const SQLPreview = ({
                     {sql}
                   </pre>
                   <div className="absolute top-2 right-2">
-                    <CopyButton
-                      copyText={sql}
-                      text="Kopier"
-                      activeText="Kopiert!"
-                      size="small"
-                    />
+                    <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
                   </div>
 
                   <div className="mt-2 mb-8 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-100">
-                  <p>
-                    <strong>Tips:</strong> Du trenger ikke å forstå koden! Den er generert basert på valgene dine, 
-                    og vil fungere når du kopierer og limer inn i Metabase.
-                  </p>
-                </div>
+                    <p>
+                      <strong>Tips:</strong> Du trenger ikke å forstå koden! Den er generert basert på valgene dine,
+                      og vil fungere når du kopierer og limer inn i Metabase.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           )}
-
         </div>
       )}
       <div className="pt-0">
-        <FormProgress 
-          activeStep={activeStep} 
-          totalSteps={4} 
+        <FormProgress
+          activeStep={activeStep}
+          totalSteps={4}
           open={openFormprogress}
           onOpenChange={onOpenChange}
           interactiveSteps={false}
@@ -245,7 +263,6 @@ const SQLPreview = ({
           <FormProgress.Step>Visualisér i Metabase</FormProgress.Step>
         </FormProgress>
       </div>
-
     </div>
   );
 };

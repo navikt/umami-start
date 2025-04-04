@@ -71,7 +71,7 @@ export interface ChartConfig {
   metrics: Metric[];
   groupByFields: string[];
   orderBy: { column: string; direction: 'ASC' | 'DESC' } | null;
-  dateFormat: DateFormat['value'];
-  paramAggregation: 'representative' | 'unique'; // New property for controlling parameter aggregation
-  limit: null
+  dateFormat: string;
+  paramAggregation: 'representative' | 'unique';
+  limit: number | null; // Change from 'null' to 'number | null' to allow both values
 }
