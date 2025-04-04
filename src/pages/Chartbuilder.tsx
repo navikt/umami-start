@@ -721,16 +721,16 @@ const ChartsPage = () => {
         sql += '    e.*';
       }
       
-      let addedDerivedColumns = false;
+      let addComma = false;
       
       if (needsUrlFullpath) {
-        sql += ',\n';
+        if (addComma) sql += ',\n';
         if (hasInteractiveFilters) {
           sql += `    CONCAT(IFNULL(${websiteAlias}.url_path, ''), IFNULL(${websiteAlias}.url_query, '')) as url_fullpath`;
         } else {
           sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
         }
-        addedDerivedColumns = true;
+        addComma = true;
       }
       
       if (hasInteractiveFilters) {
@@ -949,6 +949,7 @@ const ChartsPage = () => {
     if (config.orderBy && config.orderBy.column && config.orderBy.direction) {
       const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
       const metricWithAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
+      
       let finalColumn = config.orderBy.column;
       
       if (config.orderBy.column === 'andel' && !metricWithAlias) {
@@ -1022,19 +1023,18 @@ const ChartsPage = () => {
 
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
     const metricWithAlias = config.metrics.find(m => m.alias === column);
-    let finalColumn = column;
     if (column === 'andel' && !metricWithAlias) {
       const percentageMetrics = config.metrics.filter(m => 
         m.function === 'percentage' && !m.alias
       );
       if (percentageMetrics.length === 1) {
-        finalColumn = 'andel';
+        column = 'andel';
       }
     }
     setConfig(prev => ({
       ...prev,
       orderBy: { 
-        column: finalColumn, 
+        column, 
         direction 
       }
     }));
