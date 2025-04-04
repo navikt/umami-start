@@ -1,4 +1,4 @@
-import { Heading, DatePicker, Tabs, ExpansionCard, Button, Alert } from '@navikt/ds-react';
+import { Heading, DatePicker, Tabs, ExpansionCard, Button, Alert, Chips } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
 import { Filter } from '../../types/chart';
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -519,8 +519,6 @@ const DateRangePicker = forwardRef(({
       </Heading>
       
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
-      
-        {/* Replace button-based navigation with Tabs */}
         <Tabs 
           value={dateMode} 
           onChange={handleTabChange}
@@ -533,62 +531,61 @@ const DateRangePicker = forwardRef(({
             <Tabs.Tab value="interactive" label="Interaktiv" />
           </Tabs.List>
           
-          {/* Frequent dates panel */}
+          {/* Frequent dates panel - replace Buttons with Chips */}
           <Tabs.Panel value="frequent" className="pt-6">
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant={!hasDateFilter() || selectedDateRange === 'all' ? "primary" : "secondary"}
-                size="small"
+            <Chips>
+              <Chips.Toggle 
+                selected={!hasDateFilter() || selectedDateRange === 'all'}
                 onClick={() => applyDateRange('all')}
                 disabled={interactiveMode}
+                checkmark={false}
               >
                 Alt
-              </Button>
+              </Chips.Toggle>
               {DYNAMIC_DATE_RANGES.map((period) => (
-                <Button
+                <Chips.Toggle
                   key={period.id}
-                  variant={selectedDateRange === period.id ? "primary" : "secondary"}
-                  size="small"
+                  selected={selectedDateRange === period.id}
                   onClick={() => {
                     if (!interactiveMode) {
                       applyDateRange(period.id);
                     }
                   }}
                   disabled={interactiveMode}
+                  checkmark={false}
                 >
                   {period.label}
-                </Button>
+                </Chips.Toggle>
               ))}
-            </div>
+            </Chips>
           </Tabs.Panel>
           
-          {/* Dynamic dates panel */}
+          {/* Dynamic dates panel - replace Buttons with Chips */}
           <Tabs.Panel value="dynamic" className="pt-6">
             <div className="mb-2">
-              <div className="flex gap-2 mb-6">
-                <Button
-                  variant={relativeMode === 'previous' ? "primary" : "secondary"}
-                  size="small"
+              <Chips className="mb-6">
+                <Chips.Toggle 
+                  selected={relativeMode === 'previous'}
                   onClick={() => setRelativeMode('previous')}
+                  checkmark={false}
                 >
                   Forrige...
-                </Button>
-                <Button
-                  variant={relativeMode === 'current' ? "primary" : "secondary"}
-                  size="small"
+                </Chips.Toggle>
+                <Chips.Toggle 
+                  selected={relativeMode === 'current'}
                   onClick={() => setRelativeMode('current')}
+                  checkmark={false}
                 >
                   Inneværendee...
-                </Button>
-              </div>
+                </Chips.Toggle>
+              </Chips>
 
               {relativeMode === 'current' && (
-                <div className="flex flex-wrap gap-2">
+                <Chips>
                   {CURRENT_PERIODS.map((period) => (
-                    <Button
+                    <Chips.Toggle
                       key={period.id}
-                      variant={selectedDateRange === period.id ? "primary" : "secondary"}
-                      size="small"
+                      selected={selectedDateRange === period.id}
                       onClick={() => {
                         if (!interactiveMode) {
                           // Create a synthetic ID to apply this date range
@@ -614,12 +611,15 @@ const DateRangePicker = forwardRef(({
                         }
                       }}
                       disabled={interactiveMode}
+                      checkmark={false}
                     >
                       {period.label}
-                    </Button>
+                    </Chips.Toggle>
                   ))}
-                </div>
+                </Chips>
               )}
+              
+              {/* Keep the existing previous period interface unchanged */}
               {relativeMode === 'previous' && (
                 <div className="flex items-end gap-4">
                   <div>
