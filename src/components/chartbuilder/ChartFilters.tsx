@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Switch, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, Heading, Select, Switch, UNSAFE_Combobox, Chips } from '@navikt/ds-react';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -498,39 +498,38 @@ const ChartFilters = ({
             </div>
           )}
           
-          {/* Improved Filter Suggestions */}
+          {/* Improved Filter Suggestions using Chips */}
           <div className="mb-6">
             <Heading level="3" size="xsmall" spacing>
               Type hendelse
             </Heading>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Button 
-                variant={appliedSuggestion === '' ? "primary" : "secondary"}
-                size="small"
+            <Chips className="mt-2">
+              <Chips.Toggle 
+                selected={appliedSuggestion === ''} 
                 onClick={() => toggleFilterSuggestion(appliedSuggestion)}
+                checkmark={false}
               >
                 Alle hendelser
-              </Button>
+              </Chips.Toggle>
               {FILTER_SUGGESTIONS.map((suggestion) => (
-                <Button
+                <Chips.Toggle
                   key={suggestion.id}
-                  variant={appliedSuggestion === suggestion.id ? "primary" : "secondary"}
-                  size="small"
+                  selected={appliedSuggestion === suggestion.id}
                   onClick={() => toggleFilterSuggestion(suggestion.id)}
                   title={suggestion.description}
+                  checkmark={false}
                 >
                   {suggestion.label}
-                </Button>
+                </Chips.Toggle>
               ))}
-            </div>
+            </Chips>
             
             {/* Show URL path selector when pageviews filter is active */}
             {appliedSuggestion === 'pageviews' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant={pageViewsMode === 'all' ? "primary" : "secondary"}
-                    size="small"
+                <Chips>
+                  <Chips.Toggle 
+                    selected={pageViewsMode === 'all'}
                     onClick={() => {
                       setPageViewsMode('all');
                       // Clear any specific URL path filters
@@ -540,19 +539,19 @@ const ChartFilters = ({
                       setFilters(filtersWithoutPaths);
                       setSelectedPaths([]);
                     }}
+                    checkmark={false}
                   >
                     Alle sidevisninger
-                  </Button>
-                  <Button 
-                    variant={pageViewsMode === 'specific' ? "primary" : "secondary"}
-                    size="small"
+                  </Chips.Toggle>
+                  <Chips.Toggle 
+                    selected={pageViewsMode === 'specific'}
                     onClick={() => setPageViewsMode('specific')}
+                    checkmark={false}
                   >
                     Bestemte sider
-                  </Button>
-                  <Button 
-                    variant={pageViewsMode === 'interactive' ? "primary" : "secondary"}
-                    size="small"
+                  </Chips.Toggle>
+                  <Chips.Toggle 
+                    selected={pageViewsMode === 'interactive'}
                     onClick={() => {
                       setPageViewsMode('interactive');
                       // Add Metabase parameter filter
@@ -570,10 +569,11 @@ const ChartFilters = ({
                       ]);
                       setSelectedPaths([]);
                     }}
+                    checkmark={false}
                   >
                     Interaktiv
-                  </Button>
-                </div>
+                  </Chips.Toggle>
+                </Chips>
                 
                 {pageViewsMode === 'specific' && (
                   <>
@@ -696,10 +696,9 @@ const ChartFilters = ({
             {/* Show custom events selector when custom events filter is active */}
             {appliedSuggestion === 'custom_events' && (
               <div className="mt-4 ml-1 p-4 bg-white border rounded-md shadow-inner">
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant={customEventsMode === 'all' ? "primary" : "secondary"}
-                    size="small"
+                <Chips>
+                  <Chips.Toggle 
+                    selected={customEventsMode === 'all'}
                     onClick={() => {
                       setCustomEventsMode('all');
                       // Clear any specific event name filters
@@ -707,19 +706,19 @@ const ChartFilters = ({
                       setFilters(filtersWithoutEventNames);
                       setCustomEvents([]);
                     }}
+                    checkmark={false}
                   >
                     Alle hendelser
-                  </Button>
-                  <Button 
-                    variant={customEventsMode === 'specific' ? "primary" : "secondary"}
-                    size="small"
+                  </Chips.Toggle>
+                  <Chips.Toggle 
+                    selected={customEventsMode === 'specific'}
                     onClick={() => setCustomEventsMode('specific')}
+                    checkmark={false}
                   >
                     Bestemte hendelser
-                  </Button>
-                  <Button 
-                    variant={customEventsMode === 'interactive' ? "primary" : "secondary"}
-                    size="small"
+                  </Chips.Toggle>
+                  <Chips.Toggle 
+                    selected={customEventsMode === 'interactive'}
                     onClick={() => {
                       setCustomEventsMode('interactive');
                       // Add Metabase parameter filter
@@ -735,10 +734,11 @@ const ChartFilters = ({
                       ]);
                       setCustomEvents([]);
                     }}
+                    checkmark={false}
                   >
                     Interaktiv
-                  </Button>
-                </div>
+                  </Chips.Toggle>
+                </Chips>
                 
                 {customEventsMode === 'specific' && (
                   <>
