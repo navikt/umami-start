@@ -540,7 +540,7 @@ const DateRangePicker = forwardRef(({
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                   !hasDateFilter() || selectedDateRange === 'all'
                     ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                 }`}
                 onClick={() => applyDateRange('all')}
                 disabled={interactiveMode}
@@ -553,11 +553,10 @@ const DateRangePicker = forwardRef(({
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     selectedDateRange === period.id
                       ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                   }`}
                   onClick={() => {
                     if (!interactiveMode) {
-                      // Use dedicated and verified method to apply date range
                       applyDateRange(period.id);
                     }
                   }}
@@ -573,11 +572,11 @@ const DateRangePicker = forwardRef(({
           <Tabs.Panel value="dynamic" className="pt-6">
             <div className="mb-2">
               <div className="flex gap-2 mb-6">
-              <button
+                <button
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     relativeMode === 'previous'
                       ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                   }`}
                   onClick={() => setRelativeMode('previous')}
                 >
@@ -587,7 +586,7 @@ const DateRangePicker = forwardRef(({
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     relativeMode === 'current'
                       ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                   }`}
                   onClick={() => setRelativeMode('current')}
                 >
@@ -595,7 +594,7 @@ const DateRangePicker = forwardRef(({
                 </button>
               </div>
 
-              {relativeMode === 'current' ? (
+              {relativeMode === 'current' && (
                 <div className="flex flex-wrap gap-2">
                   {CURRENT_PERIODS.map((period) => (
                     <button
@@ -603,7 +602,7 @@ const DateRangePicker = forwardRef(({
                       className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                         selectedDateRange === period.id
                           ? 'bg-blue-600 text-white border-blue-700'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                          : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                       }`}
                       onClick={() => {
                         if (!interactiveMode) {
@@ -635,7 +634,8 @@ const DateRangePicker = forwardRef(({
                     </button>
                   ))}
                 </div>
-              ) : (
+              )}
+              {relativeMode === 'previous' && (
                 <div className="flex items-end gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

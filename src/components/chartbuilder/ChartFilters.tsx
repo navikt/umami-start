@@ -508,7 +508,7 @@ const ChartFilters = ({
                 className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                   appliedSuggestion === '' 
                     ? 'bg-blue-600 text-white border-blue-700' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                 }`}
                 onClick={() => toggleFilterSuggestion(appliedSuggestion)} // Clicking active suggestion clears it
               >
@@ -520,7 +520,7 @@ const ChartFilters = ({
                   className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                     appliedSuggestion === suggestion.id 
                       ? 'bg-blue-600 text-white border-blue-700' 
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                      : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                   }`}
                   onClick={() => toggleFilterSuggestion(suggestion.id)}
                   title={suggestion.description}
@@ -538,7 +538,7 @@ const ChartFilters = ({
                     className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                       pageViewsMode === 'all' 
                         ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                     }`}
                     onClick={() => {
                       setPageViewsMode('all');
@@ -556,7 +556,7 @@ const ChartFilters = ({
                     className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                       pageViewsMode === 'specific' 
                         ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                     }`}
                     onClick={() => setPageViewsMode('specific')}
                   >
@@ -566,7 +566,7 @@ const ChartFilters = ({
                     className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                       pageViewsMode === 'interactive' 
                         ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                     }`}
                     onClick={() => {
                       setPageViewsMode('interactive');
@@ -716,7 +716,7 @@ const ChartFilters = ({
                     className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                       customEventsMode === 'all' 
                         ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                     }`}
                     onClick={() => {
                       setCustomEventsMode('all');
@@ -732,7 +732,7 @@ const ChartFilters = ({
                     className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                       customEventsMode === 'specific' 
                         ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                     }`}
                     onClick={() => setCustomEventsMode('specific')}
                   >
@@ -742,7 +742,7 @@ const ChartFilters = ({
                     className={`px-3 py-2 rounded-md text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                       customEventsMode === 'interactive' 
                         ? 'bg-blue-600 text-white border-blue-700' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                        : 'bg-gray-50 text-gray-900 border-gray-400 hover:bg-gray-100 shadow-sm'
                     }`}
                     onClick={() => {
                       setCustomEventsMode('interactive');

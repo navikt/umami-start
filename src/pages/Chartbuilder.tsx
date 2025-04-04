@@ -950,6 +950,7 @@ const ChartsPage = () => {
       const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
       const metricWithAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
       
+      // @ts-ignore
       let finalColumn = config.orderBy.column;
       
       if (config.orderBy.column === 'andel' && !metricWithAlias) {
