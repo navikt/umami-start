@@ -559,14 +559,14 @@ const ChartFilters = ({
                       }}
                       checkmark={false}
                     >
-                      Alle sider
+                      Besøk til alle sider
                     </Chips.Toggle>
                     <Chips.Toggle 
                       selected={pageViewsMode === 'specific'}
                       onClick={() => setPageViewsMode('specific')}
                       checkmark={false}
                     >
-                      Bestemte sider
+                      Besøk til bestemte sider
                     </Chips.Toggle>
                     <Chips.Toggle 
                       selected={pageViewsMode === 'interactive'}

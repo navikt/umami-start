@@ -98,6 +98,17 @@ const Summarize = ({
     setActiveCalculations(calculationIds);
   }, [metrics]);
 
+  useEffect(() => {
+    // Force step 2 to remain active until user explicitly adds metrics
+    // This is done by dispatching a custom event that the parent can listen for
+    const event = new CustomEvent('summarizeStepStatus', {
+      detail: { 
+        hasUserSelectedMetrics: metrics.length > 0
+      }
+    });
+    document.dispatchEvent(event);
+  }, [metrics]);
+
   return (
     <>
     <div className="flex justify-between items-center mb-4">

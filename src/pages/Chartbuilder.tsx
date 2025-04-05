@@ -236,6 +236,12 @@ const ChartsPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
 
+  // Add state to track the current step
+  const [currentStep, setCurrentStep] = useState<number>(1);
+
+  // Add state to track whether user has explicitly selected metrics
+  const [hasUserSelectedMetrics, setHasUserSelectedMetrics] = useState<boolean>(false);
+
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
 
@@ -245,30 +251,44 @@ const ChartsPage = () => {
     }
   }, [debouncedConfig, filters, parameters]);
 
-  // Add state to track the current step
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  
   // Create a function to calculate the current step based on selections
   const calculateCurrentStep = useCallback(() => {
     if (!config.website) {
       return 1; // Step 1: Choose website
     }
     
-    if (filters.length === 0 && config.metrics.length === 0 && config.groupByFields.length === 0) {
-      return 2; // Step 2: Apply filters
+    // Modify this condition to use our explicit tracking of user metric selections
+    if (!hasUserSelectedMetrics && config.groupByFields.length === 0) {
+      return 2; // Step 2: Add metrics/groupings - stay on this step until user explicitly adds metrics
     }
     
-    if (config.metrics.length === 0 && config.groupByFields.length === 0) {
-      return 3; // Step 3: Add metrics/groupings
+    // If user has added metrics or groupings, but no filters, show step 3
+    if (filters.length === 0) {
+      return 3; // Step 3: Apply filters
     }
     
     return 4; // Step 4: Insert in Metabase
-  }, [config.website, filters.length, config.metrics.length, config.groupByFields.length]);
-  
+  }, [config.website, filters.length, hasUserSelectedMetrics, config.groupByFields.length]);
+
   // Update the step whenever relevant data changes
   useEffect(() => {
     setCurrentStep(calculateCurrentStep());
   }, [calculateCurrentStep]);
+
+  // Add event listener for the custom event from Summarize
+  useEffect(() => {
+    const handleSummarizeStepStatus = (event: any) => {
+      if (event.detail && typeof event.detail.hasUserSelectedMetrics !== 'undefined') {
+        setHasUserSelectedMetrics(event.detail.hasUserSelectedMetrics);
+      }
+    };
+    
+    document.addEventListener('summarizeStepStatus', handleSummarizeStepStatus);
+    
+    return () => {
+      document.removeEventListener('summarizeStepStatus', handleSummarizeStepStatus);
+    };
+  }, []);
 
   // Add state to manage FormProgress open state
   const [formProgressOpen, setFormProgressOpen] = useState<boolean>(true);
