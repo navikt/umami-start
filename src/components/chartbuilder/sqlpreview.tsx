@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heading, Link, CopyButton, Button, Alert, FormProgress } from '@navikt/ds-react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw } from 'lucide-react';
+import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
   sql: string;
@@ -25,6 +26,7 @@ const SQLPreview = ({
 }: SQLPreviewProps) => {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sql);
@@ -265,23 +267,40 @@ const SQLPreview = ({
           <FormProgress.Step>Tilpass vinsing av resultatene</FormProgress.Step>
           <FormProgress.Step>Visualisér i Metabase</FormProgress.Step>
         </FormProgress>
-
-
       </div>
     </div>
-            {/* Only show reset button after step 1 */}
-            {onResetAll && activeStep > 1 && (
-          <div className="flex justify-end mt-4 mr-4">
+    
+    <div className="mt-4 mr-4">
+      {/* Only show reset button after step 1 */}
+      {onResetAll && activeStep > 1 && (
+        <>
+          <div className="flex justify-end">
             <Button
               variant="tertiary"
               size="small"
-              onClick={onResetAll}
+              onClick={() => {
+                onResetAll();
+                setShowAlert(true);
+                // Auto-hide the alert after 4 seconds
+                setTimeout(() => setShowAlert(false), 4000);
+              }}
               icon={<RotateCcw size={16} />}
             >
               Tilbakestill alle valg
             </Button>
           </div>
-        )}
+          
+          {/* Show success alert below the button */}
+          {showAlert && (
+            <div className="mt-2">
+              <AlertWithCloseButton variant="success">
+                Alle innstillinger ble tilbakestilt
+              </AlertWithCloseButton>
+            </div>
+          )}
+        </>
+      )}
+    </div>
     </>
   );
 };

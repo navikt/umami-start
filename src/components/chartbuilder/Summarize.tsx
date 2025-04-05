@@ -62,20 +62,22 @@ const Summarize = forwardRef(({
 
   const uniqueParameters = getUniqueParameters(parameters);
 
-  const resetConfig = () => {
+  const resetConfig = (silent = false) => {
     const metricsCopy = [...metrics];
     metricsCopy.forEach((_) => {
       removeMetric(0);
     });
     
-    setAlertInfo({
-      show: true,
-      message: 'Alle målinger ble tilbakestilt'
-    });
-    
-    setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
-    }, 4000);
+    if (!silent) {
+      setAlertInfo({
+        show: true,
+        message: 'Alle målinger ble tilbakestilt'
+      });
+      
+      setTimeout(() => {
+        setAlertInfo(prev => ({...prev, show: false}));
+      }, 4000);
+    }
   };
 
   const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
@@ -124,7 +126,7 @@ const Summarize = forwardRef(({
       <Button 
         variant="tertiary" 
         size="small" 
-        onClick={resetConfig}
+        onClick={() => resetConfig(false)} // Explicitly pass false to show alert
       >
         Tilbakestill målinger
       </Button>

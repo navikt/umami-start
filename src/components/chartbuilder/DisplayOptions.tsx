@@ -81,7 +81,7 @@ const DisplayOptions = forwardRef(({
     addGroupByField(field);
   };
 
-  const resetOptions = () => {
+  const resetOptions = (silent = false) => {
     const fieldsCopy = [...groupByFields];
     fieldsCopy.forEach(field => {
       removeGroupByField(field);
@@ -95,14 +95,16 @@ const DisplayOptions = forwardRef(({
     setActiveGroupingsTab('basic');
     setShowCustomSort(false);
     
-    setAlertInfo({
-      show: true,
-      message: 'Alle visningsvalg ble tilbakestilt'
-    });
-    
-    setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
-    }, 4000);
+    if (!silent) {
+      setAlertInfo({
+        show: true,
+        message: 'Alle visningsvalg ble tilbakestilt'
+      });
+      
+      setTimeout(() => {
+        setAlertInfo(prev => ({...prev, show: false}));
+      }, 4000);
+    }
   };
 
   useImperativeHandle(ref, () => ({
@@ -125,7 +127,7 @@ const DisplayOptions = forwardRef(({
       <Button 
         variant="tertiary" 
         size="small" 
-        onClick={resetOptions}
+        onClick={() => resetOptions(false)} // Explicitly pass false to show alert
       >
         Tilbakestill visningsvalg
       </Button>

@@ -399,8 +399,8 @@ const ChartFilters = forwardRef(({
   // Create a reference to the DateRangePicker component
   const dateRangePickerRef = useRef<{ clearDateRange: () => void }>(null);
 
-  // Update resetFilters function
-  const resetFilters = () => {
+  // Update resetFilters function to accept silent parameter
+  const resetFilters = (silent = false) => {
     // Ensure filters are completely cleared
     setFilters([]);
     
@@ -432,14 +432,17 @@ const ChartFilters = forwardRef(({
     // Clear date picker state through ref
     dateRangePickerRef.current?.clearDateRange();
     
-    setAlertInfo({
-      show: true,
-      message: 'Alle filtre ble tilbakestilt'
-    });
-    
-    setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
-    }, 4000);
+    // Only show alert if not silent
+    if (!silent) {
+      setAlertInfo({
+        show: true,
+        message: 'Alle filtre ble tilbakestilt'
+      });
+      
+      setTimeout(() => {
+        setAlertInfo(prev => ({...prev, show: false}));
+      }, 4000);
+    }
   };
 
   // Add function to handle setting a filter as interactive
@@ -487,7 +490,7 @@ const ChartFilters = forwardRef(({
         <Button 
           variant="tertiary" 
           size="small" 
-          onClick={resetFilters}
+          onClick={() => resetFilters(false)} // Explicitly pass false to show alert
           className="mb-2"
         >
           Tilbakestill filtre

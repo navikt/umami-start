@@ -7,6 +7,7 @@ import ChartFilters from '../components/chartbuilder/ChartFilters';
 import Summarize from '../components/chartbuilder/Summarize';
 import EventParameterSelector from '../components/chartbuilder/EventParameterSelector';
 import DisplayOptions from '../components/chartbuilder/DisplayOptions';
+import AlertWithCloseButton from '../components/chartbuilder/AlertWithCloseButton';
 import { FILTER_COLUMNS } from '../lib/constants';
 import { 
   Parameter, 
@@ -242,6 +243,12 @@ const ChartsPage = () => {
   // Add state to track whether user has explicitly selected metrics
   const [hasUserSelectedMetrics, setHasUserSelectedMetrics] = useState<boolean>(false);
 
+  // Add the missing alertInfo state near other state declarations
+  const [alertInfo] = useState<{show: boolean, message: string}>({
+    show: false,
+    message: ''
+  });
+
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
 
@@ -299,36 +306,26 @@ const ChartsPage = () => {
   };
 
   // Create refs to expose reset functions from child components
-  const chartFiltersRef = useRef<{ resetFilters: () => void }>(null);
-  const summarizeRef = useRef<{ resetConfig: () => void }>(null);
-  const displayOptionsRef = useRef<{ resetOptions: () => void }>(null);
+  const chartFiltersRef = useRef<{ resetFilters: (silent?: boolean) => void }>(null);
+  const summarizeRef = useRef<{ resetConfig: (silent?: boolean) => void }>(null);
+  const displayOptionsRef = useRef<{ resetOptions: (silent?: boolean) => void }>(null);
 
-  // Add function to reset all components
+  // Update the resetAll function
   const resetAll = () => {
-    // Reset filters through ref
+    // Pass silent=true to prevent individual alerts
     if (chartFiltersRef.current) {
-      chartFiltersRef.current.resetFilters();
+      chartFiltersRef.current.resetFilters(true);
     }
     
-    // Reset metrics through ref
+    // Pass silent=true to prevent individual alerts
     if (summarizeRef.current) {
-      summarizeRef.current.resetConfig();
+      summarizeRef.current.resetConfig(true);
     }
     
-    // Reset display options through ref
+    // Pass silent=true to prevent individual alerts
     if (displayOptionsRef.current) {
-      displayOptionsRef.current.resetOptions();
+      displayOptionsRef.current.resetOptions(true);
     }
-    
-    // Show success alert
-    setAlertInfo({
-      show: true,
-      message: 'Alle innstillinger ble tilbakestilt'
-    });
-    
-    setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
-    }, 7000);
   };
 
   // Add helper functions for metrics
@@ -1189,6 +1186,15 @@ const ChartsPage = () => {
       <p className="text-gray-600 mb-10 prose text-lg">
         Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
       </p>
+
+      {/* Display the alert if it's active */}
+      {alertInfo.show && (
+        <div className="mb-4">
+          <AlertWithCloseButton variant="success">
+            {alertInfo.message}
+          </AlertWithCloseButton>
+        </div>
+      )}
 
       <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-8">
         <div className="mb-8 order-1 lg:order-none">
