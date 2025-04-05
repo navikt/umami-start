@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, Switch, HelpText, Chips } from '@navikt/ds-react';
+import { Button, Heading, Select, TextField, HelpText, Tabs } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react'; 
 import { 
@@ -41,7 +41,6 @@ const Summarize = ({
     message: ''
   });
   
-  const [showAdvancedCalculations, setShowAdvancedCalculations] = useState<boolean>(false);
   const [activeCalculations, setActiveCalculations] = useState<string[]>([]);
   const [activeMetricCategory, setActiveMetricCategory] = useState<string>('antall');
 
@@ -76,7 +75,7 @@ const Summarize = ({
     
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
-    }, 7000);
+    }, 5000);
   };
 
   const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
@@ -133,148 +132,136 @@ const Summarize = ({
             </HelpText>
           </div>
           
-          <div className="space-y-4 mb-6">
-            <div className="mb-4">
-              <Label as="p" size="small" className="mb-2">
-              Velg målingstype:
-              </Label>
+          <div className="space-y-4">
+            <div className="mb-2">
+              <Heading level="3" size="xsmall" spacing>
+                Velg målinger
+              </Heading>
               
-              <Chips className="mb-4">
-                <Chips.Toggle checkmark={false}
-                  selected={activeMetricCategory === 'antall'} 
-                  onClick={() => setActiveMetricCategory('antall')}
+              <div className="bg-white p-4 rounded-md border shadow-inner">
+                <Tabs
+                  value={activeMetricCategory}
+                  onChange={value => setActiveMetricCategory(value)}
+                  size="small"
                 >
-                  Antall
-                </Chips.Toggle>
-                <Chips.Toggle checkmark={false}
-                  selected={activeMetricCategory === 'andel'} 
-                  onClick={() => setActiveMetricCategory('andel')}
-                >
-                  Andel
-                </Chips.Toggle>
-                <Chips.Toggle checkmark={false}
-                  selected={activeMetricCategory === 'gjennomsnitt'} 
-                  onClick={() => setActiveMetricCategory('gjennomsnitt')}
-                >
-                  Gjennomsnitt
-                </Chips.Toggle>
-              </Chips>
-
-              <div className="flex flex-wrap gap-2">
-                {activeMetricCategory === 'antall' && (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike besøkende')}
-                      icon={<Users size={16} />}
-                    >
-                      Unike besøkende
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('count', 'session_id', 'Antall besøk')}
-                      icon={<BarChart2 size={16} />}
-                    >
-                      Antall besøk
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('count', undefined, 'Antall sidevisninger')}
-                      icon={<BarChart2 size={16} />}
-                    >
-                      Antall sidevisninger
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('count', undefined, 'Antall hendelser')}
-                      icon={<BarChart2 size={16} />}
-                    >
-                      Antall egendefinerte hendelser
-                    </Button>
-                  </>
-                )}
+                  <Tabs.List>
+                    <Tabs.Tab value="antall" label="Antall" />
+                    <Tabs.Tab value="andel" label="Andel" />
+                    <Tabs.Tab value="gjennomsnitt" label="Gjennomsnitt" />
+                    <Tabs.Tab value="avansert" label="Flere målingsvalg" />
+                  </Tabs.List>
                 
-                {activeMetricCategory === 'andel' && (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel av besøkende')}
-                      icon={<PieChart size={16} />}
-                    >
-                      Andel av besøkende
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel av hendelser')}
-                      icon={<PieChart size={16} />}
-                    >
-                      Andel av hendelser
-                    </Button>
-                  </>
-                )}
-                
-                {activeMetricCategory === 'gjennomsnitt' && (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      size="small"
-                      onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
-                      icon={<Clock size={16} />}
-                    >
-                      Besøksvarighet
-                    </Button>
-                         
-                  </>
-                )}
+                  <Tabs.Panel value="antall" className="pt-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike besøkende')}
+                        icon={<Users size={16} />}
+                      >
+                        Unike besøkende
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('count', 'session_id', 'Antall besøk')}
+                        icon={<BarChart2 size={16} />}
+                      >
+                        Antall besøk
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('count', undefined, 'Antall sidevisninger')}
+                        icon={<BarChart2 size={16} />}
+                      >
+                        Antall sidevisninger
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('count', undefined, 'Antall hendelser')}
+                        icon={<BarChart2 size={16} />}
+                      >
+                        Antall egendefinerte hendelser
+                      </Button>
+                    </div>
+                  </Tabs.Panel>
+                  
+                  <Tabs.Panel value="andel" className="pt-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel av besøkende')}
+                        icon={<PieChart size={16} />}
+                      >
+                        Andel av besøkende
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel av hendelser')}
+                        icon={<PieChart size={16} />}
+                      >
+                        Andel av hendelser
+                      </Button>
+                    </div>
+                  </Tabs.Panel>
+                  
+                  <Tabs.Panel value="gjennomsnitt" className="pt-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
+                        icon={<Clock size={16} />}
+                      >
+                        Besøksvarighet
+                      </Button>
+                    </div>
+                  </Tabs.Panel>
+                  
+                  <Tabs.Panel value="avansert" className="pt-4">
+                    <div className="flex flex-col gap-2">
+                      <Select
+                        label="Målt som"
+                        description="F.eks. antall, andel, sum, gjennomsnitt, etc."
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            addMetric(e.target.value);
+                            
+                            if (e.target.value === 'percentage' || e.target.value === 'andel') {
+                              const newIndex = metrics.length;
+                              
+                              setTimeout(() => {
+                                updateMetric(newIndex, { column: 'session_id' });
+                              }, 0);
+                            }
+                            
+                            (e.target as HTMLSelectElement).value = '';
+                          }
+                        }}
+                        size="small"
+                        className="w-full"
+                      >
+                        <option value="">Velg måling...</option>
+                        {METRICS.map(metric => (
+                          <option key={metric.value} value={metric.value}>
+                            {metric.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  </Tabs.Panel>
+                </Tabs>
               </div>
             </div>
-            
-            <Switch 
-              className="mt-2"
-              size="small"
-              checked={showAdvancedCalculations} 
-              onChange={() => setShowAdvancedCalculations(!showAdvancedCalculations)}
-            >
-              Vis flere målingsvalg
-            </Switch>
-            
-            {showAdvancedCalculations && (
-              <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
-                <Select
-                  label="Målt som"
-                  description="F.eks. antall, andel, sum, gjennomsnitt, etc."
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      addMetric(e.target.value);
-                      
-                      if (e.target.value === 'percentage' || e.target.value === 'andel') {
-                        const newIndex = metrics.length;
-                        
-                        setTimeout(() => {
-                          updateMetric(newIndex, { column: 'session_id' });
-                        }, 0);
-                      }
-                      
-                      (e.target as HTMLSelectElement).value = '';
-                    }
-                  }}
-                  size="small"
-                  className="w-full"
-                >
-                  <option value="">Velg måling...</option>
-                  {METRICS.map(metric => (
-                    <option key={metric.value} value={metric.value}>
-                      {metric.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+
+            {metrics.length > 0 && (
+              <Heading level="3" size="xsmall" spacing>
+                Valgte målinger
+              </Heading>
             )}
 
             {metrics.map((metric, index) => (
