@@ -1,4 +1,4 @@
-import { Button, Heading, Select, TextField, HelpText, Tabs } from '@navikt/ds-react';
+import { Button, Heading, Select, TextField, HelpText, Tabs, Label } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock, LogOut } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'; 
 import { 
@@ -95,10 +95,11 @@ const Summarize = forwardRef(({
     }, 0);
   };
 
-  const isMetricAdded = (functionType: string, column?: string): boolean => {
+  const isMetricAdded = (functionType: string, column?: string, checkMinutes?: boolean): boolean => {
     return metrics.some(metric => 
       metric.function === functionType && 
-      metric.column === column
+      metric.column === column &&
+      (checkMinutes === undefined || metric.showInMinutes === checkMinutes)
     );
   };
 
@@ -247,12 +248,31 @@ const Summarize = forwardRef(({
                   
                   <Tabs.Panel value="gjennomsnitt" className="pt-4">
                     <div className="flex flex-wrap gap-2">
+                    <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => {
+                          const newIndex = metrics.length;
+                          addMetric('average');
+                          setTimeout(() => {
+                            updateMetric(newIndex, { 
+                              column: 'visit_duration', 
+                              alias: 'Gjennomsnittlig_besokstid_minutter',
+                              showInMinutes: true // Add a flag to indicate minutes conversion
+                            });
+                          }, 0);
+                        }}
+                        icon={<Clock size={16} />}
+                        disabled={isMetricAdded('average', 'visit_duration', true)}
+                      >
+                        Besøksvarighet i minutter
+                      </Button>
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
+                        onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_seconds')}
                         icon={<Clock size={16} />}
-                        disabled={isMetricAdded('average', 'visit_duration')}
+                        disabled={isMetricAdded('average', 'visit_duration', false)}
                       >
                         Besøksvarighet i sekunder
                       </Button>
@@ -314,6 +334,11 @@ const Summarize = forwardRef(({
                     <div className="flex items-center gap-2">
                       <span className="font-small text-blue-900">
                         {METRICS.find(m => m.value === metric.function)?.label || 'Måling'}
+                        {metric.column === 'visit_duration' && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            {metric.showInMinutes ? 'minutter' : 'sekunder'}
+                          </span>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -365,7 +390,13 @@ const Summarize = forwardRef(({
                           <Select
                             label="Kolonne"
                             value={metric.column || ''}
-                            onChange={(e) => updateMetric(index, { column: e.target.value })}
+                            onChange={(e) => {
+                              const updates: Partial<Metric> = { 
+                                column: e.target.value,
+                                showInMinutes: undefined
+                              };
+                              updateMetric(index, updates);
+                            }}
                             size="small"
                             className="w-full"
                           >
@@ -401,6 +432,28 @@ const Summarize = forwardRef(({
                               </>
                             )}
                           </Select>
+                          
+                          {metric.column === 'visit_duration' && (
+                            <div className="mt-2">
+                              <Label size="small">Tidsenhet</Label>
+                              <div className="flex gap-2 mt-1">
+                                <Button
+                                  variant={metric.showInMinutes ? "secondary" : "primary"}
+                                  size="xsmall"
+                                  onClick={() => updateMetric(index, { showInMinutes: false })}
+                                >
+                                  Sekunder
+                                </Button>
+                                <Button
+                                  variant={metric.showInMinutes ? "primary" : "secondary"}
+                                  size="xsmall"
+                                  onClick={() => updateMetric(index, { showInMinutes: true })}
+                                >
+                                  Minutter
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                       

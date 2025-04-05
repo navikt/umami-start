@@ -24,6 +24,7 @@ export interface Metric {
   whereOperator?: string;
   whereValue?: string;
   whereMultipleValues?: string[];
+  showInMinutes?: boolean; // Add this new flag
 }
 
 export interface DateFormat {

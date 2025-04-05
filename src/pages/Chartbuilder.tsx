@@ -17,7 +17,7 @@ import {
   ColumnOption,
   ChartConfig,
   Filter,
-  Website // Add the missing Website type
+  Website
 } from '../types/chart';
 import CopyButton from '../components/theme/CopyButton/CopyButton';
 
@@ -64,7 +64,7 @@ const METRICS: MetricOption[] = [
   { label: 'Median', value: 'median' },
   { label: 'Andel av resultatene (%)', value: 'percentage' },
   { label: 'Andel av totalen (%)', value: 'andel' },
-  { label: 'Fluktrate (%)', value: 'bounce_rate' } // Add the new metric option
+  { label: 'Fluktrate (%)', value: 'bounce_rate' }
 ];
 
 // Add the sanitizeColumnName helper function BEFORE it's used
@@ -75,6 +75,14 @@ const sanitizeColumnName = (key: string): string => {
     .replace(/ø/gi, 'oe')
     .replace(/å/gi, 'aa')
     .replace(/[^a-z0-9_]/gi, '_'); // Replace any other special characters with underscore
+};
+
+// Add this function near other helper functions at the top
+const sanitizeFieldNameForBigQuery = (name: string): string => {
+  // Replace spaces, parentheses and other special chars with underscores
+  return name
+    .replace(/[^\w]/g, '_') // Replace non-word characters with underscore
+    .replace(/^[0-9]/, '_$&'); // Prefix with underscore if first char is a number
 };
 
 // Now define getMetricColumns which uses sanitizeColumnName
@@ -495,9 +503,12 @@ const ChartsPage = () => {
     
     // In interactive mode, don't use backtick quotes for aliases
     // In normal mode, use backticks to allow special characters in column names
+    // But ALWAYS sanitize the alias for BigQuery compatibility
+    const sanitizedAlias = sanitizeFieldNameForBigQuery(alias);
+    
     const quotedAlias = hasInteractiveFilters 
-      ? `${alias}` // No backticks in interactive mode
-      : `\`${alias}\``; // Use backticks in normal mode
+      ? `${sanitizedAlias}` // No backticks in interactive mode
+      : `\`${sanitizedAlias}\``; // Use backticks in normal mode
     
     const websiteId = config.website?.id || '';
     
@@ -592,6 +603,10 @@ const ChartsPage = () => {
       case 'average':
         // Special handling for visit_duration
         if (column === 'visit_duration') {
+          // Check if we need to show in minutes (using the metric object)
+          if (metric?.showInMinutes) {
+            return `ROUND(AVG(NULLIF(base_query.visit_duration, 0)) / 60, 2) as ${quotedAlias}`;
+          }
           return `AVG(NULLIF(base_query.visit_duration, 0)) as ${quotedAlias}`;
         }
         return column ? `AVG(${column}) as ${quotedAlias}` : `COUNT(*) as ${quotedAlias}`;
@@ -692,8 +707,9 @@ const ChartsPage = () => {
     const needsUrlFullpath = filters.some(f => f.column === 'url_fullpath') || 
                             config.groupByFields.includes('url_fullpath');
     
-    const needsVisitDuration = config.metrics.some(m => m.column === 'visit_duration') || 
-                              config.groupByFields.includes('visit_duration');
+    const needsVisitDuration = config.metrics.some(m => 
+      m.column === 'visit_duration'
+    ) || config.groupByFields.includes('visit_duration');
 
     // If we need bounce rate calculation, add a subquery for visit counts
     const needsBounceCounts = config.metrics.some(m => m.function === 'bounce_rate');
@@ -757,11 +773,13 @@ const ChartsPage = () => {
         sql += '    ON e.session_id = s.session_id\n';
       }
     } else if (needsVisitDuration) {
-      sql += 'WITH visit_durations AS (\n';
+      // Improved visit duration calculation - matches the sample SQL
+      sql += 'WITH visit_metrics AS (\n';
       sql += '  SELECT\n';
       sql += '    visit_id,\n';
-      sql += '    CAST(TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) AS INT64) AS duration\n';
-      sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event`\n';
+      sql += '    MIN(created_at) AS first_event_time,\n';
+      sql += '    CASE WHEN COUNT(*) > 1 THEN TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) ELSE 0 END AS duration_seconds\n';
+      sql += `  FROM \`team-researchops-prod-01d6.umami.public_website_event\`\n`;
       sql += `  WHERE website_id = '${config.website.id}'\n`;
       
       if (hasInteractiveDateFilter) {
@@ -774,13 +792,12 @@ const ChartsPage = () => {
       }
       
       sql += '  GROUP BY visit_id\n';
-      sql += '  HAVING COUNT(*) > 1\n';
       sql += '),\n';
       
       sql += 'base_query AS (\n';
       sql += '  SELECT\n';
       sql += '    e.*,\n';
-      sql += '    COALESCE(vd.duration, 0) as visit_duration\n';
+      sql += '    vm.duration_seconds as visit_duration\n';
       
       // Continue with session columns if needed
       if (requiredTables.session) {
@@ -796,8 +813,8 @@ const ChartsPage = () => {
       
       // FROM and JOIN clauses - adapted for visit_duration - ALWAYS ADD THIS
       sql += `  FROM ${fullWebsiteTable} e\n`;
-      sql += '  LEFT JOIN visit_durations vd\n';
-      sql += '    ON e.visit_id = vd.visit_id\n';
+      sql += '  LEFT JOIN visit_metrics vm\n';
+      sql += '    ON e.visit_id = vm.visit_id\n';
       
       if (requiredTables.session) {
         sql += `  LEFT JOIN ${fullSessionTable} s\n`;
