@@ -1,5 +1,5 @@
 import { Button, Heading, Select, TextField, HelpText, Tabs } from '@navikt/ds-react';
-import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock } from 'lucide-react';
+import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock, LogOut } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'; 
 import { 
   Parameter, 
@@ -220,6 +220,14 @@ const Summarize = forwardRef(({
                       >
                         Andel av hendelser
                       </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
+                        icon={<LogOut size={16} />}
+                      >
+                        Fluktrate
+                      </Button>
                     </div>
                   </Tabs.Panel>
                   
@@ -231,7 +239,7 @@ const Summarize = forwardRef(({
                         onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
                         icon={<Clock size={16} />}
                       >
-                        Besøksvarighet
+                        Besøksvarighet i sekunder
                       </Button>
                     </div>
                   </Tabs.Panel>

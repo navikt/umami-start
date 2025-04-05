@@ -63,7 +63,8 @@ const METRICS: MetricOption[] = [
   { label: 'Gjennomsnitt', value: 'average' },
   { label: 'Median', value: 'median' },
   { label: 'Andel av resultatene (%)', value: 'percentage' },
-  { label: 'Andel av totalen (%)', value: 'andel' }
+  { label: 'Andel av totalen (%)', value: 'andel' },
+  { label: 'Fluktrate (%)', value: 'bounce_rate' } // Add the new metric option
 ];
 
 // Add the sanitizeColumnName helper function BEFORE it's used
@@ -113,6 +114,9 @@ const getMetricColumns = (parameters: Parameter[], metric: string): ColumnOption
       { label: 'Besøkende (av totale besøkende)', value: 'session_id' },
       { label: 'Økter (av totale økter)', value: 'visit_id' },
       { label: 'Hendelser (av totale hendelser)', value: 'event_id' }
+    ],
+    bounce_rate: [
+      { label: 'Besøk-ID', value: 'visit_id' }
     ]
   };
 
@@ -562,6 +566,13 @@ const ChartsPage = () => {
       }
     }
 
+    // Add support for bounce_rate calculation
+    if (func === 'bounce_rate') {
+      return `ROUND(
+        100.0 * SUM(CASE WHEN base_query.visit_counts = 1 THEN 1 ELSE 0 END) / COUNT(DISTINCT base_query.visit_id)
+      , 1) as ${quotedAlias}`;
+    }
+
     // For regular columns
     switch (func) {
       case 'count':
@@ -670,7 +681,6 @@ const ChartsPage = () => {
     
     // In interactive mode, use descriptive alias names instead of single letters
     const websiteAlias = hasInteractiveFilters ? 'website_event' : 'e';
-    const sessionAlias = hasInteractiveFilters ? 'session' : 's';
 
     // Use the appropriate table prefix based on mode and aliases
     const tablePrefix = hasInteractiveFilters ? 
@@ -685,9 +695,68 @@ const ChartsPage = () => {
     const needsVisitDuration = config.metrics.some(m => m.column === 'visit_duration') || 
                               config.groupByFields.includes('visit_duration');
 
+    // If we need bounce rate calculation, add a subquery for visit counts
+    const needsBounceCounts = config.metrics.some(m => m.function === 'bounce_rate');
+
     let sql = '';
-    
-    if (needsVisitDuration) {
+
+    if (needsBounceCounts) {
+      sql = 'WITH visit_counts AS (\n';
+      sql += '  SELECT\n';
+      sql += '    visit_id,\n';
+      sql += '    COUNT(*) AS events_count\n';
+      sql += `  FROM ${fullWebsiteTable}\n`;
+      sql += `  WHERE website_id = '${config.website.id}'\n`;
+      
+      if (hasInteractiveDateFilter) {
+        const interactiveDateFilter = filters.find(f => 
+          f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
+        );
+        if (interactiveDateFilter) {
+          sql += `  [[AND {{${interactiveDateFilter.value?.replace(/[{}]/g, '')}}} ]]\n`;
+        }
+      }
+      
+      sql += '  GROUP BY visit_id\n';
+      sql += '),\n';
+      
+      // Continue with base_query including visit_counts
+      sql += 'base_query AS (\n';
+      sql += '  SELECT\n';
+      sql += '    e.*,\n';
+      sql += '    vc.events_count AS visit_counts\n';
+      
+      if (needsVisitDuration) {
+        sql += '    ,COALESCE(vd.duration, 0) as visit_duration\n';
+      }
+      
+      // Add session columns if needed
+      if (requiredTables.session) {
+        sql += '    ,s.browser,\n';
+        sql += '    s.os,\n';
+        sql += '    s.device,\n';
+        sql += '    s.screen,\n';
+        sql += '    s.language,\n';
+        sql += '    s.country,\n';
+        sql += '    s.subdivision1,\n';
+        sql += '    s.city\n';
+      }
+      
+      // FROM and JOIN clauses
+      sql += `  FROM ${fullWebsiteTable} e\n`;
+      sql += '  LEFT JOIN visit_counts vc\n';
+      sql += '    ON e.visit_id = vc.visit_id\n';
+      
+      if (needsVisitDuration) {
+        sql += '  LEFT JOIN visit_durations vd\n';
+        sql += '    ON e.visit_id = vd.visit_id\n';
+      }
+      
+      if (requiredTables.session) {
+        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+        sql += '    ON e.session_id = s.session_id\n';
+      }
+    } else if (needsVisitDuration) {
       sql += 'WITH visit_durations AS (\n';
       sql += '  SELECT\n';
       sql += '    visit_id,\n';
@@ -710,94 +779,48 @@ const ChartsPage = () => {
       
       sql += 'base_query AS (\n';
       sql += '  SELECT\n';
+      sql += '    e.*,\n';
+      sql += '    COALESCE(vd.duration, 0) as visit_duration\n';
       
-      if (hasInteractiveFilters) {
-        sql += `    ${websiteAlias}.*,\n`;
-        sql += '    COALESCE(visit_durations.duration, 0) as visit_duration\n';
-      } else {
-        sql += '    e.*,\n';
-        sql += '    COALESCE(vd.duration, 0) as visit_duration\n';
-      }
-
       // Continue with session columns if needed
       if (requiredTables.session) {
-        if (hasInteractiveFilters) {
-          sql += `    ,${sessionAlias}.browser,\n`;
-          sql += `    ${sessionAlias}.os,\n`;
-          sql += `    ${sessionAlias}.device,\n`;
-          sql += `    ${sessionAlias}.screen,\n`;
-          sql += `    ${sessionAlias}.language,\n`;
-          sql += `    ${sessionAlias}.country,\n`;
-          sql += `    ${sessionAlias}.subdivision1,\n`;
-          sql += `    ${sessionAlias}.city\n`;
-        } else {
-          sql += '    ,s.browser,\n';
-          sql += '    s.os,\n';
-          sql += '    s.device,\n';
-          sql += '    s.screen,\n';
-          sql += '    s.language,\n';
-          sql += '    s.country,\n';
-          sql += '    s.subdivision1,\n';
-          sql += '    s.city\n';
-        }
+        sql += '    ,s.browser,\n';
+        sql += '    s.os,\n';
+        sql += '    s.device,\n';
+        sql += '    s.screen,\n';
+        sql += '    s.language,\n';
+        sql += '    s.country,\n';
+        sql += '    s.subdivision1,\n';
+        sql += '    s.city\n';
       }
-
+      
       // FROM and JOIN clauses - adapted for visit_duration - ALWAYS ADD THIS
-      if (hasInteractiveFilters) {
-        sql += `  FROM ${fullWebsiteTable} AS ${websiteAlias}\n`;
-        sql += '  LEFT JOIN visit_durations\n';
-        sql += `    ON ${websiteAlias}.visit_id = visit_durations.visit_id\n`;
-        
-        if (requiredTables.session) {
-          sql += `  LEFT JOIN ${fullSessionTable} AS ${sessionAlias}\n`;
-          sql += `    ON ${websiteAlias}.session_id = ${sessionAlias}.session_id\n`;
-        }
-      } else {
-        sql += `  FROM ${fullWebsiteTable} e\n`;
-        sql += '  LEFT JOIN visit_durations vd\n';
-        sql += '    ON e.visit_id = vd.visit_id\n';
-        
-        if (requiredTables.session) {
-          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
-          sql += '    ON e.session_id = s.session_id\n';
-        }
+      sql += `  FROM ${fullWebsiteTable} e\n`;
+      sql += '  LEFT JOIN visit_durations vd\n';
+      sql += '    ON e.visit_id = vd.visit_id\n';
+      
+      if (requiredTables.session) {
+        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+        sql += '    ON e.session_id = s.session_id\n';
       }
     } else {
       sql += 'WITH base_query AS (\n';
       sql += '  SELECT\n';
-      
-      if (hasInteractiveFilters) {
-        sql += `    ${websiteAlias}.*`;
-      } else {
-        sql += '    e.*';
-      }
+      sql += '    e.*';
       
       let addComma = false;
       
       if (needsUrlFullpath) {
         if (addComma) sql += ',\n';
-        if (hasInteractiveFilters) {
-          sql += `    CONCAT(IFNULL(${websiteAlias}.url_path, ''), IFNULL(${websiteAlias}.url_query, '')) as url_fullpath`;
-        } else {
-          sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
-        }
+        sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
         addComma = true;
       }
       
-      if (hasInteractiveFilters) {
-        sql += `  FROM ${fullWebsiteTable} AS ${websiteAlias}\n`;
-        
-        if (requiredTables.session) {
-          sql += `  LEFT JOIN ${fullSessionTable} AS ${sessionAlias}\n`;
-          sql += `    ON ${websiteAlias}.session_id = ${sessionAlias}.session_id\n`;
-        }
-      } else {
-        sql += `  FROM ${fullWebsiteTable} e\n`;
-        
-        if (requiredTables.session) {
-          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
-          sql += '    ON e.session_id = s.session_id\n';
-        }
+      sql += `  FROM ${fullWebsiteTable} e\n`;
+      
+      if (requiredTables.session) {
+        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+        sql += '    ON e.session_id = s.session_id\n';
       }
     }
 
