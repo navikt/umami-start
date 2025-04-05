@@ -457,14 +457,16 @@ const Summarize = ({
               >
                 Andel av besøkende
               </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
-                icon={<Clock size={16} />}
-              >
-                Gjennomsnitt besøkstid
-              </Button>
+              {isPageviewsFilterActive() && (
+                <Button 
+                  variant="secondary" 
+                  size="small"
+                  onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
+                  icon={<Clock size={16} />}
+                >
+                  Gjennomsnitt besøkstid
+                </Button>
+              )}
             </div>
           </div>
           
