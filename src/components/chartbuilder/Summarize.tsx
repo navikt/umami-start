@@ -67,7 +67,8 @@ const Summarize = ({
   setDateFormat,
   setParamAggregation,
   setLimit,
-  availableEvents = []
+  availableEvents = [],
+  filters = []
 }: SummarizeProps) => {
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
     show: false,
@@ -188,6 +189,14 @@ const Summarize = ({
     const calculationIds = metrics.map(m => `${m.function}_${m.column || ''}`);
     setActiveCalculations(calculationIds);
   }, [groupByFields, metrics]);
+
+  const isPageviewsFilterActive = (): boolean => {
+    return filters.some(filter => 
+      filter.column === 'event_type' && 
+      filter.operator === '=' && 
+      filter.value === '1'
+    );
+  };
 
   return (
     <>
@@ -422,21 +431,23 @@ const Summarize = ({
               >
                 Unike besøkende
               </Button>
+              {isPageviewsFilterActive() && (
+                <Button 
+                  variant="secondary" 
+                  size="small"
+                  onClick={() => addConfiguredMetric('count', 'session_id', 'Antall besøk')}
+                  icon={<BarChart2 size={16} />}
+                >
+                  Antall besøk
+                </Button>
+              )}
               <Button 
                 variant="secondary" 
                 size="small"
-                onClick={() => addConfiguredMetric('distinct', 'event_id', 'Unike hendelser')}
+                onClick={() => addConfiguredMetric('count', undefined, isPageviewsFilterActive() ? 'Antall sidevisninger' : 'Antall hendelser')}
                 icon={<BarChart2 size={16} />}
               >
-                Unike hendelser
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => addConfiguredMetric('count', undefined, 'Totalt antall')}
-                icon={<BarChart2 size={16} />}
-              >
-                Hendelser totalt
+                {isPageviewsFilterActive() ? 'Antall sidevisninger' : 'Antall hendelser'}
               </Button>
               <Button 
                 variant="secondary" 

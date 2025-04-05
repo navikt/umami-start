@@ -541,7 +541,7 @@ const ChartFilters = ({
                     }}
                     checkmark={false}
                   >
-                    Alle sidevisninger
+                    Alle sider
                   </Chips.Toggle>
                   <Chips.Toggle 
                     selected={pageViewsMode === 'specific'}
