@@ -125,7 +125,7 @@ const Summarize = ({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Heading level="3" size="xsmall" >
-              Målinger
+              Velg målinger
             </Heading>
             <HelpText title="Hva er en måling?">
               Legg til en eller flere målinger, disse vises som kolonner i tabeller og grafer.
@@ -133,11 +133,7 @@ const Summarize = ({
           </div>
           
           <div className="space-y-4">
-            <div className="mb-2">
-              <Heading level="3" size="xsmall" spacing>
-                Velg målinger
-              </Heading>
-              
+            <div className="mb-2">              
               <div className="bg-white p-4 rounded-md border shadow-inner">
                 <Tabs
                   value={activeMetricCategory}

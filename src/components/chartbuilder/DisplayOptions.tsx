@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, Switch, HelpText } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { 
@@ -50,7 +50,7 @@ const DisplayOptions = ({
   setLimit,
   metrics
 }: DisplayOptionsProps) => {
-  const [showAdvancedGrouping, setShowAdvancedGrouping] = useState<boolean>(false);
+  const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
@@ -92,7 +92,7 @@ const DisplayOptions = ({
     setLimit(null);
     setParamAggregation('representative');
     
-    setShowAdvancedGrouping(false);
+    setActiveGroupingsTab('basic');
     setShowCustomSort(false);
     
     setAlertInfo({
@@ -108,6 +108,8 @@ const DisplayOptions = ({
   useEffect(() => {
     setActiveGroupings(groupByFields);
   }, [groupByFields]);
+
+  const hasCustomParameters = uniqueParameters.length > 0;
 
   return (
     <>
@@ -136,106 +138,134 @@ const DisplayOptions = ({
         <div className="space-y-4 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Heading level="3" size="xsmall" >
-              Gruppering
+              Velg gruppering
             </Heading>
             <HelpText title="Hva er en gruppering?">
               Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
             </HelpText>
           </div>
           
-          <div className="mb-2">
-            <Label as="p" size="small" className="mb-2">
-               Velg gruppering:
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant={activeGroupings.includes('created_at') ? "primary" : "secondary"}
-                size="small"
-                onClick={() => handleAddGroupField('created_at')}
-                disabled={activeGroupings.includes('created_at')}
-                icon={<Calendar size={16} />}
-              >
-                Dato
-              </Button>
-              <Button 
-                variant={activeGroupings.includes('url_path') ? "primary" : "secondary"}
-                size="small"
-                onClick={() => handleAddGroupField('url_path')}
-                disabled={activeGroupings.includes('url_path')}
-                icon={<Link2 size={16} />}
-              >
-                URL-sti
-              </Button>
-              <Button 
-                variant={activeGroupings.includes('event_name') ? "primary" : "secondary"}
-                size="small"
-                onClick={() => handleAddGroupField('event_name')}
-                disabled={activeGroupings.includes('event_name')}
-                icon={<Activity size={16} />}
-              >
-                Hendelsesnavn
-              </Button>
-              <Button 
-                variant={activeGroupings.includes('device') ? "primary" : "secondary"}
-                size="small"
-                onClick={() => handleAddGroupField('device')}
-                disabled={activeGroupings.includes('device')}
-                icon={<Smartphone size={16} />}
-              >
-                Enhet
-              </Button>
-            </div>
-          </div>
-          
-          <Switch
-            className="mt-2"
-            size="small"
-            checked={showAdvancedGrouping} 
-            onChange={() => setShowAdvancedGrouping(!showAdvancedGrouping)}
-          >
-            Vis alle grupperingsvalg
-          </Switch>
-          {showAdvancedGrouping && (
-            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-              <Select
-                label="Grupper etter"
-                description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
-                onChange={(e) => {
-                  if (e.target.value) {
-                    addGroupByField(e.target.value);
-                    (e.target as HTMLSelectElement).value = '';
-                  }
-                }}
-                size="small"
-                className="flex-grow"
-              >
-                <option value="">Velg gruppering...</option>
-                {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                  <optgroup key={groupKey} label={group.label}>
-                    {group.columns
-                      .filter(col => !groupByFields.includes(col.value))
-                      .map(col => (
-                        <option key={col.value} value={col.value}>
-                          {col.label}
-                        </option>
-                      ))}
-                  </optgroup>
-                ))}
-                
-                {uniqueParameters.length > 0 && (
-                  <optgroup label="Egendefinerte">
-                    {uniqueParameters
-                      .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
-                      .map(param => (
-                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                          {param.key}
-                        </option>
-                      ))}
-                  </optgroup>
+          <div className="bg-white p-4 rounded-md border shadow-inner mb-2">
+            <Tabs
+              value={activeGroupingsTab}
+              onChange={value => setActiveGroupingsTab(value)}
+              size="small"
+            >
+              <Tabs.List>
+                <Tabs.Tab value="basic" label="Ofte brukte" />
+                {hasCustomParameters && (
+                  <Tabs.Tab value="custom" label="Egendefinerte" />
                 )}
-              </Select>
-            </div>
-          )}
+                <Tabs.Tab value="advanced" label="Flere valg" />
+              </Tabs.List>
+            
+              <Tabs.Panel value="basic" className="pt-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant={activeGroupings.includes('created_at') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('created_at')}
+                    disabled={activeGroupings.includes('created_at')}
+                    icon={<Calendar size={16} />}
+                  >
+                    Dato
+                  </Button>
+                  <Button 
+                    variant={activeGroupings.includes('url_path') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('url_path')}
+                    disabled={activeGroupings.includes('url_path')}
+                    icon={<Link2 size={16} />}
+                  >
+                    URL-sti
+                  </Button>
+                  <Button 
+                    variant={activeGroupings.includes('event_name') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('event_name')}
+                    disabled={activeGroupings.includes('event_name')}
+                    icon={<Activity size={16} />}
+                  >
+                    Hendelsesnavn
+                  </Button>
+                  <Button 
+                    variant={activeGroupings.includes('device') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('device')}
+                    disabled={activeGroupings.includes('device')}
+                    icon={<Smartphone size={16} />}
+                  >
+                    Enhet
+                  </Button>
+                </div>
+              </Tabs.Panel>
+              
+              {hasCustomParameters && (
+                <Tabs.Panel value="custom" className="pt-4">
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueParameters.map(param => (
+                      <Button 
+                        key={`param_${param.key}`}
+                        variant={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`) ? "primary" : "secondary"}
+                        size="small"
+                        onClick={() => handleAddGroupField(`param_${sanitizeColumnName(param.key)}`)}
+                        disabled={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`)}
+                      >
+                        {param.key}
+                      </Button>
+                    ))}
+                  </div>
+                  {uniqueParameters.length === 0 && (
+                    <div className="text-sm text-gray-600 mt-2">
+                      Ingen egendefinerte parametere funnet for denne nettsiden.
+                    </div>
+                  )}
+                </Tabs.Panel>
+              )}
+              
+              <Tabs.Panel value="advanced" className="pt-4">
+                <div className="flex gap-2 items-center">
+                  <Select
+                    label="Grupper etter"
+                    description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        addGroupByField(e.target.value);
+                        (e.target as HTMLSelectElement).value = '';
+                      }
+                    }}
+                    size="small"
+                    className="flex-grow"
+                  >
+                    <option value="">Velg gruppering...</option>
+                    {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                      <optgroup key={groupKey} label={group.label}>
+                        {group.columns
+                          .filter(col => !groupByFields.includes(col.value))
+                          .map(col => (
+                            <option key={col.value} value={col.value}>
+                              {col.label}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                    
+                    {uniqueParameters.length > 0 && (
+                      <optgroup label="Egendefinerte">
+                        {uniqueParameters
+                          .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
+                          .map(param => (
+                            <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                              {param.key}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                  </Select>
+                </div>
+              </Tabs.Panel>
+            </Tabs>
+          </div>
 
           {groupByFields.length > 0 && (
             <div className="space-y-2">
