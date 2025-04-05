@@ -1,6 +1,6 @@
 import { Button, Heading, Select, TextField, HelpText, Tabs } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock } from 'lucide-react';
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'; 
 import { 
   Parameter, 
   Metric, 
@@ -24,7 +24,7 @@ interface SummarizeProps {
   filters: Filter[];
 }
 
-const Summarize = ({
+const Summarize = forwardRef(({
   metrics,
   parameters,
   METRICS,
@@ -35,7 +35,7 @@ const Summarize = ({
   removeMetric,
   addMetric,
   moveMetric
-}: SummarizeProps) => {
+}: SummarizeProps, ref) => {
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
     show: false,
     message: ''
@@ -75,7 +75,7 @@ const Summarize = ({
     
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
-    }, 5000);
+    }, 4000);
   };
 
   const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
@@ -109,6 +109,11 @@ const Summarize = ({
     document.dispatchEvent(event);
   }, [metrics]);
 
+  // Expose resetConfig method through ref
+  useImperativeHandle(ref, () => ({
+    resetConfig
+  }));
+
   return (
     <>
     <div className="flex justify-between items-center mb-4">
@@ -121,7 +126,7 @@ const Summarize = ({
         size="small" 
         onClick={resetConfig}
       >
-        Tilbakestill målingsvalg
+        Tilbakestill målinger
       </Button>
     </div>
     <div className="bg-gray-50 p-5 rounded-md border"> 
@@ -394,6 +399,6 @@ const Summarize = ({
       </div>
     </>
   );
-};
+});
 
 export default Summarize;

@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Switch, UNSAFE_Combobox, Chips, Tabs } from '@navikt/ds-react';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 import DateRangePicker from './DateRangePicker';
@@ -42,13 +42,13 @@ interface ChartFiltersProps {
   maxDaysAvailable?: number; // Added this prop to receive date range info
 }
 
-const ChartFilters = ({
+const ChartFilters = forwardRef(({
   filters,
   parameters,
   setFilters,
   availableEvents = [],
   maxDaysAvailable = 365 // Default to a year if not provided
-}: ChartFiltersProps) => {
+}: ChartFiltersProps, ref) => {
   // Add state for custom period inputs
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
   // Change to store single string instead of array
@@ -153,7 +153,7 @@ const ChartFilters = ({
       // Auto-hide staging alert after 5 seconds
       setTimeout(() => {
         setStagingAlertInfo(prev => ({...prev, show: false}));
-      }, 5000);
+      }, 4000);
     }
   };
 
@@ -228,7 +228,7 @@ const ChartFilters = ({
     // Auto-hide alert after 5 seconds
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
-    }, 5000);
+    }, 4000);
   };
 
   // Update the handleCustomEventsChange function to handle different operators
@@ -439,7 +439,7 @@ const ChartFilters = ({
     
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
-    }, 7000);
+    }, 4000);
   };
 
   // Add function to handle setting a filter as interactive
@@ -465,11 +465,16 @@ const ChartFilters = ({
     // Auto-hide alert after 5 seconds
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
-    }, 5000);
+    }, 4000);
   };
 
   // Add state for interactive mode at the top with other state declarations
   const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
+
+  // Expose resetFilters method through ref
+  useImperativeHandle(ref, () => ({
+    resetFilters
+  }));
 
   return (
     <section>
@@ -1271,6 +1276,6 @@ const ChartFilters = ({
       </div>
     </section>
   );
-};
+});
 
 export default ChartFilters;

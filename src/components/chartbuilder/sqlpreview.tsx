@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Heading, Link, CopyButton, Button, Alert, FormProgress } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw } from 'lucide-react';
 
 interface SQLPreviewProps {
   sql: string;
   activeStep?: number;
   openFormprogress?: boolean;
   onOpenChange?: (open: boolean) => void;
-  filters?: Array<{ column: string; interactive?: boolean; metabaseParam?: boolean }>; // Add filters prop
-  metrics?: Array<{ column?: string }>; // Add metrics prop
-  groupByFields?: string[]; // Add groupByFields prop
+  filters?: Array<{ column: string; interactive?: boolean; metabaseParam?: boolean }>;
+  metrics?: Array<{ column?: string }>;
+  groupByFields?: string[];
+  onResetAll?: () => void; // Add new prop for reset functionality
 }
 
 const SQLPreview = ({
@@ -20,6 +21,7 @@ const SQLPreview = ({
   filters = [],
   metrics = [],
   groupByFields = [],
+  onResetAll,
 }: SQLPreviewProps) => {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -96,6 +98,7 @@ const SQLPreview = ({
   }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedStep4]);
 
   return (
+    <>
     <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
       {isBasicTemplate() ? (
         // Show getting started guidance
@@ -262,8 +265,24 @@ const SQLPreview = ({
           <FormProgress.Step>Tilpass vinsing av resultatene</FormProgress.Step>
           <FormProgress.Step>Visualisér i Metabase</FormProgress.Step>
         </FormProgress>
+
+
       </div>
     </div>
+            {/* Only show reset button after step 1 */}
+            {onResetAll && activeStep > 1 && (
+          <div className="flex justify-end mt-4 mr-4">
+            <Button
+              variant="tertiary"
+              size="small"
+              onClick={onResetAll}
+              icon={<RotateCcw size={16} />}
+            >
+              Tilbakestill alle valg
+            </Button>
+          </div>
+        )}
+    </>
   );
 };
 

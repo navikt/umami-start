@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Heading, VStack } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
@@ -296,6 +296,39 @@ const ChartsPage = () => {
   // Create a handler for FormProgress open state changes
   const handleFormProgressOpenChange = (open: boolean) => {
     setFormProgressOpen(open);
+  };
+
+  // Create refs to expose reset functions from child components
+  const chartFiltersRef = useRef<{ resetFilters: () => void }>(null);
+  const summarizeRef = useRef<{ resetConfig: () => void }>(null);
+  const displayOptionsRef = useRef<{ resetOptions: () => void }>(null);
+
+  // Add function to reset all components
+  const resetAll = () => {
+    // Reset filters through ref
+    if (chartFiltersRef.current) {
+      chartFiltersRef.current.resetFilters();
+    }
+    
+    // Reset metrics through ref
+    if (summarizeRef.current) {
+      summarizeRef.current.resetConfig();
+    }
+    
+    // Reset display options through ref
+    if (displayOptionsRef.current) {
+      displayOptionsRef.current.resetOptions();
+    }
+    
+    // Show success alert
+    setAlertInfo({
+      show: true,
+      message: 'Alle innstillinger ble tilbakestilt'
+    });
+    
+    setTimeout(() => {
+      setAlertInfo(prev => ({...prev, show: false}));
+    }, 7000);
   };
 
   // Add helper functions for metrics
@@ -1190,6 +1223,7 @@ const ChartsPage = () => {
                 {/* Step 2: What to Calculate (Metrics) - Simplified to just metrics */}
                 <section className="mt-4">
                   <Summarize
+                    ref={summarizeRef} // Add ref
                     metrics={config.metrics}
                     parameters={parameters}
                     METRICS={METRICS}
@@ -1207,6 +1241,7 @@ const ChartsPage = () => {
                 {/* Step 3: Event Filter Selection */}
                 <section className="mt-4">
                   <ChartFilters
+                    ref={chartFiltersRef} // Add ref
                     filters={filters}
                     parameters={parameters}
                     setFilters={setFilters}
@@ -1218,6 +1253,7 @@ const ChartsPage = () => {
                 {/* Step 4: New Display Options component for grouping and visualization */}
                 <section className="mt-4">
                   <DisplayOptions
+                    ref={displayOptionsRef} // Add ref
                     groupByFields={config.groupByFields}
                     parameters={parameters}
                     dateFormat={config.dateFormat}
@@ -1260,6 +1296,7 @@ const ChartsPage = () => {
               filters={filters}
               metrics={config.metrics}
               groupByFields={config.groupByFields}
+              onResetAll={resetAll} // Add reset function
             />
           </div>
         </div>

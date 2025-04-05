@@ -1,6 +1,6 @@
 import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { 
   Parameter, 
   DateFormat, 
@@ -31,7 +31,7 @@ interface DisplayOptionsProps {
   metrics: Metric[];
 }
 
-const DisplayOptions = ({
+const DisplayOptions = forwardRef(({
   groupByFields,
   parameters,
   dateFormat,
@@ -49,7 +49,7 @@ const DisplayOptions = ({
   setParamAggregation,
   setLimit,
   metrics
-}: DisplayOptionsProps) => {
+}: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
@@ -102,8 +102,12 @@ const DisplayOptions = ({
     
     setTimeout(() => {
       setAlertInfo(prev => ({...prev, show: false}));
-    }, 7000);
+    }, 4000);
   };
+
+  useImperativeHandle(ref, () => ({
+    resetOptions
+  }));
 
   useEffect(() => {
     setActiveGroupings(groupByFields);
@@ -496,6 +500,6 @@ const DisplayOptions = ({
       </div>
     </>
   );
-};
+});
 
 export default DisplayOptions;
