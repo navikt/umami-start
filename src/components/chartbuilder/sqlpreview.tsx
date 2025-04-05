@@ -258,8 +258,8 @@ const SQLPreview = ({
           interactiveSteps={false}
         >
           <FormProgress.Step>Velg nettside eller app</FormProgress.Step>
+          <FormProgress.Step>Velg hva du vil måle</FormProgress.Step>
           <FormProgress.Step>Avgrens med filtre</FormProgress.Step>
-          <FormProgress.Step>Tilpass visningen</FormProgress.Step>
           <FormProgress.Step>Visualisér i Metabase</FormProgress.Step>
         </FormProgress>
       </div>

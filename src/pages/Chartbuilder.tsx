@@ -6,6 +6,7 @@ import SQLPreview from '../components/chartbuilder/sqlpreview';
 import ChartFilters from '../components/chartbuilder/ChartFilters';
 import Summarize from '../components/chartbuilder/Summarize';
 import EventParameterSelector from '../components/chartbuilder/EventParameterSelector';
+import DisplayOptions from '../components/chartbuilder/DisplayOptions';
 import { FILTER_COLUMNS } from '../lib/constants';
 import { 
   Parameter, 
@@ -1151,10 +1152,8 @@ const ChartsPage = () => {
 
             {config.website && dateRangeReady && (
               <>
+                {/* Step 1: Explorer - Keep this in original position for learning purposes */}
                 <section className="mt-4">
-                  <Heading level="2" size="small" spacing>
-                    Utforsk
-                  </Heading>
                   <EventParameterSelector
                     availableEvents={availableEvents}
                     parameters={parameters}
@@ -1168,6 +1167,24 @@ const ChartsPage = () => {
                   />
                 </section>
 
+                {/* Step 2: What to Calculate (Metrics) - Simplified to just metrics */}
+                <section className="mt-4">
+                  <Summarize
+                    metrics={config.metrics}
+                    parameters={parameters}
+                    METRICS={METRICS}
+                    COLUMN_GROUPS={FILTER_COLUMNS}
+                    getMetricColumns={getMetricColumns}
+                    sanitizeColumnName={sanitizeColumnName}
+                    updateMetric={(index, updates) => updateMetric(index, updates)}
+                    removeMetric={removeMetric}
+                    addMetric={addMetric}
+                    moveMetric={moveMetric}
+                    filters={filters}
+                  />
+                </section>
+
+                {/* Step 3: Event Filter Selection */}
                 <section className="mt-4">
                   <ChartFilters
                     filters={filters}
@@ -1178,38 +1195,30 @@ const ChartsPage = () => {
                   />
                 </section>
 
+                {/* Step 4: New Display Options component for grouping and visualization */}
                 <section className="mt-4">
-                  <Summarize
-                    metrics={config.metrics}
+                  <DisplayOptions
                     groupByFields={config.groupByFields}
                     parameters={parameters}
                     dateFormat={config.dateFormat}
                     orderBy={config.orderBy}
                     paramAggregation={config.paramAggregation}
                     limit={config.limit}
-                    METRICS={METRICS}
                     DATE_FORMATS={DATE_FORMATS}
                     COLUMN_GROUPS={FILTER_COLUMNS}
-                    getMetricColumns={getMetricColumns}
                     sanitizeColumnName={sanitizeColumnName}
-                    updateMetric={(index, updates) => updateMetric(index, updates)}
-                    removeMetric={removeMetric}
-                    addMetric={addMetric}
                     addGroupByField={addGroupByField}
                     removeGroupByField={removeGroupByField}
                     moveGroupField={moveGroupField}
-                    moveMetric={moveMetric}
                     setOrderBy={setOrderBy}
                     clearOrderBy={clearOrderBy}
-                    setParamAggregation={setParamAggregation}
-                    setLimit={setLimit}
                     setDateFormat={(format) => setConfig(prev => ({
                       ...prev,
                       dateFormat: format as DateFormat['value']
                     }))}
-                    availableEvents={availableEvents}
-                    filters={filters} // Add this prop
-                    setFilters={setFilters} // Add this prop
+                    setParamAggregation={setParamAggregation}
+                    setLimit={setLimit}
+                    metrics={config.metrics}
                   />
                 </section>
               </>

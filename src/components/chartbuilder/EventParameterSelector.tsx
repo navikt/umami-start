@@ -348,6 +348,10 @@ const getGroupedParameters = () => {
   };
 
   return (
+    <>
+        <Heading level="2" size="small" spacing>
+          Tilgjengelig hendelser
+        </Heading>
         <ExpansionCard
           aria-label="Hendelsesdetaljer"
           defaultOpen={false}
@@ -357,10 +361,10 @@ const getGroupedParameters = () => {
             <ExpansionCard.Title as="h3" size="small">
             {getEventCount() === 0 ? (
               <>
-                Ingen egendefinerte hendelser
+                Kun besøk - ingen egendefinerte hendelser funnet
               </>
             ): (
-              <>{getEventCount()} egendefinerte hendelser</>
+              <>{getEventCount()} egendefinerte hendelser + besøk</>
             )}
             </ExpansionCard.Title>
           </ExpansionCard.Header>
@@ -612,6 +616,7 @@ const getGroupedParameters = () => {
             </VStack>
           </ExpansionCard.Content>
         </ExpansionCard>
+      </>
   );
 };
 
