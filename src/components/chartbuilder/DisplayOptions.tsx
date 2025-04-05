@@ -180,6 +180,15 @@ const DisplayOptions = ({
                     URL-sti
                   </Button>
                   <Button 
+                    variant={activeGroupings.includes('referrer_domain') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('referrer_domain')}
+                    disabled={activeGroupings.includes('referrer_domain')}
+                    icon={<Link2 size={16} />}
+                  >
+                    Henvisningsdomene
+                  </Button>
+                  <Button 
                     variant={activeGroupings.includes('event_name') ? "primary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('event_name')}
@@ -196,7 +205,25 @@ const DisplayOptions = ({
                     icon={<Smartphone size={16} />}
                   >
                     Enhet
-                  </Button>
+                  </Button>  
+                  <Button 
+                    variant={activeGroupings.includes('browser') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('browser')}
+                    disabled={activeGroupings.includes('browser')}
+                    icon={<Smartphone size={16} />}
+                  >
+                    Nettleser
+                  </Button>  
+                  <Button 
+                    variant={activeGroupings.includes('os') ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('os')}
+                    disabled={activeGroupings.includes('os')}
+                    icon={<Smartphone size={16} />}
+                  >
+                    OS
+                  </Button>  
                 </div>
               </Tabs.Panel>
               

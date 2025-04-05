@@ -190,7 +190,7 @@ const Summarize = ({
                         onClick={() => addConfiguredMetric('count', undefined, 'Antall hendelser')}
                         icon={<BarChart2 size={16} />}
                       >
-                        Antall egendefinerte hendelser
+                        Antall hendelser
                       </Button>
                     </div>
                   </Tabs.Panel>
