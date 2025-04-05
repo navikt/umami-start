@@ -95,6 +95,13 @@ const Summarize = forwardRef(({
     }, 0);
   };
 
+  const isMetricAdded = (functionType: string, column?: string): boolean => {
+    return metrics.some(metric => 
+      metric.function === functionType && 
+      metric.column === column
+    );
+  };
+
   useEffect(() => {
     const calculationIds = metrics.map(m => `${m.function}_${m.column || ''}`);
     setActiveCalculations(calculationIds);
@@ -172,6 +179,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike besøkende')}
                         icon={<Users size={16} />}
+                        disabled={isMetricAdded('distinct', 'session_id')}
                       >
                         Unike besøkende
                       </Button>
@@ -180,6 +188,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('count', 'session_id', 'Antall besøk')}
                         icon={<BarChart2 size={16} />}
+                        disabled={isMetricAdded('count', 'session_id')}
                       >
                         Antall besøk
                       </Button>
@@ -188,6 +197,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('count', undefined, 'Antall sidevisninger')}
                         icon={<BarChart2 size={16} />}
+                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall sidevisninger')}
                       >
                         Antall sidevisninger
                       </Button>
@@ -196,6 +206,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('count', undefined, 'Antall hendelser')}
                         icon={<BarChart2 size={16} />}
+                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall hendelser')}
                       >
                         Antall hendelser
                       </Button>
@@ -209,6 +220,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel av besøkende')}
                         icon={<PieChart size={16} />}
+                        disabled={isMetricAdded('percentage', 'session_id')}
                       >
                         Andel av besøkende
                       </Button>
@@ -217,6 +229,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel av hendelser')}
                         icon={<PieChart size={16} />}
+                        disabled={isMetricAdded('percentage', 'event_id')}
                       >
                         Andel av hendelser
                       </Button>
@@ -225,6 +238,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
                         icon={<LogOut size={16} />}
+                        disabled={isMetricAdded('bounce_rate', 'visit_id')}
                       >
                         Fluktrate
                       </Button>
@@ -238,6 +252,7 @@ const Summarize = forwardRef(({
                         size="small"
                         onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig besøkstid')}
                         icon={<Clock size={16} />}
+                        disabled={isMetricAdded('average', 'visit_duration')}
                       >
                         Besøksvarighet i sekunder
                       </Button>
