@@ -41,7 +41,7 @@ const Summarize = forwardRef(({
     message: ''
   });
   
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [activeCalculations, setActiveCalculations] = useState<string[]>([]);
   const [activeMetricCategory, setActiveMetricCategory] = useState<string>('antall');

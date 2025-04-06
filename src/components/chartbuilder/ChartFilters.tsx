@@ -83,9 +83,9 @@ const ChartFilters = forwardRef(({
   });
 
   // Add a ref to store the timeout ID
-  const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Add a ref for staging alert timeout
-  const stagingAlertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stagingAlertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -573,13 +573,13 @@ const ChartFilters = forwardRef(({
                 <Tabs.List>
                   <Tabs.Tab 
                     value="pageviews" 
-                    label="Kun besøk"
+                    label="Besøk"
                     title="Viser kun sidevisninger"
                   />
                   {customEventsList.length > 0 && (
                     <Tabs.Tab 
                       value="custom_events" 
-                      label="Kun egendefinerte"
+                      label="Egendefinerte"
                       title="Viser kun egendefinerte hendelser"
                     />
                   )}

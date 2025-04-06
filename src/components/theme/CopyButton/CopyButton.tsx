@@ -34,7 +34,7 @@ function CopyButton({ textToCopy, visible }: CopyButtonProps) {
             id="sql-copy-button"
             icon={isCopied ? <Check size="1.2rem" /> : <Copy size="1.2rem" />}
         >
-            {isCopied ? 'Kopiert!' : 'Kopier graf'}
+            {isCopied ? 'Kopiert!' : 'Kopier spørsmålet'}
         </Button>
     );
 }

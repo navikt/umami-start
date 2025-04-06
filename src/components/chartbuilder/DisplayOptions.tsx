@@ -59,7 +59,7 @@ const DisplayOptions = forwardRef(({
   });
 
   // Add a ref to store the timeout ID
-  const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();

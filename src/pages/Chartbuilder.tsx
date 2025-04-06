@@ -1229,10 +1229,13 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Lag grafer og tabeller for Metabase
+        Still spørsmål og få svaret i Metabase
+      </Heading>
+      <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
+        Lurer du på hvordan folk bruker nettsiden eller appen din?
       </Heading>
       <p className="text-gray-600 mb-10 prose text-lg">
-        Gode beslutninger starter med innsikt. Med grafbyggeren lager du grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
+        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller i Metabase – som du enkelt kan dele med kollegaer.
       </p>
 
       {/* Display the alert if it's active */}
