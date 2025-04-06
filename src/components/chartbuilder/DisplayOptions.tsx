@@ -1,6 +1,6 @@
 import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import { 
   Parameter, 
   DateFormat, 
@@ -58,6 +58,9 @@ const DisplayOptions = forwardRef(({
     message: ''
   });
 
+  // Add a ref to store the timeout ID
+  const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
     
@@ -96,16 +99,41 @@ const DisplayOptions = forwardRef(({
     setShowCustomSort(false);
     
     if (!silent) {
+      // Clear any existing timeout
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+        alertTimeoutRef.current = null;
+      }
+      
       setAlertInfo({
         show: true,
         message: 'Alle visningsvalg ble tilbakestilt'
       });
       
-      setTimeout(() => {
+      alertTimeoutRef.current = setTimeout(() => {
         setAlertInfo(prev => ({...prev, show: false}));
+        alertTimeoutRef.current = null;
       }, 4000);
     }
   };
+
+  // Add handler for alert close
+  const handleAlertClose = () => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+      alertTimeoutRef.current = null;
+    }
+    setAlertInfo(prev => ({...prev, show: false}));
+  };
+
+  // Clear timeout when component unmounts
+  useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
     resetOptions
@@ -135,7 +163,10 @@ const DisplayOptions = forwardRef(({
     <div className="bg-gray-50 p-5 rounded-md border">
         {alertInfo.show && (
           <div className="mb-4">
-            <AlertWithCloseButton variant="success">
+            <AlertWithCloseButton 
+              variant="success"
+              onClose={handleAlertClose}
+            >
               {alertInfo.message}
             </AlertWithCloseButton>
           </div>

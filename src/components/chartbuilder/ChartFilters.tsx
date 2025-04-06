@@ -82,6 +82,11 @@ const ChartFilters = forwardRef(({
     message: ''
   });
 
+  // Add a ref to store the timeout ID
+  const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Add a ref for staging alert timeout
+  const stagingAlertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
     // Filter out null or undefined events and then filter for custom events
@@ -145,14 +150,20 @@ const ChartFilters = forwardRef(({
       setStagingFilter(null);
       
       // Show alert in the staging area
+      if (stagingAlertTimeoutRef.current) {
+        clearTimeout(stagingAlertTimeoutRef.current);
+        stagingAlertTimeoutRef.current = null;
+      }
+      
       setStagingAlertInfo({
         show: true,
         message: `Filter lagt til under aktive filter`
       });
       
-      // Auto-hide staging alert after 5 seconds
-      setTimeout(() => {
+      // Auto-hide staging alert after 4 seconds
+      stagingAlertTimeoutRef.current = setTimeout(() => {
         setStagingAlertInfo(prev => ({...prev, show: false}));
+        stagingAlertTimeoutRef.current = null;
       }, 4000);
     }
   };
@@ -434,13 +445,20 @@ const ChartFilters = forwardRef(({
     
     // Only show alert if not silent
     if (!silent) {
+      // Clear any existing timeout
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+        alertTimeoutRef.current = null;
+      }
+      
       setAlertInfo({
         show: true,
         message: 'Alle filtre ble tilbakestilt'
       });
       
-      setTimeout(() => {
+      alertTimeoutRef.current = setTimeout(() => {
         setAlertInfo(prev => ({...prev, show: false}));
+        alertTimeoutRef.current = null;
       }, 4000);
     }
   };
@@ -474,6 +492,35 @@ const ChartFilters = forwardRef(({
   // Add state for interactive mode at the top with other state declarations
   const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 
+  // Add handlers for alert close
+  const handleAlertClose = () => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+      alertTimeoutRef.current = null;
+    }
+    setAlertInfo(prev => ({...prev, show: false}));
+  };
+
+  const handleStagingAlertClose = () => {
+    if (stagingAlertTimeoutRef.current) {
+      clearTimeout(stagingAlertTimeoutRef.current);
+      stagingAlertTimeoutRef.current = null;
+    }
+    setStagingAlertInfo(prev => ({...prev, show: false}));
+  };
+
+  // Clear timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+      if (stagingAlertTimeoutRef.current) {
+        clearTimeout(stagingAlertTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Expose resetFilters method through ref
   useImperativeHandle(ref, () => ({
     resetFilters
@@ -502,7 +549,10 @@ const ChartFilters = forwardRef(({
           {/* Show alert if it's active */}
           {alertInfo.show && (
             <div className="mb-4">
-              <AlertWithCloseButton variant="success">
+              <AlertWithCloseButton 
+                variant="success"
+                onClose={handleAlertClose}
+              >
                 {alertInfo.message}
               </AlertWithCloseButton>
             </div>
@@ -968,7 +1018,10 @@ const ChartFilters = forwardRef(({
                 {/* Show staging alert if it's active */}
                 {stagingAlertInfo.show && (
                   <div className="mb-4 mt-4">
-                    <AlertWithCloseButton variant="success">
+                    <AlertWithCloseButton 
+                      variant="success"
+                      onClose={handleStagingAlertClose}
+                    >
                       {stagingAlertInfo.message}
                     </AlertWithCloseButton>
                   </div>

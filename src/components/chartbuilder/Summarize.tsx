@@ -1,6 +1,6 @@
 import { Button, Heading, Select, TextField, HelpText, Tabs, Label } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock, LogOut } from 'lucide-react';
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'; 
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'; 
 import { 
   Parameter, 
   Metric, 
@@ -41,6 +41,8 @@ const Summarize = forwardRef(({
     message: ''
   });
   
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const [activeCalculations, setActiveCalculations] = useState<string[]>([]);
   const [activeMetricCategory, setActiveMetricCategory] = useState<string>('antall');
 
@@ -68,16 +70,40 @@ const Summarize = forwardRef(({
       removeMetric(0);
     });
     
+    setActiveMetricCategory('antall');
+    
     if (!silent) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      
       setAlertInfo({
         show: true,
         message: 'Alle målinger ble tilbakestilt'
       });
       
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setAlertInfo(prev => ({...prev, show: false}));
+        timeoutRef.current = null;
       }, 4000);
     }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleAlertClose = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setAlertInfo(prev => ({...prev, show: false}));
   };
 
   const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
@@ -109,8 +135,6 @@ const Summarize = forwardRef(({
   }, [metrics]);
 
   useEffect(() => {
-    // Force step 2 to remain active until user explicitly adds metrics
-    // This is done by dispatching a custom event that the parent can listen for
     const event = new CustomEvent('summarizeStepStatus', {
       detail: { 
         hasUserSelectedMetrics: metrics.length > 0
@@ -119,7 +143,6 @@ const Summarize = forwardRef(({
     document.dispatchEvent(event);
   }, [metrics]);
 
-  // Expose resetConfig method through ref
   useImperativeHandle(ref, () => ({
     resetConfig
   }));
@@ -134,7 +157,7 @@ const Summarize = forwardRef(({
       <Button 
         variant="tertiary" 
         size="small" 
-        onClick={() => resetConfig(false)} // Explicitly pass false to show alert
+        onClick={() => resetConfig(false)}
       >
         Tilbakestill målinger
       </Button>
@@ -142,7 +165,10 @@ const Summarize = forwardRef(({
     <div className="bg-gray-50 p-5 rounded-md border"> 
         {alertInfo.show && (
           <div className="mb-4">
-            <AlertWithCloseButton variant="success">
+            <AlertWithCloseButton 
+              variant="success"
+              onClose={handleAlertClose}
+            >
               {alertInfo.message}
             </AlertWithCloseButton>
           </div>
@@ -258,7 +284,7 @@ const Summarize = forwardRef(({
                             updateMetric(newIndex, { 
                               column: 'visit_duration', 
                               alias: 'Gjennomsnittlig_besokstid_minutter',
-                              showInMinutes: true // Add a flag to indicate minutes conversion
+                              showInMinutes: true
                             });
                           }, 0);
                         }}
