@@ -1362,7 +1362,7 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
-      {currentStep == 4 && (
+      {currentStep == 3 && ( // Now using step 3 as the final step
       <CopyButton 
         textToCopy={generatedSQL} 
         visible={!!generatedSQL && generatedSQL !== '-- Please select a website to generate SQL'}
