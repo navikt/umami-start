@@ -57,7 +57,7 @@ export default function Header() {
                 className="no-underline"
               >
                 <AreaChartIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Still spørsmål</span>
+                <span className="whitespace-nowrap">Lag grafer</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -103,7 +103,7 @@ export default function Header() {
               className={linkButton}
             >
               <AreaChartIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Still spørsmål</span>
+              <span className="whitespace-nowrap">Lag grafer</span>
             </Link>
             <Link
               href="/taksonomi"
