@@ -3,7 +3,7 @@ import {List, Link} from "@navikt/ds-react";
 export default function Kontaktboks() {
     return (
         <>
-            <List as="ul" title="Ønsker noen å sparre med?" className="pt-2">
+            <List as="ul" title="Ønsker du noen å sparre med?" className="pt-2">
                 <List.Item>
                     <strong>Slack:</strong> Bli med i kanalen <Link
                     href={"https://nav-it.slack.com/archives/C070BPKR830"} target={"_blank"}>#produktanalyse</Link> og <Link
