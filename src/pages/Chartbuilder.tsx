@@ -1044,6 +1044,9 @@ const ChartsPage = () => {
       // @ts-ignore
       let finalColumn = config.orderBy.column;
       
+      // Sanitize the orderBy column name for BigQuery
+      finalColumn = sanitizeFieldNameForBigQuery(finalColumn);
+      
       if (config.orderBy.column === 'andel' && !metricWithAlias) {
         const percentageMetrics = config.metrics.filter(m => 
           m.function === 'percentage' && !m.alias
@@ -1057,26 +1060,27 @@ const ChartsPage = () => {
       const orderColumn = config.orderBy.column === 'created_at' 
         ? 'dato' 
         : hasInteractiveFilters
-          ? config.orderBy.column // No backticks in interactive mode
-          : metricWithAlias
-            ? `\`${config.orderBy.column}\`` 
-            : config.orderBy.column.startsWith('metrikk_') || 
-              config.orderBy.column.startsWith('andel') || 
-              config.orderBy.column.includes('`')
-              ? `\`${config.orderBy.column.replace(/`/g, '')}\`` 
-              : config.orderBy.column;
+          ? finalColumn // No backticks in interactive mode, but still sanitized
+          : `\`${finalColumn}\``; // Use backticks and sanitized name
       
       const columnExists = config.groupByFields.some(field => 
         (field === 'created_at' && config.orderBy?.column === 'dato') ||
         field === config.orderBy?.column
-      ) || config.metrics.some((m, i) => 
-        m.alias === config.orderBy?.column || 
-        `metrikk_${i + 1}` === config.orderBy?.column ||
-        (m.function === 'percentage' && (
+      ) || config.metrics.some((m, i) => {
+        // For metrics with explicit aliases
+        if (m.alias === config.orderBy?.column) return true;
+        
+        // For metrics with default names (metrikk_N)
+        if (`metrikk_${i + 1}` === config.orderBy?.column) return true;
+        
+        // For percentage metrics that use "andel" as their name
+        if (m.function === 'percentage' && (
           config.orderBy?.column === 'andel' ||
           config.orderBy?.column === `andel_${i + 1}`
-        ))
-      );
+        )) return true;
+        
+        return false;
+      });
       
       if (columnExists) {
         sql += `ORDER BY ${orderColumn} ${config.orderBy.direction}\n`;
@@ -1091,8 +1095,10 @@ const ChartsPage = () => {
       if (config.groupByFields.includes('created_at')) {
         sql += 'ORDER BY dato ASC\n';
       } else if (config.metrics.length > 0) {
-        const firstMetricAlias = config.metrics[0].alias || 'metrikk_1';
-        sql += `ORDER BY \`${firstMetricAlias}\` ${config.orderBy?.direction || 'DESC'}\n`;
+        const firstMetric = config.metrics[0];
+        const firstMetricAlias = firstMetric.alias || 'metrikk_1';
+        const sanitizedAlias = sanitizeFieldNameForBigQuery(firstMetricAlias);
+        sql += `ORDER BY \`${sanitizedAlias}\` ${config.orderBy?.direction || 'DESC'}\n`;
       } else {
         sql += `ORDER BY 1 ${config.orderBy?.direction || 'DESC'}\n`;
       }
@@ -1123,10 +1129,12 @@ const ChartsPage = () => {
         column = 'andel';
       }
     }
+    
+    // Store the sanitized column name in orderBy
     setConfig(prev => ({
       ...prev,
       orderBy: { 
-        column, 
+        column, // Keep the original column name for reference purposes
         direction 
       }
     }));

@@ -178,7 +178,7 @@ const Summarize = forwardRef(({
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike besøkende')}
+                        onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike_besokende')}
                         icon={<Users size={16} />}
                         disabled={isMetricAdded('distinct', 'session_id')}
                       >
@@ -187,7 +187,7 @@ const Summarize = forwardRef(({
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('count', 'session_id', 'Antall besøk')}
+                        onClick={() => addConfiguredMetric('count', 'session_id', 'Antall_besok')}
                         icon={<BarChart2 size={16} />}
                         disabled={isMetricAdded('count', 'session_id')}
                       >
@@ -196,18 +196,18 @@ const Summarize = forwardRef(({
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('count', undefined, 'Antall sidevisninger')}
+                        onClick={() => addConfiguredMetric('count', undefined, 'Antall_sidevisninger')}
                         icon={<BarChart2 size={16} />}
-                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall sidevisninger')}
+                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall_sidevisninger')}
                       >
                         Antall sidevisninger
                       </Button>
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('count', undefined, 'Antall hendelser')}
+                        onClick={() => addConfiguredMetric('count', undefined, 'Antall_hendelser')}
                         icon={<BarChart2 size={16} />}
-                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall hendelser')}
+                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall_hendelser')}
                       >
                         Antall hendelser
                       </Button>
@@ -219,7 +219,7 @@ const Summarize = forwardRef(({
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel av besøkende')}
+                        onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel_av_besokende')}
                         icon={<PieChart size={16} />}
                         disabled={isMetricAdded('percentage', 'session_id')}
                       >
@@ -228,7 +228,7 @@ const Summarize = forwardRef(({
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel av hendelser')}
+                        onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel_av_hendelser')}
                         icon={<PieChart size={16} />}
                         disabled={isMetricAdded('percentage', 'event_id')}
                       >
@@ -270,7 +270,7 @@ const Summarize = forwardRef(({
                       <Button 
                         variant="secondary" 
                         size="small"
-                        onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_seconds')}
+                        onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_sekunder')}
                         icon={<Clock size={16} />}
                         disabled={isMetricAdded('average', 'visit_duration', false)}
                       >
