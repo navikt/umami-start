@@ -27,6 +27,7 @@ const SQLPreview = ({
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sql);
@@ -66,56 +67,63 @@ const SQLPreview = ({
 
   // Track previous step to detect transitions
   const [prevStep, setPrevStep] = useState(activeStep);
-  // Rename to make it clearer this refers to the final step (3)
   const [autoClosedFinalStep, setAutoClosedFinalStep] = useState(false);
 
-  // The final step is now 3, not 4
   const FINAL_STEP = 3;
 
-  // Update the function to always force open the form progress regardless of current state
+  // Update the function to track manual opening state
   const ensureFormProgressOpen = () => {
     if (onOpenChange) {
-      // Always force it open, don't check current state
       onOpenChange(true);
-
-      // Reset the auto-closed flag when we manually open it
+      setWasManuallyOpened(true);
       setAutoClosedFinalStep(false);
+    }
+  };
+
+  // Custom handler for form progress open state changes
+  const handleFormProgressOpenChange = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+      // If the user manually opens it, track this action
+      if (open && activeStep === FINAL_STEP) {
+        setWasManuallyOpened(true);
+      }
     }
   };
 
   useEffect(() => {
     if (onOpenChange) {
-      // Auto-close when initially moving to the final step, but only once
-      if (activeStep === FINAL_STEP && prevStep !== FINAL_STEP && !autoClosedFinalStep) {
+      // Case 1: Moving to final step - auto-close it if it wasn't manually opened
+      if (activeStep === FINAL_STEP && prevStep !== FINAL_STEP && !wasManuallyOpened) {
         onOpenChange(false);
         setAutoClosedFinalStep(true);
       }
-      // Reopen when moving from final step back to earlier steps
+      // Case 2: Moving back from final step to an earlier step - reopen it
       else if (prevStep === FINAL_STEP && activeStep < FINAL_STEP) {
         onOpenChange(true);
         setAutoClosedFinalStep(false);
       }
-      // Ensure form progress is open when moving from step 3 back to step 2
-      else if (prevStep === 3 && activeStep === 2) {
-        onOpenChange(true);
+      // Case 3: Initial setup on first render
+      else if (prevStep === activeStep && activeStep === 1) {
+        onOpenChange(openFormprogress);
       }
-      // Initial setup on first render
-      else if (prevStep === activeStep && !autoClosedFinalStep) {
-        onOpenChange(activeStep < FINAL_STEP && openFormprogress);
-      }
-      // If parent explicitly sets openFormprogress, respect that even at final step
+      // Case 4: If parent explicitly sets openFormprogress, respect that
       else if (
         openFormprogress !== undefined &&
-        openFormprogress !== (activeStep === FINAL_STEP ? false : openFormprogress)
+        prevStep !== activeStep // Only process external state changes on step changes
       ) {
-        // This means user manually toggled it, so respect that
         onOpenChange(openFormprogress);
       }
     }
-
+    
     // Update previous step
     setPrevStep(activeStep);
-  }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedFinalStep, FINAL_STEP]);
+    
+    // Reset manual opening flag when changing steps (except when at step 3)
+    if (prevStep !== activeStep && activeStep !== FINAL_STEP) {
+      setWasManuallyOpened(false);
+    }
+  }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedFinalStep, wasManuallyOpened, FINAL_STEP]);
 
   return (
     <>
@@ -124,14 +132,7 @@ const SQLPreview = ({
           // Show getting started guidance
           <div className="space-y-4">
             <Heading level="2" size="small">Klargjør spørsmålet ditt</Heading>
-            {/*
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                Lag grafer og tabeller basert på data fra Umami, klare til å presenteres i Metabase.
-              </p>
-            </div>
-            */}
-
+            
             {/* Only show SQL code button if the SQL is meaningful */}
             {isSQLMeaningful() && (
               <div className="mt-4">
@@ -274,10 +275,10 @@ const SQLPreview = ({
         )}
         <div className="pt-0">
           <FormProgress
-            activeStep={activeStep}
+            activeStep={Math.min(activeStep, FINAL_STEP)} // Ensure we never show step 4
             totalSteps={3}
             open={openFormprogress}
-            onOpenChange={onOpenChange}
+            onOpenChange={handleFormProgressOpenChange}
             interactiveSteps={false}
           >
             <FormProgress.Step>Velg nettside eller app</FormProgress.Step>
