@@ -187,10 +187,10 @@ const Summarize = forwardRef(({
 
   const getMetricDisplayName = (metric: Metric): string => {
     if (metric.function === 'distinct' && metric.column === 'session_id') {
-      return 'Unike besøkende';
+      return 'Antall unike besøkende';
     }
     if (metric.function === 'count' && metric.column === 'session_id') {
-      return 'Antall besøk';
+      return 'Antall besøk / økter';
     }
     if (metric.function === 'count' && metric.alias === 'Antall_sidevisninger') {
       return 'Antall sidevisninger';
@@ -276,7 +276,7 @@ const Summarize = forwardRef(({
                         icon={<Users size={16} />}
                         disabled={isMetricAdded('distinct', 'session_id')}
                       >
-                        Unike besøkende
+                        Antall unike besøkende
                       </Button>
                       <Button 
                         variant="secondary" 
@@ -285,7 +285,7 @@ const Summarize = forwardRef(({
                         icon={<BarChart2 size={16} />}
                         disabled={isMetricAdded('count', 'session_id')}
                       >
-                        Antall besøk
+                        Antall besøk / økter
                       </Button>
                       <Button 
                         variant="secondary" 
