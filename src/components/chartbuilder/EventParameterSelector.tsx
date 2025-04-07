@@ -361,7 +361,7 @@ const getGroupedParameters = () => {
             <ExpansionCard.Title as="h3" size="small">
             {getEventCount() === 0 ? (
               <>
-                Kun besøk - ingen egendefinerte hendelser funnet
+                Besøk
               </>
             ): (
               <>{getEventCount()} egendefinerte hendelser + besøk</>
