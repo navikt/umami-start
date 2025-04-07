@@ -185,6 +185,36 @@ const Summarize = forwardRef(({
     return editingMetrics.includes(index) || !isShortcutMetric(metric);
   };
 
+  const getMetricDisplayName = (metric: Metric): string => {
+    if (metric.function === 'distinct' && metric.column === 'session_id') {
+      return 'Unike besøkende';
+    }
+    if (metric.function === 'count' && metric.column === 'session_id') {
+      return 'Antall besøk';
+    }
+    if (metric.function === 'count' && metric.alias === 'Antall_sidevisninger') {
+      return 'Antall sidevisninger';
+    }
+    if (metric.function === 'count' && metric.alias === 'Antall_hendelser') {
+      return 'Antall hendelser';
+    }
+    if (metric.function === 'percentage' && metric.column === 'session_id') {
+      return 'Andel av besøkende';
+    }
+    if (metric.function === 'percentage' && metric.column === 'event_id') {
+      return 'Andel av hendelser';
+    }
+    if (metric.function === 'bounce_rate' && metric.column === 'visit_id') {
+      return 'Fluktrate';
+    }
+    if (metric.function === 'average' && metric.column === 'visit_duration') {
+      return metric.showInMinutes 
+        ? 'Besøksvarighet i minutter' 
+        : 'Besøksvarighet i sekunder';
+    }
+    return METRICS.find(m => m.value === metric.function)?.label || 'Måling';
+  };
+
   return (
     <>
     <div className="flex justify-between items-center mb-4">
@@ -394,7 +424,9 @@ const Summarize = forwardRef(({
                         {index + 1}.
                       </span>
                       <span className="font-medium">
-                        {METRICS.find(m => m.value === metric.function)?.label || 'Måling'}
+                        {isShortcutMetric(metric) && !shouldShowDetailedView(metric, index) 
+                          ? getMetricDisplayName(metric) 
+                          : METRICS.find(m => m.value === metric.function)?.label || 'Måling'}
                         {metric.column === 'visit_duration' && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                             {metric.showInMinutes ? 'minutter' : 'sekunder'}
