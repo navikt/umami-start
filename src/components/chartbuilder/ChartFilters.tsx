@@ -580,7 +580,7 @@ const ChartFilters = forwardRef(({
                   </Checkbox>
                   
                   {selectedEventTypes.includes('pageviews') && (
-                    <div className="pl-5 ml-3 border-l">
+                    <div className="pl-4 ml-3 border-l">
                       <RadioGroup 
                         legend="" 
                         hideLegend
@@ -760,7 +760,7 @@ const ChartFilters = forwardRef(({
                     </Checkbox>
                     
                     {selectedEventTypes.includes('custom_events') && (
-                      <div className="pl-5 ml-3 border-l">
+                      <div className="pl-4 ml-3 border-l">
                         <RadioGroup 
                           legend="" 
                           hideLegend
