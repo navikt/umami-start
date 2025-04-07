@@ -1229,7 +1229,7 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Still spørsmål og få svaret i Metabase
+        Spør og få svaret i Metabase
       </Heading>
       <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
         Lurer du på hvordan folk bruker nettsiden eller appen din?
