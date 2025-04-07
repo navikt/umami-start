@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Switch, UNSAFE_Combobox, Chips, Tabs } from '@navikt/ds-react';
+import { Button, Heading, Select, Switch, UNSAFE_Combobox, Checkbox, Radio, RadioGroup } from '@navikt/ds-react';
 import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
@@ -24,12 +24,6 @@ const FILTER_SUGGESTIONS = [
     label: 'Egendefinerte hendelser', 
     filters: [{ column: 'event_type', operator: '=', value: '2' }],
     description: 'Viser kun egendefinerte hendelser'
-  },
-  {
-    id: 'all_events',
-    label: 'Begge typer',
-    filters: [], // No filters means we include all event types
-    description: 'Viser både sidevisninger og egendefinerte hendelser'
   }
 ];
 
@@ -51,8 +45,8 @@ const ChartFilters = forwardRef(({
 }: ChartFiltersProps, ref) => {
   // Add state for custom period inputs
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
-  // Change to store single string instead of array
-  const [appliedSuggestion, setAppliedSuggestion] = useState<string>('pageviews'); // Pre-select pageviews
+  // Change to store array instead of single string
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(['pageviews']);
   // Add state for selected date range
   const [selectedDateRange, setSelectedDateRange] = useState<string>('');
   // Add state to track custom events selection
@@ -180,7 +174,7 @@ const ChartFilters = forwardRef(({
     );
     // If we're removing a suggestion filter, clear the selection
     if (isSuggestionFilter) {
-      setAppliedSuggestion('');
+      setSelectedEventTypes([]);
     }
     
     // If removing date filter, clear date range selection
@@ -197,49 +191,59 @@ const ChartFilters = forwardRef(({
     ));
   };
 
-  // Simplified toggle function for radio-like behavior
-  const toggleFilterSuggestion = (suggestionId: string) => {
-    // Don't allow deselection by clicking the same tab again
-    if (appliedSuggestion === suggestionId) {
-      return;
+  // Replace toggleFilterSuggestion with new handler
+  const handleEventTypeChange = (eventType: string, isChecked: boolean) => {
+    let newSelection = [...selectedEventTypes];
+    
+    if (isChecked) {
+      if (!newSelection.includes(eventType)) {
+        newSelection.push(eventType);
+      }
+    } else {
+      newSelection = newSelection.filter(type => type !== eventType);
     }
-
-    // Remove any existing suggestion filters first
-    const cleanFilters = filters.filter(existingFilter => {
-      const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
-        suggestion.filters.some(f => 
-          f.column === existingFilter.column && f.operator === existingFilter.operator
-        )
-      );
-      return !isSuggestionFilter;
-    });
-    // Remove any existing event_name filters and url_path filters
-    const cleanerFilters = cleanFilters.filter(f => 
-      !(f.column === 'event_name') && 
-      !(f.column === 'url_path' && f.operator === 'IN')
+    
+    setSelectedEventTypes(newSelection);
+    
+    // Remove any existing event_type filters
+    const cleanFilters = filters.filter(existingFilter => 
+      existingFilter.column !== 'event_type'
     );
     
-    // Add new suggestion filters (if any)
-    const suggestion = FILTER_SUGGESTIONS.find(s => s.id === suggestionId);
-    if (suggestion) {
-      const filtersToApply = [...cleanerFilters];
-      if (suggestion.filters.length > 0) {
-        filtersToApply.push(...suggestion.filters);
-      }
-      setFilters(filtersToApply);
-      
-      // Reset selections when switching between suggestions
-      setCustomEvents([]);
-      setSelectedPaths([]);
-      setPageViewsMode('all');
-      setCustomEventsMode('all');
-    }
-    setAppliedSuggestion(suggestionId);
+    // Add new filters based on selection
+    const filtersToApply = [...cleanFilters];
     
-    // Auto-hide alert after 5 seconds
-    setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
-    }, 4000);
+    // If both types are selected, use the IN operator
+    if (newSelection.includes('pageviews') && newSelection.includes('custom_events')) {
+      filtersToApply.push({ 
+        column: 'event_type', 
+        operator: 'IN', 
+        value: '1',
+        multipleValues: ['1', '2']
+      });
+    } 
+    // If only one type is selected, use the = operator
+    else if (newSelection.includes('pageviews')) {
+      filtersToApply.push({ column: 'event_type', operator: '=', value: '1' });
+    }
+    else if (newSelection.includes('custom_events')) {
+      filtersToApply.push({ column: 'event_type', operator: '=', value: '2' });
+    }
+    
+    setFilters(filtersToApply);
+    
+    // Only reset these selections when fully unchecking a section, not when adding
+    if (!isChecked) {
+      if (eventType === 'pageviews') {
+        // Reset pageview-specific selections when unchecking pageviews
+        setSelectedPaths([]);
+        setPageViewsMode('all');
+      } else if (eventType === 'custom_events') {
+        // Reset custom events selections when unchecking custom events
+        setCustomEvents([]);
+        setCustomEventsMode('all');
+      }
+    }
   };
 
   // Update the handleCustomEventsChange function to handle different operators
@@ -416,7 +420,7 @@ const ChartFilters = forwardRef(({
     setFilters([]);
     
     // Reset UI state but keep 'pageviews' suggestion active
-    setAppliedSuggestion('pageviews');
+    setSelectedEventTypes(['pageviews']);
     setSelectedDateRange('');
     setCustomEvents([]);
     setSelectedPaths([]);
@@ -565,385 +569,372 @@ const ChartFilters = forwardRef(({
             </Heading>
             
             <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
-              <Tabs 
-                value={appliedSuggestion || 'pageviews'}
-                onChange={(value) => toggleFilterSuggestion(value)}
-                size="small"
-              >
-                <Tabs.List>
-                  <Tabs.Tab 
-                    value="pageviews" 
-                    label="Besøk"
-                    title="Viser kun sidevisninger"
-                  />
-                  {customEventsList.length > 0 && (
-                    <Tabs.Tab 
-                      value="custom_events" 
-                      label="Egendefinerte"
-                      title="Viser kun egendefinerte hendelser"
-                    />
-                  )}
-                  {customEventsList.length > 0 && (
-                    <Tabs.Tab 
-                      value="all_events" 
-                      label="Begge kombinert"
-                      title="Viser både sidevisninger og egendefinerte hendelser"
-                    />
-                  )}
-                </Tabs.List>
-              </Tabs>
-
-              {/* Keep existing pageviews and custom events sections */}
-              {(appliedSuggestion === 'pageviews' || appliedSuggestion === 'all_events') && (
-                <div className="mt-4">
-                  {/* Only show heading in "all_events" mode */}
-                  {appliedSuggestion === 'all_events' && (
-                    <Heading level="4" size="xsmall" spacing className="mb-2">
-                      Besøk
-                    </Heading>
-                  )}
+              <div className="space-y-2">
+                {/* Pageviews section */}
+                <div className="space-y-4">
+                  <Checkbox
+                    checked={selectedEventTypes.includes('pageviews')}
+                    onChange={(e) => handleEventTypeChange('pageviews', e.target.checked)}
+                  >
+                    Besøk
+                  </Checkbox>
                   
-                  <Chips>
-                    <Chips.Toggle 
-                      selected={pageViewsMode === 'all'}
-                      onClick={() => {
-                        setPageViewsMode('all');
-                        // Clear any specific URL path filters
-                        const filtersWithoutPaths = filters.filter(f => 
-                          !(f.column === 'url_path')
-                        );
-                        setFilters(filtersWithoutPaths);
-                        setSelectedPaths([]);
-                      }}
-                      checkmark={false}
-                    >
-                      Besøk til alle sider
-                    </Chips.Toggle>
-                    <Chips.Toggle 
-                      selected={pageViewsMode === 'specific'}
-                      onClick={() => setPageViewsMode('specific')}
-                      checkmark={false}
-                    >
-                      Besøk til bestemte sider
-                    </Chips.Toggle>
-                    <Chips.Toggle 
-                      selected={pageViewsMode === 'interactive'}
-                      onClick={() => {
-                        setPageViewsMode('interactive');
-                        // Add Metabase parameter filter
-                        const filtersWithoutPaths = filters.filter(f => 
-                          !(f.column === 'url_path')
-                        );
-                        setFilters([
-                          ...filtersWithoutPaths,
-                          { 
-                            column: 'url_path', 
-                            operator: '=', 
-                            value: '{{url_sti}}',
-                            metabaseParam: true
+                  {selectedEventTypes.includes('pageviews') && (
+                    <div className="pl-4 ml-3 border-l">
+                      <RadioGroup 
+                        legend="" 
+                        hideLegend
+                        value={pageViewsMode}
+                        onChange={(val) => {
+                          const newMode = val as 'all' | 'specific' | 'interactive';
+                          
+                          if (newMode === 'all') {
+                            setPageViewsMode('all');
+                            const filtersWithoutPaths = filters.filter(f => 
+                              !(f.column === 'url_path')
+                            );
+                            setFilters(filtersWithoutPaths);
+                            setSelectedPaths([]);
+                          } else if (newMode === 'interactive') {
+                            setPageViewsMode('interactive');
+                            const filtersWithoutPaths = filters.filter(f => 
+                              !(f.column === 'url_path')
+                            );
+                            setFilters([
+                              ...filtersWithoutPaths,
+                              { 
+                                column: 'url_path', 
+                                operator: '=', 
+                                value: '{{url_sti}}',
+                                metabaseParam: true
+                              }
+                            ]);
+                            setSelectedPaths([]);
+                          } else {
+                            setPageViewsMode(newMode);
                           }
-                        ]);
-                        setSelectedPaths([]);
-                      }}
-                      checkmark={false}
-                    >
-                      Interaktiv
-                    </Chips.Toggle>
-                  </Chips>
-                  
-                  {pageViewsMode === 'specific' && (
-                    <>
-                      <div className="flex gap-2 items-end mb-3 mt-4">
-                        <Select
-                          label="URL-sti"
-                          value={urlPathOperator}
-                          onChange={(e) => {
-                            const newOperator = e.target.value;
-                            setUrlPathOperator(newOperator);
-                            
-                            // Handle the transition between IN and other operators
-                            if ((newOperator === 'IN' && selectedPaths.length <= 1) || 
-                                (urlPathOperator === 'IN' && newOperator !== 'IN')) {
-                              const pathValue = selectedPaths.length > 0 ? selectedPaths[0] : '';
-                              handlePathsChange(
-                                newOperator === 'IN' ? selectedPaths : [pathValue],  
-                                newOperator
-                              );
-                            } else {
-                              handlePathsChange(selectedPaths, newOperator);
-                            }
-                          }}
-                          size="small"
-                          className="w-full md:w-1/3"
-                        >
-                          {OPERATORS.map(op => (
-                            <option key={op.value} value={op.value}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                        }}
+                      >
+                        <Radio value="all">
+                          Besøk til alle sider
+                        </Radio>
+                        
+                        <Radio value="specific">
+                          Besøk til bestemte sider
+                        </Radio>
+                        
+                        <Radio value="interactive">
+                          Interaktiv
+                        </Radio>
+                      </RadioGroup>
                       
-                      {urlPathOperator === 'IN' ? (
-                        <UNSAFE_Combobox
-                          label="Velg URL-stier"
-                          description="Flere stier kan velges for 'er lik' operator"
-                          options={availablePaths.map(path => ({
-                            label: path,
-                            value: path
-                          }))}
-                          selectedOptions={selectedPaths}
-                          onToggleSelected={(option, isSelected) => {
-                            if (option) {
-                              const newSelection = isSelected 
-                                ? [...selectedPaths, option] 
-                                : selectedPaths.filter(p => p !== option);
-                              handlePathsChange(newSelection, urlPathOperator);
-                            }
-                          }}
-                          isMultiSelect
-                          size="small"
-                          clearButton
-                          allowNewValues
-                        />
-                      ) : (
-                        <UNSAFE_Combobox
-                          label="Legg til en eller flere URL-stier"
-                          description={
-                            urlPathOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
-                            urlPathOperator === 'STARTS_WITH' ? "Søket vil finne stier som starter med verdien" :
-                            urlPathOperator === 'ENDS_WITH' ? "Søket vil finne stier som slutter med verdien" :
-                            null
-                          }
-                          options={availablePaths.map(path => ({
-                            label: path,
-                            value: path
-                          }))}
-                          selectedOptions={selectedPaths.length > 0 ? [selectedPaths[0]] : []}
-                          onToggleSelected={(option, isSelected) => {
-                            if (option) {
-                              handlePathsChange(isSelected ? [option] : [], urlPathOperator);
-                            }
-                          }}
-                          isMultiSelect={true}
-                          size="small"
-                          clearButton
-                          allowNewValues
-                        />
-                      )}
-                      
-                      {selectedPaths.length === 0 && (
-                        <div className="mt-2 text-xs text-gray-600">
-                          Når tom vises alle sidevisninger
+                      {pageViewsMode === 'specific' && (
+                        <div className="mt-4 pl-6">
+                          <div className="flex gap-2 items-end mb-3 mt-4">
+                            <Select
+                              label="URL-sti"
+                              value={urlPathOperator}
+                              onChange={(e) => {
+                                const newOperator = e.target.value;
+                                setUrlPathOperator(newOperator);
+                                
+                                // Handle the transition between IN and other operators
+                                if ((newOperator === 'IN' && selectedPaths.length <= 1) || 
+                                    (urlPathOperator === 'IN' && newOperator !== 'IN')) {
+                                  const pathValue = selectedPaths.length > 0 ? selectedPaths[0] : '';
+                                  handlePathsChange(
+                                    newOperator === 'IN' ? selectedPaths : [pathValue],  
+                                    newOperator
+                                  );
+                                } else {
+                                  handlePathsChange(selectedPaths, newOperator);
+                                }
+                              }}
+                              size="small"
+                              className="w-full md:w-1/3"
+                            >
+                              {OPERATORS.map(op => (
+                                <option key={op.value} value={op.value}>
+                                  {op.label}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                          
+                          {urlPathOperator === 'IN' ? (
+                            <UNSAFE_Combobox
+                              label="Velg URL-stier"
+                              description="Flere stier kan velges for 'er lik' operator"
+                              options={availablePaths.map(path => ({
+                                label: path,
+                                value: path
+                              }))}
+                              selectedOptions={selectedPaths}
+                              onToggleSelected={(option, isSelected) => {
+                                if (option) {
+                                  const newSelection = isSelected 
+                                    ? [...selectedPaths, option] 
+                                    : selectedPaths.filter(p => p !== option);
+                                  handlePathsChange(newSelection, urlPathOperator);
+                                }
+                              }}
+                              isMultiSelect
+                              size="small"
+                              clearButton
+                              allowNewValues
+                            />
+                          ) : (
+                            <UNSAFE_Combobox
+                              label="Legg til en eller flere URL-stier"
+                              description={
+                                urlPathOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
+                                urlPathOperator === 'STARTS_WITH' ? "Søket vil finne stier som starter med verdien" :
+                                urlPathOperator === 'ENDS_WITH' ? "Søket vil finne stier som slutter med verdien" :
+                                null
+                              }
+                              options={availablePaths.map(path => ({
+                                label: path,
+                                value: path
+                              }))}
+                              selectedOptions={selectedPaths.length > 0 ? [selectedPaths[0]] : []}
+                              onToggleSelected={(option, isSelected) => {
+                                if (option) {
+                                  handlePathsChange(isSelected ? [option] : [], urlPathOperator);
+                                }
+                              }}
+                              isMultiSelect={true}
+                              size="small"
+                              clearButton
+                              allowNewValues
+                            />
+                          )}
+                          
+                          {selectedPaths.length === 0 && (
+                            <div className="mt-2 text-xs text-gray-600">
+                              Når tom vises alle sidevisninger
+                            </div>
+                          )}
                         </div>
                       )}
-                    </>
-                  )}
-                  
-                  {pageViewsMode === 'interactive' && (
-                    <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
-                          <svg 
-                            width="16" 
-                            height="16" 
-                            viewBox="0 0 16 16" 
-                            fill="none" 
-                            className="text-green-600"
-                          >
-                            <path 
-                              d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
-                              fill="currentColor"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium mb-1">Aktivert som interaktivt filter for sidevisninger</p>
-                        <p className="text-gray-600">URL-sti kan velges som et filtervalg i Metabase-dashbord</p>
-                      </div>
+                      
+                      {pageViewsMode === 'interactive' && (
+                        <div className="mt-4 pl-6">
+                          <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-shrink-0">
+                                <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                  <svg 
+                                    width="16" 
+                                    height="16" 
+                                    viewBox="0 0 16 16" 
+                                    fill="none" 
+                                    className="text-green-600"
+                                  >
+                                    <path 
+                                      d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium mb-1">Aktivert som interaktivt filter for sidevisninger</p>
+                                <p className="text-gray-600">URL-sti kan velges som et filtervalg i Metabase-dashbord</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
                   )}
                 </div>
-              )}
-              
-              {(appliedSuggestion === 'custom_events' || appliedSuggestion === 'all_events') && (
-                <div className="mt-4">
-                  {/* Only show heading in "all_events" mode */}
-                  {appliedSuggestion === 'all_events' && (
-                    <Heading level="4" size="xsmall" spacing className="mb-2">
+
+                {/* Custom events section */}
+                {customEventsList.length > 0 && (
+                  <div className="space-y-4">
+                    <Checkbox
+                      checked={selectedEventTypes.includes('custom_events')}
+                      onChange={(e) => handleEventTypeChange('custom_events', e.target.checked)}
+                    >
                       Egendefinerte hendelser
-                    </Heading>
-                  )}
-                  
-                  <Chips>
-                    <Chips.Toggle 
-                      selected={customEventsMode === 'all'}
-                      onClick={() => {
-                        setCustomEventsMode('all');
-                        // Clear any specific event name filters
-                        const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
-                        setFilters(filtersWithoutEventNames);
-                        setCustomEvents([]);
-                      }}
-                      checkmark={false}
-                    >
-                      Alle hendelser
-                    </Chips.Toggle>
-                    <Chips.Toggle 
-                      selected={customEventsMode === 'specific'}
-                      onClick={() => setCustomEventsMode('specific')}
-                      checkmark={false}
-                    >
-                      Bestemte hendelser
-                    </Chips.Toggle>
-                    <Chips.Toggle 
-                      selected={customEventsMode === 'interactive'}
-                      onClick={() => {
-                        setCustomEventsMode('interactive');
-                        // Add Metabase parameter filter
-                        const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
-                        setFilters([
-                          ...filtersWithoutEventNames,
-                          { 
-                            column: 'event_name', 
-                            operator: '=', 
-                            value: '{{hendelse}}',
-                            metabaseParam: true
-                          }
-                        ]);
-                        setCustomEvents([]);
-                      }}
-                      checkmark={false}
-                    >
-                      Interaktiv
-                    </Chips.Toggle>
-                  </Chips>
-                  
-                  {customEventsMode === 'specific' && (
-                    <>
-                      <div className="flex gap-2 items-end mb-3 mt-4">
-                        <Select
-                          label="Hendelser"
-                          value={eventNameOperator}
-                          onChange={(e) => {
-                            const newOperator = e.target.value;
-                            setEventNameOperator(newOperator);
+                    </Checkbox>
+                    
+                    {selectedEventTypes.includes('custom_events') && (
+                      <div className="pl-4 ml-3 border-l">
+                        <RadioGroup 
+                          legend="" 
+                          hideLegend
+                          value={customEventsMode}
+                          onChange={(val) => {
+                            const newMode = val as 'all' | 'specific' | 'interactive';
                             
-                            // Handle the transition between IN and other operators
-                            if ((newOperator === 'IN' && customEvents.length <= 1) || 
-                                (eventNameOperator === 'IN' && newOperator !== 'IN')) {
-                              const eventValue = customEvents.length > 0 ? customEvents[0] : '';
-                              handleCustomEventsChange(
-                                newOperator === 'IN' ? customEvents : [eventValue],
-                                newOperator
+                            if (newMode === 'all') {
+                              setCustomEventsMode('all');
+                              const filtersWithoutEventNames = filters.filter(f => 
+                                f.column !== 'event_name'
                               );
+                              setFilters(filtersWithoutEventNames);
+                              setCustomEvents([]);
+                            } else if (newMode === 'interactive') {
+                              setCustomEventsMode('interactive');
+                              const filtersWithoutEventNames = filters.filter(f => 
+                                f.column !== 'event_name'
+                              );
+                              setFilters([
+                                ...filtersWithoutEventNames,
+                                { 
+                                  column: 'event_name', 
+                                  operator: '=', 
+                                  value: '{{hendelse}}',
+                                  metabaseParam: true
+                                }
+                              ]);
+                              setCustomEvents([]);
                             } else {
-                              handleCustomEventsChange(customEvents, newOperator);
+                              setCustomEventsMode(newMode);
                             }
                           }}
-                          size="small"
-                          className="w-full md:w-1/3"
                         >
-                          {OPERATORS.map(op => (
-                            <option key={op.value} value={op.value}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                      
-                      {eventNameOperator === 'IN' ? (
-                        <UNSAFE_Combobox
-                          label="Velg spesifikke hendelser"
-                          description="Flere hendelser kan velges for 'er lik' operator"
-                          options={customEventsList.map(event => ({
-                            label: event,
-                            value: event
-                          }))}
-                          selectedOptions={customEvents}
-                          onToggleSelected={(option, isSelected) => {
-                            if (option) {
-                              const newSelection = isSelected 
-                                ? [...customEvents, option] 
-                                : customEvents.filter(e => e !== option);
-                              handleCustomEventsChange(newSelection, eventNameOperator);
-                            }
-                          }}
-                          isMultiSelect
-                          size="small"
-                          clearButton
-                          allowNewValues
-                        />
-                      ) : (
-                        <UNSAFE_Combobox
-                          label="Legg til hendelse"
-                          description={
-                            eventNameOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
-                            eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
-                            eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
-                            null
-                          }
-                          options={customEventsList.map(event => ({
-                            label: event,
-                            value: event
-                          }))}
-                          selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
-                          onToggleSelected={(option, isSelected) => {
-                            if (option) {
-                              handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
-                            }
-                          }}
-                          isMultiSelect={false}
-                          size="small"
-                          clearButton
-                          allowNewValues
-                        />
-                      )}
+                          <Radio value="all">
+                            Alle hendelser
+                          </Radio>
+                          
+                          <Radio value="specific">
+                            Bestemte hendelser
+                          </Radio>
+                          
+                          <Radio value="interactive">
+                            Interaktiv
+                          </Radio>
+                        </RadioGroup>
+                        
+                        {customEventsMode === 'specific' && (
+                          <div className="mt-4 pl-6">
+                            <div className="flex gap-2 items-end mb-3 mt-4">
+                              <Select
+                                label="Hendelser"
+                                value={eventNameOperator}
+                                onChange={(e) => {
+                                  const newOperator = e.target.value;
+                                  setEventNameOperator(newOperator);
+                                  
+                                  // Handle the transition between IN and other operators
+                                  if ((newOperator === 'IN' && customEvents.length <= 1) || 
+                                      (eventNameOperator === 'IN' && newOperator !== 'IN')) {
+                                    const eventValue = customEvents.length > 0 ? customEvents[0] : '';
+                                    handleCustomEventsChange(
+                                      newOperator === 'IN' ? customEvents : [eventValue],
+                                      newOperator
+                                    );
+                                  } else {
+                                    handleCustomEventsChange(customEvents, newOperator);
+                                  }
+                                }}
+                                size="small"
+                                className="w-full md:w-1/3"
+                              >
+                                {OPERATORS.map(op => (
+                                  <option key={op.value} value={op.value}>
+                                    {op.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </div>
+                            
+                            {eventNameOperator === 'IN' ? (
+                              <UNSAFE_Combobox
+                                label="Velg spesifikke hendelser"
+                                description="Flere hendelser kan velges for 'er lik' operator"
+                                options={customEventsList.map(event => ({
+                                  label: event,
+                                  value: event
+                                }))}
+                                selectedOptions={customEvents}
+                                onToggleSelected={(option, isSelected) => {
+                                  if (option) {
+                                    const newSelection = isSelected 
+                                      ? [...customEvents, option] 
+                                      : customEvents.filter(e => e !== option);
+                                    handleCustomEventsChange(newSelection, eventNameOperator);
+                                  }
+                                }}
+                                isMultiSelect
+                                size="small"
+                                clearButton
+                                allowNewValues
+                              />
+                            ) : (
+                              <UNSAFE_Combobox
+                                label="Legg til hendelse"
+                                description={
+                                  eventNameOperator === 'LIKE' ? "Søket vil inneholde verdien uavhengig av posisjon" :
+                                  eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
+                                  eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
+                                  null
+                                }
+                                options={customEventsList.map(event => ({
+                                  label: event,
+                                  value: event
+                                }))}
+                                selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
+                                onToggleSelected={(option, isSelected) => {
+                                  if (option) {
+                                    handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
+                                  }
+                                }}
+                                isMultiSelect={false}
+                                size="small"
+                                clearButton
+                                allowNewValues
+                              />
+                            )}
 
-                      {customEvents.length === 0 && (
-                        <div className="mt-2 text-xs text-gray-600">
-                          Når tom vises alle egendefinerte hendelser
-                        </div>
-                      )}
-                      {customEventsList.length === 0 && (
-                        <div className="mt-2 text-sm text-amber-600">
-                          Ingen egendefinerte hendelser funnet. Velg en nettside som har sporing av egendefinerte hendelser.
-                        </div>
-                      )}
-                    </>
-                  )}
-                  
-                  {customEventsMode === 'interactive' && (
-                    <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
-                          <svg 
-                            width="16" 
-                            height="16" 
-                            viewBox="0 0 16 16" 
-                            fill="none" 
-                            className="text-green-600"
-                          >
-                            <path 
-                              d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
-                              fill="currentColor"
-                            />
-                          </svg>
-                        </span>
+                            {customEvents.length === 0 && (
+                              <div className="mt-2 text-xs text-gray-600">
+                                Når tom vises alle egendefinerte hendelser
+                              </div>
+                            )}
+                            {customEventsList.length === 0 && (
+                              <div className="mt-2 text-sm text-amber-600">
+                                Ingen egendefinerte hendelser funnet. Velg en nettside som har sporing av egendefinerte hendelser.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {customEventsMode === 'interactive' && (
+                          <div className="mt-4 pl-6">
+                            <div className="mt-4 text-sm text-gray-700 bg-white p-4 rounded border">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0">
+                                  <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg 
+                                      width="16" 
+                                      height="16" 
+                                      viewBox="0 0 16 16" 
+                                      fill="none" 
+                                      className="text-green-600"
+                                    >
+                                      <path 
+                                        d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
+                                        fill="currentColor"
+                                      />
+                                    </svg>
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-medium mb-1">Aktivert som interaktivt filter for egendefinerte hendelser</p>
+                                  <p className="text-gray-600">Egendefinerte hendelser kan velges via filtervalg i Metabase-dashbord</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-medium mb-1">Aktivert som interaktivt filter for egendefinerte hendelser</p>
-                        <p className="text-gray-600">Egendefinerte hendelser kan velges via filtervalg i Metabase-dashbord</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
