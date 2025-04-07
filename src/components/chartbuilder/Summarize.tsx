@@ -45,6 +45,8 @@ const Summarize = forwardRef(({
   
   const [activeCalculations, setActiveCalculations] = useState<string[]>([]);
   const [activeMetricCategory, setActiveMetricCategory] = useState<string>('antall');
+  
+  const [editingMetrics, setEditingMetrics] = useState<number[]>([]);
 
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
@@ -146,6 +148,42 @@ const Summarize = forwardRef(({
   useImperativeHandle(ref, () => ({
     resetConfig
   }));
+
+  const isShortcutMetric = (metric: Metric): boolean => {
+    const shortcutMetrics = [
+      { function: 'distinct', column: 'session_id' },
+      { function: 'count', column: 'session_id' },
+      { function: 'count', column: undefined, alias: 'Antall_sidevisninger' },
+      { function: 'count', column: undefined, alias: 'Antall_hendelser' },
+      { function: 'percentage', column: 'session_id' },
+      { function: 'percentage', column: 'event_id' },
+      { function: 'bounce_rate', column: 'visit_id' },
+      { function: 'average', column: 'visit_duration', showInMinutes: true },
+      { function: 'average', column: 'visit_duration', showInMinutes: false }
+    ];
+  
+    return shortcutMetrics.some(shortcut => {
+      if (shortcut.function !== metric.function) return false;
+      if (shortcut.column !== metric.column) return false;
+      if (shortcut.alias && shortcut.alias !== metric.alias) return false;
+      if (shortcut.showInMinutes !== undefined && shortcut.showInMinutes !== metric.showInMinutes) return false;
+      return true;
+    });
+  };
+
+  const toggleEditMetric = (index: number) => {
+    setEditingMetrics(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
+
+  const shouldShowDetailedView = (metric: Metric, index: number): boolean => {
+    return editingMetrics.includes(index) || !isShortcutMetric(metric);
+  };
 
   return (
     <>
@@ -348,17 +386,14 @@ const Summarize = forwardRef(({
             )}
 
             {metrics.map((metric, index) => (
-              <div key={index} className="flex flex-col bg-white p-3 rounded-md border">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {metrics.length > 0 && (
-                      <span className="text-sm bg-gray-100 px-2 py-1 rounded-md text-blue-900 font-medium">
-                        {index + 1}
+              <div key={index} className={`flex ${shouldShowDetailedView(metric, index) ? 'flex-col' : 'items-center justify-between'} bg-white px-4 py-3 rounded-md border`}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500">
+                        {index + 1}.
                       </span>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      <span className="font-small text-blue-900">
+                      <span className="font-medium">
                         {METRICS.find(m => m.value === metric.function)?.label || 'Måling'}
                         {metric.column === 'visit_duration' && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -368,134 +403,152 @@ const Summarize = forwardRef(({
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <div className="flex gap-1">
-                      {index > 0 && (
+                  <div className="flex items-center gap-2">
+                    {isShortcutMetric(metric) ? (
+                      <>
                         <Button
-                          variant="secondary"
+                          variant={shouldShowDetailedView(metric, index) ? "primary" : "secondary"}
                           size="small"
-                          icon={<MoveUp size={16} />}
-                          onClick={() => moveMetric(index, 'up')}
-                          title="Flytt opp"
-                        />
-                      )}
-                      {index < metrics.length - 1 && (
+                          onClick={() => toggleEditMetric(index)}
+                        >
+                          {shouldShowDetailedView(metric, index) ? "Minimer" : "Endre"}
+                        </Button>
                         <Button
-                          variant="secondary"
+                          variant="tertiary-neutral"
                           size="small"
-                          icon={<MoveDown size={16} />}
-                          onClick={() => moveMetric(index, 'down')}
-                          title="Flytt ned"
-                        />
-                      )}
-                      {(index === 0 || index === metrics.length - 1) && metrics.length > 1 && (
-                        <div className="w-8"></div>
-                      )}
-                    </div>
-                    
-                    <Button
-                      variant="tertiary-neutral"
-                      size="small"
-                      onClick={() => removeMetric(index)}
-                    >
-                      Fjern
-                    </Button>
+                          onClick={() => removeMetric(index)}
+                        >
+                          Fjern
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex gap-1">
+                          {index > 0 && (
+                            <Button
+                              variant="secondary"
+                              size="small"
+                              icon={<MoveUp size={16} />}
+                              onClick={() => moveMetric(index, 'up')}
+                              title="Flytt opp"
+                            />
+                          )}
+                          {index < metrics.length - 1 && (
+                            <Button
+                              variant="secondary"
+                              size="small"
+                              icon={<MoveDown size={16} />}
+                              onClick={() => moveMetric(index, 'down')}
+                              title="Flytt ned"
+                            />
+                          )}
+                        </div>
+                        <Button
+                          variant="tertiary-neutral"
+                          size="small"
+                          onClick={() => removeMetric(index)}
+                        >
+                          Fjern
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
             
-                <div className="mt-2">
-                  {metric.function === 'count_where' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* ... existing code for count_where metric type ... */}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col md:flex-row gap-4">
-                      {metric.function !== 'count' && (
-                        <div className="flex-grow">
-                          <Select
-                            label="Kolonne"
-                            value={metric.column || ''}
-                            onChange={(e) => {
-                              const updates: Partial<Metric> = { 
-                                column: e.target.value,
-                                showInMinutes: undefined
-                              };
-                              updateMetric(index, updates);
-                            }}
+                {shouldShowDetailedView(metric, index) && (
+                  <div className="mt-4 border-t pt-4">
+                    {metric.function === 'count_where' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* ...existing code for count_where metric type... */}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col md:flex-row gap-4">
+                        {metric.function !== 'count' && (
+                          <div className="flex-grow">
+                            <Select
+                              label="Kolonne"
+                              value={metric.column || ''}
+                              onChange={(e) => {
+                                const updates: Partial<Metric> = { 
+                                  column: e.target.value,
+                                  showInMinutes: undefined
+                                };
+                                updateMetric(index, updates);
+                              }}
+                              size="small"
+                              className="w-full"
+                            >
+                              <option value="">Velg kolonne</option>
+                              
+                              {(metric.function === 'percentage' || metric.function === 'andel') ? (
+                                getMetricColumns(parameters, metric.function).map(col => (
+                                  <option key={col.value} value={col.value}>
+                                    {col.label}
+                                  </option>
+                                ))
+                              ) : (
+                                <>
+                                  {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
+                                      <optgroup key={groupKey} label={(group as { label: string }).label}>
+                                      {(group as { columns: { value: string; label: string }[] }).columns.map(col => (
+                                        <option key={col.value} value={col.value}>
+                                        {col.label}
+                                        </option>
+                                      ))}
+                                      </optgroup>
+                                  ))}
+                                  
+                                  {uniqueParameters.length > 0 && (
+                                    <optgroup label="Egendefinerte">
+                                      {uniqueParameters.map(param => (
+                                        <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
+                                          {param.key}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                </>
+                              )}
+                            </Select>
+                            
+                            {metric.column === 'visit_duration' && (
+                              <div className="mt-2">
+                                <Label size="small">Tidsenhet</Label>
+                                <div className="flex gap-2 mt-1">
+                                  <Button
+                                    variant={metric.showInMinutes ? "secondary" : "primary"}
+                                    size="xsmall"
+                                    onClick={() => updateMetric(index, { showInMinutes: false })}
+                                  >
+                                    Sekunder
+                                  </Button>
+                                  <Button
+                                    variant={metric.showInMinutes ? "primary" : "secondary"}
+                                    size="xsmall"
+                                    onClick={() => updateMetric(index, { showInMinutes: true })}
+                                  >
+                                    Minutter
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="md:w-1/3">
+                          <TextField
+                            label="Kolonnetittel (valgfritt)"
+                            value={metric.alias || ''}
+                            onChange={(e) => updateMetric(index, { alias: e.target.value })}
+                            placeholder={`metrikk_${index + 1}`}
                             size="small"
                             className="w-full"
-                          >
-                            <option value="">Velg kolonne</option>
-                            
-                            {(metric.function === 'percentage' || metric.function === 'andel') ? (
-                              getMetricColumns(parameters, metric.function).map(col => (
-                                <option key={col.value} value={col.value}>
-                                  {col.label}
-                                </option>
-                              ))
-                            ) : (
-                              <>
-                                {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                                    <optgroup key={groupKey} label={(group as { label: string }).label}>
-                                    {(group as { columns: { value: string; label: string }[] }).columns.map(col => (
-                                      <option key={col.value} value={col.value}>
-                                      {col.label}
-                                      </option>
-                                    ))}
-                                    </optgroup>
-                                ))}
-                                
-                                {uniqueParameters.length > 0 && (
-                                  <optgroup label="Egendefinerte">
-                                    {uniqueParameters.map(param => (
-                                      <option key={`param_${param.key}`} value={`param_${sanitizeColumnName(param.key)}`}>
-                                        {param.key}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                              </>
-                            )}
-                          </Select>
-                          
-                          {metric.column === 'visit_duration' && (
-                            <div className="mt-2">
-                              <Label size="small">Tidsenhet</Label>
-                              <div className="flex gap-2 mt-1">
-                                <Button
-                                  variant={metric.showInMinutes ? "secondary" : "primary"}
-                                  size="xsmall"
-                                  onClick={() => updateMetric(index, { showInMinutes: false })}
-                                >
-                                  Sekunder
-                                </Button>
-                                <Button
-                                  variant={metric.showInMinutes ? "primary" : "secondary"}
-                                  size="xsmall"
-                                  onClick={() => updateMetric(index, { showInMinutes: true })}
-                                >
-                                  Minutter
-                                </Button>
-                              </div>
-                            </div>
-                          )}
+                          />
                         </div>
-                      )}
-                      
-                      <div className="md:w-1/3">
-                        <TextField
-                          label="Kolonnetittel (valgfritt)"
-                          value={metric.alias || ''}
-                          onChange={(e) => updateMetric(index, { alias: e.target.value })}
-                          placeholder={`metrikk_${index + 1}`}
-                          size="small"
-                          className="w-full"
-                        />
                       </div>
-                    </div>
-                  )}
-                </div> 
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
