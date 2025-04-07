@@ -571,7 +571,7 @@ const ChartFilters = forwardRef(({
             <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
               <div className="space-y-2">
                 {/* Pageviews section */}
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <Checkbox
                     checked={selectedEventTypes.includes('pageviews')}
                     onChange={(e) => handleEventTypeChange('pageviews', e.target.checked)}
@@ -580,7 +580,7 @@ const ChartFilters = forwardRef(({
                   </Checkbox>
                   
                   {selectedEventTypes.includes('pageviews') && (
-                    <div className="pl-4 ml-3 border-l">
+                    <div className="pl-5 ml-3 border-l">
                       <RadioGroup 
                         legend="" 
                         hideLegend
@@ -751,7 +751,7 @@ const ChartFilters = forwardRef(({
 
                 {/* Custom events section */}
                 {customEventsList.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <Checkbox
                       checked={selectedEventTypes.includes('custom_events')}
                       onChange={(e) => handleEventTypeChange('custom_events', e.target.checked)}
@@ -760,7 +760,7 @@ const ChartFilters = forwardRef(({
                     </Checkbox>
                     
                     {selectedEventTypes.includes('custom_events') && (
-                      <div className="pl-4 ml-3 border-l">
+                      <div className="pl-5 ml-3 border-l">
                         <RadioGroup 
                           legend="" 
                           hideLegend
