@@ -616,11 +616,11 @@ const ChartFilters = forwardRef(({
                         }}
                       >
                         <Radio value="all">
-                          Besøk til alle sider
+                          Alle sider
                         </Radio>
                         
                         <Radio value="specific">
-                          Besøk til bestemte sider
+                          Bestemte sider
                         </Radio>
                         
                         <Radio value="interactive">
