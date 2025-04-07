@@ -199,7 +199,7 @@ const DisplayOptions = forwardRef(({
               <Tabs.Panel value="basic" className="pt-4">
                 <div className="flex flex-wrap gap-2">
                   <Button 
-                    variant={activeGroupings.includes('created_at') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('created_at') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('created_at')}
                     disabled={activeGroupings.includes('created_at')}
@@ -208,7 +208,7 @@ const DisplayOptions = forwardRef(({
                     Dato
                   </Button>
                   <Button 
-                    variant={activeGroupings.includes('url_path') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('url_path') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('url_path')}
                     disabled={activeGroupings.includes('url_path')}
@@ -217,7 +217,7 @@ const DisplayOptions = forwardRef(({
                     URL-sti
                   </Button>
                   <Button 
-                    variant={activeGroupings.includes('referrer_domain') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('referrer_domain') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('referrer_domain')}
                     disabled={activeGroupings.includes('referrer_domain')}
@@ -226,7 +226,7 @@ const DisplayOptions = forwardRef(({
                     Henvisningsdomene
                   </Button>
                   <Button 
-                    variant={activeGroupings.includes('event_name') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('event_name') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('event_name')}
                     disabled={activeGroupings.includes('event_name')}
@@ -235,7 +235,7 @@ const DisplayOptions = forwardRef(({
                     Hendelsesnavn
                   </Button>
                   <Button 
-                    variant={activeGroupings.includes('device') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('device') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('device')}
                     disabled={activeGroupings.includes('device')}
@@ -244,7 +244,7 @@ const DisplayOptions = forwardRef(({
                     Enhet
                   </Button>  
                   <Button 
-                    variant={activeGroupings.includes('browser') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('browser') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('browser')}
                     disabled={activeGroupings.includes('browser')}
@@ -253,7 +253,7 @@ const DisplayOptions = forwardRef(({
                     Nettleser
                   </Button>  
                   <Button 
-                    variant={activeGroupings.includes('os') ? "primary" : "secondary"}
+                    variant={activeGroupings.includes('os') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('os')}
                     disabled={activeGroupings.includes('os')}
@@ -270,7 +270,7 @@ const DisplayOptions = forwardRef(({
                     {uniqueParameters.map(param => (
                       <Button 
                         key={`param_${param.key}`}
-                        variant={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`) ? "primary" : "secondary"}
+                        variant={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`) ? "secondary" : "secondary"}
                         size="small"
                         onClick={() => handleAddGroupField(`param_${sanitizeColumnName(param.key)}`)}
                         disabled={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`)}
