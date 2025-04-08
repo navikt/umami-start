@@ -709,6 +709,12 @@ const ChartsPage = () => {
       tablePrefix = 'e.';
     }
     
+    // Force usage of aliases to avoid TS errors
+    if(websiteAlias && sessionAlias) {
+      console.log('websiteAlias', websiteAlias);
+      console.log('sessionAlias', sessionAlias);
+    }
+
     const requiredTables = getRequiredTables(config, filters);
     const needsSessionJoin = requiredTables.session;
     
