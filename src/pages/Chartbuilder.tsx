@@ -646,7 +646,7 @@ const ChartsPage = () => {
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = '${websiteId}'
                 ${hasInteractiveDateFilter 
-                  ? '[[AND {{created_at}} ]]' 
+                  ? '[[AND {{created_at}} ]]' // Corrected format for interactive mode
                   : getDateFilterConditions()}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -657,7 +657,7 @@ const ChartsPage = () => {
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = '${websiteId}'
                 ${hasInteractiveDateFilter 
-                  ? '[[AND {{created_at}} ]]' 
+                  ? '[[AND {{created_at}} ]]' // Corrected format for interactive mode
                   : getDateFilterConditions()}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -691,18 +691,26 @@ const ChartsPage = () => {
     const fullWebsiteTable = '`team-researchops-prod-01d6.umami.public_website_event`';
     const fullSessionTable = '`team-researchops-prod-01d6.umami.public_session`';
     
-    // Determine if any filter is interactive (has Metabase parameters)
     const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
     
-    // In interactive mode, use descriptive alias names instead of single letters
-    const websiteAlias = hasInteractiveFilters ? 'website_event' : 'e';
-
-    // Use the appropriate table prefix based on mode and aliases
-    const tablePrefix = hasInteractiveFilters ? 
-      `${websiteAlias}.` : 
-      'e.';
+    // For interactive mode, we'll use fully qualified table names instead of aliases
+    // For normal mode, we'll use aliases as usual
+    let websiteAlias, sessionAlias, tablePrefix;
+    
+    if (hasInteractiveFilters) {
+      // In interactive mode with Metabase, use the full table names directly
+      websiteAlias = fullWebsiteTable; 
+      sessionAlias = fullSessionTable;
+      tablePrefix = `${fullWebsiteTable}.`;
+    } else {
+      // For regular mode, use short aliases
+      websiteAlias = 'e';
+      sessionAlias = 's';
+      tablePrefix = 'e.';
+    }
     
     const requiredTables = getRequiredTables(config, filters);
+    const needsSessionJoin = requiredTables.session;
     
     const needsUrlFullpath = filters.some(f => f.column === 'url_fullpath') || 
                             config.groupByFields.includes('url_fullpath');
@@ -711,7 +719,6 @@ const ChartsPage = () => {
       m.column === 'visit_duration'
     ) || config.groupByFields.includes('visit_duration');
 
-    // If we need bounce rate calculation, add a subquery for visit counts
     const needsBounceCounts = config.metrics.some(m => m.function === 'bounce_rate');
 
     let sql = '';
@@ -729,7 +736,7 @@ const ChartsPage = () => {
           f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
         );
         if (interactiveDateFilter) {
-          sql += `  [[AND {{${interactiveDateFilter.value?.replace(/[{}]/g, '')}}} ]]\n`;
+          sql += `  [[AND {{created_at}} ]]\n`; // Corrected format for interactive mode
         }
       }
       
@@ -758,19 +765,35 @@ const ChartsPage = () => {
         sql += '    s.city\n';
       }
       
-      // FROM and JOIN clauses
-      sql += `  FROM ${fullWebsiteTable} e\n`;
-      sql += '  LEFT JOIN visit_counts vc\n';
-      sql += '    ON e.visit_id = vc.visit_id\n';
-      
-      if (needsVisitDuration) {
-        sql += '  LEFT JOIN visit_durations vd\n';
-        sql += '    ON e.visit_id = vd.visit_id\n';
-      }
-      
-      if (requiredTables.session) {
-        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
-        sql += '    ON e.session_id = s.session_id\n';
+      // FROM and JOIN clauses - Adjusted for interactive mode
+      if (hasInteractiveFilters) {
+        sql += `  FROM ${fullWebsiteTable}\n`;
+        sql += '  LEFT JOIN visit_counts vc\n';
+        sql += `    ON ${fullWebsiteTable}.visit_id = vc.visit_id\n`;
+        
+        if (needsVisitDuration) {
+          sql += '  LEFT JOIN visit_durations vd\n';
+          sql += `    ON ${fullWebsiteTable}.visit_id = vd.visit_id\n`;
+        }
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable}\n`;
+          sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
+        }
+      } else {
+        sql += `  FROM ${fullWebsiteTable} e\n`;
+        sql += '  LEFT JOIN visit_counts vc\n';
+        sql += '    ON e.visit_id = vc.visit_id\n';
+        
+        if (needsVisitDuration) {
+          sql += '  LEFT JOIN visit_durations vd\n';
+          sql += '    ON e.visit_id = vd.visit_id\n';
+        }
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+          sql += '    ON e.session_id = s.session_id\n';
+        }
       }
     } else if (needsVisitDuration) {
       // Improved visit duration calculation - matches the sample SQL
@@ -787,7 +810,7 @@ const ChartsPage = () => {
           f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
         );
         if (interactiveDateFilter) {
-          sql += `  [[AND {{${interactiveDateFilter.value?.replace(/[{}]/g, '')}}} ]]\n`;
+          sql += `  [[AND {{created_at}} ]]\n`; // Corrected format for interactive mode
         }
       }
       
@@ -812,37 +835,93 @@ const ChartsPage = () => {
       }
       
       // FROM and JOIN clauses - adapted for visit_duration - ALWAYS ADD THIS
-      sql += `  FROM ${fullWebsiteTable} e\n`;
-      sql += '  LEFT JOIN visit_metrics vm\n';
-      sql += '    ON e.visit_id = vm.visit_id\n';
-      
-      if (requiredTables.session) {
-        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
-        sql += '    ON e.session_id = s.session_id\n';
+      if (hasInteractiveFilters) {
+        sql += `  FROM ${fullWebsiteTable}\n`;
+        sql += '  LEFT JOIN visit_metrics vm\n';
+        sql += `    ON ${fullWebsiteTable}.visit_id = vm.visit_id\n`;
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable}\n`;
+          sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
+        }
+      } else {
+        sql += `  FROM ${fullWebsiteTable} e\n`;
+        sql += '  LEFT JOIN visit_metrics vm\n';
+        sql += '    ON e.visit_id = vm.visit_id\n';
+        
+        if (requiredTables.session) {
+          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+          sql += '    ON e.session_id = s.session_id\n';
+        }
       }
     } else {
       sql += 'WITH base_query AS (\n';
       sql += '  SELECT\n';
-      sql += '    e.*';
       
-      let addComma = false;
-      
-      if (needsUrlFullpath) {
-        if (addComma) sql += ',\n';
-        sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
-        addComma = true;
-      }
-      
-      sql += `  FROM ${fullWebsiteTable} e\n`;
-      
-      if (requiredTables.session) {
-        sql += `  LEFT JOIN ${fullSessionTable} s\n`;
-        sql += '    ON e.session_id = s.session_id\n';
+      if (hasInteractiveFilters) {
+        // In interactive mode, use full table names in the SELECT statement
+        sql += `    ${fullWebsiteTable}.*`;
+        
+        // Add session fields if they're needed
+        if (needsSessionJoin) {
+          sql += ',\n';
+          sql += `    ${fullSessionTable}.browser,\n`;
+          sql += `    ${fullSessionTable}.os,\n`;
+          sql += `    ${fullSessionTable}.device,\n`;
+          sql += `    ${fullSessionTable}.screen,\n`;
+          sql += `    ${fullSessionTable}.language,\n`;
+          sql += `    ${fullSessionTable}.country,\n`;
+          sql += `    ${fullSessionTable}.subdivision1,\n`;
+          sql += `    ${fullSessionTable}.city`;
+        }
+        
+        if (needsUrlFullpath) {
+          sql += needsSessionJoin ? ',\n' : '\n';
+          sql += `    CONCAT(IFNULL(${fullWebsiteTable}.url_path, ''), IFNULL(${fullWebsiteTable}.url_query, '')) as url_fullpath`;
+        }
+        
+        sql += `  FROM ${fullWebsiteTable}\n`;
+        
+        // Always add session join if needed
+        if (needsSessionJoin) {
+          sql += `  LEFT JOIN ${fullSessionTable}\n`;
+          sql += `    ON ${fullWebsiteTable}.session_id = ${fullSessionTable}.session_id\n`;
+        }
+      } else {
+        // In normal mode, use aliases as before
+        sql += '    e.*';
+        
+        // Add session fields if they're needed
+        if (needsSessionJoin) {
+          sql += ',\n';
+          sql += '    s.browser,\n';
+          sql += '    s.os,\n';
+          sql += '    s.device,\n';
+          sql += '    s.screen,\n';
+          sql += '    s.language,\n';
+          sql += '    s.country,\n';
+          sql += '    s.subdivision1,\n';
+          sql += '    s.city';
+        }
+        
+        if (needsUrlFullpath) {
+          sql += needsSessionJoin ? ',\n' : '\n';
+          sql += "    CONCAT(IFNULL(e.url_path, ''), IFNULL(e.url_query, '')) as url_fullpath";
+        }
+        
+        sql += `  FROM ${fullWebsiteTable} e\n`;
+        
+        // Always add session join if needed
+        if (needsSessionJoin) {
+          sql += `  LEFT JOIN ${fullSessionTable} s\n`;
+          sql += '    ON e.session_id = s.session_id\n';
+        }
       }
     }
 
     sql += `  WHERE ${tablePrefix}website_id = '${config.website.id}'\n`;
     
+    // Process filters with consistent table references
     filters.forEach(filter => {
       if (filter.column.startsWith('param_')) {
         const paramBase = filter.column.replace('param_', '');
@@ -856,7 +935,19 @@ const ChartsPage = () => {
           sql += `  AND event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${filter.value}\n`;
         }
       } else {
-        if (filter.operator === 'IN' && filter.multipleValues && filter.multipleValues.length > 0) {
+        if (filter.interactive && filter.metabaseParam && filter.value) {
+          // For interactive filters, use the correct format
+          if (filter.column === 'created_at') {
+            sql += `  [[AND {{created_at}} ]]\n`; // Use simpler format for created_at
+          } else if (isSessionColumn(filter.column) && needsSessionJoin) {
+            // For session columns in interactive mode, use the full table name
+            sql += `  [[AND ${fullSessionTable}.${filter.column} ${filter.operator} {{${filter.value.replace(/[{}]/g, '')}}} ]]\n`;
+          } else {
+            // For other columns in interactive mode, use the full website table name
+            sql += `  [[AND ${fullWebsiteTable}.${filter.column} ${filter.operator} {{${filter.value.replace(/[{}]/g, '')}}} ]]\n`;
+          }
+        }
+        else if (filter.operator === 'IN' && filter.multipleValues && filter.multipleValues.length > 0) {
           const valueList = filter.multipleValues
             .map(val => {
               const needsQuotes = isNaN(Number(val)) || 
@@ -868,21 +959,41 @@ const ChartsPage = () => {
             })
             .join(', ');
           
-          sql += `  AND ${tablePrefix}${filter.column} IN (${valueList})\n`;
+          // Use the correct table reference for the column - full name for interactive mode
+          if (hasInteractiveFilters) {
+            const tableName = isSessionColumn(filter.column) && needsSessionJoin ? fullSessionTable : fullWebsiteTable;
+            sql += `  AND ${tableName}.${filter.column} IN (${valueList})\n`;
+          } else {
+            const prefix = isSessionColumn(filter.column) && needsSessionJoin ? 's.' : 'e.';
+            sql += `  AND ${prefix}${filter.column} IN (${valueList})\n`;
+          }
         }
         else if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-          sql += `  AND ${tablePrefix}${filter.column} ${filter.operator}\n`;
+          if (hasInteractiveFilters) {
+            const tableName = isSessionColumn(filter.column) && needsSessionJoin ? fullSessionTable : fullWebsiteTable;
+            sql += `  AND ${tableName}.${filter.column} ${filter.operator}\n`;
+          } else {
+            const prefix = isSessionColumn(filter.column) && needsSessionJoin ? 's.' : 'e.';
+            sql += `  AND ${prefix}${filter.column} ${filter.operator}\n`;
+          }
         }
         else if (filter.value) {
+          // Determine the correct table reference
+          let tableRef;
+          if (hasInteractiveFilters) {
+            tableRef = isSessionColumn(filter.column) && needsSessionJoin ? `${fullSessionTable}.` : `${fullWebsiteTable}.`;
+          } else {
+            tableRef = isSessionColumn(filter.column) && needsSessionJoin ? 's.' : 'e.';
+          }
+          
           if ((filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') && 
               !filter.value.includes('%')) {
-            sql += `  AND ${tablePrefix}${filter.column} ${filter.operator} '%${filter.value.replace(/'/g, "''")}%'`;
+            sql += `  AND ${tableRef}${filter.column} ${filter.operator} '%${filter.value.replace(/'/g, "''")}%'`;
           } else {
             const isTimestampFunction = typeof filter.value === 'string' && 
                                        filter.value.toUpperCase().includes('TIMESTAMP(') &&
                                        !filter.value.startsWith("'");
             
-            // Check if this is a Metabase parameter (interactive filter)
             const isMetabaseParam = filter.metabaseParam === true && 
                                     typeof filter.value === 'string' && 
                                     filter.value.includes('{{') && 
@@ -899,12 +1010,12 @@ const ChartsPage = () => {
             const formattedValue = isTimestampFunction 
               ? filter.value.replace(/^['"]|['"]$/g, '') 
               : isMetabaseParam
-                ? filter.value.replace(/^['"]|['"]$/g, '') // Remove any quotes from Metabase parameters
+                ? filter.value.replace(/^['"]|['"]$/g, '') 
                 : needsQuotes 
                   ? `'${filter.value.replace(/'/g, "''")}'` 
                   : filter.value;
             
-            sql += `  AND ${tablePrefix}${filter.column} ${filter.operator} ${formattedValue}\n`;
+            sql += `  AND ${tableRef}${filter.column} ${filter.operator} ${formattedValue}\n`;
           }
         }
         else if (filter.operator !== 'IS NULL' && filter.operator !== 'IS NOT NULL') {
