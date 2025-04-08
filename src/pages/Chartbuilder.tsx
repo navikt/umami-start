@@ -1362,14 +1362,21 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
-      {currentStep == 3 && ( // Now using step 3 as the final step
       <CopyButton 
         textToCopy={generatedSQL} 
-        visible={!!generatedSQL && generatedSQL !== '-- Please select a website to generate SQL'}
+        visible={!!generatedSQL && 
+          generatedSQL !== '-- Please select a website to generate SQL' && 
+          !isBasicTemplate(generatedSQL)}
       />
-      )}
     </div>
   );
+};
+
+// Helper function to check if SQL is basic template
+const isBasicTemplate = (sql: string): boolean => {
+  if (!sql) return true;
+  const selectPattern = /SELECT\s+(\s*FROM|\s*$)/i;
+  return selectPattern.test(sql);
 };
 
 function useDebounce<T>(value: T, delay: number): T {
