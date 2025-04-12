@@ -941,16 +941,21 @@ const ChartsPage = () => {
           sql += `  AND event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${filter.value}\n`;
         }
       } else {
-        if (filter.interactive && filter.metabaseParam && filter.value) {
-          // For interactive filters, use the correct format
+        if (filter.interactive === true && filter.metabaseParam === true && filter.value) {
+          // Special handling for interactive filters - no quotes should be added
           if (filter.column === 'created_at') {
-            sql += `  [[AND {{created_at}} ]]\n`; // Use simpler format for created_at
-          } else if (isSessionColumn(filter.column) && needsSessionJoin) {
-            // For session columns in interactive mode, use the full table name
-            sql += `  [[AND ${fullSessionTable}.${filter.column} ${filter.operator} {{${filter.value.replace(/[{}]/g, '')}}} ]]\n`;
+            sql += `  [[AND {{created_at}} ]]\n`;
           } else {
-            // For other columns in interactive mode, use the full website table name
-            sql += `  [[AND ${fullWebsiteTable}.${filter.column} ${filter.operator} {{${filter.value.replace(/[{}]/g, '')}}} ]]\n`;
+            // For all other interactive filters, use proper Metabase parameter syntax without quotes
+            const tableName = isSessionColumn(filter.column) && needsSessionJoin ? 
+              fullSessionTable : 
+              fullWebsiteTable;
+            
+            // Extract the parameter name without {{ }}
+            const paramName = filter.value.replace(/[{}]/g, '');
+            
+            // Add parameter without quotes
+            sql += `  AND ${tableName}.${filter.column} = {{${paramName}}}\n`;
           }
         }
         else if (filter.operator === 'IN' && filter.multipleValues && filter.multipleValues.length > 0) {
