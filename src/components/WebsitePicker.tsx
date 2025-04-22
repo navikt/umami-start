@@ -55,11 +55,11 @@ const WebsitePicker = ({
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
   const [setMaxDaysAvailable] = useState<number>(30);
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 3);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 1);
   const apiCache = useRef<ApiCache>({});
   const fetchInProgress = useRef<{[key: string]: boolean}>({});
   const websitesLoaded = useRef<boolean>(false);
-  const prevExternalDateRange = useRef<number>(externalDateRange || 3);
+  const prevExternalDateRange = useRef<number>(externalDateRange || 1);
   const prevShouldReload = useRef<boolean>(shouldReload);
   const initialUrlChecked = useRef<boolean>(false);
 
