@@ -242,7 +242,7 @@ const WebsitePicker = ({
         const message = error.message.includes('timed out') 
           ? 'Forespørselen tok for lang tid. Prøv igjen senere.'
           : 'Det oppstod en feil ved lasting av data. Forsøk å laste siden inn på nytt.';
-        setError(message);
+        console.log(message);
       }
       handleLoadingState(false);
     } finally {
