@@ -239,10 +239,10 @@ const WebsitePicker = ({
     } catch (error) {
       console.error("Error fetching event data:", error);
       if (error instanceof Error) {
-        const message = error.message.includes('timed out') 
+        const message = error.message.includes('timed out')
           ? 'Forespørselen tok for lang tid. Prøv igjen senere.'
           : 'Det oppstod en feil ved lasting av data. Forsøk å laste siden inn på nytt.';
-        console.log(message);
+        setError(message);
       }
       handleLoadingState(false);
     } finally {
@@ -366,7 +366,7 @@ const WebsitePicker = ({
             <ProgressBar 
               size="small"
               simulated={{
-                seconds: 30,
+                seconds: 120,
                 onTimeout: () => {
                   setError('Forespørselen tok for lang tid. Prøv igjen senere.');
                 }
