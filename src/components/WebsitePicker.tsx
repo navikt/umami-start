@@ -35,7 +35,7 @@ interface WebsiteApiResponse {
   data: Website[];
 }
 
-const API_TIMEOUT_MS = 60000; // 30 seconds timeout
+const API_TIMEOUT_MS = 120000; // timeout
 
 const timeoutPromise = (ms: number) => {
   return new Promise((_, reject) => {
