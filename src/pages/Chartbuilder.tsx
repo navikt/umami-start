@@ -997,10 +997,20 @@ const ChartsPage = () => {
             tableRef = isSessionColumn(filter.column) && needsSessionJoin ? 's.' : 'e.';
           }
           
-          if ((filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') && 
+          // Fix STARTS_WITH and ENDS_WITH operators to use LIKE with proper patterns
+          if (filter.operator === 'STARTS_WITH') {
+            // Convert STARTS_WITH to LIKE 'pattern%'
+            sql += `  AND ${tableRef}${filter.column} LIKE '${filter.value.replace(/'/g, "''")}%'\n`;
+          } 
+          else if (filter.operator === 'ENDS_WITH') {
+            // Convert ENDS_WITH to LIKE '%pattern'
+            sql += `  AND ${tableRef}${filter.column} LIKE '%${filter.value.replace(/'/g, "''")}'\n`;
+          }
+          else if ((filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') && 
               !filter.value.includes('%')) {
             sql += `  AND ${tableRef}${filter.column} ${filter.operator} '%${filter.value.replace(/'/g, "''")}%'`;
           } else {
+            // ...existing other operators handling code...
             const isTimestampFunction = typeof filter.value === 'string' && 
                                        filter.value.toUpperCase().includes('TIMESTAMP(') &&
                                        !filter.value.startsWith("'");
