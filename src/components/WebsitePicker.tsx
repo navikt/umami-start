@@ -49,8 +49,8 @@ const WebsitePicker = ({
   selectedWebsite, 
   onWebsiteChange, 
   onEventsLoad,
-  dateRangeInDays: externalDateRange, // Accept date range from props
-  shouldReload = false                // Flag to force reload 
+  dateRangeInDays: externalDateRange, 
+  shouldReload = false                
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -67,6 +67,7 @@ const WebsitePicker = ({
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState<boolean>(false);
+  const [usingJsonData, setUsingJsonData] = useState<boolean>(false);
   const loadingTimerRef = useRef<number | null>(null);
 
   // Function to update URL with website ID
@@ -83,11 +84,33 @@ const WebsitePicker = ({
     window.history.pushState({}, '', url.toString());
   }, []);
 
+  // Function to check if JSON file with same website ID exists
+  const checkExistingJsonData = useCallback(async (websiteId: string) => {
+    try {
+      // Dynamic import of JSON file based on website ID
+      const module = await import(`../data/eventer/${websiteId}.json`)
+        .catch(() => null);
+      
+      if (module) {
+        console.log(`Found existing JSON data for website ID: ${websiteId}`, module.default);
+        return module.default;
+      }
+    } catch (error) {
+      console.log(`No existing JSON data found for website ID: ${websiteId}`);
+    }
+    return null;
+  }, []);
+
   // Handle website selection and update URL
   const handleWebsiteChange = useCallback((website: Website | null) => {
     onWebsiteChange(website);
     updateUrlWithWebsiteId(website);
-  }, [onWebsiteChange, updateUrlWithWebsiteId]);
+    
+    // Check for existing JSON data when website is selected
+    if (website && website.id) {
+      checkExistingJsonData(website.id);
+    }
+  }, [onWebsiteChange, updateUrlWithWebsiteId, checkExistingJsonData]);
 
   // Check for website ID in URL on initial load
   useEffect(() => {
@@ -160,10 +183,64 @@ const WebsitePicker = ({
     if (fetchInProgress.current[websiteId]) return;
     
     fetchInProgress.current[websiteId] = true;
-    handleLoadingState(true); // Set loading state when fetching starts
     setError(null); // Clear any previous errors
+    setUsingJsonData(false); // Reset JSON data flag
     
     try {
+      // First check if we have JSON data for this website ID
+      const existingData = await checkExistingJsonData(websiteId);
+      
+      if (existingData && !forceFresh) {
+        console.log(`Using existing JSON data instead of API calls for website ID: ${websiteId}`);
+        setUsingJsonData(true); // Set flag when using JSON data
+        
+        // Process the existing JSON data - using same approach as API data for consistency
+        const eventMap = new Map<string, string[]>();
+        
+        // Process JSON data to match API data structure
+        existingData.forEach((item: any) => {
+          const eventName = item.event_name;
+          const parameters = item.parameters || [];
+          
+          if (!eventMap.has(eventName)) {
+            eventMap.set(eventName, []);
+          }
+          
+          // Add parameters to the map
+          parameters.forEach((param: string) => {
+            if (!eventMap.get(eventName)!.includes(param)) {
+              eventMap.get(eventName)!.push(param);
+            }
+          });
+        });
+        
+        // Convert to the same format used by the API path
+        const uniqueEventNames = Array.from(eventMap.keys());
+        const paramsByEvent: {key: string, type: 'string'}[] = [];
+        
+        eventMap.forEach((params, eventName) => {
+          params.forEach(param => {
+            paramsByEvent.push({
+              key: `${eventName}.${param}`,
+              type: 'string'
+            });
+          });
+        });
+        
+        console.log(`[JSON Source] Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+        
+        if (onEventsLoad) {
+          // Using 30 as default max days when loading from JSON
+          onEventsLoad(uniqueEventNames, paramsByEvent, 30);
+        }
+        
+        fetchInProgress.current[websiteId] = false;
+        return;
+      }
+      
+      // Only show loading UI for API calls, not JSON data
+      handleLoadingState(true);
+      
       const baseUrl = window.location.hostname === 'localhost' 
         ? 'https://reops-proxy.intern.nav.no' 
         : 'https://reops-proxy.ansatt.nav.no';
@@ -227,7 +304,7 @@ const WebsitePicker = ({
         });
       });
       
-      console.log(`Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+      console.log(`[API Source] Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
       
       if (onEventsLoad) {
         onEventsLoad(uniqueEventNames, paramsByEvent, totalDays);
@@ -248,7 +325,7 @@ const WebsitePicker = ({
     } finally {
       fetchInProgress.current[websiteId] = false;
     }
-  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState]);
+  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, checkExistingJsonData]);
 
   useEffect(() => {
     if (websitesLoaded.current) {
@@ -291,15 +368,17 @@ const WebsitePicker = ({
 
   // Fetch events when a website is selected
   useEffect(() => {
-    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
+    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId) {
       // Clear cache when website changes
       apiCache.current = {};
-      fetchEventNames(selectedWebsite.id, true, dateRangeInDays)
+      
+      // Use false for forceFresh to prefer JSON data if available
+      fetchEventNames(selectedWebsite.id, false, dateRangeInDays)
         .finally(() => {
           setLoadedWebsiteId(selectedWebsite.id);
         });
     }
-  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
+  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, checkExistingJsonData]);
 
   // Combine the reload effects to avoid loops
   useEffect(() => {
@@ -324,6 +403,8 @@ const WebsitePicker = ({
       
       // Clear cache and force a fresh fetch
       apiCache.current[selectedWebsite.id] = {};
+      
+      // Always use API data when explicitly reloading
       fetchEventNames(selectedWebsite.id, true, externalDateRange || dateRangeInDays);
     }
   }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays]);
@@ -337,6 +418,13 @@ const WebsitePicker = ({
               {error}
             </Alert>
           )}
+          {/*
+          {usingJsonData && selectedWebsite && (
+            <Alert variant="success" className="mb-4">
+              Bruker lagret datasett med hendelser og detaljer
+            </Alert>
+          )}
+            */}
           <UNSAFE_Combobox
             label={selectedWebsite ? "Nettside eller app" : "Velg nettside eller app"}
             options={websites.map(website => ({
@@ -355,10 +443,8 @@ const WebsitePicker = ({
             }}
             clearButton
           />
-          
-          {/* The ReadMore component has been moved to EventParameterSelector */}
         </div>
-        {showLoading && (
+        {showLoading && !usingJsonData && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span>Laster inn hendelser og detaljer...</span>

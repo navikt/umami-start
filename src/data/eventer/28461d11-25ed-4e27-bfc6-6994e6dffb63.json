@@ -1,0 +1,15 @@
+[
+    {"event_name":"Pageview (Umami auto-track)","parameters":["parametre.simpleHeader","parametre.breadcrumbs","viaDekoratoren","parametre.simple","parametre.chatbot","parametre.logoutWarning","parametre.chatbotVisible","originVersion","parametre.feedback","parametre.availableLanguages","parametre.language","origin","parametre.maskHotjar","sidetittel","parametre.BREADCRUMBS","parametre.level","målgruppe","innlogging","parametre.shareScreen","parametre.context","parametre.redirectOnUserChange","parametre.utilsBackground","parametre.redirectToApp"]},
+    {"event_name":"accordion åpnet","parameters":["viaDekoratoren","målgruppe","originVersion","origin","kategori","lenketekst","komponent"]},
+    {"event_name":"accordion lukket","parameters":["viaDekoratoren","målgruppe","kategori","lenketekst","origin","komponent","originVersion"]},
+    {"event_name":"navigere","parameters":["origin","originVersion","lenketekst","lenkegruppe","viaDekoratoren","komponent","kategori","målgruppe","destinasjon"]},
+    {"event_name":"søk","parameters":["kategori","søkeord","originVersion","komponent","viaDekoratoren","origin"]},
+    {"event_name":"token dialog shown","parameters":["originVersion","viaDekoratoren","origin"]},
+    {"event_name":"token dialog renew","parameters":["originVersion","viaDekoratoren","origin"]},
+    {"event_name":"token dialog logout","parameters":["viaDekoratoren","originVersion","origin"]},
+    {"event_name":"modal åpnet","parameters":["originVersion","kategori","komponent","tekst","viaDekoratoren","origin"]},
+    {"event_name":"modal lukket","parameters":["kategori","komponent","tekst","viaDekoratoren","origin","originVersion"]},
+    {"event_name":"skjermdeling","parameters":["komponent","kategori","originVersion","origin","viaDekoratoren"]},
+    {"event_name":"arkivert-beskjed","parameters":["komponent","origin","viaDekoratoren","originVersion","kategori"]},
+    {"event_name":"session dialog shown","parameters":["viaDekoratoren","origin","originVersion"]}
+    ]

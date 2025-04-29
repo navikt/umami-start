@@ -1,0 +1,13 @@
+[
+  {"event_name":"Klikk annonse","parameters":["adid","title","href"]},
+  {"event_name":"Scrolled 80%","parameters":["page","title"]},
+  {"event_name":"Klikk søk stilling","parameters":["href","title","adid"]},
+  {"event_name":"Sommerjobb klikk annonse","parameters":["href","title"]},
+  {"event_name":"Klikk søk e-post","parameters":["adid","title"]},
+  {"event_name":"Klikk kopier e-postadresse","parameters":["title","adid"]},
+  {"event_name":"Klikk søk superrask søknad","parameters":["adid","href","title"]},
+  {"event_name":"Del annonse på Facebook","parameters":["adid","ad","title"]},
+  {"event_name":"Er søketreffene relevante","parameters":["value"]},
+  {"event_name":"Del annonse på LinkedIn","parameters":["adid","title","ad"]},
+  {"event_name":"Del annonse på X","parameters":["adid","title","ad"]}
+]
