@@ -90,23 +90,29 @@ const Metabase = () => {
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">c</span>
                 <span>
-                  Når du er fornøyd, kopiere og lim inn i Metabase.
+                  Velg "interaktiv" dersom du ønsker filreringsvalg i dashboardet.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">d</span>
                 <span>
-                  I Metabase trykk på ▶️ "vis resultater"-knappen.
+                  Når du er fornøyd, kopiere og lim inn i Metabase.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">e</span>
                 <span>
-                  Trykk "visualisering" for å bytte fra tabell til graf.
+                  I Metabase trykk på ▶️ "vis resultater"-knappen.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">f</span>
+                <span>
+                  Trykk "visualisering" for å bytte fra tabell til graf.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">g</span>
                 <span>
                   Trykk på "lagre"-knappen. Gi grafen et navn og velg plassering.
                 </span>
