@@ -44,11 +44,11 @@ export default function Header() {
             <Dropdown.Menu.List>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="https://metabase.ansatt.nav.no/"
+                href="/komigang"
                 className="no-underline"
               >
-                <BarChartIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Metabase</span>
+                <BookIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Guide</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -77,11 +77,11 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="/komigang"
+                href="https://metabase.ansatt.nav.no/"
                 className="no-underline"
               >
-                <BookIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Guide</span>
+                <BarChartIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Metabase</span>
               </Dropdown.Menu.List.Item>
             </Dropdown.Menu.List>
           </Dropdown.Menu>
@@ -91,14 +91,13 @@ export default function Header() {
           <div className="flex items-center w-full"></div>
           <div className="flex flex-grow">
           <Link
-              href="https://metabase.ansatt.nav.no/"
+              href="/komigang"
               className={linkButton}
-              target="_blank"
             >
-              <BarChartIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Metabase</span>
-            </Link>
-            <Link
+              <BookIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Guide</span>
+          </Link>
+          <Link
               href="/grafbygger"
               className={linkButton}
             >
@@ -120,11 +119,12 @@ export default function Header() {
               <span className="whitespace-nowrap">Doks</span>
             </Link>
             <Link
-              href="/komigang"
+              href="https://metabase.ansatt.nav.no/"
               className={linkButton}
+              target="_blank"
             >
-              <BookIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Guide</span>
+              <BarChartIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Metabase</span>
             </Link>
           </div>
         </div>
