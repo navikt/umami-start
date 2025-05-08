@@ -74,7 +74,11 @@ const Metabase = () => {
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-base font-semibold">2</span>
               Lag grafer med Umami Grafbyggeren
             </Heading>
-            <ol className="mt-4 space-y-2  text-gray-800 list-none">
+
+            <Heading level="3" size="xsmall" spacing className="mt-4 ml-8">
+              I Grafbyggeren
+            </Heading>
+            <ol className="mt-2 space-y-2 text-gray-800 list-none">
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">a</span>
                 <span>
@@ -96,23 +100,35 @@ const Metabase = () => {
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">d</span>
                 <span>
-                  Når du er fornøyd, kopiere og lim inn i Metabase.
+                  Når du er fornøyd, trykk kopiere.
                 </span>
               </li>
+            </ol>
+
+            <Heading level="3" size="xsmall" spacing className="mt-4 ml-8">
+              I Metabase
+            </Heading>
+            <ol className="mt-2 space-y-2 text-gray-800 list-none">
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">e</span>
                 <span>
-                  I Metabase trykk på ▶️ "vis resultater"-knappen.
+                  Lim inn grafen i <a href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0=" target='_new' className="text-blue-500 underline">Metabase</a>.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">f</span>
                 <span>
-                  Trykk "visualisering" for å bytte fra tabell til graf.
+                  Trykk på ▶️ "vis resultater"-knappen.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">g</span>
+                <span>
+                  Trykk "visualisering" for å bytte fra tabell til graf.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">h</span>
                 <span>
                   Trykk på "lagre"-knappen. Gi grafen et navn og velg plassering.
                 </span>
