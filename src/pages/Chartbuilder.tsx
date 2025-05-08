@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Heading, VStack } from '@navikt/ds-react';
+import { Heading, VStack, List, Link } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
 import SQLPreview from '../components/chartbuilder/sqlpreview';
@@ -1361,7 +1361,7 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Still spørsmål og få svaret i Metabase
+        Umami Grafbyggeren for Metabase
       </Heading>
       <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
         Lurer du på hvordan folk bruker nettsiden eller appen din?
@@ -1471,6 +1471,15 @@ const ChartsPage = () => {
           </VStack>
 
           <div className="mt-8 hidden lg:block">
+            <List as="ul" title="Relaterte veiledninger" className="pt-4">
+                <List.Item>
+                    <strong><Link target="_new" href={"/taksonomi"}>Taksonomi:</Link></strong> Guide til navngivning av hendelser.
+                </List.Item>
+                <List.Item>
+                    <strong><Link target="_new"
+                        href={"/metabase"}>Metabase dashboards:</Link></strong> Slik lager du dashboards i Metabase.
+                </List.Item>
+            </List>
             <Kontaktboks />
           </div>
         </div>
@@ -1491,6 +1500,16 @@ const ChartsPage = () => {
         </div>
 
         <div className="order-3 lg:hidden">
+          <List as="ul" title="Relaterte veiledninger" className="pt-4">
+              <List.Item>
+                  <strong><Link target="_new" href={"/taksonomi"}>Taksonomi:</Link></strong> Guide til navngivning av hendelser.
+              </List.Item>
+              <List.Item>
+                  <strong><Link target="_new"
+                      href={"/metabase"}>Metabase dashboards:</Link></strong> Slik lager du dashboards i Metabase.
+              </List.Item>
+          </List>
+
           <Kontaktboks />
         </div>
       </div>

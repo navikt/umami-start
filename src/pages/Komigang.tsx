@@ -92,7 +92,11 @@ function Komigang() {
                 </List.Item>
                 <List.Item>
                     <strong><Link
-                        href={"/grafbygger"}>Grafbyggeren:</Link></strong> Bygg grafer og modeller for Metabase.
+                        href={"/grafbygger"}>Grafbyggeren:</Link></strong> Bygg grafer og tabeller for Metabase.
+                </List.Item>
+                <List.Item>
+                    <strong><Link
+                        href={"/metabase"}>Metabase dashboard guide:</Link></strong> Slik lager du dashboards i Metabase.
                 </List.Item>
             </List>
             <List as="ul" title="Flere Metabase verktøy" className="pt-4">

@@ -9,6 +9,7 @@ import Copilot from "./pages/Copilot.tsx";
 import Validator from "./pages/Validator.tsx";
 import Taksonomi from "./pages/Taksonomi.tsx";
 import Charts from "./pages/Chartbuilder.tsx";
+import Metabase from "./pages/Metabase.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -20,7 +21,8 @@ const routes = [
     { path: "/copilot", component: <Copilot /> },
     { path: "/validator", component: <Validator /> },
     { path: "/taksonomi", component: <Taksonomi /> },
-    { path: "/grafbygger", component: <Charts /> }
+    { path: "/grafbygger", component: <Charts /> },
+    { path: "/metabase", component: <Metabase /> }
 ];
 
 export default routes;
