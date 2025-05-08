@@ -2,9 +2,7 @@ import {
   Heading, 
   VStack, 
   Box, 
-  ReadMore,
-  List,
-  Table,
+  List
 } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
 
