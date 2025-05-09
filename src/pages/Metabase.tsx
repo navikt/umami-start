@@ -80,13 +80,13 @@ const Metabase = () => {
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">a</span>
                 <span>
-                  Gå til <a href="/grafbygger" target='_new' className="text-blue-500 underline">Umami Grafbygger</a> og velg nettstedet du vil analysere.
+                  Gå til <a href="/grafbygger" target='_new' className="text-blue-500 underline">Umami Grafbygger</a>.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">b</span>
                 <span>
-                  Velg nettside eller app, og velg hvilke data du vil vise i grafen.
+                  Velg nettside eller app, og hvilke data du vil vise i grafen.
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -98,7 +98,7 @@ const Metabase = () => {
               <li className="flex items-start gap-3">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">d</span>
                 <span>
-                  Når du er fornøyd, trykk kopiere.
+                  Når du er fornøyd, trykk kopiere og fortsett i Metabase.
                 </span>
               </li>
             </ol>
