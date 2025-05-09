@@ -1010,33 +1010,36 @@ const ChartsPage = () => {
               !filter.value.includes('%')) {
             sql += `  AND ${tableRef}${filter.column} ${filter.operator} '%${filter.value.replace(/'/g, "''")}%'`;
           } else {
-            // ...existing other operators handling code...
+            // Detect Metabase parameter syntax: {{param}}
+            const isMetabaseParam = filter.metabaseParam === true ||
+              (typeof filter.value === 'string' && 
+               /^\s*\{\{.*\}\}\s*$/.test(filter.value));
+            
             const isTimestampFunction = typeof filter.value === 'string' && 
-                                       filter.value.toUpperCase().includes('TIMESTAMP(') &&
-                                       !filter.value.startsWith("'");
+                                     filter.value.toUpperCase().includes('TIMESTAMP(') &&
+                                     !filter.value.startsWith("'");
             
-            const isMetabaseParam = filter.metabaseParam === true && 
-                                    typeof filter.value === 'string' && 
-                                    filter.value.includes('{{') && 
-                                    filter.value.includes('}}');
-            
-            const needsQuotes = !isTimestampFunction && !isMetabaseParam && (
-              isNaN(Number(filter.value)) || 
-              filter.column === 'event_name' || 
-              filter.column === 'url_path' ||
-              filter.column.includes('_path') ||
-              filter.column.includes('_name')
-            );
-            
-            const formattedValue = isTimestampFunction 
-              ? filter.value.replace(/^['"]|['"]$/g, '') 
-              : isMetabaseParam
+            if (isMetabaseParam) {
+              // For Metabase parameters, output without quotes
+              sql += `  AND ${tableRef}${filter.column} ${filter.operator} ${filter.value.trim()}\n`;
+            } else {
+              // For regular values, handle quoting as before
+              const needsQuotes = !isTimestampFunction && (
+                isNaN(Number(filter.value)) || 
+                filter.column === 'event_name' || 
+                filter.column === 'url_path' ||
+                filter.column.includes('_path') ||
+                filter.column.includes('_name')
+              );
+              
+              const formattedValue = isTimestampFunction 
                 ? filter.value.replace(/^['"]|['"]$/g, '') 
                 : needsQuotes 
                   ? `'${filter.value.replace(/'/g, "''")}'` 
                   : filter.value;
-            
-            sql += `  AND ${tableRef}${filter.column} ${filter.operator} ${formattedValue}\n`;
+              
+              sql += `  AND ${tableRef}${filter.column} ${filter.operator} ${formattedValue}\n`;
+            }
           }
         }
         else if (filter.operator !== 'IS NULL' && filter.operator !== 'IS NOT NULL') {

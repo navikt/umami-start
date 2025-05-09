@@ -71,16 +71,10 @@ const EventSelector = ({
                     // Clear existing paths
                     handlePathsChange([], 'IN');
                     
-                    // Add interactive filter if selected - create a special object with metabase parameter
+                    // Add interactive filter if selected - use Metabase parameter syntax directly
                     if (newMode === 'interactive') {
-                      // Create a parameter object that will signal the parent not to add quotes
-                      const metabaseParam = {
-                        type: 'metabase_param',
-                        paramName: 'url_sti'
-                      };
-                      
-                      // Pass this special object to the parent - FIX: Convert to string first
-                      handlePathsChange([JSON.stringify(metabaseParam)], '=', true);
+                      // Use Metabase parameter syntax: {{url_sti}}
+                      handlePathsChange(['{{url_sti}}'], '=', true);
                     }
                   }}
                 >
@@ -260,11 +254,8 @@ const EventSelector = ({
                       
                       // Special handling for interactive mode
                       if (newMode === 'interactive') {
-                        const metabaseParam = {
-                          type: 'metabase_param',
-                          paramName: 'event_name'
-                        };
-                        handleCustomEventsChange([JSON.stringify(metabaseParam)], '=');
+                        // Use Metabase parameter syntax: {{event_name}}
+                        handleCustomEventsChange(['{{event_name}}'], '=');
                       }
                     }}
                   >
