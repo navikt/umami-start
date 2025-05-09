@@ -74,7 +74,7 @@ const Metabase = () => {
             </Heading>
 
             <Heading level="3" size="xsmall" spacing className="mt-4 ml-8">
-              I Grafbyggeren
+              Start i Umami Grafbyggeren
             </Heading>
             <ol className="mt-2 space-y-2 text-gray-800 list-none">
               <li className="flex items-start gap-3">
@@ -104,7 +104,7 @@ const Metabase = () => {
             </ol>
 
             <Heading level="3" size="xsmall" spacing className="mt-4 ml-8">
-              I Metabase
+              Ferdigstill og lagre grafen i Metabase
             </Heading>
             <ol className="mt-2 space-y-2 text-gray-800 list-none">
               <li className="flex items-start gap-3">
