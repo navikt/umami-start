@@ -1020,8 +1020,13 @@ const ChartsPage = () => {
                                      !filter.value.startsWith("'");
             
             if (isMetabaseParam) {
-              // For Metabase parameters, output without quotes
-              sql += `  AND ${tableRef}${filter.column} ${filter.operator} ${filter.value.trim()}\n`;
+              // For Metabase parameters, add default values for specific columns
+              if (filter.column === 'url_path') {
+                sql += `  AND ${tableRef}${filter.column} = [[ ${filter.value.trim()} --]] '/'\n`;
+              } else {
+                // For other interactive filters, keep the original format
+                sql += `  AND ${tableRef}${filter.column} ${filter.operator} ${filter.value.trim()}\n`;
+              }
             } else {
               // For regular values, handle quoting as before
               const needsQuotes = !isTimestampFunction && (
