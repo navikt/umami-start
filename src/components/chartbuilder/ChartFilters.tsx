@@ -767,23 +767,22 @@ const ChartFilters = forwardRef(({
                                 const currentValues = stagingFilter.multipleValues || 
                                                     (stagingFilter.value ? [stagingFilter.value] : []);
                                 const newValues = isSelected 
-                                  ? [...currentValues, option]
+                                  ? [...new Set([...currentValues, option])]  // Ensure unique values
                                   : currentValues.filter(val => val !== option);
-                                
-                                const newOperator = newValues.length > 1 ? 'IN' : stagingFilter.operator;
                                 
                                 setStagingFilter({
                                   ...stagingFilter,
+                                  operator: newValues.length > 1 ? 'IN' : stagingFilter.operator,
                                   multipleValues: newValues.length > 0 ? newValues : undefined,
-                                  value: newValues.length > 0 ? newValues[0] : '',
-                                  operator: newOperator
+                                  value: newValues.length > 0 ? newValues[0] : ''
                                 });
                               }
                             }}
-                            isMultiSelect
+                            isMultiSelect={true}
                             size="small"
                             clearButton
-                            allowNewValues={stagingFilter.column !== 'event_type'}
+                            allowNewValues={filter.column !== 'event_type'}
+                            shouldAutocomplete={false}
                           />
                         )}
                       </div>
@@ -929,23 +928,22 @@ const ChartFilters = forwardRef(({
                                         const currentValues = filter.multipleValues || 
                                                             (filter.value ? [filter.value] : []);
                                         const newValues = isSelected 
-                                          ? [...currentValues, option]
+                                          ? [...new Set([...currentValues, option])]  // Ensure unique values
                                           : currentValues.filter(val => val !== option);
-                                        
-                                        const newOperator = newValues.length > 1 ? 'IN' : filter.operator;
-                                        
-                                        updateFilter(index, {
-                                          multipleValues: newValues.length > 0 ? newValues : undefined,
-                                          value: newValues.length > 0 ? newValues[0] : '',
-                                          operator: newOperator
-                                        });
-                                      }
-                                    }}
-                                    isMultiSelect
-                                    size="small"
-                                    clearButton
-                                    allowNewValues={filter.column !== 'event_type'}
-                                  />
+                                      
+                                      updateFilter(index, {
+                                        operator: newValues.length > 1 ? 'IN' : filter.operator,
+                                        multipleValues: newValues.length > 0 ? newValues : undefined,
+                                        value: newValues.length > 0 ? newValues[0] : ''
+                                      });
+                                    }
+                                  }}
+                                  isMultiSelect={true}
+                                  size="small"
+                                  clearButton
+                                  allowNewValues={filter.column !== 'event_type'}
+                                  shouldAutocomplete={false}
+                                />
                                 </div>
                               )
                             )}
