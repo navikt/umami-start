@@ -109,7 +109,7 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(({ selec
             </Accordion>
             <List as="ul" title="Verdt å vite" style={{marginTop: "30px"}}>
                 <List.Item>
-                    Sporingskoden må legges til i &lt;head&gt;-delen på nettsiden.
+                    Sporingskoden legges vanligvis til i &lt;head&gt;-delen på nettsiden.
                 </List.Item>
                 <List.Item>
                     Vil du at sporingskoden kun skal kjøre på spesifikke domener, for eksempel ikke på localhost? Da kan
