@@ -55,7 +55,7 @@ const EventSelector = ({
               checked={selectedEventTypes.includes('pageviews')}
               onChange={(e) => handleEventTypeChange('pageviews', e.target.checked)}
             >
-              Besøk
+              Sidevisning
             </Checkbox>
             
             {selectedEventTypes.includes('pageviews') && (
@@ -80,7 +80,7 @@ const EventSelector = ({
                 >
                   <Radio value="all">Alle sider</Radio>
                   <Radio value="specific">Bestemte sider</Radio>
-                  <Radio value="interactive">Interaktiv</Radio>
+                  <Radio value="interactive">Filtervalg i Metabase</Radio>
                 </RadioGroup>
                 {/* Improved: Add a visual section for each mode */}
                 <div className="mt-2">
@@ -192,7 +192,7 @@ const EventSelector = ({
                       }}
                     >
                       <div className="font-semibold mb-2" style={{ color: '#14532d' }}>
-                        Interaktivt filter for sidevisninger
+                        Filtervalg i Metabase for sidevisninger
                       </div>
                       {/* Remove inner indent and border */}
                       <div>
@@ -215,7 +215,7 @@ const EventSelector = ({
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium mb-1">Aktivert som interaktivt filter for sidevisninger</p>
+                              <p className="font-medium mb-1">Aktivert som filtervalg i Metabase</p>
                               <p className="text-gray-600">URL-sti kan velges som et filtervalg i Metabase-dashbord</p>
                             </div>
                           </div>
@@ -261,7 +261,7 @@ const EventSelector = ({
                   >
                     <Radio value="all">Alle hendelser</Radio>
                     <Radio value="specific">Bestemte hendelser</Radio>
-                    <Radio value="interactive">Interaktiv</Radio>
+                    <Radio value="interactive">Filtervalg i Metabase</Radio>
                   </RadioGroup>
                   <div className="mt-2">
                     {customEventsMode === 'specific' && (
@@ -366,7 +366,7 @@ const EventSelector = ({
                         }}
                       >
                         <div className="font-semibold mb-2" style={{ color: '#14532d' }}>
-                          Interaktivt filter for hendelser
+                          Filtervalg i Metabase for hendelser
                         </div>
                         {/* Remove inner indent and border */}
                         <div>
@@ -389,7 +389,7 @@ const EventSelector = ({
                                 </span>
                               </div>
                               <div>
-                                <p className="font-medium mb-1">Aktivert som interaktivt filter for hendelser</p>
+                                <p className="font-medium mb-1">Aktivert som filtervalg i Metabase</p>
                                 <p className="text-gray-600">Hendelsesnavn kan velges som filtervalg i Metabase-dashbord</p>
                               </div>
                             </div>

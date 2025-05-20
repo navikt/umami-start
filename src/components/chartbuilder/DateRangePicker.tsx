@@ -528,7 +528,7 @@ const DateRangePicker = forwardRef(({
             <Tabs.Tab value="frequent" label="Ofte brukte" />
             <Tabs.Tab value="dynamic" label="Relative" />
             <Tabs.Tab value="fixed" label="Bestemte" />
-            <Tabs.Tab value="interactive" label="Interaktiv" />
+            <Tabs.Tab value="interactive" label="Filtervalg i Metabase" />
           </Tabs.List>
           
           {/* Frequent dates panel */}
@@ -789,7 +789,7 @@ const DateRangePicker = forwardRef(({
                   </span>
                 </div>
                 <div>
-                  <p className="font-medium mb-1">Interaktivt datofilter er aktivert</p>
+                  <p className="font-medium mb-1">Filtervalg i Metabase for datofilter er aktivert</p>
                   <p className="text-gray-600">Datoperiode kan velges via filtervalg i Metabase-dashbord</p>
                 </div>
               </div>

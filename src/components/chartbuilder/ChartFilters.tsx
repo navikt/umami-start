@@ -706,7 +706,7 @@ const ChartFilters = forwardRef(({
                             size="small"
                           >
                             {/* Add the interactive operator option at the top */}
-                            <option value="INTERACTIVE">Interaktiv</option>
+                            <option value="INTERACTIVE">Filtervalg i Metabase</option>
                             {OPERATORS.map(op => (
                               <option key={op.value} value={op.value}>
                                 {op.label}
@@ -722,7 +722,7 @@ const ChartFilters = forwardRef(({
                         {stagingFilter.operator === 'INTERACTIVE' && (
                           <div className="mt-3 bg-blue-50 p-3 rounded text-sm">
                             <p>
-                              <strong>Interaktiv filter:</strong> Dette filteret vil bli kontrollert av Metabase-dashbordet.
+                              <strong>Filtervalg i Metabase:</strong> Dette filteret vil bli brukt som filtervalg i Metabase.
                             </p>
                             <p className="mt-1 text-xs text-gray-600">
                               Parameter vil være {stagingFilter.column === 'url_path' ? 'url_sti' : 
@@ -872,7 +872,7 @@ const ChartFilters = forwardRef(({
                               {filter.interactive ? (
                                 <div className="ml-2 mb-1">
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    Interaktiv
+                                    Filtervalg i Metabase
                                   </span>
                                 </div>
                               ) : (
@@ -882,7 +882,7 @@ const ChartFilters = forwardRef(({
                                   className="ml-2 mb-1"
                                   onClick={() => handleSetInteractiveFilter(index, filter.column)}
                                 >
-                                  Gjør interaktiv
+                                  Gjør til filtervalg
                                 </Button>
                               )}
                               
@@ -909,7 +909,7 @@ const ChartFilters = forwardRef(({
                                   <strong>Parameter:</strong> {filter.value?.replace('{{', '').replace('}}', '')}
                                 </p>
                                 <p className="mt-1 text-xs text-gray-600">
-                                  Denne filteret vil bli kontrollert av Metabase-dashbordet.
+                                  Dette filteret kan nå brukes som filtervalg i Metabase.
                                 </p>
                               </div>
                             ) : (
