@@ -50,6 +50,14 @@ export default function Header() {
                 <BookIcon aria-hidden fontSize="1.5rem" />
                 <span className="whitespace-nowrap">Guide</span>
               </Dropdown.Menu.List.Item>
+                <Dropdown.Menu.List.Item
+                as={Link}
+                href="/taksonomi"
+                className="no-underline"
+              >
+                <ComponentIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Taksonomi</span>
+              </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
                 href="/grafbygger"
@@ -58,14 +66,6 @@ export default function Header() {
               >
                 <AreaChartIcon aria-hidden fontSize="1.5rem" />
                 <span className="whitespace-nowrap">Lag grafer</span>
-              </Dropdown.Menu.List.Item>
-              <Dropdown.Menu.List.Item
-                as={Link}
-                href="/taksonomi"
-                className="no-underline"
-              >
-                <ComponentIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Taksonomi</span>
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
@@ -97,19 +97,19 @@ export default function Header() {
               <BookIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Guide</span>
           </Link>
+                      <Link
+              href="/taksonomi"
+              className={linkButton}
+            >
+              <ComponentIcon aria-hidden fontSize="1.5rem" />
+              <span className="whitespace-nowrap">Taksonomi</span>
+            </Link>
           <Link
               href="/grafbygger"
               className={linkButton}
             >
               <AreaChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Lag grafer</span>
-            </Link>
-            <Link
-              href="/taksonomi"
-              className={linkButton}
-            >
-              <ComponentIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Taksonomi</span>
             </Link>
             <Link
               href="https://umami.is/docs"

@@ -2,9 +2,14 @@ import {BodyShort, Heading, Link, List} from "@navikt/ds-react";
 
 function Komigang() {
     return (
-        <>
-            <Heading spacing={true} as="h2" size="large" style={{marginTop: "60px", marginBottom: "30px"}}>Kom i gang:
-                Mål brukeradferd med Umami</Heading>
+        <div className="w-full max-w-[800px] mx-auto">
+            <Heading spacing level="1" size="large" className="pt-24 pb-4">
+                Kom i gang: Mål brukeradferd med Umami
+            </Heading>
+            
+            <p className="text-gray-600 mb-8 text-xl leading-relaxed">
+                En guide for å komme i gang med måling av brukeratferd i NAV.
+            </p>
 
 
                 <Heading spacing={true} as="h3" size="medium"
@@ -127,7 +132,7 @@ function Komigang() {
 
             {/*<Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Dele</Heading>*/}
 
-        </>
+        </div>
     )
 }
 
