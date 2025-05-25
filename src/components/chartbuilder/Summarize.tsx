@@ -157,6 +157,7 @@ const Summarize = forwardRef(({
       { function: 'count', column: undefined, alias: 'Antall_hendelser' },
       { function: 'percentage', column: 'session_id' },
       { function: 'percentage', column: 'event_id' },
+      { function: 'andel', column: 'session_id' },
       { function: 'bounce_rate', column: 'visit_id' },
       { function: 'average', column: 'visit_duration', showInMinutes: true },
       { function: 'average', column: 'visit_duration', showInMinutes: false }
@@ -203,6 +204,9 @@ const Summarize = forwardRef(({
     }
     if (metric.function === 'percentage' && metric.column === 'event_id') {
       return 'Andel av hendelser';
+    }
+    if (metric.function === 'andel' && metric.column === 'session_id') {
+      return 'Andel av totale besøkende';
     }
     if (metric.function === 'bounce_rate' && metric.column === 'visit_id') {
       return 'Fluktrate';
@@ -327,6 +331,15 @@ const Summarize = forwardRef(({
                         disabled={isMetricAdded('percentage', 'event_id')}
                       >
                         Andel av hendelser
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel_av_totale_besokende')}
+                        icon={<PieChart size={16} />}
+                        disabled={isMetricAdded('andel', 'session_id')}
+                      >
+                        Andel av totale besøkende
                       </Button>
                       <Button 
                         variant="secondary" 
