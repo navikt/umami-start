@@ -781,7 +781,7 @@ const ChartFilters = forwardRef(({
                             isMultiSelect={true}
                             size="small"
                             clearButton
-                            allowNewValues={filter.column !== 'event_type'}
+                            allowNewValues={stagingFilter.column !== 'event_type'}
                             shouldAutocomplete={false}
                           />
                         )}
