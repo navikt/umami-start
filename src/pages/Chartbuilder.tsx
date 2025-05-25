@@ -636,18 +636,37 @@ const ChartsPage = () => {
         , 1) as ${quotedAlias}`;
       case 'andel':
         if (column && websiteId) {
-          const hasInteractiveDateFilter = filters.some(f => 
-            f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
-          );
+          // Build subquery filters for all interactive filters, preserving order
+          let subqueryFilters = '';
+          
+          // Handle date filter first
+          const dateFilter = filters.find(f => f.column === 'created_at' && f.interactive === true);
+          if (dateFilter) {
+            subqueryFilters += '\n  [[AND {{created_at}} ]]';
+          }
+          
+          // Always add URL path filter if there's any URL path filter (interactive or not)
+          const urlPathFilter = filters.find(f => f.column === 'url_path');
+          if (urlPathFilter) {
+            subqueryFilters += `\n  AND url_path = [[ {{url_sti}} --]] '/'`;
+          }
+          
+          // Handle all other interactive filters (except date and url_path which are handled above)
+          filters
+            .filter(f => f.interactive === true && f.metabaseParam === true && f.column !== 'created_at' && f.column !== 'url_path')
+            .forEach(filter => {
+              if (filter.value) {
+                const paramName = filter.value.replace(/[{}]/g, '').trim();
+                subqueryFilters += `\n  AND ${filter.column} = {{${paramName}}}`;
+              }
+            });
+
           if (column === 'session_id') {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column}) 
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = '${websiteId}'
-                ${hasInteractiveDateFilter 
-                  ? '[[AND {{created_at}} ]]' // Corrected format for interactive mode
-                  : getDateFilterConditions()}
+                WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
           } else if (column === 'visit_id') {
@@ -655,10 +674,7 @@ const ChartsPage = () => {
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column})
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = '${websiteId}'
-                ${hasInteractiveDateFilter 
-                  ? '[[AND {{created_at}} ]]' // Corrected format for interactive mode
-                  : getDateFilterConditions()}
+                WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
           }
