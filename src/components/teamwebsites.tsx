@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Table, Link, Button, Tag, Search, Switch } from "@navikt/ds-react";
+import { Table, Button, Tag, Search, Switch } from "@navikt/ds-react";
 import SporingsModal from "./sporingsmodal";
 
 // Add styles at the top of the file
@@ -138,12 +138,10 @@ function TeamWebsites() {
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                    {filteredData && filteredData.map(({id, name, domain, shareId, createdAt, teamId}) => (
+                    {filteredData && filteredData.map(({id, name, domain, createdAt, teamId}) => (
                         <Table.Row key={id}>
                             <Table.HeaderCell scope="row">
-                                <Link target="_blank" href={`https://umami.ansatt.nav.no/share/${shareId}/${domain}`}>
                                     {name}
-                                </Link>
                             </Table.HeaderCell>
                             <Table.DataCell>
                                 <Tag variant={teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'success' : 'alt1'}>
