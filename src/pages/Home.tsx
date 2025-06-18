@@ -1,9 +1,21 @@
-import {BodyShort, Heading, Link, List} from "@navikt/ds-react";
+import {BodyShort, Heading, Link, List, Alert } from "@navikt/ds-react";
 import TeamWebsites from "../components/teamwebsites.tsx";
 
 function Home() {
     return (
         <>
+            <Alert variant="warning" style={{marginTop: "60px"}}>
+                <Heading spacing size="small" level="3">
+                    Umami er nede for telling
+                </Heading>
+                Natt til 17. juni gikk Umami ned for telling i forbindelse med forsøk på oppgradering.
+                Dataen team har sendte til Umami før dette ligger trygt lagret, men
+                da migreringen til ny versjon mislyktes halvveis, har vi verken klart å rulle frem eller tilbake.
+                <br /><br />
+                Team ResearchOps beklager.<br />
+                Vi vet ikke hvor lang tid dette vil ta.
+                <br />
+            </Alert>
             <Heading as="h2" size={"large"} style={{marginTop: "60px"}}>Brukeradferd gjort forståelig – med Umami</Heading>
             <BodyShort size="medium" style={{ marginTop: "20px", marginBottom: "20px", maxWidth: "600px" }}>
                 For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å gå på bekostning av brukervennlighet, datasikkerhet eller personvern.
