@@ -8,7 +8,7 @@ function Home() {
                 <Heading spacing size="small" level="3">
                     Umami er nede for telling
                 </Heading>
-                Natt til 17. juni gikk Umami ned for telling i forbindelse med forsøk på oppgradering.
+                Natt til 18. juni gikk Umami ned for telling i forbindelse med forsøk på oppgradering.
                 Dataen team har sendte til Umami før dette ligger trygt lagret, men
                 da migreringen til ny versjon mislyktes halvveis, har vi verken klart å rulle frem eller tilbake.
                 <br /><br />
