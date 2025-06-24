@@ -109,7 +109,9 @@ function Metadashboard() {
                 // Use the original domain for nav.no to preserve www if present
                 const websiteDomain = domain === 'www.nav.no' ? domain : matchedWebsite.domain;
                 const metabaseUrl = `https://metabase.ansatt.nav.no/dashboard/716-nav-webstatistikk?dato=past30days~&nettside=${websiteDomain}&url-sti_er_lik=${path || '*'}`;
-                window.location.href = metabaseUrl;
+                
+                // Open in a new tab instead of redirecting the current page
+                window.open(metabaseUrl, '_blank');
             } else {
                 setAlertVisible(true);
             }
