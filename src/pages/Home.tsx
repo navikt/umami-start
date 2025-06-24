@@ -1,10 +1,15 @@
 import {BodyShort, Heading, Link, List } from "@navikt/ds-react";
 import TeamWebsites from "../components/teamwebsites.tsx";
+import Metadashboard from "../components/metadashboard.tsx";
 
 function Home() {
     return (
         <>
-            <Heading as="h2" size={"large"} style={{marginTop: "60px"}}>Brukeradferd gjort forståelig – med Umami</Heading>
+            <Heading spacing={true} as="h2" size="large" style={{marginTop: "80px"}}>Mål brukeradferd med
+                Umami</Heading>
+            <Metadashboard/>
+
+            <Heading size={"medium"} style={{marginTop: "83px"}}>Brukeradferd gjort forståelig – med Umami</Heading>
             <BodyShort size="medium" style={{ marginTop: "20px", marginBottom: "20px", maxWidth: "600px" }}>
                 For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å gå på bekostning av brukervennlighet, datasikkerhet eller personvern.
             </BodyShort>

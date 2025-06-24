@@ -10,6 +10,7 @@ import Validator from "./pages/Validator.tsx";
 import Taksonomi from "./pages/Taksonomi.tsx";
 import Charts from "./pages/Chartbuilder.tsx";
 import Metabase from "./pages/Metabase.tsx";
+import Sok from "./pages/Sok.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -22,7 +23,9 @@ const routes = [
     { path: "/validator", component: <Validator /> },
     { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> },
-    { path: "/metabase", component: <Metabase /> }
+    { path: "/metabase", component: <Metabase /> },
+    { path: "/sok", component: <Sok /> }
+
 ];
 
 export default routes;
