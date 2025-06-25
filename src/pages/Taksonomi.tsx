@@ -267,7 +267,7 @@ function handleSkjemaSendt() {
             
             <ol className="space-y-3 list-disc pl-5">
               <li>
-                <strong><a href="/teamwebsites" className="text-blue-500 hover:text-blue-700 underline">Bruk Grafbygger</a></strong> til å sjekke at du kan lage de rapportene du trenger
+                <strong><a href="/grafbygger" className="text-blue-500 hover:text-blue-700 underline">Bruk Grafbygger</a></strong> til å sjekke at du kan lage de rapportene du trenger
               </li>
               <li>
                 <strong>Del med teamet</strong> for å sikre at alle forstår hva som spores og hvorfor
