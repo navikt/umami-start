@@ -190,9 +190,7 @@ const Summarize = forwardRef(({
     if (metric.function === 'distinct' && metric.column === 'session_id') {
       return 'Antall unike besøkende';
     }
-    if (metric.function === 'count' && metric.column === 'session_id') {
-      return 'Antall besøk / økter';
-    }
+    
     if (metric.function === 'count' && metric.alias === 'Antall_sidevisninger') {
       return 'Antall sidevisninger';
     }
@@ -281,15 +279,6 @@ const Summarize = forwardRef(({
                         disabled={isMetricAdded('distinct', 'session_id')}
                       >
                         Antall unike besøkende
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="small"
-                        onClick={() => addConfiguredMetric('count', 'session_id', 'Antall_besok')}
-                        icon={<BarChart2 size={16} />}
-                        disabled={isMetricAdded('count', 'session_id')}
-                      >
-                        Antall besøk / økter
                       </Button>
                       <Button 
                         variant="secondary" 
