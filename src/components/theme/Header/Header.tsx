@@ -31,7 +31,7 @@ export default function Header() {
       <div className="flex items-stretch">
         <Link className={linkButton} href="/">
           <span className="text-2xl whitespace-nowrap text-white">
-            Start Umami
+            Umami Webstatistikk
           </span>
         </Link>
       </div>

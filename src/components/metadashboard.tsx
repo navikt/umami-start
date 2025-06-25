@@ -43,8 +43,10 @@ function Metadashboard() {
                 );
                 
                 const combinedData = [...team1Data, ...team2Data];
-                combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
-                setFilteredData(combinedData);
+                // Filter out exactly "nav.no" from the list, preserve items like "www.nav.no"
+                const filteredItems = combinedData.filter(item => item.domain !== "nav.no");
+                filteredItems.sort((a, b) => a.domain.localeCompare(b.domain));
+                setFilteredData(filteredItems);
             })
             .catch(error => console.error("Error fetching data:", error));
     }, []);
@@ -97,6 +99,7 @@ function Metadashboard() {
             );
             
             const combinedData = [...team1Data, ...team2Data];
+            // For search functionality, we keep all domains including "nav.no"
             combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
 
             const normalizedInputDomain = normalizeDomain(domain);
