@@ -16,6 +16,14 @@ function Metadashboard() {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
 
+    const normalizeDomain = (domain: string) => {
+        // Special case: preserve www for nav.no
+        if (domain === 'www.nav.no') {
+            return domain;
+        }
+        return domain.replace(/^www\./, '');
+    };
+
     useEffect(() => {
         Promise.all([
             fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
@@ -50,7 +58,7 @@ function Metadashboard() {
 
     const [searchError, setSearchError] = useState<string | null>(null);
 
-    const handleSubmit = (event: React.FormEvent) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!searchQuery) {
             setSearchError("Du må sette inn en URL-adresse.");
@@ -65,12 +73,55 @@ function Metadashboard() {
 
         try {
             const url = new URL(inputUrl);
-            const normalizedUrl = url.href;
-            // Always redirect to felgen with encoded URL as q param in same tab
-            const felgenUrl = `https://felgen.ansatt.nav.no/?q=${encodeURIComponent(normalizedUrl)}`;
-            window.location.assign(felgenUrl);
+            const domain = url.hostname;
+            const path = url.pathname;
+
+            const [data1, data2] = await Promise.all([
+                fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
+                    credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+                }).then(response => response.json()),
+                fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
+                    credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
+                }).then(response => response.json())
+            ]);
+
+            // Type guard to ensure data has the correct structure
+            if (!data1?.data || !data2?.data || !Array.isArray(data1.data) || !Array.isArray(data2.data)) {
+                throw new Error('Invalid data structure received from API');
+            }
+
+            const team1Data = data1.data.filter((item: Website) => 
+                item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
+            );
+            const team2Data = data2.data.filter((item: Website) => 
+                item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
+                item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
+            );
+            
+            const combinedData = [...team1Data, ...team2Data];
+            // For search functionality, we keep all domains including "nav.no"
+            combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
+
+            const normalizedInputDomain = normalizeDomain(domain);
+            const matchedWebsite = combinedData.find(item => 
+                normalizeDomain(item.domain) === normalizedInputDomain ||
+                normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
+            );
+
+            if (matchedWebsite) {
+                // Use the original domain for nav.no to preserve www if present
+                const websiteDomain = domain === 'www.nav.no' ? domain : matchedWebsite.domain;
+                const metabaseUrl = `https://metabase.ansatt.nav.no/dashboard/716-nav-webstatistikk?dato=past30days~&nettside=${websiteDomain}&url-sti_er_lik=${path || '*'}`;
+                
+                // Open in a new tab instead of redirecting the current page
+                window.open(metabaseUrl, '_blank');
+            } else {
+                setAlertVisible(true);
+            }
         } catch (error) {
-            setSearchError("Ugyldig URL-format");
+            if (error instanceof Error) {
+                setSearchError("Ugyldig URL-format");
+            }
             console.error("Error:", error);
         }
     };
