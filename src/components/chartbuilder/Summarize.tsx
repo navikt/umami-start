@@ -323,15 +323,6 @@ const Summarize = forwardRef(({
                           >
                             Andel av totale besøkende
                           </Button>
-                          <Button 
-                            variant="secondary" 
-                            size="small"
-                            onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
-                            icon={<LogOut size={16} />}
-                            disabled={isMetricAdded('bounce_rate', 'visit_id')}
-                          >
-                            Fluktrate
-                          </Button>
                         </div>
                       </div>
 
@@ -361,6 +352,21 @@ const Summarize = forwardRef(({
                             disabled={isMetricAdded('percentage', 'event_id')}
                           >
                             Andel av hendelser på side
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-medium mb-2 text-gray-700">Fluktrate - andel besøkende som kun ser én side før de forlater nettstedet</h4>
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            variant="secondary" 
+                            size="small"
+                            onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
+                            icon={<LogOut size={16} />}
+                            disabled={isMetricAdded('bounce_rate', 'visit_id')}
+                          >
+                            Fluktrate
                           </Button>
                         </div>
                       </div>
