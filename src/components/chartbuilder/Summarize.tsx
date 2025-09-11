@@ -155,7 +155,9 @@ const Summarize = forwardRef(({
       { function: 'count', column: 'session_id' },
       { function: 'count', column: undefined, alias: 'Antall_sidevisninger' },
       { function: 'count', column: undefined, alias: 'Antall_hendelser' },
+      { function: 'percentage', column: 'session_id', alias: 'Andel_av_besokende_pa_side' },
       { function: 'percentage', column: 'session_id' },
+      { function: 'percentage', column: 'event_id', alias: 'Andel_av_hendelser_pa_side' },
       { function: 'percentage', column: 'event_id' },
       { function: 'andel', column: 'session_id' },
       { function: 'bounce_rate', column: 'visit_id' },
@@ -197,8 +199,14 @@ const Summarize = forwardRef(({
     if (metric.function === 'count' && metric.alias === 'Antall_hendelser') {
       return 'Antall hendelser';
     }
+    if (metric.function === 'percentage' && metric.column === 'session_id' && metric.alias === 'Andel_av_besokende_pa_side') {
+      return 'Andel av besøkende på side';
+    }
     if (metric.function === 'percentage' && metric.column === 'session_id') {
       return 'Andel av besøkende';
+    }
+    if (metric.function === 'percentage' && metric.column === 'event_id' && metric.alias === 'Andel_av_hendelser_pa_side') {
+      return 'Andel av hendelser på side';
     }
     if (metric.function === 'percentage' && metric.column === 'event_id') {
       return 'Andel av hendelser';
@@ -302,43 +310,60 @@ const Summarize = forwardRef(({
                   </Tabs.Panel>
                   
                   <Tabs.Panel value="andel" className="pt-4">
-                    <div className="flex flex-wrap gap-2">
-                      <Button 
-                        variant="secondary" 
-                        size="small"
-                        onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel_av_besokende')}
-                        icon={<PieChart size={16} />}
-                        disabled={isMetricAdded('percentage', 'session_id')}
-                      >
-                        Andel av besøkende
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="small"
-                        onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel_av_hendelser')}
-                        icon={<PieChart size={16} />}
-                        disabled={isMetricAdded('percentage', 'event_id')}
-                      >
-                        Andel av hendelser
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="small"
-                        onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel_av_totale_besokende')}
-                        icon={<PieChart size={16} />}
-                        disabled={isMetricAdded('andel', 'session_id')}
-                      >
-                        Andel av totale besøkende
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="small"
-                        onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
-                        icon={<LogOut size={16} />}
-                        disabled={isMetricAdded('bounce_rate', 'visit_id')}
-                      >
-                        Fluktrate
-                      </Button>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av alle besøkende på hele nettsiden</h4>
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            variant="secondary" 
+                            size="small"
+                            onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel_av_totale_besokende')}
+                            icon={<PieChart size={16} />}
+                            disabled={isMetricAdded('andel', 'session_id')}
+                          >
+                            Andel av totale besøkende
+                          </Button>
+                          <Button 
+                            variant="secondary" 
+                            size="small"
+                            onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
+                            icon={<LogOut size={16} />}
+                            disabled={isMetricAdded('bounce_rate', 'visit_id')}
+                          >
+                            Fluktrate
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av besøkende på en side</h4>
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            variant="secondary" 
+                            size="small"
+                            onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel_av_besokende_pa_side')}
+                            icon={<PieChart size={16} />}
+                            disabled={isMetricAdded('percentage', 'session_id')}
+                          >
+                            Andel av besøkende på side
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av hendelser på en side</h4>
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            variant="secondary" 
+                            size="small"
+                            onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel_av_hendelser_pa_side')}
+                            icon={<PieChart size={16} />}
+                            disabled={isMetricAdded('percentage', 'event_id')}
+                          >
+                            Andel av hendelser på side
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </Tabs.Panel>
                   
