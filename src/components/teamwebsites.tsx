@@ -130,9 +130,9 @@ function TeamWebsites() {
             <Table zebraStripes={true}>
                 <Table.Header>
                     <Table.Row>
-                        <Table.HeaderCell scope="col">Umami dashboard</Table.HeaderCell>
+                        <Table.HeaderCell scope="col">Umami-prosjekt</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Miljø</Table.HeaderCell>
-                        <Table.HeaderCell scope="col">Domene</Table.HeaderCell>
+                        <Table.HeaderCell scope="col">Hoveddomene</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Opprettet</Table.HeaderCell>
                         <Table.HeaderCell scope="col">Sporingskode</Table.HeaderCell>
                     </Table.Row>
