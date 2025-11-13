@@ -14,5 +14,5 @@ Start Umami er utviklet med hjelp av KI.
 # Henvendelser og veiledning
 
 Spørsmål knyttet til koden eller arbeidet kan stilles
-som issues har på Github. Henvendelser kan sendes via Slack i
+som issues her på Github. Henvendelser kan sendes via Slack i
 kanalen [#researchops](https://nav-it.slack.com/archives/C02UGFS2J4B).
