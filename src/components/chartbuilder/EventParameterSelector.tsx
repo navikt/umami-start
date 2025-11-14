@@ -19,7 +19,7 @@ import {
 } from '@navikt/aksel-icons';
 import { Parameter } from '../../types/chart';
 import { FILTER_COLUMNS } from '../../lib/constants';
-import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
+// import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
 
 interface EventParameterSelectorProps {
   availableEvents: string[];

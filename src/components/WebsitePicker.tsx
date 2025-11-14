@@ -67,7 +67,6 @@ const WebsitePicker = ({
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState<boolean>(false);
-  const [usingJsonData, setUsingJsonData] = useState<boolean>(false);
   const loadingTimerRef = useRef<number | null>(null);
 
   // Function to update URL with website ID
@@ -84,33 +83,11 @@ const WebsitePicker = ({
     window.history.pushState({}, '', url.toString());
   }, []);
 
-  // Function to check if JSON file with same website ID exists
-  const checkExistingJsonData = useCallback(async (websiteId: string) => {
-    try {
-      // Dynamic import of JSON file based on website ID
-      const module = await import(`../data/eventer/${websiteId}.json`)
-        .catch(() => null);
-      
-      if (module) {
-        console.log(`Found existing JSON data for website ID: ${websiteId}`, module.default);
-        return module.default;
-      }
-    } catch (error) {
-      console.log(`No existing JSON data found for website ID: ${websiteId}`);
-    }
-    return null;
-  }, []);
-
   // Handle website selection and update URL
   const handleWebsiteChange = useCallback((website: Website | null) => {
     onWebsiteChange(website);
     updateUrlWithWebsiteId(website);
-    
-    // Check for existing JSON data when website is selected
-    if (website && website.id) {
-      checkExistingJsonData(website.id);
-    }
-  }, [onWebsiteChange, updateUrlWithWebsiteId, checkExistingJsonData]);
+  }, [onWebsiteChange, updateUrlWithWebsiteId]);
 
   // Check for website ID in URL on initial load
   useEffect(() => {
@@ -184,61 +161,9 @@ const WebsitePicker = ({
     
     fetchInProgress.current[websiteId] = true;
     setError(null); // Clear any previous errors
-    setUsingJsonData(false); // Reset JSON data flag
     
     try {
-      // First check if we have JSON data for this website ID
-      const existingData = await checkExistingJsonData(websiteId);
-      
-      if (existingData && !forceFresh) {
-        console.log(`Using existing JSON data instead of API calls for website ID: ${websiteId}`);
-        setUsingJsonData(true); // Set flag when using JSON data
-        
-        // Process the existing JSON data - using same approach as API data for consistency
-        const eventMap = new Map<string, string[]>();
-        
-        // Process JSON data to match API data structure
-        existingData.forEach((item: any) => {
-          const eventName = item.event_name;
-          const parameters = item.parameters || [];
-          
-          if (!eventMap.has(eventName)) {
-            eventMap.set(eventName, []);
-          }
-          
-          // Add parameters to the map
-          parameters.forEach((param: string) => {
-            if (!eventMap.get(eventName)!.includes(param)) {
-              eventMap.get(eventName)!.push(param);
-            }
-          });
-        });
-        
-        // Convert to the same format used by the API path
-        const uniqueEventNames = Array.from(eventMap.keys());
-        const paramsByEvent: {key: string, type: 'string'}[] = [];
-        
-        eventMap.forEach((params, eventName) => {
-          params.forEach(param => {
-            paramsByEvent.push({
-              key: `${eventName}.${param}`,
-              type: 'string'
-            });
-          });
-        });
-        
-        console.log(`[JSON Source] Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
-        
-        if (onEventsLoad) {
-          // Using 30 as default max days when loading from JSON
-          onEventsLoad(uniqueEventNames, paramsByEvent, 30);
-        }
-        
-        fetchInProgress.current[websiteId] = false;
-        return;
-      }
-      
-      // Only show loading UI for API calls, not JSON data
+      // Show loading UI
       handleLoadingState(true);
       
       // Use local API endpoint that queries BigQuery
@@ -319,7 +244,7 @@ const WebsitePicker = ({
     } finally {
       fetchInProgress.current[websiteId] = false;
     }
-  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, checkExistingJsonData]);
+  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState]);
 
   useEffect(() => {
     if (websitesLoaded.current) {
@@ -366,13 +291,12 @@ const WebsitePicker = ({
       // Clear cache when website changes
       apiCache.current = {};
       
-      // Use false for forceFresh to prefer JSON data if available
       fetchEventNames(selectedWebsite.id, false, dateRangeInDays)
         .finally(() => {
           setLoadedWebsiteId(selectedWebsite.id);
         });
     }
-  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, checkExistingJsonData]);
+  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
 
   // Combine the reload effects to avoid loops
   useEffect(() => {
@@ -412,13 +336,6 @@ const WebsitePicker = ({
               {error}
             </Alert>
           )}
-          {/*
-          {usingJsonData && selectedWebsite && (
-            <Alert variant="success" className="mb-4">
-              Bruker lagret datasett med hendelser og detaljer
-            </Alert>
-          )}
-            */}
           <UNSAFE_Combobox
             label={selectedWebsite ? "Nettside eller app" : "Velg nettside eller app"}
             options={websites.map(website => ({
@@ -438,7 +355,7 @@ const WebsitePicker = ({
             clearButton
           />
         </div>
-        {showLoading && !usingJsonData && (
+        {showLoading && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span>Laster inn hendelser og detaljer...</span>
@@ -446,7 +363,7 @@ const WebsitePicker = ({
             <ProgressBar 
               size="small"
               simulated={{
-                seconds: 120,
+                seconds: 30,
                 onTimeout: () => {
                   setError('Forespørselen tok for lang tid. Prøv igjen senere.');
                 }
