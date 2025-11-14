@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw } from 'lucide-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal } from '@navikt/ds-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon } from 'lucide-react';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
@@ -31,6 +31,12 @@ const SQLPreview = ({
   const [estimate, setEstimate] = useState<any>(null);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingQueryEstimate, setPendingQueryEstimate] = useState<any>(null);
+  const [queryStats, setQueryStats] = useState<any>(null);
 
   const handleCopy = async () => {
     navigator.clipboard.writeText(sql);
@@ -63,6 +69,107 @@ const SQLPreview = ({
     }
     
     setTimeout(() => setCopied(false), 3000);
+  };
+
+  const executeQuery = async () => {
+    // First, estimate the cost
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const estimateResponse = await fetch('/api/bigquery/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: sql }),
+      });
+
+      const estimateData = await estimateResponse.json();
+
+      if (!estimateResponse.ok) {
+        throw new Error(estimateData.error || 'Estimation failed');
+      }
+
+      const gb = parseFloat(estimateData.totalBytesProcessedGB);
+      
+      // Check if we should warn the user
+      let shouldWarn = false;
+      
+      if (gb >= 15) {
+        shouldWarn = true;
+      }
+      
+      // If warning threshold is met, show modal for confirmation
+      if (shouldWarn) {
+        setPendingQueryEstimate(estimateData);
+        setShowConfirmModal(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Proceed with the actual query for small queries
+      await runQuery();
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      setLoading(false);
+    }
+  };
+
+  const runQuery = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setQueryStats(null);
+
+    try {
+      const response = await fetch('/api/bigquery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: sql }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Query failed');
+      }
+
+      setResult(data);
+      
+      // Also get the query stats by running estimate (it's fast and gives us the GB info)
+      try {
+        const estimateResponse = await fetch('/api/bigquery/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        });
+        const estimateData = await estimateResponse.json();
+        if (estimateResponse.ok) {
+          setQueryStats(estimateData);
+        }
+      } catch {
+        // If estimate fails, it's not critical
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmQuery = async () => {
+    setShowConfirmModal(false);
+    await runQuery();
+  };
+
+  const handleCancelQuery = () => {
+    setShowConfirmModal(false);
+    setPendingQueryEstimate(null);
   };
 
   // Check if SQL is just a basic template without metrics or groupings
@@ -155,6 +262,13 @@ const SQLPreview = ({
     }
   }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedFinalStep, wasManuallyOpened, FINAL_STEP]);
 
+  // Clear results when SQL changes (website change or reset)
+  useEffect(() => {
+    setResult(null);
+    setQueryStats(null);
+    setError(null);
+  }, [sql]);
+
   return (
     <>
       <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
@@ -192,8 +306,97 @@ const SQLPreview = ({
         ) : (
           // Show the original SQL preview instructions
           <div>
+            {/* Direct Query Execution Section */}
+            <div className="space-y-2 mb-6">
+              <Heading level="2" size="small">Vis resultater</Heading>
+              
+              <div className="bg-green-50 p-4 rounded-md border border-green-100">
+                {/* <p className="mb-3">Få resultatet med en gang uten å åpne Metabase.</p>*/}
+                
+                <Button
+                  onClick={executeQuery}
+                  loading={loading}
+                  icon={<PlayIcon size={18} />}
+                  variant="primary"
+                  size="medium"
+                >
+                  Vis resultater
+                </Button>
+
+                {/* Error Display */}
+                {error && (
+                  <Alert variant="error" className="mt-3">
+                    <div className="text-sm">
+                      <p className="font-medium">Feil ved kjøring</p>
+                      <p className="mt-1">{error}</p>
+                    </div>
+                  </Alert>
+                )}
+
+                {/* Results Display */}
+                {result && result.data && result.data.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    {/*
+                    <Alert variant="success" className="text-sm">
+                      Fant {result.rowCount} {result.rowCount === 1 ? 'rad' : 'rader'}
+                    </Alert>*/}
+                    
+                    <div className="border rounded-lg overflow-hidden bg-white">
+                      <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-100 sticky top-0">
+                            <tr>
+                              {Object.keys(result.data[0]).map((key) => (
+                                <th
+                                  key={key}
+                                  className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                                >
+                                  {key}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {result.data.map((row: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-gray-50">
+                                {Object.values(row).map((value: any, cellIdx: number) => (
+                                  <td
+                                    key={cellIdx}
+                                    className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                                  >
+                                    {value !== null && value !== undefined
+                                      ? String(value)
+                                      : '-'}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    {/* Query Stats Display */}
+                    {queryStats && (
+                      <div className="text-sm text-gray-600">
+                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                        {parseFloat(queryStats.estimatedCostUSD) > 0 && ` • Kostnad: $${queryStats.estimatedCostUSD}`}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {result && result.data && result.data.length === 0 && (
+                  <Alert variant="info" className="mt-3">
+                    Spørringen returnerte ingen resultater.
+                  </Alert>
+                )}
+              </div>
+            </div>
+
+            {/* Metabase Section */}
             <div className="space-y-2 mb-4">
-              <Heading level="2" size="small">Få svaret i Metabase</Heading>
+              <Heading level="2" size="small">Legg til i Metabase</Heading>
 
               {/* Add incompatibility warning */}
               {showIncompatibilityWarning && (
@@ -243,7 +446,7 @@ const SQLPreview = ({
                       
                       {estimate && !estimating && (() => {
                         const gb = parseFloat(estimate.totalBytesProcessedGB);
-                        const mb = parseFloat(estimate.totalBytesProcessedMB);
+                       // const mb = parseFloat(estimate.totalBytesProcessedMB);
                         
                         // Determine variant and message based on data size
                         let variant: 'info' | 'warning' | 'error' = 'info';
@@ -276,7 +479,7 @@ const SQLPreview = ({
                           <Alert variant={variant} className="mt-2">
                             <div className="text-sm space-y-1">
                               <p>
-                                <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB ({mb} MB)
+                                <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
                               </p>
                               {parseFloat(estimate.estimatedCostUSD) > 0 && (
                                 <p>
@@ -426,6 +629,69 @@ const SQLPreview = ({
           </>
         )}
       </div>
+
+      {/* Confirmation Modal for Large Queries */}
+      <Modal
+        open={showConfirmModal}
+        onClose={handleCancelQuery}
+        header={{
+          heading: "Bekreft stor spørring",
+          closeButton: false,
+        }}
+      >
+        <Modal.Body>
+          {pendingQueryEstimate && (() => {
+            const gb = parseFloat(pendingQueryEstimate.totalBytesProcessedGB);
+            let variant: 'info' | 'warning' | 'error' = 'info';
+            let message = '';
+            
+            if (gb >= 100) {
+              variant = 'error';
+              message = 'Dette er en veldig stor spørring!';
+            } else if (gb >= 20) {
+              variant = 'warning';
+              message = 'Dette er en stor spørring.';
+            } else {
+              variant = 'info';
+              message = 'Denne spørringen vil prosessere en del data.';
+            }
+            
+            return (
+              <div className="space-y-4">
+                <Alert variant={variant}>
+                  <div className="space-y-2">
+                    <p className="font-medium">{message}</p>
+                    <p>
+                      <strong>Data å prosessere:</strong> {pendingQueryEstimate.totalBytesProcessedGB} GB
+                    </p>
+                    {parseFloat(pendingQueryEstimate.estimatedCostUSD) > 0 && (
+                      <p>
+                        <strong>Estimert kostnad:</strong> ${pendingQueryEstimate.estimatedCostUSD} USD
+                      </p>
+                    )}
+                  </div>
+                </Alert>
+                <p>Er du sikker på at du vil kjøre denne spørringen?</p>
+              </div>
+            );
+          })()}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="primary"
+            onClick={handleConfirmQuery}
+            loading={loading}
+          >
+            Ja, kjør spørringen
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleCancelQuery}
+          >
+            Avbryt
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };

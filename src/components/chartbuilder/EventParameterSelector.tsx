@@ -350,7 +350,7 @@ const getGroupedParameters = () => {
   return (
     <>
         <Heading level="2" size="small" spacing>
-          Tilgjengelig hendelser
+          Tilgjengelige hendelser
         </Heading>
         <ExpansionCard
           aria-label="Hendelsesdetaljer"
@@ -515,7 +515,7 @@ const getGroupedParameters = () => {
                 </Box>
               )}
 
-              {/* Date Range Settings - Moved from WebsitePicker */}
+              {/* Date Range Settings - Moved from WebsitePicker
               <div>
                 <ReadMore className="mt-0" header="Innstillinger for hendelsesinnlasting">
                   <div className="space-y-4 mt-4">
@@ -557,11 +557,11 @@ const getGroupedParameters = () => {
                     )}
                   </div>
                 </ReadMore>
-              </div>
+              </div> */}
 
               {/* Add Custom Parameters Section - Only when not loading */}
               {!isLoadingParameters && (
-                <div className="-mt-4 mb-2">
+                <div className="mt-0 mb-2">
                   <ReadMore 
                     header="Legg til hendelsesdetaljer manuelt" 
                     defaultOpen={customParamAccordionOpen}

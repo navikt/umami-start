@@ -19,7 +19,7 @@ import {
   Filter,
   Website
 } from '../types/chart';
-import CopyButton from '../components/theme/CopyButton/CopyButton';
+//import CopyButton from '../components/theme/CopyButton/CopyButton';
 
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [
@@ -1385,13 +1385,13 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Umami grafbygger for Metabase
+        Umami grafbygger
       </Heading>
       <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
         Lurer du på hvordan folk bruker nettsiden eller appen din?
       </Heading>
       <p className="text-gray-600 mb-10 prose text-lg">
-        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller i Metabase – som du enkelt kan dele med kollegaer.
+        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan legges til i Metabase og deles med kollegaer.
       </p>
 
       {/* Display the alert if it's active */}
@@ -1537,22 +1537,24 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
+      {/*  
       <CopyButton 
         textToCopy={generatedSQL} 
         visible={!!generatedSQL && 
           generatedSQL !== '-- Please select a website to generate SQL' && 
           !isBasicTemplate(generatedSQL)}
-      />
+      />*/}
     </div>
   );
 };
 
 // Helper function to check if SQL is basic template
+{/* 
 const isBasicTemplate = (sql: string): boolean => {
   if (!sql) return true;
   const selectPattern = /SELECT\s+(\s*FROM|\s*$)/i;
   return selectPattern.test(sql);
-};
+};*/}
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
