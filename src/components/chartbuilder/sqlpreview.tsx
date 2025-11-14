@@ -28,10 +28,40 @@ const SQLPreview = ({
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
+  const [estimate, setEstimate] = useState<any>(null);
+  const [estimating, setEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     navigator.clipboard.writeText(sql);
     setCopied(true);
+    
+    // Also run cost estimation
+    setEstimating(true);
+    setEstimateError(null);
+    
+    try {
+      const response = await fetch('/api/bigquery/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: sql }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Estimation failed');
+      }
+
+      setEstimate(data);
+    } catch (err: any) {
+      setEstimateError(err.message || 'Kunne ikke estimere kostnad');
+    } finally {
+      setEstimating(false);
+    }
+    
     setTimeout(() => setCopied(false), 3000);
   };
 
@@ -194,6 +224,7 @@ const SQLPreview = ({
                           onClick={handleCopy}
                           icon={<Copy size={18} />}
                           className="w-full md:w-auto"
+                          loading={estimating}
                         >
                           Kopier spørsmålet
                         </Button>
@@ -202,6 +233,75 @@ const SQLPreview = ({
                           Spørsmålet er kopiert!
                         </Alert>
                       )}
+                      
+                      {/* Cost Estimate Display */}
+                      {estimating && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          Estimerer kostnad...
+                        </div>
+                      )}
+                      
+                      {estimate && !estimating && (() => {
+                        const gb = parseFloat(estimate.totalBytesProcessedGB);
+                        const mb = parseFloat(estimate.totalBytesProcessedMB);
+                        
+                        // Determine variant and message based on data size
+                        let variant: 'info' | 'warning' | 'error' = 'info';
+                        let showAsAlert = false;
+                        
+                        if (gb >= 100) { // Crazy much - 100+ GB
+                          variant = 'error';
+                          showAsAlert = true;
+                        } else if (gb >= 20) { // Many GB - 10-100 GB
+                          variant = 'warning';
+                          showAsAlert = true;
+                        } else if (gb >= 15) { // More than 1 GB
+                          variant = 'info';
+                          showAsAlert = true;
+                        }
+                        // Less than 1 GB - just show as simple text line
+                        
+                        if (!showAsAlert) {
+                          // Simple line for small queries (< 1 GB)
+                          return (
+                            <div className="mt-2 text-sm text-gray-800">
+                              Data å prosessere: {gb} GB
+                              {parseFloat(estimate.estimatedCostUSD) > 0 && ` • Kostnad: $${estimate.estimatedCostUSD}`}
+                            </div>
+                          );
+                        }
+                        
+                        // Alert for larger queries
+                        return (
+                          <Alert variant={variant} className="mt-2">
+                            <div className="text-sm space-y-1">
+                              <p>
+                                <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB ({mb} MB)
+                              </p>
+                              {parseFloat(estimate.estimatedCostUSD) > 0 && (
+                                <p>
+                                  <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
+                                </p>
+                              )}
+                              {gb >= 100 && (
+                                <p className="font-medium mt-2">
+                                  ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
+                                </p>
+                              )}
+                              {gb >= 10 && gb < 100 && (
+                                <p className="font-medium mt-2">
+                                  Dette er en stor spørring. Sjekk at du trenger all denne dataen.
+                                </p>
+                              )}
+                            </div>
+                          </Alert>
+                        );
+                      })()}
+                      {/* {estimateError && (
+                        <Alert variant="warning" className="mt-2">
+                          <p className="text-sm">Kunne ikke estimere kostnad: {estimateError}</p>
+                        </Alert>
+                      )} */}
                     </div>
                   </div>
                 </div>
