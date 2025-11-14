@@ -11,6 +11,7 @@ import Taksonomi from "./pages/Taksonomi.tsx";
 import Charts from "./pages/Chartbuilder.tsx";
 import Metabase from "./pages/Metabase.tsx";
 import Sok from "./pages/Sok.tsx";
+import BigQuery from "./pages/BigQuery.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -24,7 +25,8 @@ const routes = [
     { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> },
     { path: "/metabase", component: <Metabase /> },
-    { path: "/sok", component: <Sok /> }
+    { path: "/sok", component: <Sok /> },
+    { path: "/bigquery", component: <BigQuery /> }
 
 ];
 

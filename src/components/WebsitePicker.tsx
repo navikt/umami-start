@@ -241,15 +241,12 @@ const WebsitePicker = ({
       // Only show loading UI for API calls, not JSON data
       handleLoadingState(true);
       
-      const baseUrl = window.location.hostname === 'localhost' 
-        ? 'https://reops-proxy.intern.nav.no' 
-        : 'https://reops-proxy.ansatt.nav.no';
+      // Use local API endpoint that queries BigQuery
+      const apiBase = '/api/bigquery';
 
       // Add timeout to date range fetch
       const dateRangeResponse = await Promise.race([
-        fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
-          credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-        }),
+        fetch(`${apiBase}/websites/${websiteId}/daterange`),
         timeoutPromise(API_TIMEOUT_MS)
       ]);
       // @ts-ignore
@@ -272,10 +269,7 @@ const WebsitePicker = ({
       
       // Add timeout to properties fetch
       const propertiesResponse = await Promise.race([
-        fetch(
-          `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
-          { credentials: window.location.hostname === 'localhost' ? 'omit' : 'include' }
-        ),
+        fetch(`${apiBase}/websites/${websiteId}/event-properties?startAt=${startAt}&endAt=${endAt}`),
         timeoutPromise(API_TIMEOUT_MS)
       ]);// @ts-ignore
       const properties: EventProperty[] = await propertiesResponse.json();
