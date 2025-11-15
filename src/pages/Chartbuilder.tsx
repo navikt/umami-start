@@ -384,6 +384,11 @@ const ChartsPage = () => {
 
   const removeMetric = (index: number) => {
     setConfig(prev => {
+      // Guard: check if the metric exists
+      if (!prev.metrics[index]) {
+        return prev;
+      }
+      
       const newConfig = { ...prev };
       
       // Get the metric being removed
