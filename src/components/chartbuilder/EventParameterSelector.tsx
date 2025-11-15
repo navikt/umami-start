@@ -532,12 +532,6 @@ const getGroupedParameters = () => {
                     </>
                   )}
 
-                  {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <BodyShort size="small" spacing className="text-md text-gray-700 mt-6">
-                      <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
-                    </BodyShort>
-                  )}
-
                   <Heading level="3" size="xsmall" spacing className="mt-6">
                      Standard hendelser og detaljer
                   </Heading>
@@ -639,9 +633,15 @@ const getGroupedParameters = () => {
                 </ReadMore>
               </div> */}
 
+              {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                <BodyShort size="small" spacing className="text-md text-gray-700 mt-2">
+                  <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene.
+                </BodyShort>
+              )}
+
               {/* Add Custom Parameters Section - Only when not loading */}
               {!isLoadingParameters && (
-                <div className="mt-0 mb-2">
+                <div className="-mt-4 mb-2">
                   <ReadMore 
                     header="Legg til hendelsesdetaljer manuelt" 
                     defaultOpen={customParamAccordionOpen}
