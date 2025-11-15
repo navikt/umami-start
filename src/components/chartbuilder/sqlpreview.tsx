@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs } from '@navikt/ds-react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, Maximize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, ICustomizedCalloutData } from '@fluentui/react-charting';
+import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
@@ -53,9 +53,9 @@ const SQLPreview = ({
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('table');
   const [showChartModal, setShowChartModal] = useState(false);
-  const [modalChartType, setModalChartType] = useState<'line' | 'area' | 'bar' | null>(null);
+  const [modalChartType, setModalChartType] = useState<'line' | 'area' | 'bar' | 'pie' | null>(null);
 
-  const openChartModal = (chartType: 'line' | 'area' | 'bar') => {
+  const openChartModal = (chartType: 'line' | 'area' | 'bar' | 'pie') => {
     setModalChartType(chartType);
     setShowChartModal(true);
   };
@@ -251,6 +251,53 @@ const SQLPreview = ({
           },
         },
       },
+    };
+  };
+
+  // Helper function to prepare data for PieChart
+  const preparePieChartData = (): { data: Array<{ y: number; x: string }>; total: number } | null => {
+    if (!result || !result.data || result.data.length === 0) return null;
+    
+    const data = result.data;
+    
+    // Only show pie chart if 10 or fewer items
+    if (data.length > 10) return null;
+    
+    const keys = Object.keys(data[0]);
+    
+    // Need at least 2 columns (label and value)
+    if (keys.length < 2) return null;
+    
+    // Assume first column is label and second is value
+    const labelKey = keys[0];
+    const valueKey = keys[1];
+    
+    console.log('Preparing PieChart with keys:', { labelKey, valueKey });
+    console.log('Sample row:', data[0]);
+    
+    // Calculate total for percentages
+    const total = data.reduce((sum: number, row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      return sum + value;
+    }, 0);
+    
+    console.log('Total value for pie chart:', total);
+    
+    const pieChartData = data.map((row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      const label = String(row[labelKey] || 'Ukjent');
+      
+      return {
+        y: value,
+        x: label,
+      };
+    });
+    
+    console.log('PieChart data points:', pieChartData.slice(0, 3)); // Log first 3 points
+    
+    return {
+      data: pieChartData,
+      total,
     };
   };
 
@@ -734,6 +781,7 @@ const SQLPreview = ({
                         <Tabs.Tab value="linechart" label="Linje" />
                         <Tabs.Tab value="areachart" label="Område" />
                         <Tabs.Tab value="barchart" label="Stolpe" />
+                        <Tabs.Tab value="piechart" label="Kake" />
                       </Tabs.List>
 
                       {/* Table Tab */}
@@ -853,28 +901,6 @@ const SQLPreview = ({
                                   yAxisTickCount={10}
                                   width={700}
                                   enablePerfOptimization={true}
-                                  calloutProps={{
-                                    isBeakVisible: true,
-                                  }}
-                                  onRenderCalloutPerStack={(props?: ICustomizedCalloutData) => {
-                                    if (!props || !props.values || props.values.length === 0) return null;
-                                    return (
-                                      <div style={{ padding: '8px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                        <div style={{ marginBottom: '6px', fontWeight: 'normal' }}>
-                                          {String(props.values[0].xAxisCalloutData || props.x)}
-                                        </div>
-                                        {props.values.map((point: any, index: number) => (
-                                          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center' }}>
-                                              <span style={{ width: '12px', height: '12px', backgroundColor: point.color, marginRight: '6px', borderRadius: '2px' }}></span>
-                                              <span>{point.legend}:</span>
-                                            </span>
-                                            <span style={{ fontWeight: 'bold', marginLeft: '12px' }}>{String(point.yAxisCalloutData || point.y)}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    );
-                                  }}
                                 />
                                 <div className="mt-2 text-xs text-gray-500">
                                   Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
@@ -927,6 +953,98 @@ const SQLPreview = ({
                                 </div>
                                 <div className="mt-2 text-xs text-gray-500 text-center">
                                   Viser {Array.isArray(chartData.data) ? chartData.data.length : 0} kategorier (hover over stolpene for detaljer)
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </Tabs.Panel>
+
+                      {/* Pie Chart Tab */}
+                      <Tabs.Panel value="piechart" className="pt-4">
+                        <div className="border rounded-lg bg-white p-4">
+                          {(() => {
+                            const chartData = preparePieChartData();
+                            console.log('Pie Chart Data:', chartData);
+                            
+                            // Check if too many items
+                            if (result && result.data && result.data.length > 10) {
+                              return (
+                                <Alert variant="info">
+                                  Sirkeldiagram vises kun for resultater med maks 10 rader. Dette resultatet har {result.data.length} rader.
+                                </Alert>
+                              );
+                            }
+                            
+                            if (!chartData) {
+                              return (
+                                <Alert variant="info">
+                                  Kunne ikke lage sirkeldiagram fra dataene. Trenger minst to kolonner (kategori og verdi).
+                                </Alert>
+                              );
+                            }
+                            
+                            return (
+                              <div>
+                                <div className="flex justify-end mb-2">
+                                  <Button
+                                    size="small"
+                                    variant="secondary"
+                                    icon={<Maximize2 size={16} />}
+                                    onClick={() => openChartModal('pie')}
+                                  >
+                                    Forstørr
+                                  </Button>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <style>{`
+                                    /* Make the labels transparent but keep them for hover functionality */
+                                    .pie-chart-wrapper text[class*="pieLabel"],
+                                    .pie-chart-wrapper g[class*="arc"] text {
+                                      opacity: 0 !important;
+                                      pointer-events: none !important;
+                                    }
+                                    /* Make the pie slices hoverable */
+                                    .pie-chart-wrapper path {
+                                      cursor: pointer !important;
+                                    }
+                                    /* Style the callout to be larger and more readable */
+                                    .pie-chart-wrapper .ms-Callout-main {
+                                      padding: 24px !important;
+                                      background: white !important;
+                                      border: 3px solid #0067C5 !important;
+                                      border-radius: 8px !important;
+                                      box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
+                                      min-width: 300px !important;
+                                    }
+                                    .pie-chart-wrapper .ms-Callout-main div {
+                                      font-size: 24px !important;
+                                      line-height: 1.8 !important;
+                                      font-weight: 700 !important;
+                                      color: #262626 !important;
+                                    }
+                                  `}</style>
+                                  <div className="pie-chart-wrapper">
+                                    <PieChart
+                                      data={chartData.data}
+                                      width={600}
+                                      height={400}
+                                      chartTitle=""
+                                    />
+                                  </div>
+                                  <div className="mt-4 text-xs text-gray-500 text-center">
+                                    <p>Viser {chartData.data.length} kategorier med prosentandeler:</p>
+                                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
+                                      {chartData.data.map((item, idx) => {
+                                        const percentage = ((item.y / chartData.total) * 100).toFixed(1);
+                                        return (
+                                          <span key={idx}>
+                                            {item.x}: <strong>{percentage}%</strong>
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -1282,7 +1400,7 @@ const SQLPreview = ({
         onClose={() => setShowChartModal(false)}
         width="90vw"
         header={{
-          heading: modalChartType === 'line' ? 'Linjediagram' : modalChartType === 'area' ? 'Områdediagram' : 'Stolpediagram',
+          heading: modalChartType === 'line' ? 'Linjediagram' : modalChartType === 'area' ? 'Områdediagram' : modalChartType === 'pie' ? 'Sirkeldiagram' : 'Stolpediagram',
           closeButton: true,
         }}
       >
@@ -1319,29 +1437,65 @@ const SQLPreview = ({
                     legendsOverflowText="Flere"
                     yAxisTickCount={10}
                     enablePerfOptimization={true}
-                    calloutProps={{
-                      isBeakVisible: true,
-                    }}
-                    onRenderCalloutPerStack={(props?: ICustomizedCalloutData) => {
-                      if (!props || !props.values || props.values.length === 0) return null;
-                      return (
-                        <div style={{ padding: '8px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                          <div style={{ marginBottom: '6px', fontWeight: 'normal' }}>
-                            {String(props.values[0].xAxisCalloutData || props.x)}
-                          </div>
-                          {props.values.map((point: any, index: number) => (
-                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <span style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ width: '12px', height: '12px', backgroundColor: point.color, marginRight: '6px', borderRadius: '2px' }}></span>
-                                <span>{point.legend}:</span>
-                              </span>
-                              <span style={{ fontWeight: 'bold', marginLeft: '12px' }}>{String(point.yAxisCalloutData || point.y)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }}
                   />
+                </div>
+              );
+            })()}
+            {modalChartType === 'pie' && (() => {
+              const chartData = preparePieChartData();
+              if (!chartData) return <Alert variant="info">Ingen data å vise</Alert>;
+              
+              return (
+                <div className="flex flex-col items-center pie-modal-container">
+                  <style>{`
+                    /* Make the labels transparent but keep them for hover functionality */
+                    .pie-chart-modal-wrapper text[class*="pieLabel"],
+                    .pie-chart-modal-wrapper g[class*="arc"] text {
+                      opacity: 0 !important;
+                      pointer-events: none !important;
+                    }
+                    /* Make the pie slices hoverable */
+                    .pie-chart-modal-wrapper path {
+                      cursor: pointer !important;
+                    }
+                    /* Style ONLY pie chart modal callouts - using attribute selector for specificity */
+                    .pie-modal-container ~ .ms-Layer .ms-Callout-main,
+                    body:has(.pie-modal-container) .ms-Layer .ms-Callout-main {
+                      padding: 28px !important;
+                      background: white !important;
+                      border: 4px solid #0067C5 !important;
+                      border-radius: 10px !important;
+                      box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
+                      min-width: 350px !important;
+                    }
+                    body:has(.pie-modal-container) .ms-Layer .ms-Callout-main div {
+                      font-size: 28px !important;
+                      line-height: 2 !important;
+                      font-weight: 700 !important;
+                      color: #262626 !important;
+                    }
+                  `}</style>
+                  <div className="pie-chart-modal-wrapper">
+                    <PieChart
+                      data={chartData.data}
+                      width={Math.min(window.innerWidth * 0.8, 1000)}
+                      height={700}
+                      chartTitle=""
+                    />
+                  </div>
+                  <div className="mt-4 text-sm text-gray-600 text-center">
+                    <p className="font-semibold mb-2">Prosentandeler:</p>
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
+                      {chartData.data.map((item, idx) => {
+                        const percentage = ((item.y / chartData.total) * 100).toFixed(1);
+                        return (
+                          <span key={idx} className="text-base">
+                            {item.x}: <strong>{percentage}%</strong> ({item.y.toLocaleString('nb-NO')})
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               );
             })()}
