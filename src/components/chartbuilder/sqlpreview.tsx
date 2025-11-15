@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download } from 'lucide-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs } from '@navikt/ds-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, Maximize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
+import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
@@ -50,6 +51,143 @@ const SQLPreview = ({
   const [pendingQueryEstimate, setPendingQueryEstimate] = useState<any>(null);
   const [queryStats, setQueryStats] = useState<any>(null);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('table');
+  const [showChartModal, setShowChartModal] = useState(false);
+  const [modalChartType, setModalChartType] = useState<'line' | 'bar' | null>(null);
+
+  const openChartModal = (chartType: 'line' | 'bar') => {
+    setModalChartType(chartType);
+    setShowChartModal(true);
+  };
+
+  // Helper function to prepare data for LineChart
+  const prepareLineChartData = (): ILineChartProps | null => {
+    if (!result || !result.data || result.data.length === 0) return null;
+    
+    const data = result.data;
+    const keys = Object.keys(data[0]);
+    
+    // Need at least 2 columns (x-axis and y-axis)
+    if (keys.length < 2) return null;
+    
+    // Assume first column is x-axis (often time/category) and second is y-axis (often count/value)
+    const xKey = keys[0];
+    const yKey = keys[1];
+    
+    console.log('Preparing LineChart with keys:', { xKey, yKey });
+    console.log('Sample row:', data[0]);
+    
+    // Map data and handle x-axis which can be dates or numbers
+    const chartPoints = data.map((row: any, index: number) => {
+      const xValue = row[xKey];
+      const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
+      
+      // For dates, try to parse them; for other values, use index as numeric x or string as-is
+      let x: number | Date;
+      
+      if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+        // Looks like a date string
+        x = new Date(xValue);
+      } else if (typeof xValue === 'number') {
+        x = xValue;
+      } else {
+        // Use index for string categories to ensure proper numeric spacing
+        x = index;
+      }
+      
+      return {
+        x,
+        y: yValue,
+        xAxisCalloutData: String(xValue), // Display original value in callout
+        yAxisCalloutData: String(yValue),
+      };
+    });
+    
+    console.log('LineChart points:', chartPoints.slice(0, 3)); // Log first 3 points
+    
+    return {
+      data: {
+        lineChartData: [{
+          legend: yKey,
+          data: chartPoints,
+          color: '#0067C5', // NAV blue color
+        }],
+      },
+    };
+  };
+
+  // Helper function to prepare data for VerticalBarChart
+  // Helper function to prepare data for VerticalBarChart
+  const prepareBarChartData = (): IVerticalBarChartProps | null => {
+    if (!result || !result.data || result.data.length === 0) return null;
+    
+    const data = result.data;
+    
+    // Only show bar chart if 10 or fewer items
+    if (data.length > 10) return null;
+    
+    const keys = Object.keys(data[0]);
+    
+    // Need at least 2 columns (label and value)
+    if (keys.length < 2) return null;
+    
+    // Assume first column is label and second is value
+    const labelKey = keys[0];
+    const valueKey = keys[1];
+    
+    console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
+    console.log('Sample row:', data[0]);
+    
+    // Calculate total for percentages
+    const total = data.reduce((sum: number, row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      return sum + value;
+    }, 0);
+    
+    console.log('Total value for bar chart:', total);
+    
+    const barChartData = data.map((row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+      
+      // Use label for x-axis
+      const label = String(row[labelKey] || 'Ukjent');
+      
+      return {
+        x: label,
+        y: value,
+        xAxisCalloutData: label,
+        yAxisCalloutData: `${value} (${percentage}%)`,
+        color: '#0067C5', // NAV blue color
+        legend: label,
+      };
+    });
+    
+    console.log('VerticalBarChart data points:', barChartData.slice(0, 3)); // Log first 3 points
+    
+    return {
+      data: barChartData,
+      barWidth: 'auto',
+      yAxisTickCount: 5,
+      enableReflow: true,
+      legendProps: {
+        allowFocusOnLegends: true,
+        canSelectMultipleLegends: false,
+        styles: {
+          root: {
+            display: 'flex',
+            flexWrap: 'wrap',
+            rowGap: '8px',
+            columnGap: '16px',
+            maxWidth: '100%',
+          },
+          legend: {
+            marginRight: 0,
+          },
+        },
+      },
+    };
+  };
 
   const handleCopy = async () => {
     navigator.clipboard.writeText(sql);
@@ -524,51 +662,149 @@ const SQLPreview = ({
                 {/* Results Display */}
                 {result && result.data && result.data.length > 0 && (
                   <div className="mt-2 space-y-3">
-                    {/*
-                    <Alert variant="success" className="text-sm">
-                      Fant {result.rowCount} {result.rowCount === 1 ? 'rad' : 'rader'}
-                    </Alert>*/}
-                    
-        
-                    
-                    <div className="border rounded-lg overflow-hidden bg-white">
-                      <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-100 sticky top-0">
-                            <tr>
-                              {Object.keys(result.data[0]).map((key) => (
-                                <th
-                                  key={key}
-                                  className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
-                                >
-                                  {key}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {result.data.map((row: any, idx: number) => (
-                              <tr key={idx} className="hover:bg-gray-50">
-                                {Object.values(row).map((value: any, cellIdx: number) => (
-                                  <td
-                                    key={cellIdx}
-                                    className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
-                                  >
-                                    {typeof value === 'number'
-                                      ? value.toLocaleString('nb-NO')
-                                      : value !== null && value !== undefined
-                                      ? String(value)
-                                      : '-'}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    {/* Tabbed Display */}
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                      <Tabs.List>
+                        <Tabs.Tab value="table" label="Tabell" />
+                        <Tabs.Tab value="linechart" label="Linjediagram" />
+                        <Tabs.Tab value="barchart" label="Stolpediagram" />
+                      </Tabs.List>
 
-          
+                      {/* Table Tab */}
+                      <Tabs.Panel value="table" className="pt-4">
+                        <div className="border rounded-lg overflow-hidden bg-white">
+                          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-100 sticky top-0">
+                                <tr>
+                                  {Object.keys(result.data[0]).map((key) => (
+                                    <th
+                                      key={key}
+                                      className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                                    >
+                                      {key}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {result.data.map((row: any, idx: number) => (
+                                  <tr key={idx} className="hover:bg-gray-50">
+                                    {Object.values(row).map((value: any, cellIdx: number) => (
+                                      <td
+                                        key={cellIdx}
+                                        className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                                      >
+                                        {typeof value === 'number'
+                                          ? value.toLocaleString('nb-NO')
+                                          : value !== null && value !== undefined
+                                          ? String(value)
+                                          : '-'}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </Tabs.Panel>
+
+                      {/* Line Chart Tab */}
+                      <Tabs.Panel value="linechart" className="pt-4">
+                        <div className="border rounded-lg bg-white p-4">
+                          {(() => {
+                            const chartData = prepareLineChartData();
+                            console.log('Line Chart Data:', chartData);
+                            console.log('Raw Result Data:', result.data);
+                            
+                            if (!chartData) {
+                              return (
+                                <Alert variant="info">
+                                  Kunne ikke lage linjediagram fra dataene. Trenger minst to kolonner (x-akse og y-akse).
+                                </Alert>
+                              );
+                            }
+                            return (
+                              <div>
+                                <div className="flex justify-end mb-2">
+                                  <Button
+                                    size="small"
+                                    variant="secondary"
+                                    icon={<Maximize2 size={16} />}
+                                    onClick={() => openChartModal('line')}
+                                  >
+                                    Forstørr
+                                  </Button>
+                                </div>
+                                <LineChart
+                                  data={chartData.data}
+                                  height={400}
+                                  legendsOverflowText="Flere"
+                                  yAxisTickCount={10}
+                                  allowMultipleShapesForPoints={false}
+                                  enablePerfOptimization={true}
+                                  width={700}
+                                />
+                                <div className="mt-2 text-xs text-gray-500">
+                                  Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </Tabs.Panel>
+
+                      {/* Bar Chart Tab */}
+                      <Tabs.Panel value="barchart" className="pt-4">
+                        <div className="border rounded-lg bg-white p-4">
+                          {(() => {
+                            const chartData = prepareBarChartData();
+                            console.log('Bar Chart Data:', chartData);
+                            
+                            // Check if too many items
+                            if (result && result.data && result.data.length > 10) {
+                              return (
+                                <Alert variant="info">
+                                  Stolpediagram vises kun for resultater med maks 10 rader. Dette resultatet har {result.data.length} rader.
+                                </Alert>
+                              );
+                            }
+                            
+                            if (!chartData || !chartData.data || (Array.isArray(chartData.data) && chartData.data.length === 0)) {
+                              return (
+                                <Alert variant="info">
+                                  Kunne ikke lage stolpediagram fra dataene. Trenger minst to kolonner (kategori og verdi).
+                                </Alert>
+                              );
+                            }
+                            return (
+                              <div className="w-full">
+                                <div className="overflow-y-auto max-h-[500px]">
+                                  <style>{`
+                                    .bar-chart-hide-xaxis .ms-Chart-xAxis text,
+                                    .bar-chart-hide-xaxis g[class*="xAxis"] text {
+                                      display: none !important;
+                                    }
+                                  `}</style>
+                                  <div className="bar-chart-hide-xaxis">
+                                    <VerticalBarChart
+                                      data={chartData.data}
+                                      barWidth={chartData.barWidth}
+                                      yAxisTickCount={chartData.yAxisTickCount}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-500 text-center">
+                                  Viser {Array.isArray(chartData.data) ? chartData.data.length : 0} kategorier (hover over stolpene for detaljer)
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </Tabs.Panel>
+                    </Tabs>
+        
                     {/* Download Options */}
                     <ReadMore header="Last ned resultater">
                       <div className="flex gap-2 mt-2">
@@ -592,7 +828,7 @@ const SQLPreview = ({
   
                     </ReadMore>
 
-                                          {/* Query Stats Display - moved above table */}
+                    {/* Query Stats Display */}
                     {queryStats && (
                       <div className="text-sm text-gray-600 text-right">
                         Data prosessert: {queryStats.totalBytesProcessedGB} GB
@@ -908,6 +1144,39 @@ const SQLPreview = ({
             Avbryt
           </Button>
         </Modal.Footer>
+      </Modal>
+
+      {/* Chart Enlargement Modal */}
+      <Modal
+        open={showChartModal}
+        onClose={() => setShowChartModal(false)}
+        width="90vw"
+        header={{
+          heading: modalChartType === 'line' ? 'Linjediagram' : 'Stolpediagram',
+          closeButton: true,
+        }}
+      >
+        <Modal.Body>
+          <div className="p-4">
+            {modalChartType === 'line' && (() => {
+              const chartData = prepareLineChartData();
+              if (!chartData) return null;
+              return (
+                <div className="flex justify-center overflow-x-auto">
+                  <LineChart
+                    data={chartData.data}
+                    height={600}
+                    width={Math.min(window.innerWidth * 0.8, 1400)}
+                    legendsOverflowText="Flere"
+                    yAxisTickCount={10}
+                    allowMultipleShapesForPoints={false}
+                    enablePerfOptimization={true}
+                  />
+                </div>
+              );
+            })()}
+          </div>
+        </Modal.Body>
       </Modal>
     </>
   );

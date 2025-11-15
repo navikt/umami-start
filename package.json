@@ -12,6 +12,8 @@
     "start": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
+    "@fluentui/react": "^8.125.1",
+    "@fluentui/react-charting": "^5.25.2",
     "@google-cloud/bigquery": "^8.1.1",
     "@navikt/ds-css": "^7.33.3",
     "@navikt/ds-react": "^7.33.3",
