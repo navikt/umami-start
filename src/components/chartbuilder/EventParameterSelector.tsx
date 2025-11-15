@@ -414,10 +414,10 @@ const getGroupedParameters = () => {
             <ExpansionCard.Title as="h3" size="small">
             {getEventCount() === 0 ? (
               <>
-                Besøk
+                Sidevisninger
               </>
             ): (
-              <>{getEventCount()} egendefinerte hendelser + besøk</>
+              <>{getEventCount()} egendefinerte hendelser + sidevisninger</>
             )}
             </ExpansionCard.Title>
           </ExpansionCard.Header>
