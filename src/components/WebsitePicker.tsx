@@ -363,10 +363,8 @@ const WebsitePicker = ({
             <ProgressBar 
               size="small"
               simulated={{
-                seconds: 30,
-                onTimeout: () => {
-                  setError('Forespørselen tok for lang tid. Prøv igjen senere.');
-                }
+                seconds: 10,
+                 onTimeout: () => {}
               }}
               aria-label="Laster inn data"
             />
