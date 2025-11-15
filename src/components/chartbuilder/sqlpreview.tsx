@@ -172,6 +172,9 @@ const SQLPreview = ({
   // Check if SQL is just a basic template without metrics or groupings
   const isBasicTemplate = () => {
     if (!sql) return true;
+    
+    // Check if it's the "please select website" message
+    if (sql.includes('Please select a website')) return true;
 
     // Check if there are any SELECT columns specified or if it's just the basic structure
     const selectPattern = /SELECT\s+(\s*FROM|\s*$)/i;
@@ -264,6 +267,8 @@ const SQLPreview = ({
     setResult(null);
     setQueryStats(null);
     setError(null);
+    setEstimate(null);
+    setCopied(false);
   }, [sql]);
 
   return (

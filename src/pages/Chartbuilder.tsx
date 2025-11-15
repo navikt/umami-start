@@ -249,6 +249,7 @@ const ChartsPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
   const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
+  const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -329,6 +330,18 @@ const ChartsPage = () => {
     setAvailableEvents([]);
     setParameters([]);
     setDateRangeReady(false);
+    
+    // Reset the website selection
+    setConfig(prev => ({
+      ...prev,
+      website: null,
+      metrics: [],
+      groupByFields: [],
+      orderBy: null
+    }));
+    
+    // Toggle resetIncludeParams to trigger reset in WebsitePicker
+    setResetIncludeParams(prev => !prev);
     
     // Pass silent=true to prevent individual alerts
     if (chartFiltersRef.current) {
@@ -1423,6 +1436,7 @@ const ChartsPage = () => {
                 dateRangeInDays={dateRangeInDays}
                 shouldReload={forceReload}
                 onIncludeParamsChange={setIncludeParams}
+                resetIncludeParams={resetIncludeParams}
               />
             </section>
 

@@ -15,6 +15,7 @@ interface WebsitePickerProps {
   dateRangeInDays?: number; // Add this prop to accept date range from parent
   shouldReload?: boolean;   // Add flag to force reload
   onIncludeParamsChange?: (includeParams: boolean) => void; // Callback to notify parent of includeParams state
+  resetIncludeParams?: boolean; // Add flag to reset includeParams
 }
 
 interface EventProperty {
@@ -52,7 +53,8 @@ const WebsitePicker = ({
   onEventsLoad,
   dateRangeInDays: externalDateRange, 
   shouldReload = false,
-  onIncludeParamsChange
+  onIncludeParamsChange,
+  resetIncludeParams = false
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -74,6 +76,13 @@ const WebsitePicker = ({
   const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
   const [includeParams, setIncludeParams] = useState<boolean>(false);
   const prevIncludeParams = useRef<boolean>(false);
+
+  // Reset includeParams when resetIncludeParams prop changes
+  useEffect(() => {
+    if (resetIncludeParams) {
+      setIncludeParams(false);
+    }
+  }, [resetIncludeParams]);
 
   // Notify parent when includeParams changes
   useEffect(() => {
