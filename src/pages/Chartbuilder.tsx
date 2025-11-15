@@ -1417,9 +1417,11 @@ const ChartsPage = () => {
       <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
         Lurer du på hvordan folk bruker nettsiden eller appen din?
       </Heading>
-      <p className="text-gray-600 mb-10 prose text-lg">
-        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan legges til i Metabase og deles med kollegaer.
+
+      <p className="text-gray-600 mb-10 text-lg max-w-[59vh]">
+        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
       </p>
+
 
       {/* Display the alert if it's active */}
       {alertInfo.show && (
@@ -1524,7 +1526,7 @@ const ChartsPage = () => {
             )}
           </VStack>
 
-          <div className="mt-8 hidden lg:block">
+          <div className="mt-8 hidden lg:block mb-[40rem]">
             <List as="ul" title="Relaterte veiledninger" className="pt-4">
                 <List.Item>
                     <strong><Link target="_new" href={"/taksonomi"}>Taksonomi:</Link></strong> Guide til navngivning av hendelser.
@@ -1538,8 +1540,8 @@ const ChartsPage = () => {
           </div>
         </div>
 
-        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start">
-          <div className="overflow-y-auto">
+        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start h-[calc(100vh-2rem)]">
+          <div className="overflow-y-auto h-full">
             <SQLPreview 
               sql={generatedSQL} 
               activeStep={currentStep} 
