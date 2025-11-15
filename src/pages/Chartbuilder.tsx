@@ -325,6 +325,11 @@ const ChartsPage = () => {
 
   // Update the resetAll function
   const resetAll = () => {
+    // Clear available events and parameters
+    setAvailableEvents([]);
+    setParameters([]);
+    setDateRangeReady(false);
+    
     // Pass silent=true to prevent individual alerts
     if (chartFiltersRef.current) {
       chartFiltersRef.current.resetFilters(true);
@@ -1331,6 +1336,9 @@ const ChartsPage = () => {
     }));
     if (website && website.id !== config.website?.id) {
       setFilters([]);
+      setAvailableEvents([]);
+      setParameters([]);
+      setDateRangeReady(false);
       setConfig(prev => ({
         ...prev,
         website,
