@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs, Switch } from '@navikt/ds-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs } from '@navikt/ds-react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, Maximize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart } from '@fluentui/react-charting';
+import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, ICustomizedCalloutData } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
@@ -70,47 +70,108 @@ const SQLPreview = ({
     // Need at least 2 columns (x-axis and y-axis)
     if (keys.length < 2) return null;
     
-    // Assume first column is x-axis (often time/category) and second is y-axis (often count/value)
+    console.log('Preparing LineChart with keys:', keys);
+    console.log('Sample row:', data[0]);
+    
+    // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
+    if (keys.length === 3) {
+      const xKey = keys[0];
+      const seriesKey = keys[1]; // e.g., 'browser'
+      const yKey = keys[2]; // e.g., 'Unike_besokende'
+      
+      // Group data by series
+      const seriesMap = new Map<string, any[]>();
+      
+      data.forEach((row: any) => {
+        const seriesValue = String(row[seriesKey] || 'Unknown');
+        if (!seriesMap.has(seriesValue)) {
+          seriesMap.set(seriesValue, []);
+        }
+        
+        const xValue = row[xKey];
+        const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
+        
+        let x: number | Date;
+        if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+          x = new Date(xValue);
+        } else if (typeof xValue === 'number') {
+          x = xValue;
+        } else {
+          x = new Date(xValue).getTime() || 0;
+        }
+        
+        seriesMap.get(seriesValue)!.push({
+          x,
+          y: yValue,
+          xAxisCalloutData: String(xValue),
+          yAxisCalloutData: String(yValue),
+        });
+      });
+      
+      // Convert to line chart format with colors
+      // Using colorblind-friendly palette with good contrast
+      const colors = [
+        '#0067C5', // Blue (NAV blue)
+        '#FF9100', // Orange
+        '#06893A', // Green
+        '#C30000', // Red
+        '#634689', // Purple
+        '#A8874C', // Brown/Gold
+        '#005B82', // Teal
+        '#E18AAA', // Pink
+      ];
+      const lineChartData = Array.from(seriesMap.entries()).map(([seriesName, points], index) => ({
+        legend: seriesName,
+        data: points,
+        color: colors[index % colors.length],
+        lineOptions: {
+          lineBorderWidth: '2',
+        },
+      }));
+      
+      console.log('Multi-line chart data:', lineChartData.length, 'series');
+      
+      return {
+        data: {
+          lineChartData,
+        },
+        enabledLegendsWrapLines: true,
+      };
+    }
+    
+    // Single line: assume first column is x-axis and second is y-axis
     const xKey = keys[0];
     const yKey = keys[1];
     
-    console.log('Preparing LineChart with keys:', { xKey, yKey });
-    console.log('Sample row:', data[0]);
-    
-    // Map data and handle x-axis which can be dates or numbers
     const chartPoints = data.map((row: any, index: number) => {
       const xValue = row[xKey];
       const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
       
-      // For dates, try to parse them; for other values, use index as numeric x or string as-is
       let x: number | Date;
-      
       if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-        // Looks like a date string
         x = new Date(xValue);
       } else if (typeof xValue === 'number') {
         x = xValue;
       } else {
-        // Use index for string categories to ensure proper numeric spacing
         x = index;
       }
       
       return {
         x,
         y: yValue,
-        xAxisCalloutData: String(xValue), // Display original value in callout
+        xAxisCalloutData: String(xValue),
         yAxisCalloutData: String(yValue),
       };
     });
     
-    console.log('LineChart points:', chartPoints.slice(0, 3)); // Log first 3 points
+    console.log('Single-line chart points:', chartPoints.slice(0, 3));
     
     return {
       data: {
         lineChartData: [{
           legend: yKey,
           data: chartPoints,
-          color: '#0067C5', // NAV blue color
+          color: '#0067C5',
           lineOptions: {
             lineBorderWidth: '2',
           },
@@ -791,6 +852,29 @@ const SQLPreview = ({
                                   legendsOverflowText="Flere"
                                   yAxisTickCount={10}
                                   width={700}
+                                  enablePerfOptimization={true}
+                                  calloutProps={{
+                                    isBeakVisible: true,
+                                  }}
+                                  onRenderCalloutPerStack={(props?: ICustomizedCalloutData) => {
+                                    if (!props || !props.values || props.values.length === 0) return null;
+                                    return (
+                                      <div style={{ padding: '8px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                        <div style={{ marginBottom: '6px', fontWeight: 'normal' }}>
+                                          {String(props.values[0].xAxisCalloutData || props.x)}
+                                        </div>
+                                        {props.values.map((point: any, index: number) => (
+                                          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center' }}>
+                                              <span style={{ width: '12px', height: '12px', backgroundColor: point.color, marginRight: '6px', borderRadius: '2px' }}></span>
+                                              <span>{point.legend}:</span>
+                                            </span>
+                                            <span style={{ fontWeight: 'bold', marginLeft: '12px' }}>{String(point.yAxisCalloutData || point.y)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  }}
                                 />
                                 <div className="mt-2 text-xs text-gray-500">
                                   Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
@@ -1234,6 +1318,29 @@ const SQLPreview = ({
                     width={Math.min(window.innerWidth * 0.8, 1400)}
                     legendsOverflowText="Flere"
                     yAxisTickCount={10}
+                    enablePerfOptimization={true}
+                    calloutProps={{
+                      isBeakVisible: true,
+                    }}
+                    onRenderCalloutPerStack={(props?: ICustomizedCalloutData) => {
+                      if (!props || !props.values || props.values.length === 0) return null;
+                      return (
+                        <div style={{ padding: '8px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                          <div style={{ marginBottom: '6px', fontWeight: 'normal' }}>
+                            {String(props.values[0].xAxisCalloutData || props.x)}
+                          </div>
+                          {props.values.map((point: any, index: number) => (
+                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ width: '12px', height: '12px', backgroundColor: point.color, marginRight: '6px', borderRadius: '2px' }}></span>
+                                <span>{point.legend}:</span>
+                              </span>
+                              <span style={{ fontWeight: 'bold', marginLeft: '12px' }}>{String(point.yAxisCalloutData || point.y)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }}
                   />
                 </div>
               );
