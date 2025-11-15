@@ -96,8 +96,8 @@ const DisplayOptions = forwardRef(({
   );
   
   const handleAddGroupField = (field: string) => {
-    // Check if user is trying to add event_name without custom events enabled
-    if (field === 'event_name' && !hasCustomEventsEnabled) {
+    // Check if user is trying to add event_name or event_type without custom events enabled
+    if ((field === 'event_name' || field === 'event_type') && !hasCustomEventsEnabled) {
       // Automatically enable custom events for the user
       if (onEnableCustomEvents) {
         onEnableCustomEvents();
@@ -232,7 +232,7 @@ const DisplayOptions = forwardRef(({
                 setEventNameWarning(false);
               }}
             >
-              <strong>Måling av egendefinerte hendelser aktivert:</strong> Du hadde kun valgt hendelsen "sidevinisnger". Vi har automatisk aktivert hendelsen "Egendefinerte hendelser" for deg, som mulligjør gruppering på hendelsesnavn.
+              <strong>Måling av egendefinerte hendelser aktivert:</strong> Du hadde kun valgt hendelsen "sidevisninger". Vi har automatisk aktivert hendelsen "Egendefinerte hendelser" for deg, som muliggjør gruppering på hendelsesnavn og hendelsestype.
             </AlertWithCloseButton>
           </div>
         )}
@@ -359,7 +359,7 @@ const DisplayOptions = forwardRef(({
                     description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
                     onChange={(e) => {
                       if (e.target.value) {
-                        addGroupByField(e.target.value);
+                        handleAddGroupField(e.target.value);
                         (e.target as HTMLSelectElement).value = '';
                       }
                     }}
