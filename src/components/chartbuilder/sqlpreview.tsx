@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs } from '@navikt/ds-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs, Switch } from '@navikt/ds-react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, Maximize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps } from '@fluentui/react-charting';
+import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
@@ -53,9 +53,9 @@ const SQLPreview = ({
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('table');
   const [showChartModal, setShowChartModal] = useState(false);
-  const [modalChartType, setModalChartType] = useState<'line' | 'bar' | null>(null);
+  const [modalChartType, setModalChartType] = useState<'line' | 'area' | 'bar' | null>(null);
 
-  const openChartModal = (chartType: 'line' | 'bar') => {
+  const openChartModal = (chartType: 'line' | 'area' | 'bar') => {
     setModalChartType(chartType);
     setShowChartModal(true);
   };
@@ -111,8 +111,12 @@ const SQLPreview = ({
           legend: yKey,
           data: chartPoints,
           color: '#0067C5', // NAV blue color
+          lineOptions: {
+            lineBorderWidth: '2',
+          },
         }],
       },
+      enabledLegendsWrapLines: true,
     };
   };
 
@@ -666,8 +670,9 @@ const SQLPreview = ({
                     <Tabs value={activeTab} onChange={setActiveTab}>
                       <Tabs.List>
                         <Tabs.Tab value="table" label="Tabell" />
-                        <Tabs.Tab value="linechart" label="Linjediagram" />
-                        <Tabs.Tab value="barchart" label="Stolpediagram" />
+                        <Tabs.Tab value="linechart" label="Linje" />
+                        <Tabs.Tab value="areachart" label="Område" />
+                        <Tabs.Tab value="barchart" label="Stolpe" />
                       </Tabs.List>
 
                       {/* Table Tab */}
@@ -744,6 +749,47 @@ const SQLPreview = ({
                                   yAxisTickCount={10}
                                   allowMultipleShapesForPoints={false}
                                   enablePerfOptimization={true}
+                                  width={700}
+                                />
+                                <div className="mt-2 text-xs text-gray-500">
+                                  Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </Tabs.Panel>
+
+                      {/* Area Chart Tab */}
+                      <Tabs.Panel value="areachart" className="pt-4">
+                        <div className="border rounded-lg bg-white p-4">
+                          {(() => {
+                            const chartData = prepareLineChartData();
+                            
+                            if (!chartData) {
+                              return (
+                                <Alert variant="info">
+                                  Kunne ikke lage områdediagram fra dataene. Trenger minst to kolonner (x-akse og y-akse).
+                                </Alert>
+                              );
+                            }
+                            return (
+                              <div>
+                                <div className="flex justify-end mb-2">
+                                  <Button
+                                    size="small"
+                                    variant="secondary"
+                                    icon={<Maximize2 size={16} />}
+                                    onClick={() => openChartModal('area')}
+                                  >
+                                    Forstørr
+                                  </Button>
+                                </div>
+                                <AreaChart
+                                  data={chartData.data}
+                                  height={400}
+                                  legendsOverflowText="Flere"
+                                  yAxisTickCount={10}
                                   width={700}
                                 />
                                 <div className="mt-2 text-xs text-gray-500">
@@ -1152,7 +1198,7 @@ const SQLPreview = ({
         onClose={() => setShowChartModal(false)}
         width="90vw"
         header={{
-          heading: modalChartType === 'line' ? 'Linjediagram' : 'Stolpediagram',
+          heading: modalChartType === 'line' ? 'Linjediagram' : modalChartType === 'area' ? 'Områdediagram' : 'Stolpediagram',
           closeButton: true,
         }}
       >
@@ -1160,7 +1206,8 @@ const SQLPreview = ({
           <div className="p-4">
             {modalChartType === 'line' && (() => {
               const chartData = prepareLineChartData();
-              if (!chartData) return null;
+              if (!chartData) return <Alert variant="info">Ingen data å vise</Alert>;
+              
               return (
                 <div className="flex justify-center overflow-x-auto">
                   <LineChart
@@ -1171,6 +1218,22 @@ const SQLPreview = ({
                     yAxisTickCount={10}
                     allowMultipleShapesForPoints={false}
                     enablePerfOptimization={true}
+                  />
+                </div>
+              );
+            })()}
+            {modalChartType === 'area' && (() => {
+              const chartData = prepareLineChartData();
+              if (!chartData) return <Alert variant="info">Ingen data å vise</Alert>;
+              
+              return (
+                <div className="flex justify-center overflow-x-auto">
+                  <AreaChart
+                    data={chartData.data}
+                    height={600}
+                    width={Math.min(window.innerWidth * 0.8, 1400)}
+                    legendsOverflowText="Flere"
+                    yAxisTickCount={10}
                   />
                 </div>
               );
