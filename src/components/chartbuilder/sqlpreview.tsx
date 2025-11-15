@@ -30,7 +30,6 @@ const SQLPreview = ({
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
   const [estimate, setEstimate] = useState<any>(null);
   const [estimating, setEstimating] = useState(false);
-  const [estimateError, setEstimateError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +43,6 @@ const SQLPreview = ({
     
     // Also run cost estimation
     setEstimating(true);
-    setEstimateError(null);
     
     try {
       const response = await fetch('/api/bigquery/estimate', {
@@ -63,7 +61,6 @@ const SQLPreview = ({
 
       setEstimate(data);
     } catch (err: any) {
-      setEstimateError(err.message || 'Kunne ikke estimere kostnad');
     } finally {
       setEstimating(false);
     }

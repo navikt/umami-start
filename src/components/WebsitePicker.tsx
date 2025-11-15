@@ -72,8 +72,6 @@ const WebsitePicker = ({
   const loadingTimerRef = useRef<number | null>(null);
   const [gbProcessed, setGbProcessed] = useState<string | null>(null);
   const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
-  const [estimatedGbCheap, setEstimatedGbCheap] = useState<string | null>(null);
-  const [estimatedGbExpensive, setEstimatedGbExpensive] = useState<string | null>(null);
   const [includeParams, setIncludeParams] = useState<boolean>(false);
   const prevIncludeParams = useRef<boolean>(false);
 
@@ -231,12 +229,6 @@ const WebsitePicker = ({
       
       if (estimatedGbValue) {
         setEstimatedGbProcessed(estimatedGbValue);
-        // Store the estimate for the current query type
-        if (includeParams) {
-          setEstimatedGbExpensive(estimatedGbValue);
-        } else {
-          setEstimatedGbCheap(estimatedGbValue);
-        }
       }
       
       console.log(`Fetched ${properties.length} event entries from the API, estimated ${estimatedGbValue} GB, actual ${gbProcessedValue} GB`);

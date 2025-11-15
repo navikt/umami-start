@@ -214,10 +214,6 @@ const DateRangePicker = forwardRef(({
   // Add state for filter applied alert
   const [showFilterApplied, setShowFilterApplied] = useState<boolean>(false);
 
-  const hasDateFilter = (): boolean => {
-    return filters.some(filter => filter.column === 'created_at');
-  };
-
   // Convert max days available to a specific date
   useEffect(() => {
     if (maxDaysAvailable) {
