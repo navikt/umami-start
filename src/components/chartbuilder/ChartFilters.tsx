@@ -48,8 +48,8 @@ const ChartFilters = forwardRef(({
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
   // Change to store array instead of single string
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(['pageviews']);
-  // Add state for selected date range - default to last 30 days
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('last30days');
+  // Add state for selected date range - default to last 7 days
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('last7days');
   // Add state to track custom events selection
   const [customEvents, setCustomEvents] = useState<string[]>([]);
   // Add state to track selected URL paths
@@ -352,11 +352,11 @@ const ChartFilters = forwardRef(({
     }
   }, []); // Empty dependency array means this runs once on mount
 
-  // Add useEffect to apply default date range (last 30 days) on mount
+  // Add useEffect to apply default date range (last 7 days) on mount
   useEffect(() => {
     if (filters.length > 0 && !filters.some(f => f.column === 'created_at')) {
-      const last30daysSQL = {
-        fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
+      const last7daysSQL = {
+        fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
         toSQL: "CURRENT_TIMESTAMP()"
       };
       
@@ -365,13 +365,13 @@ const ChartFilters = forwardRef(({
         {
           column: 'created_at',
           operator: '>=',
-          value: last30daysSQL.fromSQL,
+          value: last7daysSQL.fromSQL,
           dateRangeType: 'dynamic'
         },
         {
           column: 'created_at',
           operator: '<=',
-          value: last30daysSQL.toSQL,
+          value: last7daysSQL.toSQL,
           dateRangeType: 'dynamic'
         }
       ]);

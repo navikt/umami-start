@@ -62,15 +62,15 @@ const DATE_RANGE_SUGGESTIONS = [
 // Add dynamic date range options
 const DYNAMIC_DATE_RANGES = [
   {
-    id: 'last30days',
-    label: 'Siste 30 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
     id: 'last7days',
     label: 'Siste 7 dager',
     fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last30days',
+    label: 'Siste 30 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
     toSQL: "CURRENT_TIMESTAMP()"
   },
   {
