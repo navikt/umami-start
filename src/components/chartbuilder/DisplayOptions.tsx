@@ -6,7 +6,8 @@ import {
   DateFormat, 
   ColumnGroup,
   OrderBy,
-  Metric
+  Metric,
+  Filter
 } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton'; // Import AlertWithCloseButton
 
@@ -29,6 +30,8 @@ interface DisplayOptionsProps {
   setParamAggregation: (strategy: 'representative' | 'unique') => void;
   setLimit: (limit: number | null) => void;
   metrics: Metric[];
+  filters: Filter[];
+  onEnableCustomEvents?: () => void;
 }
 
 const DisplayOptions = forwardRef(({
@@ -48,7 +51,9 @@ const DisplayOptions = forwardRef(({
   setDateFormat,
   setParamAggregation,
   setLimit,
-  metrics
+  metrics,
+  filters,
+  onEnableCustomEvents
 }: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
@@ -58,9 +63,13 @@ const DisplayOptions = forwardRef(({
     message: ''
   });
   const [limitInput, setLimitInput] = useState<string>('');
+  const [eventNameWarning, setEventNameWarning] = useState<boolean>(false);
 
   // Add a ref to store the timeout ID
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Add a ref to store the event name warning timeout
+  const eventNameWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
@@ -80,7 +89,37 @@ const DisplayOptions = forwardRef(({
 
   const uniqueParameters = getUniqueParameters(parameters);
   
+  // Check if custom events (event_type = 2) are enabled in filters
+  const hasCustomEventsEnabled = filters.some(f => 
+    (f.column === 'event_type' && f.value === '2') ||
+    (f.column === 'event_name' && f.value && f.value !== '')
+  );
+  
   const handleAddGroupField = (field: string) => {
+    // Check if user is trying to add event_name without custom events enabled
+    if (field === 'event_name' && !hasCustomEventsEnabled) {
+      // Automatically enable custom events for the user
+      if (onEnableCustomEvents) {
+        onEnableCustomEvents();
+      }
+      
+      // Show success notification
+      setEventNameWarning(true);
+      
+      // Clear any existing timeout
+      if (eventNameWarningTimeoutRef.current) {
+        clearTimeout(eventNameWarningTimeoutRef.current);
+        eventNameWarningTimeoutRef.current = null;
+      }
+      
+      // Auto-hide notification after 20 seconds
+      eventNameWarningTimeoutRef.current = setTimeout(() => {
+        setEventNameWarning(false);
+        eventNameWarningTimeoutRef.current = null;
+      }, 20000);
+    }
+    
+    // Always add the field
     setActiveGroupings([...activeGroupings, field]);
     addGroupByField(field);
   };
@@ -133,6 +172,9 @@ const DisplayOptions = forwardRef(({
       if (alertTimeoutRef.current) {
         clearTimeout(alertTimeoutRef.current);
       }
+      if (eventNameWarningTimeoutRef.current) {
+        clearTimeout(eventNameWarningTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -174,6 +216,23 @@ const DisplayOptions = forwardRef(({
               onClose={handleAlertClose}
             >
               {alertInfo.message}
+            </AlertWithCloseButton>
+          </div>
+        )}
+        
+        {eventNameWarning && (
+          <div className="mb-4">
+            <AlertWithCloseButton 
+              variant="info"
+              onClose={() => {
+                if (eventNameWarningTimeoutRef.current) {
+                  clearTimeout(eventNameWarningTimeoutRef.current);
+                  eventNameWarningTimeoutRef.current = null;
+                }
+                setEventNameWarning(false);
+              }}
+            >
+              <strong>Måling av egendefinerte hendelser aktivert:</strong> Du hadde kun valgt hendelsen "sidevinisnger". Vi har automatisk aktivert hendelsen "Egendefinerte hendelser" for deg, som mulligjør gruppering på hendelsesnavn.
             </AlertWithCloseButton>
           </div>
         )}

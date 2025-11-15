@@ -320,7 +320,7 @@ const ChartsPage = () => {
   };
 
   // Create refs to expose reset functions from child components
-  const chartFiltersRef = useRef<{ resetFilters: (silent?: boolean) => void }>(null);
+  const chartFiltersRef = useRef<{ resetFilters: (silent?: boolean) => void; enableCustomEvents: () => void }>(null);
   const summarizeRef = useRef<{ resetConfig: (silent?: boolean) => void }>(null);
   const displayOptionsRef = useRef<{ resetOptions: (silent?: boolean) => void }>(null);
 
@@ -1520,6 +1520,12 @@ const ChartsPage = () => {
                     setParamAggregation={setParamAggregation}
                     setLimit={setLimit}
                     metrics={config.metrics}
+                    filters={filters}
+                    onEnableCustomEvents={() => {
+                      if (chartFiltersRef.current) {
+                        chartFiltersRef.current.enableCustomEvents();
+                      }
+                    }}
                   />
                 </section>
               </>

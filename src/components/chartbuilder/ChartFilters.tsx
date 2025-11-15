@@ -554,7 +554,13 @@ const ChartFilters = forwardRef(({
 
   // Expose resetFilters method through ref
   useImperativeHandle(ref, () => ({
-    resetFilters
+    resetFilters,
+    enableCustomEvents: () => {
+      // Enable custom events if not already enabled
+      if (!selectedEventTypes.includes('custom_events')) {
+        handleEventTypeChange('custom_events', true);
+      }
+    }
   }));
 
   return (
