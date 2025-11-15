@@ -14,6 +14,7 @@ interface WebsitePickerProps {
   onEventsLoad?: (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => void;
   dateRangeInDays?: number; // Add this prop to accept date range from parent
   shouldReload?: boolean;   // Add flag to force reload
+  onIncludeParamsChange?: (includeParams: boolean) => void; // Callback to notify parent of includeParams state
 }
 
 interface EventProperty {
@@ -50,7 +51,8 @@ const WebsitePicker = ({
   onWebsiteChange, 
   onEventsLoad,
   dateRangeInDays: externalDateRange, 
-  shouldReload = false                
+  shouldReload = false,
+  onIncludeParamsChange
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -68,6 +70,19 @@ const WebsitePicker = ({
   const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState<boolean>(false);
   const loadingTimerRef = useRef<number | null>(null);
+  const [gbProcessed, setGbProcessed] = useState<string | null>(null);
+  const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
+  const [estimatedGbCheap, setEstimatedGbCheap] = useState<string | null>(null);
+  const [estimatedGbExpensive, setEstimatedGbExpensive] = useState<string | null>(null);
+  const [includeParams, setIncludeParams] = useState<boolean>(false);
+  const prevIncludeParams = useRef<boolean>(false);
+
+  // Notify parent when includeParams changes
+  useEffect(() => {
+    if (onIncludeParamsChange) {
+      onIncludeParamsChange(includeParams);
+    }
+  }, [includeParams, onIncludeParamsChange]);
 
   // Function to update URL with website ID
   const updateUrlWithWebsiteId = useCallback((website: Website | null) => {
@@ -87,6 +102,8 @@ const WebsitePicker = ({
   const handleWebsiteChange = useCallback((website: Website | null) => {
     onWebsiteChange(website);
     updateUrlWithWebsiteId(website);
+    // Reset to cheap query when switching websites
+    setIncludeParams(false);
   }, [onWebsiteChange, updateUrlWithWebsiteId]);
 
   // Check for website ID in URL on initial load
@@ -161,6 +178,8 @@ const WebsitePicker = ({
     
     fetchInProgress.current[websiteId] = true;
     setError(null); // Clear any previous errors
+    setGbProcessed(null); // Clear previous GB count
+    setEstimatedGbProcessed(null); // Clear previous estimated GB
     
     try {
       // Show loading UI
@@ -192,14 +211,35 @@ const WebsitePicker = ({
       
       console.log(`Fetching data for ${daysToFetch} days from ${new Date(startAt).toLocaleDateString()} to ${new Date(endAt).toLocaleDateString()}`);
       
-      // Add timeout to properties fetch
+      // Fetch BOTH query types to get both estimates
       const propertiesResponse = await Promise.race([
-        fetch(`${apiBase}/websites/${websiteId}/event-properties?startAt=${startAt}&endAt=${endAt}`),
+        fetch(`${apiBase}/websites/${websiteId}/event-properties?startAt=${startAt}&endAt=${endAt}&includeParams=${includeParams}`),
         timeoutPromise(API_TIMEOUT_MS)
       ]);// @ts-ignore
-      const properties: EventProperty[] = await propertiesResponse.json();
+      const responseData = await propertiesResponse.json();
       
-      console.log(`Fetched ${properties.length} properties from the API`);
+      console.log('API Response:', responseData);
+      
+      // Extract properties and GB processed from response
+      const properties: EventProperty[] = responseData.properties || [];
+      const gbProcessedValue = responseData.gbProcessed;
+      const estimatedGbValue = responseData.estimatedGbProcessed;
+      
+      if (gbProcessedValue) {
+        setGbProcessed(gbProcessedValue);
+      }
+      
+      if (estimatedGbValue) {
+        setEstimatedGbProcessed(estimatedGbValue);
+        // Store the estimate for the current query type
+        if (includeParams) {
+          setEstimatedGbExpensive(estimatedGbValue);
+        } else {
+          setEstimatedGbCheap(estimatedGbValue);
+        }
+      }
+      
+      console.log(`Fetched ${properties.length} event entries from the API, estimated ${estimatedGbValue} GB, actual ${gbProcessedValue} GB`);
       
       // Process events and parameters
       const eventMap = new Map<string, string[]>();
@@ -207,7 +247,8 @@ const WebsitePicker = ({
         if (!eventMap.has(prop.eventName)) {
           eventMap.set(prop.eventName, []);
         }
-        if (!eventMap.get(prop.eventName)!.includes(prop.propertyName)) {
+        // Only add property name if it exists (when includeParams=true)
+        if (prop.propertyName && !eventMap.get(prop.eventName)!.includes(prop.propertyName)) {
           eventMap.get(prop.eventName)!.push(prop.propertyName);
         }
       });
@@ -223,7 +264,8 @@ const WebsitePicker = ({
         });
       });
       
-      console.log(`[API Source] Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+      console.log(`Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+
       
       if (onEventsLoad) {
         onEventsLoad(uniqueEventNames, paramsByEvent, totalDays);
@@ -244,7 +286,7 @@ const WebsitePicker = ({
     } finally {
       fetchInProgress.current[websiteId] = false;
     }
-  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState]);
+  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, includeParams]);
 
   useEffect(() => {
     if (websitesLoaded.current) {
@@ -297,6 +339,17 @@ const WebsitePicker = ({
         });
     }
   }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
+
+  // Reload when includeParams changes
+  useEffect(() => {
+    if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current) {
+      prevIncludeParams.current = includeParams;
+      apiCache.current[selectedWebsite.id] = {};
+      fetchEventNames(selectedWebsite.id, true, dateRangeInDays);
+    }
+  }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays]);
+
+
 
   // Combine the reload effects to avoid loops
   useEffect(() => {
@@ -354,11 +407,39 @@ const WebsitePicker = ({
             }}
             clearButton
           />
+          
+          {selectedWebsite && !includeParams && (
+            <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+              <div className="text-sm text-gray-700 mb-3">
+                Hentet alle hendelser for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}. Trenger du også hendelsesdetaljene?
+              </div>
+              <button
+                onClick={() => setIncludeParams(true)}
+                className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                Last inn hendelsesdetaljer (hvis nødvendig)
+              </button>
+            </div>
+          )}
+          
+          {selectedWebsite && includeParams && (
+            <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+              <div className="text-sm text-gray-700">
+               Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
+              </div>
+            </div>
+          )}
         </div>
         {showLoading && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span>Laster inn hendelser og detaljer...</span>
+              {estimatedGbProcessed && (
+                <span className="text-sm text-gray-600">(estimert {estimatedGbProcessed} GB)</span>
+              )}
+              {gbProcessed && (
+                <span className="text-sm text-gray-600">(faktisk {gbProcessed} GB)</span>
+              )}
             </div>
             <ProgressBar 
               size="small"

@@ -158,7 +158,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt } = req.query;
+        const { startAt, endAt, includeParams } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({ 
@@ -168,9 +168,12 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
 
         const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+        const withParams = includeParams === 'true';
+        
+        console.log(`[Event Properties] Query: ${withParams ? 'EXPENSIVE (with params)' : 'CHEAP (events only)'} - includeParams=${includeParams}`);
 
-        // Get event names with their parameters
-        const query = `
+        // Query depends on whether we need parameters or not
+        const query = withParams ? `
             SELECT 
                 e.event_name,
                 d.data_key,
@@ -192,8 +195,41 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
               AND d.data_key IS NOT NULL
             GROUP BY e.event_name, d.data_key, d.data_type
             ORDER BY e.event_name, d.data_key
+        ` : `
+            SELECT 
+                event_name,
+                COUNT(*) as total
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+            WHERE website_id = @websiteId
+              AND created_at BETWEEN @startDate AND @endDate
+              AND event_name IS NOT NULL
+            GROUP BY event_name
+            ORDER BY event_name
         `;
 
+        // Dry run to estimate bytes processed
+        let estimatedBytes = '0';
+        try {
+            const dryRunJob = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: {
+                    websiteId: websiteId,
+                    startDate: startDate,
+                    endDate: endDate
+                },
+                dryRun: true
+            });
+            
+            const [dryRunMetadata] = await dryRunJob.getMetadata();
+            estimatedBytes = dryRunMetadata.statistics?.totalBytesProcessed || '0';
+            const estimatedGb = (Number(estimatedBytes) / (1024 ** 3)).toFixed(2);
+            console.log(`[Event Properties] Estimated bytes: ${estimatedGb} GB`);
+        } catch (dryRunError) {
+            console.warn('[Event Properties] Dry run failed:', dryRunError.message);
+        }
+
+        // Actual query execution
         const [job] = await bigquery.createQueryJob({
             query: query,
             location: 'europe-north1',
@@ -206,15 +242,32 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
 
         const [rows] = await job.getQueryResults();
         
-        // Format the response to match the expected structure
-        const properties = rows.map(row => ({
-            eventName: row.event_name,
-            propertyName: row.data_key,
-            total: parseInt(row.total),
-            type: row.type
-        }));
+        // Get job statistics for bytes processed from metadata
+        const [metadata] = await job.getMetadata();
+        const bytesProcessed = metadata.statistics?.totalBytesProcessed || estimatedBytes;
+        const gbProcessed = (Number(bytesProcessed) / (1024 ** 3)).toFixed(2);
+        
+        // Format the response based on query type
+        const properties = withParams 
+            ? rows.map(row => ({
+                eventName: row.event_name,
+                propertyName: row.data_key,
+                total: parseInt(row.total),
+                type: row.type
+            }))
+            : rows.map(row => ({
+                eventName: row.event_name,
+                propertyName: null, // No parameters in simple query
+                total: parseInt(row.total),
+                type: 'string'
+            }));
 
-        res.json(properties);
+        res.json({
+            properties,
+            gbProcessed,
+            estimatedGbProcessed: (Number(estimatedBytes) / (1024 ** 3)).toFixed(2),
+            includeParams: withParams
+        });
     } catch (error) {
         console.error('BigQuery event properties error:', error);
         res.status(500).json({ 

@@ -34,6 +34,7 @@ interface EventParameterSelectorProps {
   handleDateRangeChange?: () => void;
   dateChanged?: boolean;
   isLoading?: boolean;
+  includeParams?: boolean; // Whether parameters were loaded (expensive query)
 }
 
 // Enhanced structure to maintain event-parameter relationships
@@ -65,6 +66,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   setTempDateRangeInDays = () => {},
   handleDateRangeChange = () => {},
   dateChanged = false,
+  includeParams = false, // Default to false (cheap query)
 }) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>(
     initiallySelectAll ? availableEvents : []
@@ -288,11 +290,24 @@ const getGroupedParameters = () => {
 
   // Add helper function to get total event count
   const getEventCount = () => {
+    // Count events from availableEvents first (from cheap query)
+    const cheapQueryEvents = availableEvents.filter(e => 
+      !e.toLowerCase().startsWith('pageview') && 
+      !e.includes('/')
+    );
+    
+    if (cheapQueryEvents.length > 0) {
+      return cheapQueryEvents.length;
+    }
+    
+    // Fallback to counting from parameters (for expensive query with details)
     const uniqueEvents = new Set();
     parameters.forEach(param => {
       if (param.key.includes('.')) {
         const [eventName] = param.key.split('.');
-        uniqueEvents.add(eventName);
+        if (eventName !== MANUAL_EVENT_NAME) {
+          uniqueEvents.add(eventName);
+        }
       }
     });
     return uniqueEvents.size;
@@ -408,7 +423,11 @@ const getGroupedParameters = () => {
                                 </>
                               }
                               <span className="text-sm text-gray-600">
-                                ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
+                                ({includeParams ? (
+                                  `${groupedParameters[eventName]?.length || 0} ${groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'}`
+                                ) : (
+                                  'detaljer ikke hentet'
+                                )})
                               </span>
                             </span>
                           </Accordion.Header>

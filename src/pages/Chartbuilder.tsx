@@ -248,6 +248,7 @@ const ChartsPage = () => {
   const [dateChanged, setDateChanged] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
+  const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1413,6 +1414,7 @@ const ChartsPage = () => {
                 onEventsLoad={handleEventsLoad}
                 dateRangeInDays={dateRangeInDays}
                 shouldReload={forceReload}
+                onIncludeParamsChange={setIncludeParams}
               />
             </section>
 
@@ -1430,6 +1432,7 @@ const ChartsPage = () => {
                     handleDateRangeChange={handleDateRangeChange}
                     dateChanged={dateChanged}
                     isLoading={isLoading}
+                    includeParams={includeParams}
                   />
                 </section>
 
