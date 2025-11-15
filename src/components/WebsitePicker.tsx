@@ -401,17 +401,19 @@ const WebsitePicker = ({
           />
           
           {selectedWebsite && !includeParams && (
-            <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-              <div className="text-sm text-gray-800 mb-3">
-                 Hentet alle hendelser de siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}. Trenger du også hendelsesdetaljene?
+            <div className="mt-4 p-3 bg-green-50 rounded border border-blue-600">
+              <div className="text-sm text-gray-800 mb-2">
+                 Vi henter alltid hendelser fra de siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}. Trenger du også hendelsesdetaljene?
               </div>
+              <div className="bg-white">
               <Button
                 onClick={() => setIncludeParams(true)}
-                size="small"
+                size="xsmall"
                 variant="secondary"
               >
                 Hent hendelsesdetaljer (hvis nødvendig)
               </Button>
+              </div>
             </div>
           )}
           
