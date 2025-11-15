@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon } from 'lucide-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore } from '@navikt/ds-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download } from 'lucide-react';
+import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 interface SQLPreviewProps {
@@ -294,6 +295,75 @@ const SQLPreview = ({
     setCopied(false);
   }, [sql]);
 
+  // Function to convert results to CSV
+  const downloadCSV = () => {
+    if (!result || !result.data || result.data.length === 0) return;
+
+    const headers = Object.keys(result.data[0]);
+    const csvRows = [
+      headers.join(','), // Header row
+      ...result.data.map((row: any) =>
+        headers
+          .map((header) => {
+            const value = row[header];
+            // Escape quotes and wrap in quotes if contains comma or quote
+            const stringValue = value !== null && value !== undefined ? String(value) : '';
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+              return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+          })
+          .join(',')
+      ),
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel compatibility
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `query_results_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Function to convert results to a real XLSX file
+  const downloadExcel = () => {
+    if (!result || !result.data || result.data.length === 0) return;
+
+    const headers = Object.keys(result.data[0]);
+    const worksheetData = [
+      headers,
+      ...result.data.map((row: any) =>
+        headers.map((header) => {
+          const value = row[header];
+          return value !== null && value !== undefined ? value : '';
+        })
+      ),
+    ];
+
+    const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
+    const workbook = XLSXUtils.book_new();
+    XLSXUtils.book_append_sheet(workbook, worksheet, 'Query Results');
+
+    const wbout = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `query_results_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
@@ -369,6 +439,8 @@ const SQLPreview = ({
                       Fant {result.rowCount} {result.rowCount === 1 ? 'rad' : 'rader'}
                     </Alert>*/}
                     
+        
+                    
                     <div className="border rounded-lg overflow-hidden bg-white">
                       <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -405,14 +477,39 @@ const SQLPreview = ({
                         </table>
                       </div>
                     </div>
-                    
-                    {/* Query Stats Display */}
+
+          
+                    {/* Download Options */}
+                    <ReadMore header="Last ned resultater">
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          onClick={downloadCSV}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          Last ned CSV
+                        </Button>
+                        <Button
+                          onClick={downloadExcel}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          Last ned Excel (XLSX)
+                        </Button>
+                      </div>
+  
+                    </ReadMore>
+
+                                          {/* Query Stats Display - moved above table */}
                     {queryStats && (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 text-right">
                         Data prosessert: {queryStats.totalBytesProcessedGB} GB
                         {parseFloat(queryStats.estimatedCostUSD) > 0 && ` • Kostnad: $${queryStats.estimatedCostUSD}`}
                       </div>
                     )}
+                    
                   </div>
                 )}
 
