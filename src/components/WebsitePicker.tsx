@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { UNSAFE_Combobox, Alert, ProgressBar } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Alert, ProgressBar, Button } from '@navikt/ds-react';
 
 interface Website {
   id: string;
@@ -410,22 +410,23 @@ const WebsitePicker = ({
           
           {selectedWebsite && !includeParams && (
             <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-              <div className="text-sm text-gray-700 mb-3">
-                Hentet alle hendelser for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}. Trenger du også hendelsesdetaljene?
+              <div className="text-sm text-gray-800 mb-3">
+                 Hentet alle hendelser de siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}. Trenger du også hendelsesdetaljene?
               </div>
-              <button
+              <Button
                 onClick={() => setIncludeParams(true)}
-                className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                size="small"
+                variant="secondary"
               >
-                Last inn hendelsesdetaljer (hvis nødvendig)
-              </button>
+                Hent hendelsesdetaljer (hvis nødvendig)
+              </Button>
             </div>
           )}
           
           {selectedWebsite && includeParams && (
             <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
               <div className="text-sm text-gray-700">
-               Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
+                Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
               </div>
             </div>
           )}

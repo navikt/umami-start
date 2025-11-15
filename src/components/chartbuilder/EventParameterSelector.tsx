@@ -61,11 +61,11 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   setParameters,
   initiallySelectAll = true, // Default to true to select all events initially
   // Add new props with default values
-  maxDaysAvailable = 0,
-  tempDateRangeInDays = 3,
-  setTempDateRangeInDays = () => {},
-  handleDateRangeChange = () => {},
-  dateChanged = false,
+  // maxDaysAvailable = 0,
+  // tempDateRangeInDays = 3,
+  // setTempDateRangeInDays = () => {},
+  // handleDateRangeChange = () => {},
+  // dateChanged = false,
   includeParams = false, // Default to false (cheap query)
 }) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>(
