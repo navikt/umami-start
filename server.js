@@ -12,6 +12,13 @@ const __dirname = path.dirname(__filename)
 const app = express()
 app.use(express.json())
 
+// Set server timeout to 2 minutes for BigQuery queries
+app.use((req, res, next) => {
+    req.setTimeout(120000) // 2 minutes
+    res.setTimeout(120000) // 2 minutes
+    next()
+})
+
 // Initialize BigQuery client
 let bigquery;
 try {
@@ -377,4 +384,12 @@ app.post('/api/bigquery/estimate', async (req, res) => {
 
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
-app.listen(8080, () => { console.log('Listening on port 8080') })
+const server = app.listen(8080, () => { 
+    console.log('Listening on port 8080')
+    console.log('Server timeout set to 2 minutes')
+})
+
+// Set server timeout to 2 minutes
+server.timeout = 120000
+server.keepAliveTimeout = 125000 // Slightly longer than timeout
+server.headersTimeout = 130000 // Slightly longer than keepAliveTimeout

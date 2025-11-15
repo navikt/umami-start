@@ -15,12 +15,13 @@ interface SQLPreviewProps {
   onResetAll?: () => void; // Add new prop for reset functionality
 }
 
-const API_TIMEOUT_MS = 120000; // timeout
+const API_TIMEOUT_MS = 60000; // timeout
 
 const timeoutPromise = (ms: number) => {
   return new Promise((_, reject) => {
     setTimeout(() => {
-      reject(new Error(`Request timed out after ${ms}ms`));
+      const seconds = Math.round(ms / 1000);
+      reject(new Error(`Forespørsel feilet etter å ha ventet ${seconds} sekunder`));
     }, ms);
   });
 };
@@ -44,9 +45,11 @@ const SQLPreview = ({
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<'copy' | 'estimate' | 'execute' | 'run' | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingQueryEstimate, setPendingQueryEstimate] = useState<any>(null);
   const [queryStats, setQueryStats] = useState<any>(null);
+  const [showLoadingMessage, setShowLoadingMessage] = useState(false);
 
   const handleCopy = async () => {
     navigator.clipboard.writeText(sql);
@@ -54,6 +57,7 @@ const SQLPreview = ({
     
     // Also run cost estimation
     setEstimating(true);
+    setLastAction('copy');
     
     try {
       const response = await Promise.race([
@@ -75,7 +79,8 @@ const SQLPreview = ({
 
       setEstimate(data);
     } catch (err: any) {
-      // Do not set an error here, as it's not critical
+      // Record a non-fatal error so user can retry if it was a timeout
+      setError(err.message || 'En feil oppstod');
     } finally {
       setEstimating(false);
     }
@@ -87,6 +92,7 @@ const SQLPreview = ({
     // First, estimate the cost
     setLoading(true);
     setError(null);
+    setLastAction('execute');
     
     try {
       const estimateResponse = await Promise.race([
@@ -126,7 +132,7 @@ const SQLPreview = ({
       // Proceed with the actual query for small queries
       await runQuery();
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'En feil oppstod');
       setLoading(false);
     }
   };
@@ -136,6 +142,7 @@ const SQLPreview = ({
     setError(null);
     setResult(null);
     setQueryStats(null);
+    setLastAction('run');
 
     try {
       const response = await Promise.race([
@@ -177,9 +184,59 @@ const SQLPreview = ({
         // If estimate fails, it's not critical
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'En feil oppstod');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Retry handler based on the lastAction
+  const handleRetry = async () => {
+    if (!lastAction) return;
+
+    setError(null);
+
+    if (lastAction === 'copy') {
+      // Retry the estimate used in the copy flow
+      setEstimating(true);
+      try {
+        const response = await Promise.race([
+          fetch('/api/bigquery/estimate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: sql }),
+          }),
+          timeoutPromise(API_TIMEOUT_MS),
+        ]) as Response;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Estimation failed');
+        setEstimate(data);
+      } catch (err: any) {
+        setError(err.message || 'En feil oppstod');
+      } finally {
+        setEstimating(false);
+      }
+    } else if (lastAction === 'execute') {
+      await executeQuery();
+    } else if (lastAction === 'run') {
+      await runQuery();
+    } else if (lastAction === 'estimate') {
+      // generic estimate
+      try {
+        const response = await Promise.race([
+          fetch('/api/bigquery/estimate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: sql }),
+          }),
+          timeoutPromise(API_TIMEOUT_MS),
+        ]) as Response;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Estimation failed');
+        setEstimate(data);
+      } catch (err: any) {
+        setError(err.message || 'En feil oppstod');
+      }
     }
   };
 
@@ -192,6 +249,22 @@ const SQLPreview = ({
     setShowConfirmModal(false);
     setPendingQueryEstimate(null);
   };
+
+  // Show loading message after 10 seconds
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading) {
+      setShowLoadingMessage(false);
+      timer = setTimeout(() => {
+        setShowLoadingMessage(true);
+      }, 10000);
+    } else {
+      setShowLoadingMessage(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [loading]);
 
   // Check if SQL is just a basic template without metrics or groupings
   const isBasicTemplate = () => {
@@ -410,23 +483,40 @@ const SQLPreview = ({
                 
                 {/* Only show button if no results yet */}
                 {!result && !error && (
-                  <Button
-                    onClick={executeQuery}
-                    loading={loading}
-                    icon={<PlayIcon size={18} />}
-                    variant="primary"
-                    size="medium"
-                  >
-                    Vis resultater
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      onClick={executeQuery}
+                      loading={loading}
+                      icon={<PlayIcon size={18} />}
+                      variant="primary"
+                      size="medium"
+                    >
+                      Vis resultater
+                    </Button>
+                    {loading && showLoadingMessage && (
+                      <Alert variant="info" className="text-sm">
+                        <p className="font-medium">Spørring kjører...</p>
+                        <p className="mt-1">Dette kan ta opptil 20-30 sekunder for store datasett. Vennligst vent.</p>
+                      </Alert>
+                    )}
+                  </div>
                 )}
 
                 {/* Error Display */}
                 {error && (
                   <Alert variant="error" className="mt-3">
-                    <div className="text-sm">
-                      <p className="font-medium">Feil ved kjøring</p>
-                      <p className="mt-1">{error}</p>
+                    <div className="text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <div>
+                        <p className="font-medium">Feil ved kjøring</p>
+                        <p className="mt-1">{error}</p>
+                      </div>
+                      {lastAction && (
+                        <div className="flex-shrink-0">
+                          <Button size="small" variant="primary" onClick={handleRetry}>
+                            Prøv igjen
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </Alert>
                 )}
