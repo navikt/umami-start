@@ -1331,7 +1331,7 @@ const SQLPreview = ({
           >
             <FormProgress.Step>Velg nettside eller app</FormProgress.Step>
             <FormProgress.Step>Formuler spørsmålet</FormProgress.Step>
-            <FormProgress.Step>Få svaret i Metabase</FormProgress.Step>
+            <FormProgress.Step>Vis resultater</FormProgress.Step>
           </FormProgress>
         </div>
       </div>

@@ -439,7 +439,7 @@ const getGroupedParameters = () => {
                   {/* Continue with existing Alert for no events */}
                   {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
                     <Alert variant="info" className="mt-3">
-                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 3 dagene. Juster tidsperioden under "innstillinger for hendelsesinnlasting" om nødvendig.
+                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 3 dagene.
                     </Alert>
                   )}
 
