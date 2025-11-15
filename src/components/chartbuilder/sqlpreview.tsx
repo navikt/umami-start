@@ -315,15 +315,18 @@ const SQLPreview = ({
               <div className="bg-green-50 p-4 rounded-md border border-green-100">
                 {/* <p className="mb-3">Få resultatet med en gang uten å åpne Metabase.</p>*/}
                 
-                <Button
-                  onClick={executeQuery}
-                  loading={loading}
-                  icon={<PlayIcon size={18} />}
-                  variant="primary"
-                  size="medium"
-                >
-                  Vis resultater
-                </Button>
+                {/* Only show button if no results yet */}
+                {!result && !error && (
+                  <Button
+                    onClick={executeQuery}
+                    loading={loading}
+                    icon={<PlayIcon size={18} />}
+                    variant="primary"
+                    size="medium"
+                  >
+                    Vis resultater
+                  </Button>
+                )}
 
                 {/* Error Display */}
                 {error && (
@@ -337,7 +340,7 @@ const SQLPreview = ({
 
                 {/* Results Display */}
                 {result && result.data && result.data.length > 0 && (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-2 space-y-3">
                     {/*
                     <Alert variant="success" className="text-sm">
                       Fant {result.rowCount} {result.rowCount === 1 ? 'rad' : 'rader'}
