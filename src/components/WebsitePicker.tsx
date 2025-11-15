@@ -411,6 +411,35 @@ const WebsitePicker = ({
             }}
             clearButton
           />
+          {!selectedWebsite && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm">Hurtigvalg:</span>
+              <Button
+                size="xsmall"
+                variant="secondary"
+                onClick={() => {
+                  const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
+                  if (website) {
+                    handleWebsiteChange(website);
+                  }
+                }}
+              >
+                nav.no (prod)
+              </Button>
+                            <Button
+                size="xsmall"
+                variant="secondary"
+                onClick={() => {
+                  const website = websites.find(w => w.id === 'c44a6db3-c974-4316-b433-214f87e80b4d');
+                  if (website) {
+                    handleWebsiteChange(website);
+                  }
+                }}
+              >
+                nav.no (dev)
+              </Button>
+            </div>
+          )}
           
           {selectedWebsite && !includeParams && (
             <div className="mt-4 p-3 bg-green-50 rounded border border-blue-600">
