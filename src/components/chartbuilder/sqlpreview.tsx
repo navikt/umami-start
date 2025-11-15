@@ -680,6 +680,23 @@ const SQLPreview = ({
     URL.revokeObjectURL(url);
   };
 
+  // Function to convert results to JSON
+  const downloadJSON = () => {
+    if (!result || !result.data || result.data.length === 0) return;
+
+    const jsonContent = JSON.stringify(result.data, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `query_results_${new Date().toISOString().slice(0, 10)}.json`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
@@ -1018,7 +1035,7 @@ const SQLPreview = ({
         
                     {/* Download Options */}
                     <ReadMore header="Last ned resultater">
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-2 flex-wrap">
                         <Button
                           onClick={downloadCSV}
                           variant="secondary"
@@ -1034,6 +1051,14 @@ const SQLPreview = ({
                           icon={<Download size={16} />}
                         >
                           Last ned Excel (XLSX)
+                        </Button>
+                        <Button
+                          onClick={downloadJSON}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          Last ned JSON
                         </Button>
                       </div>
   
