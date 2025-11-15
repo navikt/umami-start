@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, Maximize2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
@@ -52,13 +52,6 @@ const SQLPreview = ({
   const [queryStats, setQueryStats] = useState<any>(null);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('table');
-  const [showChartModal, setShowChartModal] = useState(false);
-  const [modalChartType, setModalChartType] = useState<'line' | 'area' | 'bar' | 'pie' | null>(null);
-
-  const openChartModal = (chartType: 'line' | 'area' | 'bar' | 'pie') => {
-    setModalChartType(chartType);
-    setShowChartModal(true);
-  };
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (): ILineChartProps | null => {
@@ -841,16 +834,6 @@ const SQLPreview = ({
                             }
                             return (
                               <div>
-                                <div className="flex justify-end mb-2">
-                                  <Button
-                                    size="small"
-                                    variant="secondary"
-                                    icon={<Maximize2 size={16} />}
-                                    onClick={() => openChartModal('line')}
-                                  >
-                                    Forstørr
-                                  </Button>
-                                </div>
                                 <LineChart
                                   data={chartData.data}
                                   height={400}
@@ -884,16 +867,6 @@ const SQLPreview = ({
                             }
                             return (
                               <div>
-                                <div className="flex justify-end mb-2">
-                                  <Button
-                                    size="small"
-                                    variant="secondary"
-                                    icon={<Maximize2 size={16} />}
-                                    onClick={() => openChartModal('area')}
-                                  >
-                                    Forstørr
-                                  </Button>
-                                </div>
                                 <AreaChart
                                   data={chartData.data}
                                   height={400}
@@ -986,16 +959,6 @@ const SQLPreview = ({
                             
                             return (
                               <div>
-                                <div className="flex justify-end mb-2">
-                                  <Button
-                                    size="small"
-                                    variant="secondary"
-                                    icon={<Maximize2 size={16} />}
-                                    onClick={() => openChartModal('pie')}
-                                  >
-                                    Forstørr
-                                  </Button>
-                                </div>
                                 <div className="flex flex-col items-center">
                                   <style>{`
                                     /* Make the labels transparent but keep them for hover functionality */
@@ -1032,7 +995,7 @@ const SQLPreview = ({
                                       chartTitle=""
                                     />
                                   </div>
-                                  <div className="mt-4 text-xs text-gray-500 text-center">
+                                  <div className="mt-4 text-base text-gray-800 text-center">
                                     <p>Viser {chartData.data.length} kategorier med prosentandeler:</p>
                                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
                                       {chartData.data.map((item, idx) => {
@@ -1392,115 +1355,6 @@ const SQLPreview = ({
             Avbryt
           </Button>
         </Modal.Footer>
-      </Modal>
-
-      {/* Chart Enlargement Modal */}
-      <Modal
-        open={showChartModal}
-        onClose={() => setShowChartModal(false)}
-        width="90vw"
-        header={{
-          heading: modalChartType === 'line' ? 'Linjediagram' : modalChartType === 'area' ? 'Områdediagram' : modalChartType === 'pie' ? 'Sirkeldiagram' : 'Stolpediagram',
-          closeButton: true,
-        }}
-      >
-        <Modal.Body>
-          <div className="p-4">
-            {modalChartType === 'line' && (() => {
-              const chartData = prepareLineChartData();
-              if (!chartData) return <Alert variant="info">Ingen data å vise</Alert>;
-              
-              return (
-                <div className="flex justify-center overflow-x-auto">
-                  <LineChart
-                    data={chartData.data}
-                    height={600}
-                    width={Math.min(window.innerWidth * 0.8, 1400)}
-                    legendsOverflowText="Flere"
-                    yAxisTickCount={10}
-                    allowMultipleShapesForPoints={false}
-                    enablePerfOptimization={true}
-                  />
-                </div>
-              );
-            })()}
-            {modalChartType === 'area' && (() => {
-              const chartData = prepareLineChartData();
-              if (!chartData) return <Alert variant="info">Ingen data å vise</Alert>;
-              
-              return (
-                <div className="flex justify-center overflow-x-auto">
-                  <AreaChart
-                    data={chartData.data}
-                    height={600}
-                    width={Math.min(window.innerWidth * 0.8, 1400)}
-                    legendsOverflowText="Flere"
-                    yAxisTickCount={10}
-                    enablePerfOptimization={true}
-                  />
-                </div>
-              );
-            })()}
-            {modalChartType === 'pie' && (() => {
-              const chartData = preparePieChartData();
-              if (!chartData) return <Alert variant="info">Ingen data å vise</Alert>;
-              
-              return (
-                <div className="flex flex-col items-center pie-modal-container">
-                  <style>{`
-                    /* Make the labels transparent but keep them for hover functionality */
-                    .pie-chart-modal-wrapper text[class*="pieLabel"],
-                    .pie-chart-modal-wrapper g[class*="arc"] text {
-                      opacity: 0 !important;
-                      pointer-events: none !important;
-                    }
-                    /* Make the pie slices hoverable */
-                    .pie-chart-modal-wrapper path {
-                      cursor: pointer !important;
-                    }
-                    /* Style ONLY pie chart modal callouts - using attribute selector for specificity */
-                    .pie-modal-container ~ .ms-Layer .ms-Callout-main,
-                    body:has(.pie-modal-container) .ms-Layer .ms-Callout-main {
-                      padding: 28px !important;
-                      background: white !important;
-                      border: 4px solid #0067C5 !important;
-                      border-radius: 10px !important;
-                      box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
-                      min-width: 350px !important;
-                    }
-                    body:has(.pie-modal-container) .ms-Layer .ms-Callout-main div {
-                      font-size: 28px !important;
-                      line-height: 2 !important;
-                      font-weight: 700 !important;
-                      color: #262626 !important;
-                    }
-                  `}</style>
-                  <div className="pie-chart-modal-wrapper">
-                    <PieChart
-                      data={chartData.data}
-                      width={Math.min(window.innerWidth * 0.8, 1000)}
-                      height={700}
-                      chartTitle=""
-                    />
-                  </div>
-                  <div className="mt-4 text-sm text-gray-600 text-center">
-                    <p className="font-semibold mb-2">Prosentandeler:</p>
-                    <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
-                      {chartData.data.map((item, idx) => {
-                        const percentage = ((item.y / chartData.total) * 100).toFixed(1);
-                        return (
-                          <span key={idx} className="text-base">
-                            {item.x}: <strong>{percentage}%</strong> ({item.y.toLocaleString('nb-NO')})
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </Modal.Body>
       </Modal>
     </>
   );
