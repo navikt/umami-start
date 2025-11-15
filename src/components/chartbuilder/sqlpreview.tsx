@@ -14,6 +14,16 @@ interface SQLPreviewProps {
   onResetAll?: () => void; // Add new prop for reset functionality
 }
 
+const API_TIMEOUT_MS = 120000; // timeout
+
+const timeoutPromise = (ms: number) => {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Request timed out after ${ms}ms`));
+    }, ms);
+  });
+};
+
 const SQLPreview = ({
   sql,
   activeStep = 1,
@@ -45,13 +55,16 @@ const SQLPreview = ({
     setEstimating(true);
     
     try {
-      const response = await fetch('/api/bigquery/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: sql }),
-      });
+      const response = await Promise.race([
+        fetch('/api/bigquery/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]) as Response;
 
       const data = await response.json();
 
@@ -61,6 +74,7 @@ const SQLPreview = ({
 
       setEstimate(data);
     } catch (err: any) {
+      // Do not set an error here, as it's not critical
     } finally {
       setEstimating(false);
     }
@@ -74,13 +88,16 @@ const SQLPreview = ({
     setError(null);
     
     try {
-      const estimateResponse = await fetch('/api/bigquery/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: sql }),
-      });
+      const estimateResponse = await Promise.race([
+        fetch('/api/bigquery/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]) as Response;
 
       const estimateData = await estimateResponse.json();
 
@@ -120,13 +137,16 @@ const SQLPreview = ({
     setQueryStats(null);
 
     try {
-      const response = await fetch('/api/bigquery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: sql }),
-      });
+      const response = await Promise.race([
+        fetch('/api/bigquery', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]) as Response;
 
       const data = await response.json();
 
@@ -138,13 +158,16 @@ const SQLPreview = ({
       
       // Also get the query stats by running estimate (it's fast and gives us the GB info)
       try {
-        const estimateResponse = await fetch('/api/bigquery/estimate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: sql }),
-        });
+        const estimateResponse = await Promise.race([
+          fetch('/api/bigquery/estimate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: sql }),
+          }),
+          timeoutPromise(API_TIMEOUT_MS)
+        ]) as Response;
         const estimateData = await estimateResponse.json();
         if (estimateResponse.ok) {
           setQueryStats(estimateData);
@@ -369,7 +392,9 @@ const SQLPreview = ({
                                     key={cellIdx}
                                     className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
                                   >
-                                    {value !== null && value !== undefined
+                                    {typeof value === 'number'
+                                      ? value.toLocaleString('nb-NO')
+                                      : value !== null && value !== undefined
                                       ? String(value)
                                       : '-'}
                                   </td>
