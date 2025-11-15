@@ -995,7 +995,7 @@ const SQLPreview = ({
                                       chartTitle=""
                                     />
                                   </div>
-                                  <div className="mt-4 text-base text-gray-800 text-center">
+                                  <div className="mt-4 text-md text-gray-800 text-center">
                                     <p>Viser {chartData.data.length} kategorier med prosentandeler:</p>
                                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
                                       {chartData.data.map((item, idx) => {
