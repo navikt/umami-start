@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs } from '@navikt/ds-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs, Search } from '@navikt/ds-react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
@@ -52,6 +52,7 @@ const SQLPreview = ({
   const [queryStats, setQueryStats] = useState<any>(null);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('table');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (): ILineChartProps | null => {
@@ -796,40 +797,103 @@ const SQLPreview = ({
 
                       {/* Table Tab */}
                       <Tabs.Panel value="table" className="pt-4">
-                        <div className="border rounded-lg overflow-hidden bg-white">
-                          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-100 sticky top-0">
-                                <tr>
-                                  {Object.keys(result.data[0]).map((key) => (
-                                    <th
-                                      key={key}
-                                      className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
-                                    >
-                                      {key}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {result.data.map((row: any, idx: number) => (
-                                  <tr key={idx} className="hover:bg-gray-50">
-                                    {Object.values(row).map((value: any, cellIdx: number) => (
-                                      <td
-                                        key={cellIdx}
-                                        className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
-                                      >
-                                        {typeof value === 'number'
-                                          ? value.toLocaleString('nb-NO')
-                                          : value !== null && value !== undefined
-                                          ? String(value)
-                                          : '-'}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                        <div className="space-y-3">
+                          <div className="border rounded-lg overflow-hidden bg-white">
+                            {/* Search Input */}
+                            <div className="p-3 bg-gray-50 border-b">
+                              <Search
+                                label="Søk i tabellen"
+                                hideLabel={false}
+                                size="small"
+                                value={searchQuery}
+                                onChange={(value) => setSearchQuery(value)}
+                                onClear={() => setSearchQuery('')}
+                                variant="simple"
+                              />
+                            </div>
+                            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                              {(() => {
+                                // Filter the data based on search query
+                                const filteredData = result.data.filter((row: any) => {
+                                  if (!searchQuery) return true;
+                                  
+                                  const query = searchQuery.toLowerCase();
+                                  return Object.values(row).some((value: any) => {
+                                    if (value === null || value === undefined) return false;
+                                    return String(value).toLowerCase().includes(query);
+                                  });
+                                });
+
+                                if (filteredData.length === 0) {
+                                  return (
+                                    <div className="p-8 text-center text-gray-500">
+                                      <p>Ingen resultater funnet for "{searchQuery}"</p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                      <thead className="bg-gray-100 sticky top-0">
+                                        <tr>
+                                          {Object.keys(result.data[0]).map((key) => (
+                                            <th
+                                              key={key}
+                                              className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                                            >
+                                              {key}
+                                            </th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody className="bg-white divide-y divide-gray-200">
+                                        {filteredData.map((row: any, idx: number) => (
+                                          <tr key={idx} className="hover:bg-gray-50">
+                                            {Object.values(row).map((value: any, cellIdx: number) => (
+                                              <td
+                                                key={cellIdx}
+                                                className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                                              >
+                                                {typeof value === 'number'
+                                                  ? value.toLocaleString('nb-NO')
+                                                  : value !== null && value !== undefined
+                                                  ? String(value)
+                                                  : '-'}
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            {/* Table Footer */}
+                            <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t">
+                              <div className="flex justify-between items-center">
+                                <span>
+                                  {searchQuery ? (
+                                    <>Viser {result.data.filter((row: any) => {
+                                      const query = searchQuery.toLowerCase();
+                                      return Object.values(row).some((value: any) => {
+                                        if (value === null || value === undefined) return false;
+                                        return String(value).toLowerCase().includes(query);
+                                      });
+                                    }).length} av {result.data.length} rader</>
+                                  ) : (
+                                    <>{result.data.length} {result.data.length === 1 ? 'rad' : 'rader'}</>
+                                  )}
+                                </span>
+                                {queryStats && (
+                                  <span>
+                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                    {parseFloat(queryStats.estimatedCostUSD) > 0 && ` • Kostnad: $${queryStats.estimatedCostUSD}`}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </Tabs.Panel>
@@ -1063,14 +1127,6 @@ const SQLPreview = ({
                       </div>
   
                     </ReadMore>
-
-                    {/* Query Stats Display */}
-                    {queryStats && (
-                      <div className="text-sm text-gray-600 text-right">
-                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                        {parseFloat(queryStats.estimatedCostUSD) > 0 && ` • Kostnad: $${queryStats.estimatedCostUSD}`}
-                      </div>
-                    )}
                     
                   </div>
                 )}
