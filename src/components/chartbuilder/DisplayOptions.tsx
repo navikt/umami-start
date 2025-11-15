@@ -57,6 +57,7 @@ const DisplayOptions = forwardRef(({
     show: false,
     message: ''
   });
+  const [limitInput, setLimitInput] = useState<string>('');
 
   // Add a ref to store the timeout ID
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,7 +93,7 @@ const DisplayOptions = forwardRef(({
     
     clearOrderBy();
     setDateFormat('day');
-    setLimit(null);
+    setLimit(1000);
     setParamAggregation('representative');
     
     setActiveGroupingsTab('basic');
@@ -142,6 +143,11 @@ const DisplayOptions = forwardRef(({
   useEffect(() => {
     setActiveGroupings(groupByFields);
   }, [groupByFields]);
+
+  // Sync limitInput with limit prop
+  useEffect(() => {
+    setLimitInput(limit?.toString() || '');
+  }, [limit]);
 
   const hasCustomParameters = uniqueParameters.length > 0;
 
@@ -492,42 +498,32 @@ const DisplayOptions = forwardRef(({
           </div>
         </div>
 
-        <div>
+        <div className="border-t pt-4">
+          <Heading level="3" size="xsmall" spacing>
+            Begrens antall rader
+          </Heading>
           <div className="flex flex-col gap-4">
-            <Switch className="-mt-1"
-              size="small"
-              checked={limit !== null}
-              onChange={() => setLimit(limit === null ? 10 : null)}
-            >
-              Begrens antall rader
-            </Switch>
-            
-            {limit !== null && (
-              <>
-              <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-                <TextField
-                  label="Maksimalt antall rader"
-                  description="F.eks. for en topp 10-liste"
-                  type="number"
-                  value={limit.toString()}
-                  onChange={(e) => {
-                    const value = e.target.value.trim();
-                    if (value === "") {
-                      setLimit(null);
-                    } else {
-                      const numValue = parseInt(value, 10);
-                      if (!isNaN(numValue) && numValue > 0) {
-                        setLimit(numValue);
-                      }
-                    }
-                  }}
-                  min="1"
-                  size="small"
-                  className="flex-grow"
-                />
-              </div>
-              </>
-            )}
+            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+              <TextField
+                label="Maksimalt antall rader"
+                description="F.eks for en topp 10 liste"
+                type="number"
+                value={limitInput}
+                onChange={(e) => setLimitInput(e.target.value)}
+                onBlur={() => {
+                  const numValue = parseInt(limitInput, 10);
+                  if (!isNaN(numValue) && numValue > 0) {
+                    setLimit(numValue);
+                  } else {
+                    setLimit(1000);
+                    setLimitInput('1000');
+                  }
+                }}
+                min="1"
+                size="small"
+                className="flex-grow"
+              />
+            </div>
           </div>
         </div>
       </div>

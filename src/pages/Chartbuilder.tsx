@@ -233,7 +233,7 @@ const ChartsPage = () => {
     orderBy: null,
     dateFormat: 'day',
     paramAggregation: 'unique',
-    limit: null
+    limit: 1000
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);
