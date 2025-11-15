@@ -338,6 +338,9 @@ const WebsitePicker = ({
         .finally(() => {
           setLoadedWebsiteId(selectedWebsite.id);
         });
+    } else if (!selectedWebsite && loadedWebsiteId) {
+      // Clear loadedWebsiteId when website is deselected/reset
+      setLoadedWebsiteId(null);
     }
   }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
 
