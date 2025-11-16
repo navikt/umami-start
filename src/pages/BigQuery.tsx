@@ -187,9 +187,9 @@ export default function BigQuery() {
             <BodyLong spacing>
                 Kjør SQL-spørringer mot Umami datasettet i BigQuery.
             </BodyLong>
-            <div className="flex flex-col md:flex-row gap-8 -mt-3">
+            <div className="flex flex-col md:flex-row gap-8 -mt-3 min-w-0">
                 {/* Main content */}
-                <div className="flex-1 space-y-6">
+                <div className="flex-1 space-y-6 min-w-0">
                     {/* Available Tables Section using ReadMore with subtitles */}
                     <ReadMore header="Tilgjengelige tabeller" size="small" className="mb-6">
                         <ul className="space-y-3">
@@ -403,7 +403,7 @@ export default function BigQuery() {
 
                 
                 {/* Aside: ResultsDisplay */}
-                <aside className="w-full md:w-[420px] lg:w-[500px] xl:w-[600px] shrink-0">
+                <aside className="w-full md:w-[420px] lg:w-[500px] xl:w-[600px] md:min-w-0 flex-shrink">
                     <ResultsDisplay
                         result={result}
                         loading={loading}
