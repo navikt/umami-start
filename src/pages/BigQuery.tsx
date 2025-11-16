@@ -353,8 +353,8 @@ export default function BigQuery() {
                             </button>
                             <div className="space-y-2">
                                 <BodyLong>
-                                    <strong>Data å prossesere:</strong> {estimate.totalBytesProcessedMB} MB 
-                                    {parseFloat(estimate.totalBytesProcessedGB) >= 0.01 && ` (${estimate.totalBytesProcessedGB} GB)`}
+                                    <strong>Data å prossesere:</strong>
+                                    {parseFloat(estimate.totalBytesProcessedGB) >= 0.01 && ` ${estimate.totalBytesProcessedGB} GB`}
                                 </BodyLong>
                                 {parseFloat(estimate.estimatedCostUSD) > 0 && (
                                     <BodyLong>
