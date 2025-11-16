@@ -17,6 +17,8 @@ LIMIT
 // Alternative query to list datasets if the above doesn't work:
 // SELECT schema_name FROM \`team-researchops-prod-01d6.INFORMATION_SCHEMA.SCHEMATA\`
 export default function BigQuery() {
+    // State for editor height (for resizable editor)
+    const [editorHeight, setEditorHeight] = useState(400);
     // Initialize state with empty string to avoid showing default until we check URL
     const [query, setQuery] = useState('');
     const [validateError, setValidateError] = useState<string | null>(null);
@@ -252,9 +254,17 @@ export default function BigQuery() {
                     {/* Query Input */}
                     <div>
                         <label className="block font-medium mb-2" htmlFor="sql-editor">SQL-spørring</label>
-                        <div className="border rounded" style={{ position: 'relative', isolation: 'isolate' }}>
+                        <div
+                            className="border rounded resize-y overflow-auto"
+                            style={{ position: 'relative', isolation: 'isolate', minHeight: 100, maxHeight: 800, height: editorHeight }}
+                            onMouseUp={e => {
+                                // On mouse up, update the editor height to the container's height
+                                const target = e.currentTarget as HTMLDivElement;
+                                setEditorHeight(target.offsetHeight);
+                            }}
+                        >
                             <Editor
-                                height="400px"
+                                height={editorHeight}
                                 defaultLanguage="sql"
                                 value={query}
                                 onChange={(value) => handleQueryChange(value || '')}
