@@ -57,6 +57,7 @@ const DisplayOptions = forwardRef(({
 }: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
+  const [showCustomLimit, setShowCustomLimit] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
     show: false,
@@ -554,35 +555,47 @@ const DisplayOptions = forwardRef(({
               </div>
               </>
             )}
-          </div>
-        </div>
 
-        <div className="border-t pt-4">
-          <Heading level="3" size="xsmall" spacing>
-            Begrens antall rader
-          </Heading>
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
-              <TextField
-                label="Maksimalt antall rader"
-                description="F.eks for en topp 10 liste"
-                type="number"
-                value={limitInput}
-                onChange={(e) => setLimitInput(e.target.value)}
-                onBlur={() => {
-                  const numValue = parseInt(limitInput, 10);
-                  if (!isNaN(numValue) && numValue > 0) {
-                    setLimit(numValue);
-                  } else {
-                    setLimit(1000);
-                    setLimitInput('1000');
-                  }
-                }}
-                min="1"
-                size="small"
-                className="flex-grow"
-              />
-            </div>
+            <Switch 
+              className="mt-1"
+              size="small"
+              description={limit && limit !== 1000
+                ? `Begrenser til ${limit} rader`
+                : 'F.eks. for en topp 10-liste (standard: 1000 rader).'}
+              checked={showCustomLimit}
+              onChange={(e) => {
+                setShowCustomLimit(e.target.checked);
+                if (!e.target.checked) {
+                  setLimit(1000);
+                  setLimitInput('1000');
+                }
+              }}
+            >
+              Begrens antall rader
+            </Switch>
+
+            {showCustomLimit && (
+              <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+                <TextField
+                  label="Maksimalt antall rader"
+                  type="number"
+                  value={limitInput}
+                  onChange={(e) => setLimitInput(e.target.value)}
+                  onBlur={() => {
+                    const numValue = parseInt(limitInput, 10);
+                    if (!isNaN(numValue) && numValue > 0) {
+                      setLimit(numValue);
+                    } else {
+                      setLimit(1000);
+                      setLimitInput('1000');
+                    }
+                  }}
+                  min="1"
+                  size="small"
+                  className="flex-grow"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
