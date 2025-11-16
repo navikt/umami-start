@@ -452,7 +452,7 @@ const WebsitePicker = ({
                 size="xsmall"
                 variant="secondary"
               >
-                Hent hendelsesdetaljer (hvis nødvendig)
+                Hent hendelsesdetaljer (kun ved behov)
               </Button>
               </div>
             </div>
