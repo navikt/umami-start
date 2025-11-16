@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs, Search } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
@@ -54,6 +54,8 @@ const SQLPreview = ({
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
@@ -698,7 +700,21 @@ const SQLPreview = ({
     setError(null);
     setEstimate(null);
     setCopied(false);
+    setSortColumn(null);
+    setSortDirection('asc');
   }, [sql]);
+
+  // Handler for sorting
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
 
   // Function to convert results to CSV
   const downloadCSV = () => {
@@ -950,7 +966,34 @@ const SQLPreview = ({
                                   });
                                 });
 
-                                if (filteredData.length === 0) {
+                                // Sort the filtered data
+                                const sortedData = sortColumn 
+                                  ? [...filteredData].sort((a: any, b: any) => {
+                                      const aVal = a[sortColumn];
+                                      const bVal = b[sortColumn];
+                                      
+                                      // Handle null/undefined values
+                                      if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1;
+                                      if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1;
+                                      
+                                      // Numeric comparison
+                                      if (typeof aVal === 'number' && typeof bVal === 'number') {
+                                        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+                                      }
+                                      
+                                      // String comparison
+                                      const aStr = String(aVal).toLowerCase();
+                                      const bStr = String(bVal).toLowerCase();
+                                      
+                                      if (sortDirection === 'asc') {
+                                        return aStr.localeCompare(bStr, 'nb-NO');
+                                      } else {
+                                        return bStr.localeCompare(aStr, 'nb-NO');
+                                      }
+                                    })
+                                  : filteredData;
+
+                                if (sortedData.length === 0) {
                                   return (
                                     <div className="p-8 text-center text-gray-500">
                                       <p>Ingen resultater funnet for "{searchQuery}"</p>
@@ -966,15 +1009,27 @@ const SQLPreview = ({
                                           {Object.keys(result.data[0]).map((key) => (
                                             <th
                                               key={key}
-                                              className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                                              className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                              onClick={() => handleSort(key)}
                                             >
-                                              {key}
+                                              <div className="flex items-center gap-1">
+                                                <span>{key}</span>
+                                                {sortColumn === key ? (
+                                                  sortDirection === 'asc' ? (
+                                                    <ArrowUp size={14} className="text-blue-600" />
+                                                  ) : (
+                                                    <ArrowDown size={14} className="text-blue-600" />
+                                                  )
+                                                ) : (
+                                                  <ArrowUpDown size={14} className="text-gray-400" />
+                                                )}
+                                              </div>
                                             </th>
                                           ))}
                                         </tr>
                                       </thead>
                                       <tbody className="bg-white divide-y divide-gray-200">
-                                        {filteredData.map((row: any, idx: number) => {
+                                        {sortedData.map((row: any, idx: number) => {
                                           const keys = Object.keys(row);
                                           return (
                                             <tr key={idx} className="hover:bg-gray-50">
