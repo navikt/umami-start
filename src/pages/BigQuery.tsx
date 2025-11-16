@@ -1,10 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
 import { Button, Alert, Heading, BodyLong } from '@navikt/ds-react';
-import Editor from 'react-simple-code-editor';
-// import { highlight, languages } from 'prismjs';
-// import 'prismjs/components/prism-sql';
-import 'prismjs/themes/prism.css';
+import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
@@ -18,7 +15,8 @@ LIMIT 100`;
 // Alternative query to list datasets if the above doesn't work:
 // SELECT schema_name FROM \`team-researchops-prod-01d6.INFORMATION_SCHEMA.SCHEMATA\`
 export default function BigQuery() {
-    const [query, setQuery] = useState(defaultQuery);
+    // Initialize state with empty string to avoid showing default until we check URL
+    const [query, setQuery] = useState('');
     const [validateError, setValidateError] = useState<string | null>(null);
         const [showValidation, setShowValidation] = useState(false);
     const [result, setResult] = useState<any>(null);
@@ -27,10 +25,38 @@ export default function BigQuery() {
     const [estimating, setEstimating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showEstimate, setShowEstimate] = useState(true);
+    const [shareSuccess, setShareSuccess] = useState(false);
+
+    // Check for SQL in URL params on mount
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sqlParam = urlParams.get('sql');
+        
+        console.log('URL search params:', window.location.search);
+        console.log('SQL param:', sqlParam);
+        
+        if (sqlParam) {
+            try {
+                // URL params are already decoded by URLSearchParams
+                console.log('Setting query to:', sqlParam);
+                setQuery(sqlParam);
+            } catch (e) {
+                console.error('Failed to set SQL parameter:', e);
+                setQuery(defaultQuery);
+            }
+        } else {
+            // No SQL param, use default
+            setQuery(defaultQuery);
+        }
+    }, []);
 
     const estimateCost = async () => {
         setEstimating(true);
         setError(null);
+
+        // Update URL with current query
+        const encodedSql = encodeURIComponent(query);
+        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
 
         try {
             const response = await fetch('/api/bigquery/estimate', {
@@ -60,6 +86,10 @@ export default function BigQuery() {
         setError(null);
         setResult(null);
 
+        // Update URL with current query
+        const encodedSql = encodeURIComponent(query);
+        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+
         try {
             const response = await fetch('/api/bigquery', {
                 method: 'POST',
@@ -85,6 +115,10 @@ export default function BigQuery() {
 
     // Simple SQL validation: check for empty input and basic SELECT/statement
     const validateSQL = () => {
+        // Update URL with current query
+        const encodedSql = encodeURIComponent(query);
+        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+
         if (!query.trim()) {
             setValidateError('SQL kan ikke være tom.');
             setShowValidation(true);
@@ -111,6 +145,10 @@ export default function BigQuery() {
     };
 
     const formatSQL = () => {
+        // Update URL with current query
+        const encodedSql = encodeURIComponent(query);
+        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+
         try {
             const formatted = sqlFormatter.format(query);
             setQuery(formatted);
@@ -118,6 +156,14 @@ export default function BigQuery() {
             setValidateError('Kunne ikke formatere SQL. Sjekk om den er gyldig.');
             setShowValidation(true);
         }
+    };
+
+    const shareQuery = () => {
+        const encodedSql = encodeURIComponent(query);
+        const shareUrl = `${window.location.origin}/sql?sql=${encodedSql}`;
+        navigator.clipboard.writeText(shareUrl);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
     };
 
     // Clear validation message on edit
@@ -201,50 +247,39 @@ export default function BigQuery() {
                     {/* Query Input */}
                     <div>
                         <label className="block font-medium mb-2" htmlFor="sql-editor">SQL-spørring</label>
-                        <div className="relative border rounded bg-[#23272e] focus-within:ring-2 focus-within:ring-blue-500" style={{ fontFamily: 'Menlo, Monaco, "Fira Mono", monospace' }}>
-                            <div style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                width: 36,
-                                background: '#23272e',
-                                color: '#888',
-                                textAlign: 'right',
-                                padding: '12px 4px',
-                                fontSize: 15,
-                                lineHeight: '1.5',
-                                userSelect: 'none',
-                                zIndex: 2,
-                                pointerEvents: 'none',
-                            }}>
-                                {query.split('\n').map((_, i) => (
-                                    <div key={i} style={{ height: 22.5, lineHeight: '22.5px' }}>{i + 1}</div>
-                                ))}
-                            </div>
+                        <div className="border rounded" style={{ position: 'relative', isolation: 'isolate' }}>
                             <Editor
-                                id="sql-editor"
+                                height="400px"
+                                defaultLanguage="sql"
                                 value={query}
-                                onValueChange={handleQueryChange}
-                                highlight={code => code}
-                                padding={12}
-                                style={{
-                                    fontFamily: 'Menlo, Monaco, "Fira Mono", monospace',
-                                    fontSize: 15,
-                                    minHeight: 180,
-                                    background: '#23272e',
-                                    color: '#f8f8f2',
-                                    border: 'none',
-                                    outline: 'none',
-                                    marginLeft: 36,
-                                    width: 'calc(100% - 36px)',
-                                    resize: 'vertical',
+                                onChange={(value) => handleQueryChange(value || '')}
+                                theme="vs-dark"
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 14,
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    tabSize: 2,
+                                    wordWrap: 'on',
+                                    fixedOverflowWidgets: true,
+                                    stickyScroll: { enabled: false },
+                                    lineNumbersMinChars: 4,
+                                    glyphMargin: false,
                                 }}
                             />
                         </div>
                         <div className="flex gap-2 mt-2 mb-4">
                             <Button size="small" variant="secondary" type="button" onClick={formatSQL}>Formater SQL</Button>
                             <Button size="small" variant="secondary" type="button" onClick={validateSQL}>Valider SQL</Button>
+                            <Button 
+                                size="small" 
+                                variant="secondary" 
+                                type="button" 
+                                onClick={shareQuery}
+                            >
+                                {shareSuccess ? 'Lenke kopiert!' : 'Del spørring'}
+                            </Button>
                         </div>
                         {showValidation && validateError && (
                             <div
