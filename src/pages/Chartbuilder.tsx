@@ -1546,7 +1546,7 @@ const ChartsPage = () => {
           </div>
         </div>
 
-        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start h-[calc(100vh-2rem)]">
+        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)]">
           <div className="overflow-y-auto h-full">
             <SQLPreview 
               sql={generatedSQL} 
