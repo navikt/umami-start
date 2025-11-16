@@ -1047,7 +1047,7 @@ const SQLPreview = ({
                               );
                             }
                             return (
-                              <div>
+                              <div style={{ overflow: 'visible' }}>
                                 <LineChart
                                   data={chartData.data}
                                   height={400}
@@ -1056,6 +1056,7 @@ const SQLPreview = ({
                                   allowMultipleShapesForPoints={false}
                                   enablePerfOptimization={true}
                                   width={700}
+                                  margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
                                 />
                                 <div className="mt-2 text-xs text-gray-500">
                                   Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
@@ -1080,7 +1081,7 @@ const SQLPreview = ({
                               );
                             }
                             return (
-                              <div>
+                              <div style={{ overflow: 'visible' }}>
                                 <AreaChart
                                   data={chartData.data}
                                   height={400}
@@ -1088,6 +1089,7 @@ const SQLPreview = ({
                                   yAxisTickCount={10}
                                   width={700}
                                   enablePerfOptimization={true}
+                                  margins={{ left: 50, right: 50, top: 20, bottom: 35 }}
                                 />
                                 <div className="mt-2 text-xs text-gray-500">
                                   Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
@@ -1123,7 +1125,7 @@ const SQLPreview = ({
                             }
                             return (
                               <div className="w-full">
-                                <div className="overflow-y-auto max-h-[500px]">
+                                <div className="overflow-y-auto max-h-[500px]" style={{ overflow: 'visible' }}>
                                   <style>{`
                                     .bar-chart-hide-xaxis .ms-Chart-xAxis text,
                                     .bar-chart-hide-xaxis g[class*="xAxis"] text {
@@ -1135,6 +1137,7 @@ const SQLPreview = ({
                                       data={chartData.data}
                                       barWidth={chartData.barWidth}
                                       yAxisTickCount={chartData.yAxisTickCount}
+                                      margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
                                     />
                                   </div>
                                 </div>
