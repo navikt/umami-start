@@ -7,10 +7,12 @@ import { PlayIcon } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
 
 const defaultQuery = `SELECT 
-  website_id, 
-  name 
-FROM \`team-researchops-prod-01d6.umami.public_website\`
-LIMIT 100`;
+  website_id,
+  name
+FROM 
+  \`team-researchops-prod-01d6.umami.public_website\`
+LIMIT 
+  100;`;
 
 // Alternative query to list datasets if the above doesn't work:
 // SELECT schema_name FROM \`team-researchops-prod-01d6.INFORMATION_SCHEMA.SCHEMATA\`
