@@ -554,7 +554,7 @@ const getGroupedParameters = () => {
                      Standard hendelser og detaljer
                   </Heading>
                   <p className="text-md text-gray-700 mb-4">
-                    Sidevisninger og besøk spores automatisk, med mindre det har blitt skrudd av.
+                    Sidevisninger og besøk spores automatisk, hvis ikke deaktivert.
                   </p>
           
                   <ExpansionCard aria-label="Standarddetaljer som følger med hendelser" size="small">
