@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -38,6 +38,11 @@ const ResultsDisplay = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showAverage, setShowAverage] = useState<boolean>(false);
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
+
+  // Reset isPercentageStacked when result or searchQuery changes
+  useEffect(() => {
+    setIsPercentageStacked(false);
+  }, [result, searchQuery]);
 
   // Handler for sorting
   const handleSort = (column: string) => {
