@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
-import { Button, Textarea, Alert, Heading, BodyLong } from '@navikt/ds-react';
+import { Button, Alert, Heading, BodyLong, ExpansionCard } from '@navikt/ds-react';
+import Editor from 'react-simple-code-editor';
+// import { highlight, languages } from 'prismjs';
+// import 'prismjs/components/prism-sql';
+import 'prismjs/themes/prism.css';
+import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon } from 'lucide-react';
 
 const defaultQuery = `SELECT 
@@ -13,6 +18,8 @@ LIMIT 100`;
 // SELECT schema_name FROM \`team-researchops-prod-01d6.INFORMATION_SCHEMA.SCHEMATA\`
 export default function BigQuery() {
     const [query, setQuery] = useState(defaultQuery);
+    const [validateError, setValidateError] = useState<string | null>(null);
+        const [showValidation, setShowValidation] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [estimate, setEstimate] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -74,6 +81,49 @@ export default function BigQuery() {
         }
     };
 
+    // Simple SQL validation: check for empty input and basic SELECT/statement
+    const validateSQL = () => {
+        if (!query.trim()) {
+            setValidateError('SQL kan ikke være tom.');
+            setShowValidation(true);
+            return false;
+        }
+        // Basic check for SQL command
+        const valid = /\b(SELECT|INSERT|UPDATE|DELETE|WITH|CREATE|DROP|ALTER|SHOW|DESCRIBE)\b/i.test(query);
+        if (!valid) {
+            setValidateError('SQL må inneholde en gyldig kommando (f.eks. SELECT, INSERT, ...).');
+            setShowValidation(true);
+            return false;
+        }
+        // Try formatting to catch syntax errors
+        try {
+            sqlFormatter.format(query);
+            setValidateError('SQL er gyldig!');
+            setShowValidation(true);
+            return true;
+        } catch (e: any) {
+            setValidateError('Ugyldig SQL: ' + (e.message || 'Syntaksfeil'));
+            setShowValidation(true);
+            return false;
+        }
+    };
+
+    const formatSQL = () => {
+        try {
+            const formatted = sqlFormatter.format(query);
+            setQuery(formatted);
+        } catch (e) {
+            setValidateError('Kunne ikke formatere SQL. Sjekk om den er gyldig.');
+            setShowValidation(true);
+        }
+    };
+
+    // Clear validation message on edit
+    const handleQueryChange = (val: string) => {
+        setQuery(val);
+        setShowValidation(false);
+    };
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
             <Heading level="1" size="large" spacing>
@@ -87,22 +137,82 @@ export default function BigQuery() {
                 <div className="flex-1 space-y-6">
                     {/* Query Input */}
                     <div>
-                        <Textarea
-                            label="SQL Query"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            minRows={8}
-                        />
+                        <label className="block font-medium mb-2" htmlFor="sql-editor">SQL Query</label>
+                        <div className="relative border rounded bg-[#23272e] focus-within:ring-2 focus-within:ring-blue-500" style={{ fontFamily: 'Menlo, Monaco, "Fira Mono", monospace' }}>
+                            <div style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: 36,
+                                background: '#23272e',
+                                color: '#888',
+                                textAlign: 'right',
+                                padding: '12px 4px',
+                                fontSize: 15,
+                                lineHeight: '1.5',
+                                userSelect: 'none',
+                                zIndex: 2,
+                                pointerEvents: 'none',
+                            }}>
+                                {query.split('\n').map((_, i) => (
+                                    <div key={i} style={{ height: 22.5, lineHeight: '22.5px' }}>{i + 1}</div>
+                                ))}
+                            </div>
+                            <Editor
+                                id="sql-editor"
+                                value={query}
+                                onValueChange={handleQueryChange}
+                                highlight={code => code}
+                                padding={12}
+                                style={{
+                                    fontFamily: 'Menlo, Monaco, "Fira Mono", monospace',
+                                    fontSize: 15,
+                                    minHeight: 180,
+                                    background: '#23272e',
+                                    color: '#f8f8f2',
+                                    border: 'none',
+                                    outline: 'none',
+                                    marginLeft: 36,
+                                    width: 'calc(100% - 36px)',
+                                    resize: 'vertical',
+                                }}
+                            />
+                        </div>
+                        <div className="flex gap-2 mt-2 mb-4">
+                            <Button size="small" variant="secondary" type="button" onClick={formatSQL}>Formater SQL</Button>
+                            <Button size="small" variant="secondary" type="button" onClick={validateSQL}>Valider SQL</Button>
+                        </div>
+                        {showValidation && validateError && (
+                            <div
+                                className={`relative rounded px-4 py-3 mb-2 ${validateError === 'SQL er gyldig!' ? 'bg-green-100 border border-green-400 text-green-800' : 'bg-red-100 border border-red-400 text-red-800'}`}
+                                style={{ fontFamily: 'Menlo, Monaco, "Fira Mono", monospace', fontSize: 14, minHeight: 36 }}
+                            >
+                                <span>{validateError}</span>
+                                <button
+                                    type="button"
+                                    aria-label="Lukk"
+                                    onClick={() => setShowValidation(false)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: 8,
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'inherit',
+                                        fontWeight: 'bold',
+                                        fontSize: 18,
+                                        cursor: 'pointer',
+                                        lineHeight: 1,
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
                     </div>
                     {/* Submit Button */}
                     <div className="flex gap-4">
-                        <Button
-                            onClick={estimateCost}
-                            loading={estimating}
-                            variant="secondary"
-                        >
-                            Estimer kostnad
-                        </Button>
                         <Button
                             onClick={executeQuery}
                             loading={loading}
@@ -111,13 +221,17 @@ export default function BigQuery() {
                         >
                             Vis resultater
                         </Button>
+                                                <Button
+                            onClick={estimateCost}
+                            loading={estimating}
+                            variant="secondary"
+                        >
+                            Estimer kostnad
+                        </Button>
                     </div>
                     {/* Cost Estimate Display */}
                     {estimate && (
                         <Alert variant="info">
-                            <Heading level="3" size="small" spacing>
-                                Kostnadsestimator
-                            </Heading>
                             <div className="space-y-2">
                                 <BodyLong>
                                     <strong>Data å prossesere:</strong> {estimate.totalBytesProcessedMB} MB 
@@ -145,7 +259,16 @@ export default function BigQuery() {
                             <BodyLong>{error}</BodyLong>
                         </Alert>
                     )}
+
+                        {result && (
+                            <details className="mt-2 mb-4 bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" open>
+                                <summary className="cursor-pointer font-semibold mb-2">Raw JSON</summary>
+                                <pre style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
+                            </details>
+                        )}
                 </div>
+
+                
                 {/* Aside: ResultsDisplay */}
                 <aside className="w-full md:w-[420px] lg:w-[500px] xl:w-[600px] shrink-0">
                     <ResultsDisplay

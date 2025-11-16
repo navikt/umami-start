@@ -337,11 +337,19 @@ const ResultsDisplay = ({
                                             key={cellIdx}
                                             className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
                                           >
-                                            {typeof translatedValue === 'number'
-                                              ? translatedValue.toLocaleString('nb-NO')
-                                              : translatedValue !== null && translatedValue !== undefined
-                                              ? String(translatedValue)
-                                              : '-'}
+                      {typeof translatedValue === 'number'
+                        ? translatedValue.toLocaleString('nb-NO')
+                        : translatedValue !== null && translatedValue !== undefined
+                        ? (typeof translatedValue === 'object'
+                          ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
+                            ? translatedValue.toISOString()
+                            : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
+                              ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
+                                ? new Date(translatedValue.value).toISOString()
+                                : String(translatedValue.value))
+                              : JSON.stringify(translatedValue)))
+                          : String(translatedValue))
+                        : '-'}
                                           </td>
                                         );
                                       })}
