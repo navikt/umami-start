@@ -431,9 +431,8 @@ const getGroupedParameters = () => {
                   </Heading>
 
                   {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <List as="ul" size="small" className="text-gray-700 pb-5">
+                    <List as="ul" size="small" className="text-gray-700 pb-1">
                       <List.Item>Vi henter alltid hendelser fra de siste 2 ukene.</List.Item>
-                      <List.Item>Detaljer kan lastes inn ved behov (under boksen du er i nå).</List.Item>
                       <List.Item>Detaljer er forhåndsatt som tekst. Du kan endre til tall ved behov.</List.Item>
                     </List>
                   )}
@@ -443,6 +442,23 @@ const getGroupedParameters = () => {
                     <Alert variant="info" className="mt-3">
                       Ingen egendefinerte hendelser eller detaljer funnet for de siste 2 ukene.
                     </Alert>
+                  )}
+
+                  {!includeParams && onLoadDetailsClick && (
+                    <div className="mb-6">
+                      <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
+                        <div className="text-sm text-gray-800 mb-3">
+                          Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
+                        </div>
+                        <Button
+                          onClick={onLoadDetailsClick}
+                          size="xsmall"
+                          variant="secondary"
+                        >
+                          Hent hendelsesdetaljer
+                        </Button>
+                      </ReadMore>
+                    </div>
                   )}
 
                   {/* Search field for filtering events and parameters */}
