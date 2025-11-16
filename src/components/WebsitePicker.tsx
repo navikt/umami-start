@@ -16,6 +16,7 @@ interface WebsitePickerProps {
   shouldReload?: boolean;   // Add flag to force reload
   onIncludeParamsChange?: (includeParams: boolean) => void; // Callback to notify parent of includeParams state
   resetIncludeParams?: boolean; // Add flag to reset includeParams
+  requestIncludeParams?: boolean; // Add flag to request loading params
 }
 
 interface EventProperty {
@@ -54,7 +55,8 @@ const WebsitePicker = ({
   dateRangeInDays: externalDateRange, 
   shouldReload = false,
   onIncludeParamsChange,
-  resetIncludeParams = false
+  resetIncludeParams = false,
+  requestIncludeParams = false
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -83,6 +85,13 @@ const WebsitePicker = ({
       setIncludeParams(false);
     }
   }, [resetIncludeParams]);
+
+  // Set includeParams when requestIncludeParams prop changes to true
+  useEffect(() => {
+    if (requestIncludeParams && !includeParams) {
+      setIncludeParams(true);
+    }
+  }, [requestIncludeParams, includeParams]);
 
   // Notify parent when includeParams changes
   useEffect(() => {
@@ -441,23 +450,6 @@ const WebsitePicker = ({
             </div>
           )}
           
-          {selectedWebsite && !includeParams && (
-            <div className="mt-4 p-3 bg-green-50 rounded border border-blue-600">
-              <div className="text-sm text-gray-800 mb-2">
-                 Vi henter alltid hendelser fra de siste 2 ukene. Trenger du også hendelsesdetaljene?
-              </div>
-              <div className="bg-white">
-              <Button
-                onClick={() => setIncludeParams(true)}
-                size="xsmall"
-                variant="secondary"
-              >
-                Hent hendelsesdetaljer (kun ved behov)
-              </Button>
-              </div>
-            </div>
-          )}
-          
           {selectedWebsite && includeParams && (
             <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
               <div className="text-sm text-gray-700">
@@ -469,7 +461,7 @@ const WebsitePicker = ({
         {showLoading && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span>Laster inn hendelser og detaljer...</span>
+              <span>Laster inn hendelser...</span>
               {estimatedGbProcessed && (
                 <span className="text-sm text-gray-600">(estimert {estimatedGbProcessed} GB)</span>
               )}

@@ -250,6 +250,7 @@ const ChartsPage = () => {
   const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
   const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
+  const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false); // Add state to request loading params
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1444,6 +1445,7 @@ const ChartsPage = () => {
                 shouldReload={forceReload}
                 onIncludeParamsChange={setIncludeParams}
                 resetIncludeParams={resetIncludeParams}
+                requestIncludeParams={requestIncludeParams}
               />
             </section>
 
@@ -1462,6 +1464,7 @@ const ChartsPage = () => {
                     dateChanged={dateChanged}
                     isLoading={isLoading}
                     includeParams={includeParams}
+                    onLoadDetailsClick={() => setRequestIncludeParams(true)}
                   />
                 </section>
 
