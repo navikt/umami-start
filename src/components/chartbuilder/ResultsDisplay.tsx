@@ -254,11 +254,13 @@ const ResultsDisplay = ({
                         // Filter the data based on search query
                         const filteredData = result.data.filter((row: any) => {
                           if (!searchQuery) return true;
-                          
                           const query = searchQuery.toLowerCase();
-                          return Object.values(row).some((value: any) => {
+                          return Object.keys(row).some((key) => {
+                            const value = row[key];
                             if (value === null || value === undefined) return false;
-                            return String(value).toLowerCase().includes(query);
+                            // Use translated value for search
+                            const translatedValue = translateValue(key, value);
+                            return String(translatedValue).toLowerCase().includes(query);
                           });
                         });
 
