@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs, Search } from '@navikt/ds-react';
+import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal, ReadMore, Tabs, Search, Switch } from '@navikt/ds-react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
@@ -56,6 +56,7 @@ const SQLPreview = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showAverage, setShowAverage] = useState<boolean>(false);
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
@@ -1090,7 +1091,7 @@ const SQLPreview = ({
                       <Tabs.Panel value="linechart" className="pt-4">
                         <div className="border rounded-lg bg-white p-4">
                           {(() => {
-                            const chartData = prepareLineChartData();
+                            const chartData = prepareLineChartData(showAverage);
                             console.log('Line Chart Data:', chartData);
                             console.log('Raw Result Data:', result.data);
                             
@@ -1103,6 +1104,15 @@ const SQLPreview = ({
                             }
                             return (
                               <div style={{ overflow: 'visible' }}>
+                                <div className="mb-3">
+                                  <Switch
+                                    checked={showAverage}
+                                    onChange={(e) => setShowAverage(e.target.checked)}
+                                    size="small"
+                                  >
+                                    Vis gjennomsnitt
+                                  </Switch>
+                                </div>
                                 <LineChart
                                   data={chartData.data}
                                   height={400}
@@ -1126,7 +1136,7 @@ const SQLPreview = ({
                       <Tabs.Panel value="areachart" className="pt-4">
                         <div className="border rounded-lg bg-white p-4">
                           {(() => {
-                            const chartData = prepareLineChartData(false);
+                            const chartData = prepareLineChartData(showAverage);
                             
                             if (!chartData) {
                               return (
@@ -1137,6 +1147,15 @@ const SQLPreview = ({
                             }
                             return (
                               <div style={{ overflow: 'visible' }}>
+                                <div className="mb-3">
+                                  <Switch
+                                    checked={showAverage}
+                                    onChange={(e) => setShowAverage(e.target.checked)}
+                                    size="small"
+                                  >
+                                    Vis gjennomsnitt
+                                  </Switch>
+                                </div>
                                 <AreaChart
                                   data={chartData.data}
                                   height={400}
