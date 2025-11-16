@@ -28,6 +28,7 @@ export default function BigQuery() {
     const [error, setError] = useState<string | null>(null);
     const [showEstimate, setShowEstimate] = useState(true);
     const [shareSuccess, setShareSuccess] = useState(false);
+    const [formatSuccess, setFormatSuccess] = useState(false);
 
     // Check for SQL in URL params on mount
     useEffect(() => {
@@ -154,6 +155,8 @@ export default function BigQuery() {
         try {
             const formatted = sqlFormatter.format(query);
             setQuery(formatted);
+            setFormatSuccess(true);
+            setTimeout(() => setFormatSuccess(false), 2000);
         } catch (e) {
             setValidateError('Kunne ikke formatere SQL. Sjekk om den er gyldig.');
             setShowValidation(true);
@@ -272,7 +275,9 @@ export default function BigQuery() {
                             />
                         </div>
                         <div className="flex gap-2 mt-2 mb-4">
-                            <Button size="small" variant="secondary" type="button" onClick={formatSQL}>Formater SQL</Button>
+                            <Button size="small" variant="secondary" type="button" onClick={formatSQL}>
+                                {formatSuccess ? '✓ Formatert' : 'Formater SQL'}
+                            </Button>
                             <Button size="small" variant="secondary" type="button" onClick={validateSQL}>Valider SQL</Button>
                             <Button 
                                 size="small" 
@@ -280,7 +285,7 @@ export default function BigQuery() {
                                 type="button" 
                                 onClick={shareQuery}
                             >
-                                {shareSuccess ? 'Lenke kopiert!' : 'Del spørring'}
+                                {shareSuccess ? '✓ Lenke kopiert' : 'Del spørring'}
                             </Button>
                         </div>
                         {showValidation && validateError && (
