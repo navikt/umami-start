@@ -26,7 +26,7 @@ const routes = [
     { path: "/grafbygger", component: <Charts /> },
     { path: "/metabase", component: <Metabase /> },
     { path: "/sok", component: <Sok /> },
-    { path: "/bigquery", component: <BigQuery /> }
+    { path: "/sql", component: <BigQuery /> }
 
 ];
 
