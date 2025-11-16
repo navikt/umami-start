@@ -706,7 +706,7 @@ const getGroupedParameters = () => {
           <div className="mt-4">
             <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
               <div className="text-sm text-gray-800 mb-3">
-                Hent hendelsesdetaljer kun ved behov. Dette er per en kostbar spørring.
+                Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
               </div>
               <Button
                 onClick={onLoadDetailsClick}
