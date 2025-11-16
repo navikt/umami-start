@@ -797,6 +797,33 @@ const SQLPreview = ({
     URL.revokeObjectURL(url);
   };
 
+  // Function to convert results to JSONL (JSON Lines)
+  const downloadJSONL = () => {
+    if (!result || !result.data || result.data.length === 0) return;
+
+    // Create translated data for JSONL export (one JSON object per line)
+    const jsonlContent = result.data
+      .map((row: any) => {
+        const translatedRow: any = {};
+        Object.keys(row).forEach((key) => {
+          translatedRow[key] = translateValue(key, row[key]);
+        });
+        return JSON.stringify(translatedRow);
+      })
+      .join('\n');
+
+    const blob = new Blob([jsonlContent], { type: 'application/jsonl;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `query_results_${new Date().toISOString().slice(0, 10)}.jsonl`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
@@ -1229,6 +1256,14 @@ const SQLPreview = ({
                           icon={<Download size={16} />}
                         >
                           Last ned JSON
+                        </Button>
+                        <Button
+                          onClick={downloadJSONL}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          Last ned JSONL
                         </Button>
                       </div>
   
