@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw, PlayIcon, Downlo
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
+import { translateValue } from '../../lib/translations';
 
 interface SQLPreviewProps {
   sql: string;
@@ -77,7 +78,9 @@ const SQLPreview = ({
       const seriesMap = new Map<string, any[]>();
       
       data.forEach((row: any) => {
-        const seriesValue = String(row[seriesKey] || 'Unknown');
+        const rawSeriesValue = row[seriesKey];
+        const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
+        const seriesValue = String(translatedSeriesValue || 'Ukjent');
         if (!seriesMap.has(seriesValue)) {
           seriesMap.set(seriesValue, []);
         }
@@ -290,8 +293,10 @@ const SQLPreview = ({
       const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
       const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
       
-      // Use label for x-axis
-      const label = String(row[labelKey] || 'Ukjent');
+      // Use label for x-axis, with translation
+      const rawLabel = row[labelKey];
+      const translatedLabel = translateValue(labelKey, rawLabel);
+      const label = String(translatedLabel || 'Ukjent');
       
       return {
         x: label,
@@ -360,7 +365,9 @@ const SQLPreview = ({
     
     const pieChartData = data.map((row: any) => {
       const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
-      const label = String(row[labelKey] || 'Ukjent');
+      const rawLabel = row[labelKey];
+      const translatedLabel = translateValue(labelKey, rawLabel);
+      const label = String(translatedLabel || 'Ukjent');
       
       return {
         y: value,
@@ -704,8 +711,9 @@ const SQLPreview = ({
         headers
           .map((header) => {
             const value = row[header];
+            const translatedValue = translateValue(header, value);
             // Escape quotes and wrap in quotes if contains comma or quote
-            const stringValue = value !== null && value !== undefined ? String(value) : '';
+            const stringValue = translatedValue !== null && translatedValue !== undefined ? String(translatedValue) : '';
             if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
               return `"${stringValue.replace(/"/g, '""')}"`;
             }
@@ -737,7 +745,8 @@ const SQLPreview = ({
       ...result.data.map((row: any) =>
         headers.map((header) => {
           const value = row[header];
-          return value !== null && value !== undefined ? value : '';
+          const translatedValue = translateValue(header, value);
+          return translatedValue !== null && translatedValue !== undefined ? translatedValue : '';
         })
       ),
     ];
@@ -766,7 +775,16 @@ const SQLPreview = ({
   const downloadJSON = () => {
     if (!result || !result.data || result.data.length === 0) return;
 
-    const jsonContent = JSON.stringify(result.data, null, 2);
+    // Create translated data for JSON export
+    const translatedData = result.data.map((row: any) => {
+      const translatedRow: any = {};
+      Object.keys(row).forEach((key) => {
+        translatedRow[key] = translateValue(key, row[key]);
+      });
+      return translatedRow;
+    });
+
+    const jsonContent = JSON.stringify(translatedData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -929,22 +947,29 @@ const SQLPreview = ({
                                         </tr>
                                       </thead>
                                       <tbody className="bg-white divide-y divide-gray-200">
-                                        {filteredData.map((row: any, idx: number) => (
-                                          <tr key={idx} className="hover:bg-gray-50">
-                                            {Object.values(row).map((value: any, cellIdx: number) => (
-                                              <td
-                                                key={cellIdx}
-                                                className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
-                                              >
-                                                {typeof value === 'number'
-                                                  ? value.toLocaleString('nb-NO')
-                                                  : value !== null && value !== undefined
-                                                  ? String(value)
-                                                  : '-'}
-                                              </td>
-                                            ))}
-                                          </tr>
-                                        ))}
+                                        {filteredData.map((row: any, idx: number) => {
+                                          const keys = Object.keys(row);
+                                          return (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                              {keys.map((key, cellIdx: number) => {
+                                                const value = row[key];
+                                                const translatedValue = translateValue(key, value);
+                                                return (
+                                                  <td
+                                                    key={cellIdx}
+                                                    className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                                                  >
+                                                    {typeof translatedValue === 'number'
+                                                      ? translatedValue.toLocaleString('nb-NO')
+                                                      : translatedValue !== null && translatedValue !== undefined
+                                                      ? String(translatedValue)
+                                                      : '-'}
+                                                  </td>
+                                                );
+                                              })}
+                                            </tr>
+                                          );
+                                        })}
                                       </tbody>
                                     </table>
                                   </>
