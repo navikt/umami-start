@@ -243,8 +243,8 @@ const ChartsPage = () => {
   const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
   
   // Add missing state variables for date range settings
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3);
-  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(14);
+  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(14);
   const [dateChanged, setDateChanged] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload

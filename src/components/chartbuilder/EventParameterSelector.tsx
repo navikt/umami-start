@@ -439,7 +439,7 @@ const getGroupedParameters = () => {
                   {/* Continue with existing Alert for no events */}
                   {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
                     <Alert variant="info" className="mt-3">
-                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 3 dagene.
+                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 2 ukene.
                     </Alert>
                   )}
 
@@ -635,7 +635,7 @@ const getGroupedParameters = () => {
 
               {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
                 <BodyShort size="small" spacing className="text-md text-gray-700 mt-2">
-                  <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene.
+                  <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 2 ukene.
                 </BodyShort>
               )}
 

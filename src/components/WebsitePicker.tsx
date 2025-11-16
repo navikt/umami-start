@@ -59,11 +59,11 @@ const WebsitePicker = ({
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
   const [setMaxDaysAvailable] = useState<number>(30);
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 1);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 14);
   const apiCache = useRef<ApiCache>({});
   const fetchInProgress = useRef<{[key: string]: boolean}>({});
   const websitesLoaded = useRef<boolean>(false);
-  const prevExternalDateRange = useRef<number>(externalDateRange || 1);
+  const prevExternalDateRange = useRef<number>(externalDateRange || 14);
   const prevShouldReload = useRef<boolean>(shouldReload);
   const initialUrlChecked = useRef<boolean>(false);
 
@@ -364,7 +364,7 @@ const WebsitePicker = ({
     const reloadFlagChanged = shouldReload !== prevShouldReload.current;
     
     // Update the refs to track current values
-    prevExternalDateRange.current = externalDateRange || 3;
+    prevExternalDateRange.current = externalDateRange || 14;
     prevShouldReload.current = shouldReload;
     
     // Only reload if something actually changed
@@ -373,7 +373,7 @@ const WebsitePicker = ({
       
       if (dateRangeChanged) {
         // Update the internal state
-        setDateRangeInDays(externalDateRange || 3);
+        setDateRangeInDays(externalDateRange || 14);
       }
       
       // Clear cache and force a fresh fetch
@@ -444,7 +444,7 @@ const WebsitePicker = ({
           {selectedWebsite && !includeParams && (
             <div className="mt-4 p-3 bg-green-50 rounded border border-blue-600">
               <div className="text-sm text-gray-800 mb-2">
-                 Vi henter alltid hendelser fra de siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}. Trenger du også hendelsesdetaljene?
+                 Vi henter alltid hendelser fra de siste 2 ukene. Trenger du også hendelsesdetaljene?
               </div>
               <div className="bg-white">
               <Button
