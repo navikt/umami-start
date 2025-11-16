@@ -539,7 +539,6 @@ const ResultsDisplay = ({
                   {(() => {
                     const chartData = prepareBarChartData();
                     console.log('Bar Chart Data:', chartData);
-                    
                     // Check if too many items
                     if (result && result.data && result.data.length > 12) {
                       return (
@@ -548,11 +547,22 @@ const ResultsDisplay = ({
                         </Alert>
                       );
                     }
-                    
                     if (!chartData || !chartData.data || (Array.isArray(chartData.data) && chartData.data.length === 0)) {
                       return (
                         <Alert variant="info">
                           Kunne ikke lage stolpediagram fra dataene. Trenger minst to kolonner (kategori og verdi).
+                        </Alert>
+                      );
+                    }
+                    // Check if all y values are NaN, 0, or invalid
+                    const hasValidBarData = Array.isArray(chartData.data) && chartData.data.some((item) => {
+                      return !Number.isNaN(item.y) && typeof item.y === 'number' && item.y !== 0;
+                    });
+                    
+                    if (!hasValidBarData) {
+                      return (
+                        <Alert variant="info">
+                          Klarer ikke å vise stolpediagram, egner seg trolig ikke for denne grafen
                         </Alert>
                       );
                     }
@@ -589,7 +599,6 @@ const ResultsDisplay = ({
                   {(() => {
                     const chartData = preparePieChartData();
                     console.log('Pie Chart Data:', chartData);
-                    
                     // Check if too many items
                     if (result && result.data && result.data.length > 12) {
                       return (
@@ -598,11 +607,20 @@ const ResultsDisplay = ({
                         </Alert>
                       );
                     }
-                    
                     if (!chartData) {
                       return (
                         <Alert variant="info">
                           Kunne ikke lage sirkeldiagram fra dataene. Trenger minst to kolonner (kategori og verdi).
+                        </Alert>
+                      );
+                    }
+                    // Check if all y values are NaN or if no valid values exist
+                    const hasValidY = Array.isArray(chartData.data) && chartData.data.some((item) => !Number.isNaN(item.y) && item.y !== 0);
+                    
+                    if (!hasValidY || (Array.isArray(chartData.data) && chartData.data.every((item) => Number.isNaN(item.y)))) {
+                      return (
+                        <Alert variant="info">
+                          Klarer ikke å vise sirkeldiagram, egner seg trolig ikke for denne grafen.
                         </Alert>
                       );
                     }
@@ -650,6 +668,8 @@ const ResultsDisplay = ({
                             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
                               {chartData.data.map((item, idx) => {
                                 const percentage = ((item.y / chartData.total) * 100).toFixed(1);
+                                // Skip displaying if percentage is NaN
+                                if (isNaN(parseFloat(percentage))) return null;
                                 return (
                                   <span key={idx}>
                                     {item.x}: <strong>{percentage}%</strong>
