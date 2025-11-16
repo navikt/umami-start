@@ -183,7 +183,7 @@ const SQLPreview = ({
     const data = result.data;
     
     // Only show bar chart if 10 or fewer items
-    if (data.length > 10) return null;
+    if (data.length > 12) return null;
     
     const keys = Object.keys(data[0]);
     
@@ -255,7 +255,7 @@ const SQLPreview = ({
     const data = result.data;
     
     // Only show pie chart if 10 or fewer items
-    if (data.length > 10) return null;
+    if (data.length > 12) return null;
     
     const keys = Object.keys(data[0]);
     
@@ -973,10 +973,10 @@ const SQLPreview = ({
                             console.log('Bar Chart Data:', chartData);
                             
                             // Check if too many items
-                            if (result && result.data && result.data.length > 10) {
+                            if (result && result.data && result.data.length > 12) {
                               return (
                                 <Alert variant="info">
-                                  Stolpediagram vises kun for resultater med maks 10 rader. Dette resultatet har {result.data.length} rader.
+                                  Stolpediagram vises kun for resultater med maks 12 rader. Dette resultatet har {result.data.length} rader.
                                 </Alert>
                               );
                             }
@@ -1022,10 +1022,10 @@ const SQLPreview = ({
                             console.log('Pie Chart Data:', chartData);
                             
                             // Check if too many items
-                            if (result && result.data && result.data.length > 10) {
+                            if (result && result.data && result.data.length > 12) {
                               return (
                                 <Alert variant="info">
-                                  Sirkeldiagram vises kun for resultater med maks 10 rader. Dette resultatet har {result.data.length} rader.
+                                  Sirkeldiagram vises kun for resultater med maks 12 rader. Dette resultatet har {result.data.length} rader.
                                 </Alert>
                               );
                             }
