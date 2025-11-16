@@ -127,17 +127,17 @@ export default function BigQuery() {
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
             <Heading level="1" size="large" spacing>
-                BigQuery spørringer
+                Umami SQL-spørringer
             </Heading>
             <BodyLong spacing>
-                Kjør BigQuery spørringer mot Umami datasett.
+                Kjør SQL-spørringer mot Umami datasettet i BigQuery.
             </BodyLong>
             <div className="flex flex-col md:flex-row gap-8 mt-8">
                 {/* Main content */}
                 <div className="flex-1 space-y-6">
                     {/* Query Input */}
                     <div>
-                        <label className="block font-medium mb-2" htmlFor="sql-editor">SQL Query</label>
+                        <label className="block font-medium mb-2" htmlFor="sql-editor">SQL-spørring</label>
                         <div className="relative border rounded bg-[#23272e] focus-within:ring-2 focus-within:ring-blue-500" style={{ fontFamily: 'Menlo, Monaco, "Fira Mono", monospace' }}>
                             <div style={{
                                 position: 'absolute',
@@ -260,6 +260,9 @@ export default function BigQuery() {
                         </Alert>
                     )}
 
+                        
+                        
+                        
                         {result && (
                             <details className="mt-2 mb-4 bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" open>
                                 <summary className="cursor-pointer font-semibold mb-2">Raw JSON</summary>
