@@ -561,7 +561,7 @@ const DisplayOptions = forwardRef(({
               size="small"
               description={limit && limit !== 1000
                 ? `Begrenser til ${limit} rader`
-                : 'F.eks. for en topp 10-liste (standard: 1000 rader).'}
+                : 'F.eks. for en topp 10-liste (standard: 1000 rader)'}
               checked={showCustomLimit}
               onChange={(e) => {
                 setShowCustomLimit(e.target.checked);
