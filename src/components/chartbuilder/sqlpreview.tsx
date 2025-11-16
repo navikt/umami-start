@@ -57,6 +57,7 @@ const SQLPreview = ({
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showAverage, setShowAverage] = useState<boolean>(false);
+  const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
@@ -1136,37 +1137,86 @@ const SQLPreview = ({
                       <Tabs.Panel value="areachart" className="pt-4">
                         <div className="border rounded-lg bg-white p-4">
                           {(() => {
-                            const chartData = prepareLineChartData(showAverage);
+                            const baseChartData = prepareLineChartData(false);
                             
-                            if (!chartData) {
+                            if (!baseChartData) {
                               return (
                                 <Alert variant="info">
-                                  Kunne ikke lage områdediagram fra dataene. Trenger minst to kolonner (x-akse og y-akse).
+                                  Kunne ikke lage områdediagram fra dataene. Trenger minst til kolonner (x-akse og y-akse).
                                 </Alert>
                               );
                             }
+                            
+                            // Check if we have multiple series
+                            const hasMultipleSeries = baseChartData.data.lineChartData && baseChartData.data.lineChartData.length > 1;
+                            
+                            // Transform data for percentage view if needed
+                            let chartData = baseChartData;
+                            if (isPercentageStacked && baseChartData.data.lineChartData) {
+                              // Create a map of x values to total y values
+                              const xTotals = new Map<number, number>();
+                              
+                              // Calculate totals for each x value
+                              baseChartData.data.lineChartData.forEach((series: any) => {
+                                series.data.forEach((point: any) => {
+                                  const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
+                                  const currentTotal = xTotals.get(xVal) || 0;
+                                  xTotals.set(xVal, currentTotal + point.y);
+                                });
+                              });
+                              
+                              // Transform each series to percentages
+                              const percentageData = baseChartData.data.lineChartData.map((series: any) => ({
+                                ...series,
+                                data: series.data.map((point: any) => {
+                                  const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
+                                  const total = xTotals.get(xVal) || 1;
+                                  const percentage = (point.y / total) * 100;
+                                  
+                                  return {
+                                    ...point,
+                                    y: percentage,
+                                    yAxisCalloutData: `${percentage.toFixed(1)}%`,
+                                    originalY: point.y,
+                                  };
+                                }),
+                              }));
+                              
+                              chartData = {
+                                ...baseChartData,
+                                data: {
+                                  lineChartData: percentageData,
+                                },
+                              };
+                            }
+                            
                             return (
                               <div style={{ overflow: 'visible' }}>
-                                <div className="mb-3">
-                                  <Switch
-                                    checked={showAverage}
-                                    onChange={(e) => setShowAverage(e.target.checked)}
-                                    size="small"
-                                  >
-                                    Vis gjennomsnitt
-                                  </Switch>
-                                </div>
+                                {hasMultipleSeries && (
+                                  <div className="mb-3">
+                                    <Switch
+                                      checked={isPercentageStacked}
+                                      onChange={(e) => setIsPercentageStacked(e.target.checked)}
+                                      size="small"
+                                    >
+                                      Stablet 100%
+                                    </Switch>
+                                  </div>
+                                )}
                                 <AreaChart
                                   data={chartData.data}
                                   height={400}
                                   legendsOverflowText="Flere"
-                                  yAxisTickCount={10}
+                                  yAxisTickCount={isPercentageStacked ? 5 : 10}
                                   width={700}
                                   enablePerfOptimization={true}
                                   margins={{ left: 50, right: 50, top: 20, bottom: 35 }}
+                                  yMinValue={isPercentageStacked ? 0 : undefined}
+                                  yMaxValue={isPercentageStacked ? 100 : undefined}
                                 />
                                 <div className="mt-2 text-xs text-gray-500">
                                   Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
+                                  {isPercentageStacked && ' (prosent av totalen per tidspunkt)'}
                                 </div>
                               </div>
                             );
