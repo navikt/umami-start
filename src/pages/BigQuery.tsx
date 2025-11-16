@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
-import { Button, Alert, Heading, BodyLong, ExpansionCard } from '@navikt/ds-react';
+import { Button, Alert, Heading, BodyLong } from '@navikt/ds-react';
 import Editor from 'react-simple-code-editor';
 // import { highlight, languages } from 'prismjs';
 // import 'prismjs/components/prism-sql';
 import 'prismjs/themes/prism.css';
 import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon } from 'lucide-react';
+import { ReadMore } from '@navikt/ds-react';
 
 const defaultQuery = `SELECT 
   website_id, 
@@ -25,6 +26,7 @@ export default function BigQuery() {
     const [loading, setLoading] = useState(false);
     const [estimating, setEstimating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showEstimate, setShowEstimate] = useState(true);
 
     const estimateCost = async () => {
         setEstimating(true);
@@ -132,9 +134,70 @@ export default function BigQuery() {
             <BodyLong spacing>
                 Kjør SQL-spørringer mot Umami datasettet i BigQuery.
             </BodyLong>
-            <div className="flex flex-col md:flex-row gap-8 mt-8">
+            <div className="flex flex-col md:flex-row gap-8 -mt-3">
                 {/* Main content */}
                 <div className="flex-1 space-y-6">
+                    {/* Available Tables Section using ReadMore with subtitles */}
+                    <ReadMore header="Tilgjengelige tabeller" size="small" className="mb-6">
+                        <ul className="space-y-3">
+                            <li className="flex flex-col gap-1">
+                                <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website</span>
+                                    <Button
+                                        size="xsmall"
+                                        variant="tertiary"
+                                        type="button"
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website'); }}
+                                    >
+                                        Kopier
+                                    </Button>
+                                </div>
+                            </li>
+                            <li className="flex flex-col gap-1">
+                                <span className="font-semibold text-sm mt-2">Personer</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_session</span>
+                                    <Button
+                                        size="xsmall"
+                                        variant="tertiary"
+                                        type="button"
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_session'); }}
+                                    >
+                                        Kopier
+                                    </Button>
+                                </div>
+                            </li>
+                            <li className="flex flex-col gap-1">
+                                <span className="font-semibold text-sm mt-2">Alle hendelser</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website_event</span>
+                                    <Button
+                                        size="xsmall"
+                                        variant="tertiary"
+                                        type="button"
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website_event'); }}
+                                    >
+                                        Kopier
+                                    </Button>
+                                </div>
+                            </li>
+                            <li className="flex flex-col gap-1">
+                                <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_event_data</span>
+                                    <Button
+                                        size="xsmall"
+                                        variant="tertiary"
+                                        type="button"
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_event_data'); }}
+                                    >
+                                        Kopier
+                                    </Button>
+                                </div>
+                            </li>
+                        </ul>
+                    </ReadMore>
                     {/* Query Input */}
                     <div>
                         <label className="block font-medium mb-2" htmlFor="sql-editor">SQL-spørring</label>
@@ -230,8 +293,27 @@ export default function BigQuery() {
                         </Button>
                     </div>
                     {/* Cost Estimate Display */}
-                    {estimate && (
-                        <Alert variant="info">
+                    {estimate && showEstimate && (
+                        <Alert variant="info" className="relative">
+                            <button
+                                type="button"
+                                aria-label="Lukk"
+                                onClick={() => setShowEstimate(false)}
+                                style={{
+                                    position: 'absolute',
+                                    right: 8,
+                                    top: 8,
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'inherit',
+                                    fontWeight: 'bold',
+                                    fontSize: 18,
+                                    cursor: 'pointer',
+                                    lineHeight: 1,
+                                }}
+                            >
+                                ×
+                            </button>
                             <div className="space-y-2">
                                 <BodyLong>
                                     <strong>Data å prossesere:</strong> {estimate.totalBytesProcessedMB} MB 
@@ -260,14 +342,10 @@ export default function BigQuery() {
                         </Alert>
                     )}
 
-                        
-                        
-                        
                         {result && (
-                            <details className="mt-2 mb-4 bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" open>
-                                <summary className="cursor-pointer font-semibold mb-2">Raw JSON</summary>
-                                <pre style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
-                            </details>
+                            <ReadMore header="Raw JSON" size="small" className="mb-4" defaultOpen>
+                                <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
+                            </ReadMore>
                         )}
                 </div>
 
@@ -292,4 +370,3 @@ export default function BigQuery() {
         </div>
     );
 }
-// ...no trailing brace needed here, already closed by the function above
