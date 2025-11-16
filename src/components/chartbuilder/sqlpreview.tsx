@@ -55,7 +55,7 @@ const SQLPreview = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Helper function to prepare data for LineChart
-  const prepareLineChartData = (): ILineChartProps | null => {
+  const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
     if (!result || !result.data || result.data.length === 0) return null;
     
     const data = result.data;
@@ -123,7 +123,61 @@ const SQLPreview = ({
         },
       }));
       
-      console.log('Multi-line chart data:', lineChartData.length, 'series');
+      // Calculate average line across all data points (only if requested)
+      if (includeAverage) {
+        // Collect all unique x values
+        const allXValues = new Set<number>();
+        lineChartData.forEach(series => {
+          series.data.forEach((point: any) => {
+            const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
+            allXValues.add(xVal);
+          });
+        });
+        
+        // For each x value, calculate the average y value across all series
+        const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
+          const yValues: number[] = [];
+          lineChartData.forEach(series => {
+            const point = series.data.find((p: any) => {
+              const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
+              return pxVal === xVal;
+            });
+            if (point) {
+              yValues.push(point.y);
+            }
+          });
+          
+          const avgY = yValues.length > 0 
+            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length 
+            : 0;
+          
+          // Find original xAxisCalloutData from any series
+          const originalPoint = lineChartData[0].data.find((p: any) => {
+            const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
+            return pxVal === xVal;
+          });
+          
+          return {
+            x: new Date(xVal),
+            y: avgY,
+            xAxisCalloutData: originalPoint?.xAxisCalloutData || String(xVal),
+            yAxisCalloutData: avgY.toFixed(2),
+          };
+        });
+        
+        // Add average line to the chart
+        lineChartData.push({
+          legend: 'Gjennomsnitt',
+          data: averagePoints,
+          color: '#262626', // Dark gray for average line
+          lineOptions: {
+            lineBorderWidth: '2',
+            strokeDasharray: '5 5',
+          } as any,
+        });
+      }
+      
+      console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
       
       return {
         data: {
@@ -160,16 +214,43 @@ const SQLPreview = ({
     
     console.log('Single-line chart points:', chartPoints.slice(0, 3));
     
+    // Build the line chart data array
+    const lineChartData: any[] = [{
+      legend: yKey,
+      data: chartPoints,
+      color: '#0067C5',
+      lineOptions: {
+        lineBorderWidth: '2',
+      },
+    }];
+    
+    // Add average line (only if requested)
+    if (includeAverage) {
+      // Calculate average y value for horizontal average line
+      const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
+      
+      // Create average line points (horizontal line across all x values)
+      const averageLinePoints = chartPoints.map((point: any) => ({
+        x: point.x,
+        y: avgY,
+        xAxisCalloutData: point.xAxisCalloutData,
+        yAxisCalloutData: avgY.toFixed(2),
+      }));
+      
+      lineChartData.push({
+        legend: 'Gjennomsnitt',
+        data: averageLinePoints,
+        color: '#262626',
+        lineOptions: {
+          lineBorderWidth: '2',
+          strokeDasharray: '5 5',
+        } as any,
+      });
+    }
+    
     return {
       data: {
-        lineChartData: [{
-          legend: yKey,
-          data: chartPoints,
-          color: '#0067C5',
-          lineOptions: {
-            lineBorderWidth: '2',
-          },
-        }],
+        lineChartData,
       },
       enabledLegendsWrapLines: true,
     };
@@ -937,7 +1018,7 @@ const SQLPreview = ({
                       <Tabs.Panel value="areachart" className="pt-4">
                         <div className="border rounded-lg bg-white p-4">
                           {(() => {
-                            const chartData = prepareLineChartData();
+                            const chartData = prepareLineChartData(false);
                             
                             if (!chartData) {
                               return (
