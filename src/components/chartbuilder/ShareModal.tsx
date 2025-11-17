@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, Textarea, CopyButton, Select, Checkbox, CheckboxGroup } from '@navikt/ds-react';
+import { Modal, Button, Textarea, Select, Checkbox, CheckboxGroup, ReadMore, CopyButton } from '@navikt/ds-react';
 
 interface ShareModalProps {
   sql: string;
@@ -25,27 +25,22 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Genererer delbar lenke for CopyButton
   const getShareUrl = () => {
     const encodedSql = encodeURIComponent(sql);
     const encodedDesc = description.trim() ? encodeURIComponent(description.trim()) : '';
     let baseUrl = `${window.location.origin}/grafdeling?sql=${encodedSql}`;
-    
     if (encodedDesc) {
       baseUrl += `&beskrivelse=${encodedDesc}`;
     }
-    
     if (selectedTab !== 'table') {
       baseUrl += `&tab=${selectedTab}`;
     }
-    
     if (hiddenTabs.length > 0) {
       baseUrl += `&hideTabs=${hiddenTabs.join(',')}`;
     }
-    
     return baseUrl;
   };
-
-  const shareUrl = getShareUrl();
 
   const handleClose = () => {
     setDescription('');
@@ -56,10 +51,10 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
 
   const tabOptions = [
     { label: 'Tabell', value: 'table' },
-    { label: 'Linje', value: 'linechart' },
-    { label: 'Område', value: 'areachart' },
-    { label: 'Stolpe', value: 'barchart' },
-    { label: 'Kake', value: 'piechart' },
+    { label: 'Linjediagram', value: 'linechart' },
+    { label: 'Områdediagram', value: 'areachart' },
+    { label: 'Stolpediagram', value: 'barchart' },
+    { label: 'Kakediagram', value: 'piechart' },
   ];
 
   return (
@@ -76,7 +71,6 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
         <div className="space-y-4">
           <Textarea
             label="Kort beskrivende tittel"
-            description={`${description.length}/${maxChars} tegn`}
             value={description}
             onChange={(e) => {
               const value = e.target.value;
@@ -85,12 +79,11 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
               }
             }}
             maxLength={maxChars}
-            rows={3}
+            rows={2}
           />
 
           <Select
-            label="Start på fane"
-            description="Velg hvilken fane som vises når lenken åpnes"
+            label="Velg startfane"
             value={selectedTab}
             onChange={(e) => setSelectedTab(e.target.value)}
           >
@@ -101,46 +94,36 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
             ))}
           </Select>
 
-          <CheckboxGroup
-            legend="Skjul graftyper"
-            description="Velg graftyper du vil skjule i delingsvisningen"
-            value={hiddenTabs}
-            onChange={(val) => setHiddenTabs(val as string[])}
-          >
-            {tabOptions.map((option) => (
-              <Checkbox key={option.value} value={option.value}>
-                {option.label}
-              </Checkbox>
-            ))}
-          </CheckboxGroup>
+          <ReadMore header="Skjul graftyper">
+            <CheckboxGroup
+              legend="Skjul graftyper"
+              description="Velg graftyper du vil skjule i delingsvisningen. Dette kan være nyttig hvis du kun ønsker å vise én eller noen få graf- eller tabelltyper til mottakeren."
+              value={hiddenTabs}
+              onChange={(val) => setHiddenTabs(val as string[])}
+            >
+              {tabOptions.map((option) => (
+                <Checkbox key={option.value} value={option.value}>
+                  {option.label}
+                </Checkbox>
+              ))}
+            </CheckboxGroup>
+          </ReadMore>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Delbar lenke</label>
-            <div className="flex items-start gap-2">
-              <div className="flex-1 bg-gray-50 p-3 rounded border border-gray-300 text-sm break-all">
-                {shareUrl}
-              </div>
-              <CopyButton
-                copyText={shareUrl}
-                text="Kopier"
-                activeText="Kopiert!"
-                size="small"
-              />
-            </div>
-          </div>
-
-          <div className="bg-blue-50 p-3 rounded-md border border-blue-100 text-sm">
-            <p>
-              <strong>Tips:</strong> Denne lenken åpner grafen i en enkel visning perfekt for deling med
-              kollegaer. Du kan velge hvilken fane som vises først og skjule faner du ikke ønsker å vise.
-            </p>
-          </div>
+          {/* Kopier-knapp flyttet til footer */}
         </div>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>
           Lukk
         </Button>
+        <CopyButton
+          copyText={getShareUrl()}
+          text="Kopier delingslenke"
+          activeText="Kopiert!"
+          size="medium"
+          variant="action"
+          className="mr-2"
+        />
       </Modal.Footer>
     </Modal>
   );
