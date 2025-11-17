@@ -69,14 +69,6 @@ export default function Header() {
               </Dropdown.Menu.List.Item>
               <Dropdown.Menu.List.Item
                 as={Link}
-                href="https://umami.is/docs"
-                className="no-underline"
-              >
-                <CodeIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Doks</span>
-              </Dropdown.Menu.List.Item>
-              <Dropdown.Menu.List.Item
-                as={Link}
                 href="https://metabase.ansatt.nav.no/"
                 className="no-underline"
               >
@@ -110,13 +102,6 @@ export default function Header() {
             >
               <AreaChartIcon aria-hidden fontSize="1.5rem" />
               <span className="whitespace-nowrap">Lag grafer</span>
-            </Link>
-            <Link
-              href="https://umami.is/docs"
-              className={linkButton}
-            >
-              <CodeIcon aria-hidden fontSize="1.5rem" />
-              <span className="whitespace-nowrap">Doks</span>
             </Link>
             <Link
               href="https://metabase.ansatt.nav.no/"
