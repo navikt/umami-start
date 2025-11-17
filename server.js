@@ -178,7 +178,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         const withParams = includeParams === 'true';
         
         console.log(`[Event Properties] Query: ${withParams ? 'EXPENSIVE (with params)' : 'CHEAP (events only)'} - includeParams=${includeParams}`);
-
+        
         // Query depends on whether we need parameters or not
         const query = withParams ? `
             SELECT 
@@ -197,9 +197,10 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             JOIN \`team-researchops-prod-01d6.umami.public_event_data\` d
                 ON e.event_id = d.website_event_id
             WHERE e.website_id = @websiteId
-              AND e.created_at BETWEEN @startDate AND @endDate
-              AND e.event_name IS NOT NULL
-              AND d.data_key IS NOT NULL
+            AND e.created_at BETWEEN @startDate AND @endDate
+            AND d.created_at BETWEEN @startDate AND @endDate    -- added for partition pruning
+            AND e.event_name IS NOT NULL
+            AND d.data_key IS NOT NULL
             GROUP BY e.event_name, d.data_key, d.data_type
             ORDER BY e.event_name, d.data_key
         ` : `
@@ -208,11 +209,12 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
                 COUNT(*) as total
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
-              AND created_at BETWEEN @startDate AND @endDate
-              AND event_name IS NOT NULL
+            AND created_at BETWEEN @startDate AND @endDate
+            AND event_name IS NOT NULL
             GROUP BY event_name
             ORDER BY event_name
         `;
+
 
         // Dry run to estimate bytes processed
         let estimatedBytes = '0';
