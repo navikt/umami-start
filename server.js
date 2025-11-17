@@ -127,7 +127,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
             })
         }
 
-        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
         const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
 
         const query = `
@@ -173,7 +173,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             })
         }
 
-        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
         const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
         const withParams = includeParams === 'true';
         
@@ -181,32 +181,38 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         
         // Query depends on whether we need parameters or not
         const query = withParams ? `
-            SELECT 
+            SELECT
                 e.event_name,
-                d.data_key,
-                COUNT(*) as total,
-                d.data_type,
-                CASE 
-                    WHEN d.data_type = 1 THEN 'number'
-                    WHEN d.data_type = 2 THEN 'string'
-                    WHEN d.data_type = 3 THEN 'boolean'
-                    WHEN d.data_type = 4 THEN 'date'
+                p.data_key,
+                COUNT(*) AS total,
+                p.data_type,
+                CASE
+                    WHEN p.data_type = 1 THEN 'number'
+                    WHEN p.data_type = 2 THEN 'string'
+                    WHEN p.data_type = 3 THEN 'boolean'
+                    WHEN p.data_type = 4 THEN 'date'
                     ELSE 'string'
-                END as type
+                END AS type
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
-            JOIN \`team-researchops-prod-01d6.umami.public_event_data\` d
+            JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+            CROSS JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate    -- added for partition pruning
+            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name IS NOT NULL
-            AND d.data_key IS NOT NULL
-            GROUP BY e.event_name, d.data_key, d.data_type
-            ORDER BY e.event_name, d.data_key
+            AND p.data_key IS NOT NULL
+            GROUP BY
+                e.event_name,
+                p.data_key,
+                p.data_type
+            ORDER BY
+                e.event_name,
+                p.data_key
         ` : `
             SELECT 
                 event_name,
-                COUNT(*) as total
+                COUNT(*) AS total
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
             AND created_at BETWEEN @startDate AND @endDate
@@ -214,7 +220,6 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             GROUP BY event_name
             ORDER BY event_name
         `;
-
 
         // Dry run to estimate bytes processed
         let estimatedBytes = '0';
