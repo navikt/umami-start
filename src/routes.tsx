@@ -12,6 +12,7 @@ import Charts from "./pages/Chartbuilder.tsx";
 import Metabase from "./pages/Metabase.tsx";
 import Sok from "./pages/Sok.tsx";
 import BigQuery from "./pages/BigQuery.tsx";
+import Grafdeling from "./pages/Grafdeling.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -26,7 +27,8 @@ const routes = [
     { path: "/grafbygger", component: <Charts /> },
     { path: "/metabase", component: <Metabase /> },
     { path: "/sok", component: <Sok /> },
-    { path: "/sql", component: <BigQuery /> }
+    { path: "/sql", component: <BigQuery /> },
+    { path: "/grafdeling", component: <Grafdeling /> }
 
 ];
 

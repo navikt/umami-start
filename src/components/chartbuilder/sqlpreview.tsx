@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress, Modal } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw } from 'lucide-react';
+import { Heading, Link, Button, Alert, FormProgress, Modal } from '@navikt/ds-react';
+import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
 import ResultsDisplay from './ResultsDisplay';
+import SqlCodeDisplay from './SqlCodeDisplay';
 import { translateValue } from '../../lib/translations';
 
 interface SQLPreviewProps {
@@ -38,7 +39,6 @@ const SQLPreview = ({
   groupByFields = [],
   onResetAll,
 }: SQLPreviewProps) => {
-  const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
@@ -708,41 +708,7 @@ const SQLPreview = ({
             
             {/* Only show SQL code button if the SQL is meaningful */}
             {isSQLMeaningful() && (
-              <div className="mt-4">
-                <Button
-                  variant="tertiary"
-                  size="small"
-                  onClick={() => setShowCode(!showCode)}
-                  icon={showCode ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  className="mb-2"
-                >
-                  {showCode ? 'Skjul SQL-kode' : 'Vis SQL-kode'}
-                </Button>
-
-                {showCode && (
-                  <div className="relative">
-                    <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
-                      {sql}
-                    </pre>
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
-                      <Button
-                        size="xsmall"
-                        variant="tertiary"
-                        type="button"
-                        onClick={() => {
-                          const encodedSql = encodeURIComponent(sql);
-                          window.open(`/sql?sql=${encodedSql}`, '_blank');
-                        }}
-                        style={{ padding: '0 8px', fontSize: 12 }}
-                        aria-label="Rediger SQL i BigQuery.tsx"
-                      >
-                        Rediger SQL
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SqlCodeDisplay sql={sql} showEditButton={true} />
             )}
           </div>
         ) : (
@@ -761,6 +727,7 @@ const SQLPreview = ({
               prepareLineChartData={prepareLineChartData}
               prepareBarChartData={prepareBarChartData}
               preparePieChartData={preparePieChartData}
+              sql={sql}
             />
 
             {/* Metabase Section */}
@@ -912,49 +879,7 @@ const SQLPreview = ({
               </div>
             </div>
 
-            {sql && (
-              <div className="mt-4">
-                <Button
-                  variant="tertiary"
-                  size="small"
-                  onClick={() => setShowCode(!showCode)}
-                  icon={showCode ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  className="mb-2"
-                >
-                  {showCode ? 'Skjul SQL-kode' : 'Vis SQL-kode'}
-                </Button>
-
-                {showCode && (
-                  <div className="relative">
-                    <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
-                      {sql}
-                    </pre>
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
-                      <Button
-                        size="xsmall"
-                        variant="tertiary"
-                        type="button"
-                        onClick={() => {
-                          const encodedSql = encodeURIComponent(sql);
-                          window.open(`/sql?sql=${encodedSql}`, '_blank');
-                        }}
-                        aria-label="Rediger SQL i BigQuery"
-                      >
-                        Rediger SQL
-                      </Button>
-                    </div>
-
-                    <div className="mt-2 mb-8 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-100">
-                      <p>
-                        <strong>Tips:</strong> Du trenger ikke å forstå koden! Den er generert basert på valgene dine,
-                        og vil fungere når du kopierer og limer inn i Metabase.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {sql && <SqlCodeDisplay sql={sql} showEditButton={true} />}
           </div>
         )}
         <div className="pt-0">

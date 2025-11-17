@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore } from '@navikt/ds-react';
-import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
 import { translateValue } from '../../lib/translations';
+import SqlCodeDisplay from './SqlCodeDisplay';
+import ShareModal from './ShareModal';
 
 interface ResultsDisplayProps {
   result: any;
@@ -17,6 +19,10 @@ interface ResultsDisplayProps {
   prepareLineChartData: (includeAverage?: boolean) => ILineChartProps | null;
   prepareBarChartData: () => IVerticalBarChartProps | null;
   preparePieChartData: () => { data: Array<{ y: number; x: string }>; total: number } | null;
+  hideHeading?: boolean;
+  sql?: string;
+  showSqlCode?: boolean;
+  showEditButton?: boolean;
 }
 
 const ResultsDisplay = ({
@@ -28,6 +34,10 @@ const ResultsDisplay = ({
   showLoadingMessage,
   executeQuery,
   handleRetry,
+  hideHeading = false,
+  sql,
+  showSqlCode = false,
+  showEditButton = false,
   prepareLineChartData,
   prepareBarChartData,
   preparePieChartData,
@@ -38,6 +48,7 @@ const ResultsDisplay = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showAverage, setShowAverage] = useState<boolean>(false);
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
 
   // Reset isPercentageStacked when result or searchQuery changes
   useEffect(() => {
@@ -182,7 +193,7 @@ const ResultsDisplay = ({
 
   return (
     <div className="space-y-2 mb-6">
-      <Heading level="2" size="small">Vis resultater</Heading>
+      {!hideHeading && <Heading level="2" size="small">Vis resultater</Heading>}
       
       <div className="bg-green-50 p-4 rounded-md border border-green-100">
         {/* Only show button if no results yet */}
@@ -722,11 +733,30 @@ const ResultsDisplay = ({
                   Last ned JSONL
                 </Button>
               </div>
-
             </ReadMore>
+
+            {/* SQL Code Display */}
+            {showSqlCode && sql && (
+              <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
+            )}
             
           </div>
         )}
+
+            {/* Share Button */}
+            {sql && (
+              <div className="mt-3 flex justify-end">
+                <Button
+                  onClick={() => setShowShareModal(true)}
+                  variant="secondary"
+                  size="small"
+                  icon={<Share2 size={18} />}
+                >
+                  Del tabell & graf
+                </Button>
+              </div>
+            )}
+
 
         {result && result.data && result.data.length === 0 && (
           <Alert variant="info" className="mt-3">
@@ -734,6 +764,15 @@ const ResultsDisplay = ({
           </Alert>
         )}
       </div>
+
+      {/* Share Modal */}
+      {sql && (
+        <ShareModal
+          sql={sql}
+          open={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </div>
   );
 };
