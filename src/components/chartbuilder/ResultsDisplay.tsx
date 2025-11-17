@@ -42,13 +42,36 @@ const ResultsDisplay = ({
   prepareBarChartData,
   preparePieChartData,
 }: ResultsDisplayProps) => {
-  const [activeTab, setActiveTab] = useState<string>('table');
+  // Read initial tab from URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    const validTabs = ['table', 'linechart', 'areachart', 'barchart', 'piechart'];
+    return tabParam && validTabs.includes(tabParam) ? tabParam : 'table';
+  });
+  
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showAverage, setShowAverage] = useState<boolean>(false);
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
+
+  // Get hidden tabs from URL
+  const hiddenTabs = (() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hideTabsParam = urlParams.get('hideTabs');
+    return hideTabsParam ? hideTabsParam.split(',') : [];
+  })();
+
+  // Update URL when tab changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('tab', newTab);
+    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  };
 
   // Reset isPercentageStacked when result or searchQuery changes
   useEffect(() => {
@@ -240,13 +263,13 @@ const ResultsDisplay = ({
         {result && result.data && result.data.length > 0 && (
           <div className="mt-2 space-y-3">
             {/* Tabbed Display */}
-            <Tabs value={activeTab} onChange={setActiveTab}>
+            <Tabs value={activeTab} onChange={handleTabChange}>
               <Tabs.List>
-                <Tabs.Tab value="table" label="Tabell" />
-                <Tabs.Tab value="linechart" label="Linje" />
-                <Tabs.Tab value="areachart" label="Område" />
-                <Tabs.Tab value="barchart" label="Stolpe" />
-                <Tabs.Tab value="piechart" label="Kake" />
+                {!hiddenTabs.includes('table') && <Tabs.Tab value="table" label="Tabell" />}
+                {!hiddenTabs.includes('linechart') && <Tabs.Tab value="linechart" label="Linje" />}
+                {!hiddenTabs.includes('areachart') && <Tabs.Tab value="areachart" label="Område" />}
+                {!hiddenTabs.includes('barchart') && <Tabs.Tab value="barchart" label="Stolpe" />}
+                {!hiddenTabs.includes('piechart') && <Tabs.Tab value="piechart" label="Kake" />}
               </Tabs.List>
 
               {/* Table Tab */}

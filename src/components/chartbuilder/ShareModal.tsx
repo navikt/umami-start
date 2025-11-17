@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, Textarea, CopyButton } from '@navikt/ds-react';
+import { Modal, Button, Textarea, CopyButton, Select, Checkbox, CheckboxGroup } from '@navikt/ds-react';
 
 interface ShareModalProps {
   sql: string;
@@ -9,6 +9,8 @@ interface ShareModalProps {
 
 const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
   const [description, setDescription] = useState('');
+  const [selectedTab, setSelectedTab] = useState('table');
+  const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
   const maxChars = 200;
 
   // On open, if description is empty, set it from URL param 'beskrivelse'
@@ -26,16 +28,39 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
   const getShareUrl = () => {
     const encodedSql = encodeURIComponent(sql);
     const encodedDesc = description.trim() ? encodeURIComponent(description.trim()) : '';
-    const baseUrl = `${window.location.origin}/grafdeling?sql=${encodedSql}`;
-    return encodedDesc ? `${baseUrl}&beskrivelse=${encodedDesc}` : baseUrl;
+    let baseUrl = `${window.location.origin}/grafdeling?sql=${encodedSql}`;
+    
+    if (encodedDesc) {
+      baseUrl += `&beskrivelse=${encodedDesc}`;
+    }
+    
+    if (selectedTab !== 'table') {
+      baseUrl += `&tab=${selectedTab}`;
+    }
+    
+    if (hiddenTabs.length > 0) {
+      baseUrl += `&hideTabs=${hiddenTabs.join(',')}`;
+    }
+    
+    return baseUrl;
   };
 
   const shareUrl = getShareUrl();
 
   const handleClose = () => {
     setDescription('');
+    setSelectedTab('table');
+    setHiddenTabs([]);
     onClose();
   };
+
+  const tabOptions = [
+    { label: 'Tabell', value: 'table' },
+    { label: 'Linje', value: 'linechart' },
+    { label: 'Område', value: 'areachart' },
+    { label: 'Stolpe', value: 'barchart' },
+    { label: 'Kake', value: 'piechart' },
+  ];
 
   return (
     <Modal
@@ -63,6 +88,32 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
             rows={3}
           />
 
+          <Select
+            label="Start på fane"
+            description="Velg hvilken fane som vises når lenken åpnes"
+            value={selectedTab}
+            onChange={(e) => setSelectedTab(e.target.value)}
+          >
+            {tabOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+
+          <CheckboxGroup
+            legend="Skjul graftyper"
+            description="Velg graftyper du vil skjule i delingsvisningen"
+            value={hiddenTabs}
+            onChange={(val) => setHiddenTabs(val as string[])}
+          >
+            {tabOptions.map((option) => (
+              <Checkbox key={option.value} value={option.value}>
+                {option.label}
+              </Checkbox>
+            ))}
+          </CheckboxGroup>
+
           <div>
             <label className="block text-sm font-medium mb-2">Delbar lenke</label>
             <div className="flex items-start gap-2">
@@ -81,7 +132,7 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
           <div className="bg-blue-50 p-3 rounded-md border border-blue-100 text-sm">
             <p>
               <strong>Tips:</strong> Denne lenken åpner grafen i en enkel visning perfekt for deling med
-              kollegaer.
+              kollegaer. Du kan velge hvilken fane som vises først og skjule faner du ikke ønsker å vise.
             </p>
           </div>
         </div>
