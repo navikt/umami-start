@@ -34,7 +34,4 @@ COPY --from=builder /app/.nais ./.nais
 
 EXPOSE 8080
 
-# Run as non-root user (chainguard images use 'node' user by default)
-USER node
-
 CMD ["node", "server.js"]
