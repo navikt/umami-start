@@ -19,10 +19,7 @@ COPY . .
 RUN yarn build
 
 # Production stage
-FROM cgr.dev/chainguard/wolfi-base@sha256:42012fa027adc864efbb7cf68d9fc575ea45fe1b9fb0d16602e00438ce3901b1
-
-# Install Node.js for runtime
-RUN apk update && apk add --no-cache nodejs
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:5181bb4b6a9129064acae4632ea92f3f991dd30d63c5d804fe59b9ad70faa544
 
 WORKDIR /app
 
