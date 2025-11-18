@@ -49,7 +49,7 @@ jobs:
         uses: "nais/deploy/actions/deploy@v2"
         env:
           CLUSTER: "dev-gcp"
-          RESOURCE: nais-dev.yaml
+          RESOURCE: .nais/nais-dev.yaml
           VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
 
   deploy-prod:
@@ -65,7 +65,7 @@ jobs:
         uses: "nais/deploy/actions/deploy@v2"
         env:
           CLUSTER: "prod-gcp"
-          RESOURCE: nais.yaml
+          RESOURCE: .nais/nais-prod.yaml
           VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
       - name: "Create deployment tag"
         if: success()
