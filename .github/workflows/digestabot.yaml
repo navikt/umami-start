@@ -1,0 +1,30 @@
+name: "Check for newer image versions"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # At the end of every day
+    - cron: "0 0 * * *"
+
+jobs:
+  digestabot:
+    name: digestabot update ${{ github.event.repository.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          echo "DT=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+          echo "B=$(date '+%Y%m%d-%H%M%S')" >> $GITHUB_ENV
+      - uses: navikt/digestabot@07cb8ac331b0b06bc0b30a7415587fb63b919608
+        with:
+          team: team-researchops
+          token: ${{ secrets.GITHUB_TOKEN }}
+          labels-for-pr: dependencies
+          branch-for-pr: 'update-digests-${{ env.B }}'
+          title-for-pr: 'Update image digests at ${{ env.DT }}'
+          description-for-pr: Automated update of container image digests to latest versions
+          commit-message: 'Update image digests at ${{ env.DT }}  [ci skip]'
