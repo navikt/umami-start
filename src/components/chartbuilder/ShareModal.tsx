@@ -13,13 +13,33 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
   const maxChars = 200;
 
-  // On open, if description is empty, set it from URL param 'beskrivelse'
+  // On open, if description/selectedTab/hiddenTabs are default, set from URL params
   useEffect(() => {
-    if (open && description === '') {
+    if (open) {
       const urlParams = new URLSearchParams(window.location.search);
-      const descParam = urlParams.get('beskrivelse');
-      if (descParam) {
-        setDescription(descParam);
+
+      // Description
+      if (description === '') {
+        const descParam = urlParams.get('beskrivelse');
+        if (descParam) {
+          setDescription(descParam);
+        }
+      }
+
+      // Tab
+      if (selectedTab === 'table') {
+        const tabParam = urlParams.get('tab');
+        if (tabParam) {
+          setSelectedTab(tabParam);
+        }
+      }
+
+      // hideTabs
+      if (hiddenTabs.length === 0) {
+        const hideTabsParam = urlParams.get('hideTabs');
+        if (hideTabsParam) {
+          setHiddenTabs(hideTabsParam.split(',').filter(Boolean));
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
