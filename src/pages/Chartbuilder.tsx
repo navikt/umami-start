@@ -752,7 +752,8 @@ const ChartsPage = () => {
     
     // Force usage of aliases to avoid TS errors
     if (websiteAlias && sessionAlias) {
-      const _ = [websiteAlias, sessionAlias];
+      void websiteAlias;
+      void sessionAlias;
     }
 
     const requiredTables = getRequiredTables(config, filters);
