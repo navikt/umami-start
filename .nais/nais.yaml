@@ -1,0 +1,28 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: umami-start
+  namespace: team-researchops
+  labels:
+    team: team-researchops
+spec:
+  image: {{ image }}
+  port: 8080
+  envFrom:
+  - secret: umami-bigquery
+  liveness:
+    path: /isalive
+    port: 8080
+    initialDelay: 20
+    timeout: 60
+  readiness:
+    path: /isready
+    port: 8080
+    initialDelay: 20
+    timeout: 60
+  replicas:
+    min: 1
+    max: 2
+    cpuThresholdPercentage: 80
+  ingresses:
+    - https://startumami.ansatt.nav.no

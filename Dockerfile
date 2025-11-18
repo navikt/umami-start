@@ -1,5 +1,8 @@
 # Build stage
-FROM cgr.dev/chainguard/node:latest-dev@sha256:42012fa027adc864efbb7cf68d9fc575ea45fe1b9fb0d16602e00438ce3901b1 AS builder
+FROM cgr.dev/chainguard/wolfi-base@sha256:42012fa027adc864efbb7cf68d9fc575ea45fe1b9fb0d16602e00438ce3901b1 AS builder
+
+# Install Node.js and yarn
+RUN apk update && apk add --no-cache nodejs yarn
 
 WORKDIR /app
 
@@ -15,8 +18,11 @@ COPY . .
 # Build the application
 RUN yarn build
 
-# Production stage - distroless
-FROM cgr.dev/chainguard/node:latest@sha256:42012fa027adc864efbb7cf68d9fc575ea45fe1b9fb0d16602e00438ce3901b1
+# Production stage
+FROM cgr.dev/chainguard/wolfi-base@sha256:42012fa027adc864efbb7cf68d9fc575ea45fe1b9fb0d16602e00438ce3901b1
+
+# Install Node.js for runtime
+RUN apk update && apk add --no-cache nodejs
 
 WORKDIR /app
 
