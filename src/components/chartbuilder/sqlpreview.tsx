@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, CopyButton, Button, Alert, FormProgress } from '@navikt/ds-react';
-import { ChevronDown, ChevronUp, Copy, ExternalLink, RotateCcw } from 'lucide-react';
+import { Heading, Link, Button, Alert, FormProgress, Modal } from '@navikt/ds-react';
+import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
+import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import AlertWithCloseButton from './AlertWithCloseButton';
+import ResultsDisplay from './ResultsDisplay';
+import SqlCodeDisplay from './SqlCodeDisplay';
+import { translateValue } from '../../lib/translations';
 
 interface SQLPreviewProps {
   sql: string;
@@ -14,6 +18,17 @@ interface SQLPreviewProps {
   onResetAll?: () => void; // Add new prop for reset functionality
 }
 
+const API_TIMEOUT_MS = 60000; // timeout
+
+const timeoutPromise = (ms: number) => {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      const seconds = Math.round(ms / 1000);
+      reject(new Error(`Forespørsel feilet etter å ha ventet ${seconds} sekunder`));
+    }, ms);
+  });
+};
+
 const SQLPreview = ({
   sql,
   activeStep = 1,
@@ -24,20 +39,569 @@ const SQLPreview = ({
   groupByFields = [],
   onResetAll,
 }: SQLPreviewProps) => {
-  const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
+  const [estimate, setEstimate] = useState<any>(null);
+  const [estimating, setEstimating] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<'copy' | 'estimate' | 'execute' | 'run' | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingQueryEstimate, setPendingQueryEstimate] = useState<any>(null);
+  const [queryStats, setQueryStats] = useState<any>(null);
+  const [showLoadingMessage, setShowLoadingMessage] = useState(false);
 
-  const handleCopy = () => {
+  // Helper function to prepare data for LineChart
+  const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
+    if (!result || !result.data || result.data.length === 0) return null;
+    
+    const data = result.data;
+    const keys = Object.keys(data[0]);
+    
+    // Need at least 2 columns (x-axis and y-axis)
+    if (keys.length < 2) return null;
+    
+    console.log('Preparing LineChart with keys:', keys);
+    console.log('Sample row:', data[0]);
+    
+    // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
+    if (keys.length === 3) {
+      const xKey = keys[0];
+      const seriesKey = keys[1]; // e.g., 'browser'
+      const yKey = keys[2]; // e.g., 'Unike_besokende'
+      
+      // Group data by series
+      const seriesMap = new Map<string, any[]>();
+      
+      data.forEach((row: any) => {
+        const rawSeriesValue = row[seriesKey];
+        const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
+        const seriesValue = String(translatedSeriesValue || 'Ukjent');
+        if (!seriesMap.has(seriesValue)) {
+          seriesMap.set(seriesValue, []);
+        }
+        
+        const xValue = row[xKey];
+        const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
+        
+        let x: number | Date;
+        if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+          x = new Date(xValue);
+        } else if (typeof xValue === 'number') {
+          x = xValue;
+        } else {
+          x = new Date(xValue).getTime() || 0;
+        }
+        
+        seriesMap.get(seriesValue)!.push({
+          x,
+          y: yValue,
+          xAxisCalloutData: String(xValue),
+          yAxisCalloutData: String(yValue),
+        });
+      });
+      
+      // Convert to line chart format with colors
+      // Using colorblind-friendly palette with good contrast
+      const colors = [
+        '#0067C5', // Blue (NAV blue)
+        '#FF9100', // Orange
+        '#06893A', // Green
+        '#C30000', // Red
+        '#634689', // Purple
+        '#A8874C', // Brown/Gold
+        '#005B82', // Teal
+        '#E18AAA', // Pink
+      ];
+      const lineChartData = Array.from(seriesMap.entries()).map(([seriesName, points], index) => ({
+        legend: seriesName,
+        data: points,
+        color: colors[index % colors.length],
+        lineOptions: {
+          lineBorderWidth: '2',
+        },
+      }));
+      
+      // Calculate average line across all data points (only if requested)
+      if (includeAverage) {
+        // Collect all unique x values
+        const allXValues = new Set<number>();
+        lineChartData.forEach(series => {
+          series.data.forEach((point: any) => {
+            const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
+            allXValues.add(xVal);
+          });
+        });
+        
+        // For each x value, calculate the average y value across all series
+        const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
+          const yValues: number[] = [];
+          lineChartData.forEach(series => {
+            const point = series.data.find((p: any) => {
+              const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
+              return pxVal === xVal;
+            });
+            if (point) {
+              yValues.push(point.y);
+            }
+          });
+          
+          const avgY = yValues.length > 0 
+            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length 
+            : 0;
+          
+          // Find original xAxisCalloutData from any series
+          const originalPoint = lineChartData[0].data.find((p: any) => {
+            const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
+            return pxVal === xVal;
+          });
+          
+          return {
+            x: new Date(xVal),
+            y: avgY,
+            xAxisCalloutData: originalPoint?.xAxisCalloutData || String(xVal),
+            yAxisCalloutData: avgY.toFixed(2),
+          };
+        });
+        
+        // Add average line to the chart
+        lineChartData.push({
+          legend: 'Gjennomsnitt',
+          data: averagePoints,
+          color: '#262626', // Dark gray for average line
+          lineOptions: {
+            lineBorderWidth: '2',
+            strokeDasharray: '5 5',
+          } as any,
+        });
+      }
+      
+      console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
+      
+      return {
+        data: {
+          lineChartData,
+        },
+        enabledLegendsWrapLines: true,
+      };
+    }
+    
+    // Single line: assume first column is x-axis and second is y-axis
+    const xKey = keys[0];
+    const yKey = keys[1];
+    
+    const chartPoints = data.map((row: any, index: number) => {
+      const xValue = row[xKey];
+      const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
+      
+      let x: number | Date;
+      if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+        x = new Date(xValue);
+      } else if (typeof xValue === 'number') {
+        x = xValue;
+      } else {
+        x = index;
+      }
+      
+      return {
+        x,
+        y: yValue,
+        xAxisCalloutData: String(xValue),
+        yAxisCalloutData: String(yValue),
+      };
+    });
+    
+    console.log('Single-line chart points:', chartPoints.slice(0, 3));
+    
+    // Build the line chart data array
+    const lineChartData: any[] = [{
+      legend: yKey,
+      data: chartPoints,
+      color: '#0067C5',
+      lineOptions: {
+        lineBorderWidth: '2',
+      },
+    }];
+    
+    // Add average line (only if requested)
+    if (includeAverage) {
+      // Calculate average y value for horizontal average line
+      const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
+      
+      // Create average line points (horizontal line across all x values)
+      const averageLinePoints = chartPoints.map((point: any) => ({
+        x: point.x,
+        y: avgY,
+        xAxisCalloutData: point.xAxisCalloutData,
+        yAxisCalloutData: avgY.toFixed(2),
+      }));
+      
+      lineChartData.push({
+        legend: 'Gjennomsnitt',
+        data: averageLinePoints,
+        color: '#262626',
+        lineOptions: {
+          lineBorderWidth: '2',
+          strokeDasharray: '5 5',
+        } as any,
+      });
+    }
+    
+    return {
+      data: {
+        lineChartData,
+      },
+      enabledLegendsWrapLines: true,
+    };
+  };
+
+  // Helper function to prepare data for VerticalBarChart
+  // Helper function to prepare data for VerticalBarChart
+  const prepareBarChartData = (): IVerticalBarChartProps | null => {
+    if (!result || !result.data || result.data.length === 0) return null;
+    
+    const data = result.data;
+    
+    // Only show bar chart if 10 or fewer items
+    if (data.length > 12) return null;
+    
+    const keys = Object.keys(data[0]);
+    
+    // Need at least 2 columns (label and value)
+    if (keys.length < 2) return null;
+    
+    // Assume first column is label and second is value
+    const labelKey = keys[0];
+    const valueKey = keys[1];
+    
+    console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
+    console.log('Sample row:', data[0]);
+    
+    // Calculate total for percentages
+    const total = data.reduce((sum: number, row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      return sum + value;
+    }, 0);
+    
+    console.log('Total value for bar chart:', total);
+    
+    const barChartData = data.map((row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+      
+      // Use label for x-axis, with translation
+      const rawLabel = row[labelKey];
+      const translatedLabel = translateValue(labelKey, rawLabel);
+      const label = String(translatedLabel || 'Ukjent');
+      
+      return {
+        x: label,
+        y: value,
+        xAxisCalloutData: label,
+        yAxisCalloutData: `${value} (${percentage}%)`,
+        color: '#0067C5', // NAV blue color
+        legend: label,
+      };
+    });
+    
+    console.log('VerticalBarChart data points:', barChartData.slice(0, 3)); // Log first 3 points
+    
+    return {
+      data: barChartData,
+      barWidth: 'auto',
+      yAxisTickCount: 5,
+      enableReflow: true,
+      legendProps: {
+        allowFocusOnLegends: true,
+        canSelectMultipleLegends: false,
+        styles: {
+          root: {
+            display: 'flex',
+            flexWrap: 'wrap',
+            rowGap: '8px',
+            columnGap: '16px',
+            maxWidth: '100%',
+          },
+          legend: {
+            marginRight: 0,
+          },
+        },
+      },
+    };
+  };
+
+  // Helper function to prepare data for PieChart
+  const preparePieChartData = (): { data: Array<{ y: number; x: string }>; total: number } | null => {
+    if (!result || !result.data || result.data.length === 0) return null;
+    
+    const data = result.data;
+    
+    // Only show pie chart if 10 or fewer items
+    if (data.length > 12) return null;
+    
+    const keys = Object.keys(data[0]);
+    
+    // Need at least 2 columns (label and value)
+    if (keys.length < 2) return null;
+    
+    // Assume first column is label and second is value
+    const labelKey = keys[0];
+    const valueKey = keys[1];
+    
+    console.log('Preparing PieChart with keys:', { labelKey, valueKey });
+    console.log('Sample row:', data[0]);
+    
+    // Calculate total for percentages
+    const total = data.reduce((sum: number, row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      return sum + value;
+    }, 0);
+    
+    console.log('Total value for pie chart:', total);
+    
+    const pieChartData = data.map((row: any) => {
+      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+      const rawLabel = row[labelKey];
+      const translatedLabel = translateValue(labelKey, rawLabel);
+      const label = String(translatedLabel || 'Ukjent');
+      
+      return {
+        y: value,
+        x: label,
+      };
+    });
+    
+    console.log('PieChart data points:', pieChartData.slice(0, 3)); // Log first 3 points
+    
+    return {
+      data: pieChartData,
+      total,
+    };
+  };
+
+  const handleCopy = async () => {
     navigator.clipboard.writeText(sql);
     setCopied(true);
+    
+    // Also run cost estimation
+    setEstimating(true);
+    setLastAction('copy');
+    
+    try {
+      const response = await Promise.race([
+        fetch('/api/bigquery/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]) as Response;
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Estimation failed');
+      }
+
+      setEstimate(data);
+    } catch (err: any) {
+      // Record a non-fatal error so user can retry if it was a timeout
+      setError(err.message || 'En feil oppstod');
+    } finally {
+      setEstimating(false);
+    }
+    
     setTimeout(() => setCopied(false), 3000);
   };
+
+  const executeQuery = async () => {
+    // First, estimate the cost
+    setLoading(true);
+    setError(null);
+    setLastAction('execute');
+    
+    try {
+      const estimateResponse = await Promise.race([
+        fetch('/api/bigquery/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]) as Response;
+
+      const estimateData = await estimateResponse.json();
+
+      if (!estimateResponse.ok) {
+        throw new Error(estimateData.error || 'Estimation failed');
+      }
+
+      const gb = parseFloat(estimateData.totalBytesProcessedGB);
+      
+      // Check if we should warn the user
+      let shouldWarn = false;
+      
+      if (gb >= 15) {
+        shouldWarn = true;
+      }
+      
+      // If warning threshold is met, show modal for confirmation
+      if (shouldWarn) {
+        setPendingQueryEstimate(estimateData);
+        setShowConfirmModal(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Proceed with the actual query for small queries
+      await runQuery();
+    } catch (err: any) {
+      setError(err.message || 'En feil oppstod');
+      setLoading(false);
+    }
+  };
+
+  const runQuery = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setQueryStats(null);
+    setLastAction('run');
+
+    try {
+      const response = await Promise.race([
+        fetch('/api/bigquery', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: sql }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS)
+      ]) as Response;
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Query failed');
+      }
+
+      setResult(data);
+      
+      // Also get the query stats by running estimate (it's fast and gives us the GB info)
+      try {
+        const estimateResponse = await Promise.race([
+          fetch('/api/bigquery/estimate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: sql }),
+          }),
+          timeoutPromise(API_TIMEOUT_MS)
+        ]) as Response;
+        const estimateData = await estimateResponse.json();
+        if (estimateResponse.ok) {
+          setQueryStats(estimateData);
+        }
+      } catch {
+        // If estimate fails, it's not critical
+      }
+    } catch (err: any) {
+      setError(err.message || 'En feil oppstod');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Retry handler based on the lastAction
+  const handleRetry = async () => {
+    if (!lastAction) return;
+
+    setError(null);
+
+    if (lastAction === 'copy') {
+      // Retry the estimate used in the copy flow
+      setEstimating(true);
+      try {
+        const response = await Promise.race([
+          fetch('/api/bigquery/estimate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: sql }),
+          }),
+          timeoutPromise(API_TIMEOUT_MS),
+        ]) as Response;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Estimation failed');
+        setEstimate(data);
+      } catch (err: any) {
+        setError(err.message || 'En feil oppstod');
+      } finally {
+        setEstimating(false);
+      }
+    } else if (lastAction === 'execute') {
+      await executeQuery();
+    } else if (lastAction === 'run') {
+      await runQuery();
+    } else if (lastAction === 'estimate') {
+      // generic estimate
+      try {
+        const response = await Promise.race([
+          fetch('/api/bigquery/estimate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: sql }),
+          }),
+          timeoutPromise(API_TIMEOUT_MS),
+        ]) as Response;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Estimation failed');
+        setEstimate(data);
+      } catch (err: any) {
+        setError(err.message || 'En feil oppstod');
+      }
+    }
+  };
+
+  const handleConfirmQuery = async () => {
+    setShowConfirmModal(false);
+    await runQuery();
+  };
+
+  const handleCancelQuery = () => {
+    setShowConfirmModal(false);
+    setPendingQueryEstimate(null);
+  };
+
+  // Show loading message after 10 seconds
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading) {
+      setShowLoadingMessage(false);
+      timer = setTimeout(() => {
+        setShowLoadingMessage(true);
+      }, 10000);
+    } else {
+      setShowLoadingMessage(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [loading]);
 
   // Check if SQL is just a basic template without metrics or groupings
   const isBasicTemplate = () => {
     if (!sql) return true;
+    
+    // Check if it's the "please select website" message
+    if (sql.includes('Please select a website')) return true;
 
     // Check if there are any SELECT columns specified or if it's just the basic structure
     const selectPattern = /SELECT\s+(\s*FROM|\s*$)/i;
@@ -125,6 +689,15 @@ const SQLPreview = ({
     }
   }, [activeStep, openFormprogress, onOpenChange, prevStep, autoClosedFinalStep, wasManuallyOpened, FINAL_STEP]);
 
+  // Clear results when SQL changes (website change or reset)
+  useEffect(() => {
+    setResult(null);
+    setQueryStats(null);
+    setError(null);
+    setEstimate(null);
+    setCopied(false);
+  }, [sql]);
+
   return (
     <>
       <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
@@ -135,35 +708,31 @@ const SQLPreview = ({
             
             {/* Only show SQL code button if the SQL is meaningful */}
             {isSQLMeaningful() && (
-              <div className="mt-4">
-                <Button
-                  variant="tertiary"
-                  size="small"
-                  onClick={() => setShowCode(!showCode)}
-                  icon={showCode ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  className="mb-2"
-                >
-                  {showCode ? 'Skjul SQL-kode' : 'Vis SQL-kode'}
-                </Button>
-
-                {showCode && (
-                  <div className="relative">
-                    <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
-                      {sql}
-                    </pre>
-                    <div className="absolute top-2 right-2">
-                      <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SqlCodeDisplay sql={sql} showEditButton={true} />
             )}
           </div>
         ) : (
           // Show the original SQL preview instructions
           <div>
+            {/* Direct Query Execution Section */}
+            <ResultsDisplay
+              result={result}
+              loading={loading}
+              error={error}
+              queryStats={queryStats}
+              lastAction={lastAction}
+              showLoadingMessage={showLoadingMessage}
+              executeQuery={executeQuery}
+              handleRetry={handleRetry}
+              prepareLineChartData={prepareLineChartData}
+              prepareBarChartData={prepareBarChartData}
+              preparePieChartData={preparePieChartData}
+              sql={sql}
+            />
+
+            {/* Metabase Section */}
             <div className="space-y-2 mb-4">
-              <Heading level="2" size="small">Få svaret i Metabase</Heading>
+              <Heading level="2" size="small">Legg til i Metabase</Heading>
 
               {/* Add incompatibility warning */}
               {showIncompatibilityWarning && (
@@ -194,6 +763,7 @@ const SQLPreview = ({
                           onClick={handleCopy}
                           icon={<Copy size={18} />}
                           className="w-full md:w-auto"
+                          loading={estimating}
                         >
                           Kopier spørsmålet
                         </Button>
@@ -202,6 +772,75 @@ const SQLPreview = ({
                           Spørsmålet er kopiert!
                         </Alert>
                       )}
+                      
+                      {/* Cost Estimate Display */}
+                      {estimating && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          Estimerer kostnad...
+                        </div>
+                      )}
+                      
+                      {estimate && !estimating && (() => {
+                        const gb = parseFloat(estimate.totalBytesProcessedGB);
+                       // const mb = parseFloat(estimate.totalBytesProcessedMB);
+                        
+                        // Determine variant and message based on data size
+                        let variant: 'info' | 'warning' | 'error' = 'info';
+                        let showAsAlert = false;
+                        
+                        if (gb >= 100) { // Crazy much - 100+ GB
+                          variant = 'error';
+                          showAsAlert = true;
+                        } else if (gb >= 20) { // Many GB - 10-100 GB
+                          variant = 'warning';
+                          showAsAlert = true;
+                        } else if (gb >= 15) { // More than 1 GB
+                          variant = 'info';
+                          showAsAlert = true;
+                        }
+                        // Less than 1 GB - just show as simple text line
+                        
+                        if (!showAsAlert) {
+                          // Simple line for small queries (< 1 GB)
+                          return (
+                            <div className="mt-2 text-sm text-gray-800">
+                              Data å prosessere: {gb} GB
+                              {parseFloat(estimate.estimatedCostUSD) > 0 && ` • Kostnad: $${estimate.estimatedCostUSD}`}
+                            </div>
+                          );
+                        }
+                        
+                        // Alert for larger queries
+                        return (
+                          <Alert variant={variant} className="mt-2">
+                            <div className="text-sm space-y-1">
+                              <p>
+                                <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
+                              </p>
+                              {parseFloat(estimate.estimatedCostUSD) > 0 && (
+                                <p>
+                                  <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
+                                </p>
+                              )}
+                              {gb >= 100 && (
+                                <p className="font-medium mt-2">
+                                  ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
+                                </p>
+                              )}
+                              {gb >= 10 && gb < 100 && (
+                                <p className="font-medium mt-2">
+                                  Dette er en stor spørring. Sjekk at du trenger all denne dataen.
+                                </p>
+                              )}
+                            </div>
+                          </Alert>
+                        );
+                      })()}
+                      {/* {estimateError && (
+                        <Alert variant="warning" className="mt-2">
+                          <p className="text-sm">Kunne ikke estimere kostnad: {estimateError}</p>
+                        </Alert>
+                      )} */}
                     </div>
                   </div>
                 </div>
@@ -240,37 +879,7 @@ const SQLPreview = ({
               </div>
             </div>
 
-            {sql && (
-              <div className="mt-4">
-                <Button
-                  variant="tertiary"
-                  size="small"
-                  onClick={() => setShowCode(!showCode)}
-                  icon={showCode ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  className="mb-2"
-                >
-                  {showCode ? 'Skjul SQL-kode' : 'Vis SQL-kode'}
-                </Button>
-
-                {showCode && (
-                  <div className="relative">
-                    <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
-                      {sql}
-                    </pre>
-                    <div className="absolute top-2 right-2">
-                      <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
-                    </div>
-
-                    <div className="mt-2 mb-8 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-100">
-                      <p>
-                        <strong>Tips:</strong> Du trenger ikke å forstå koden! Den er generert basert på valgene dine,
-                        og vil fungere når du kopierer og limer inn i Metabase.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {sql && <SqlCodeDisplay sql={sql} showEditButton={true} />}
           </div>
         )}
         <div className="pt-0">
@@ -283,7 +892,7 @@ const SQLPreview = ({
           >
             <FormProgress.Step>Velg nettside eller app</FormProgress.Step>
             <FormProgress.Step>Formuler spørsmålet</FormProgress.Step>
-            <FormProgress.Step>Få svaret i Metabase</FormProgress.Step>
+            <FormProgress.Step>Vis resultater</FormProgress.Step>
           </FormProgress>
         </div>
       </div>
@@ -326,6 +935,69 @@ const SQLPreview = ({
           </>
         )}
       </div>
+
+      {/* Confirmation Modal for Large Queries */}
+      <Modal
+        open={showConfirmModal}
+        onClose={handleCancelQuery}
+        header={{
+          heading: "Bekreft stor spørring",
+          closeButton: false,
+        }}
+      >
+        <Modal.Body>
+          {pendingQueryEstimate && (() => {
+            const gb = parseFloat(pendingQueryEstimate.totalBytesProcessedGB);
+            let variant: 'info' | 'warning' | 'error' = 'info';
+            let message = '';
+            
+            if (gb >= 100) {
+              variant = 'error';
+              message = 'Dette er en veldig stor spørring!';
+            } else if (gb >= 20) {
+              variant = 'warning';
+              message = 'Dette er en stor spørring.';
+            } else {
+              variant = 'info';
+              message = 'Denne spørringen vil prosessere en del data.';
+            }
+            
+            return (
+              <div className="space-y-4">
+                <Alert variant={variant}>
+                  <div className="space-y-2">
+                    <p className="font-medium">{message}</p>
+                    <p>
+                      <strong>Data å prosessere:</strong> {pendingQueryEstimate.totalBytesProcessedGB} GB
+                    </p>
+                    {parseFloat(pendingQueryEstimate.estimatedCostUSD) > 0 && (
+                      <p>
+                        <strong>Estimert kostnad:</strong> ${pendingQueryEstimate.estimatedCostUSD} USD
+                      </p>
+                    )}
+                  </div>
+                </Alert>
+                <p>Er du sikker på at du vil kjøre denne spørringen?</p>
+              </div>
+            );
+          })()}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="primary"
+            onClick={handleConfirmQuery}
+            loading={loading}
+          >
+            Ja, kjør spørringen
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleCancelQuery}
+          >
+            Avbryt
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };

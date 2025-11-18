@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { UNSAFE_Combobox, Alert, ProgressBar } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Alert, ProgressBar, Button } from '@navikt/ds-react';
 
 interface Website {
   id: string;
@@ -14,6 +14,9 @@ interface WebsitePickerProps {
   onEventsLoad?: (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => void;
   dateRangeInDays?: number; // Add this prop to accept date range from parent
   shouldReload?: boolean;   // Add flag to force reload
+  onIncludeParamsChange?: (includeParams: boolean) => void; // Callback to notify parent of includeParams state
+  resetIncludeParams?: boolean; // Add flag to reset includeParams
+  requestIncludeParams?: boolean; // Add flag to request loading params
 }
 
 interface EventProperty {
@@ -50,16 +53,19 @@ const WebsitePicker = ({
   onWebsiteChange, 
   onEventsLoad,
   dateRangeInDays: externalDateRange, 
-  shouldReload = false                
+  shouldReload = false,
+  onIncludeParamsChange,
+  resetIncludeParams = false,
+  requestIncludeParams = false
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
   const [setMaxDaysAvailable] = useState<number>(30);
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 1);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 14);
   const apiCache = useRef<ApiCache>({});
   const fetchInProgress = useRef<{[key: string]: boolean}>({});
   const websitesLoaded = useRef<boolean>(false);
-  const prevExternalDateRange = useRef<number>(externalDateRange || 1);
+  const prevExternalDateRange = useRef<number>(externalDateRange || 14);
   const prevShouldReload = useRef<boolean>(shouldReload);
   const initialUrlChecked = useRef<boolean>(false);
 
@@ -67,8 +73,32 @@ const WebsitePicker = ({
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState<boolean>(false);
-  const [usingJsonData, setUsingJsonData] = useState<boolean>(false);
   const loadingTimerRef = useRef<number | null>(null);
+  const [gbProcessed, setGbProcessed] = useState<string | null>(null);
+  const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
+  const [includeParams, setIncludeParams] = useState<boolean>(false);
+  const prevIncludeParams = useRef<boolean>(false);
+
+  // Reset includeParams when resetIncludeParams prop changes
+  useEffect(() => {
+    if (resetIncludeParams) {
+      setIncludeParams(false);
+    }
+  }, [resetIncludeParams]);
+
+  // Set includeParams when requestIncludeParams prop changes to true
+  useEffect(() => {
+    if (requestIncludeParams && !includeParams) {
+      setIncludeParams(true);
+    }
+  }, [requestIncludeParams, includeParams]);
+
+  // Notify parent when includeParams changes
+  useEffect(() => {
+    if (onIncludeParamsChange) {
+      onIncludeParamsChange(includeParams);
+    }
+  }, [includeParams, onIncludeParamsChange]);
 
   // Function to update URL with website ID
   const updateUrlWithWebsiteId = useCallback((website: Website | null) => {
@@ -84,33 +114,13 @@ const WebsitePicker = ({
     window.history.pushState({}, '', url.toString());
   }, []);
 
-  // Function to check if JSON file with same website ID exists
-  const checkExistingJsonData = useCallback(async (websiteId: string) => {
-    try {
-      // Dynamic import of JSON file based on website ID
-      const module = await import(`../data/eventer/${websiteId}.json`)
-        .catch(() => null);
-      
-      if (module) {
-        console.log(`Found existing JSON data for website ID: ${websiteId}`, module.default);
-        return module.default;
-      }
-    } catch (error) {
-      console.log(`No existing JSON data found for website ID: ${websiteId}`);
-    }
-    return null;
-  }, []);
-
   // Handle website selection and update URL
   const handleWebsiteChange = useCallback((website: Website | null) => {
     onWebsiteChange(website);
     updateUrlWithWebsiteId(website);
-    
-    // Check for existing JSON data when website is selected
-    if (website && website.id) {
-      checkExistingJsonData(website.id);
-    }
-  }, [onWebsiteChange, updateUrlWithWebsiteId, checkExistingJsonData]);
+    // Reset to cheap query when switching websites
+    setIncludeParams(false);
+  }, [onWebsiteChange, updateUrlWithWebsiteId]);
 
   // Check for website ID in URL on initial load
   useEffect(() => {
@@ -184,72 +194,19 @@ const WebsitePicker = ({
     
     fetchInProgress.current[websiteId] = true;
     setError(null); // Clear any previous errors
-    setUsingJsonData(false); // Reset JSON data flag
+    setGbProcessed(null); // Clear previous GB count
+    setEstimatedGbProcessed(null); // Clear previous estimated GB
     
     try {
-      // First check if we have JSON data for this website ID
-      const existingData = await checkExistingJsonData(websiteId);
-      
-      if (existingData && !forceFresh) {
-        console.log(`Using existing JSON data instead of API calls for website ID: ${websiteId}`);
-        setUsingJsonData(true); // Set flag when using JSON data
-        
-        // Process the existing JSON data - using same approach as API data for consistency
-        const eventMap = new Map<string, string[]>();
-        
-        // Process JSON data to match API data structure
-        existingData.forEach((item: any) => {
-          const eventName = item.event_name;
-          const parameters = item.parameters || [];
-          
-          if (!eventMap.has(eventName)) {
-            eventMap.set(eventName, []);
-          }
-          
-          // Add parameters to the map
-          parameters.forEach((param: string) => {
-            if (!eventMap.get(eventName)!.includes(param)) {
-              eventMap.get(eventName)!.push(param);
-            }
-          });
-        });
-        
-        // Convert to the same format used by the API path
-        const uniqueEventNames = Array.from(eventMap.keys());
-        const paramsByEvent: {key: string, type: 'string'}[] = [];
-        
-        eventMap.forEach((params, eventName) => {
-          params.forEach(param => {
-            paramsByEvent.push({
-              key: `${eventName}.${param}`,
-              type: 'string'
-            });
-          });
-        });
-        
-        console.log(`[JSON Source] Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
-        
-        if (onEventsLoad) {
-          // Using 30 as default max days when loading from JSON
-          onEventsLoad(uniqueEventNames, paramsByEvent, 30);
-        }
-        
-        fetchInProgress.current[websiteId] = false;
-        return;
-      }
-      
-      // Only show loading UI for API calls, not JSON data
+      // Show loading UI
       handleLoadingState(true);
       
-      const baseUrl = window.location.hostname === 'localhost' 
-        ? 'https://reops-proxy.intern.nav.no' 
-        : 'https://reops-proxy.ansatt.nav.no';
+      // Use local API endpoint that queries BigQuery
+      const apiBase = '/api/bigquery';
 
       // Add timeout to date range fetch
       const dateRangeResponse = await Promise.race([
-        fetch(`${baseUrl}/umami/api/websites/${websiteId}/daterange`, {
-          credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-        }),
+        fetch(`${apiBase}/websites/${websiteId}/daterange`),
         timeoutPromise(API_TIMEOUT_MS)
       ]);
       // @ts-ignore
@@ -270,17 +227,29 @@ const WebsitePicker = ({
       
       console.log(`Fetching data for ${daysToFetch} days from ${new Date(startAt).toLocaleDateString()} to ${new Date(endAt).toLocaleDateString()}`);
       
-      // Add timeout to properties fetch
+      // Fetch BOTH query types to get both estimates
       const propertiesResponse = await Promise.race([
-        fetch(
-          `${baseUrl}/umami/api/websites/${websiteId}/event-data/properties?startAt=${startAt}&endAt=${endAt}&unit=hour&timezone=Europe%2FOslo`,
-          { credentials: window.location.hostname === 'localhost' ? 'omit' : 'include' }
-        ),
+        fetch(`${apiBase}/websites/${websiteId}/event-properties?startAt=${startAt}&endAt=${endAt}&includeParams=${includeParams}`),
         timeoutPromise(API_TIMEOUT_MS)
       ]);// @ts-ignore
-      const properties: EventProperty[] = await propertiesResponse.json();
+      const responseData = await propertiesResponse.json();
       
-      console.log(`Fetched ${properties.length} properties from the API`);
+      console.log('API Response:', responseData);
+      
+      // Extract properties and GB processed from response
+      const properties: EventProperty[] = responseData.properties || [];
+      const gbProcessedValue = responseData.gbProcessed;
+      const estimatedGbValue = responseData.estimatedGbProcessed;
+      
+      if (gbProcessedValue) {
+        setGbProcessed(gbProcessedValue);
+      }
+      
+      if (estimatedGbValue) {
+        setEstimatedGbProcessed(estimatedGbValue);
+      }
+      
+      console.log(`Fetched ${properties.length} event entries from the API, estimated ${estimatedGbValue} GB, actual ${gbProcessedValue} GB`);
       
       // Process events and parameters
       const eventMap = new Map<string, string[]>();
@@ -288,7 +257,8 @@ const WebsitePicker = ({
         if (!eventMap.has(prop.eventName)) {
           eventMap.set(prop.eventName, []);
         }
-        if (!eventMap.get(prop.eventName)!.includes(prop.propertyName)) {
+        // Only add property name if it exists (when includeParams=true)
+        if (prop.propertyName && !eventMap.get(prop.eventName)!.includes(prop.propertyName)) {
           eventMap.get(prop.eventName)!.push(prop.propertyName);
         }
       });
@@ -304,7 +274,8 @@ const WebsitePicker = ({
         });
       });
       
-      console.log(`[API Source] Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+      console.log(`Found ${uniqueEventNames.length} unique events and ${paramsByEvent.length} parameters`);
+
       
       if (onEventsLoad) {
         onEventsLoad(uniqueEventNames, paramsByEvent, totalDays);
@@ -325,7 +296,7 @@ const WebsitePicker = ({
     } finally {
       fetchInProgress.current[websiteId] = false;
     }
-  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, checkExistingJsonData]);
+  }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, includeParams]);
 
   useEffect(() => {
     if (websitesLoaded.current) {
@@ -372,13 +343,26 @@ const WebsitePicker = ({
       // Clear cache when website changes
       apiCache.current = {};
       
-      // Use false for forceFresh to prefer JSON data if available
       fetchEventNames(selectedWebsite.id, false, dateRangeInDays)
         .finally(() => {
           setLoadedWebsiteId(selectedWebsite.id);
         });
+    } else if (!selectedWebsite && loadedWebsiteId) {
+      // Clear loadedWebsiteId when website is deselected/reset
+      setLoadedWebsiteId(null);
     }
-  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, checkExistingJsonData]);
+  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
+
+  // Reload when includeParams changes
+  useEffect(() => {
+    if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current) {
+      prevIncludeParams.current = includeParams;
+      apiCache.current[selectedWebsite.id] = {};
+      fetchEventNames(selectedWebsite.id, true, dateRangeInDays);
+    }
+  }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays]);
+
+
 
   // Combine the reload effects to avoid loops
   useEffect(() => {
@@ -389,7 +373,7 @@ const WebsitePicker = ({
     const reloadFlagChanged = shouldReload !== prevShouldReload.current;
     
     // Update the refs to track current values
-    prevExternalDateRange.current = externalDateRange || 3;
+    prevExternalDateRange.current = externalDateRange || 14;
     prevShouldReload.current = shouldReload;
     
     // Only reload if something actually changed
@@ -398,7 +382,7 @@ const WebsitePicker = ({
       
       if (dateRangeChanged) {
         // Update the internal state
-        setDateRangeInDays(externalDateRange || 3);
+        setDateRangeInDays(externalDateRange || 14);
       }
       
       // Clear cache and force a fresh fetch
@@ -418,13 +402,6 @@ const WebsitePicker = ({
               {error}
             </Alert>
           )}
-          {/*
-          {usingJsonData && selectedWebsite && (
-            <Alert variant="success" className="mb-4">
-              Bruker lagret datasett med hendelser og detaljer
-            </Alert>
-          )}
-            */}
           <UNSAFE_Combobox
             label={selectedWebsite ? "Nettside eller app" : "Velg nettside eller app"}
             options={websites.map(website => ({
@@ -443,19 +420,60 @@ const WebsitePicker = ({
             }}
             clearButton
           />
+          {!selectedWebsite && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm">Hurtigvalg:</span>
+              <Button
+                size="xsmall"
+                variant="secondary"
+                onClick={() => {
+                  const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
+                  if (website) {
+                    handleWebsiteChange(website);
+                  }
+                }}
+              >
+                nav.no (prod)
+              </Button>
+                            <Button
+                size="xsmall"
+                variant="secondary"
+                onClick={() => {
+                  const website = websites.find(w => w.id === 'c44a6db3-c974-4316-b433-214f87e80b4d');
+                  if (website) {
+                    handleWebsiteChange(website);
+                  }
+                }}
+              >
+                nav.no (dev)
+              </Button>
+            </div>
+          )}
+          
+          {selectedWebsite && includeParams && (
+            <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+              <div className="text-sm text-gray-700">
+                Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
+              </div>
+            </div>
+          )}
         </div>
-        {showLoading && !usingJsonData && (
+        {showLoading && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span>Laster inn hendelser og detaljer...</span>
+              <span>Laster inn hendelser...</span>
+              {estimatedGbProcessed && (
+                <span className="text-sm text-gray-600">(estimert {estimatedGbProcessed} GB)</span>
+              )}
+              {gbProcessed && (
+                <span className="text-sm text-gray-600">(faktisk {gbProcessed} GB)</span>
+              )}
             </div>
             <ProgressBar 
               size="small"
               simulated={{
-                seconds: 120,
-                onTimeout: () => {
-                  setError('Forespørselen tok for lang tid. Prøv igjen senere.');
-                }
+                seconds: 10,
+                 onTimeout: () => {}
               }}
               aria-label="Laster inn data"
             />

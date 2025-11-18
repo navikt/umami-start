@@ -48,8 +48,8 @@ const ChartFilters = forwardRef(({
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
   // Change to store array instead of single string
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(['pageviews']);
-  // Add state for selected date range
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('');
+  // Add state for selected date range - default to last 7 days
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('last7days');
   // Add state to track custom events selection
   const [customEvents, setCustomEvents] = useState<string[]>([]);
   // Add state to track selected URL paths
@@ -352,6 +352,32 @@ const ChartFilters = forwardRef(({
     }
   }, []); // Empty dependency array means this runs once on mount
 
+  // Add useEffect to apply default date range (last 7 days) on mount
+  useEffect(() => {
+    if (filters.length > 0 && !filters.some(f => f.column === 'created_at')) {
+      const last7daysSQL = {
+        fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
+        toSQL: "CURRENT_TIMESTAMP()"
+      };
+      
+      setFilters([
+        ...filters,
+        {
+          column: 'created_at',
+          operator: '>=',
+          value: last7daysSQL.fromSQL,
+          dateRangeType: 'dynamic'
+        },
+        {
+          column: 'created_at',
+          operator: '<=',
+          value: last7daysSQL.toSQL,
+          dateRangeType: 'dynamic'
+        }
+      ]);
+    }
+  }, [filters.length]); // Run when filters change from 0 to 1 (after pageviews is added)
+
   // Helper function to get clean parameter name
   const getCleanParamName = (param: Parameter): string => {
     const parts = param.key.split('.');
@@ -528,7 +554,13 @@ const ChartFilters = forwardRef(({
 
   // Expose resetFilters method through ref
   useImperativeHandle(ref, () => ({
-    resetFilters
+    resetFilters,
+    enableCustomEvents: () => {
+      // Enable custom events if not already enabled
+      if (!selectedEventTypes.includes('custom_events')) {
+        handleEventTypeChange('custom_events', true);
+      }
+    }
   }));
 
   return (

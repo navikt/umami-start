@@ -1,9 +1,8 @@
-import { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Heading,
   Button, 
   VStack, 
-  TextField, 
   HStack, 
   Accordion,
   BodyShort,
@@ -12,14 +11,13 @@ import {
   Box,
   Tag,
   ReadMore,
-  ExpansionCard
+  ExpansionCard,
+  Search,
+  List
 } from '@navikt/ds-react';
-import { 
-  PlusCircleIcon
-} from '@navikt/aksel-icons';
 import { Parameter } from '../../types/chart';
 import { FILTER_COLUMNS } from '../../lib/constants';
-import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
+// import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
 
 interface EventParameterSelectorProps {
   availableEvents: string[];
@@ -34,6 +32,8 @@ interface EventParameterSelectorProps {
   handleDateRangeChange?: () => void;
   dateChanged?: boolean;
   isLoading?: boolean;
+  includeParams?: boolean; // Whether parameters were loaded (expensive query)
+  onLoadDetailsClick?: () => void; // Callback when user wants to load details
 }
 
 // Enhanced structure to maintain event-parameter relationships
@@ -60,19 +60,22 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   setParameters,
   initiallySelectAll = true, // Default to true to select all events initially
   // Add new props with default values
-  maxDaysAvailable = 0,
-  tempDateRangeInDays = 3,
-  setTempDateRangeInDays = () => {},
-  handleDateRangeChange = () => {},
-  dateChanged = false,
+  // maxDaysAvailable = 0,
+  // tempDateRangeInDays = 3,
+  // setTempDateRangeInDays = () => {},
+  // handleDateRangeChange = () => {},
+  // dateChanged = false,
+  includeParams = false, // Default to false (cheap query)
+  onLoadDetailsClick, // Callback for loading details
 }) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>(
     initiallySelectAll ? availableEvents : []
   );
   // State for selected events and UI controls
-  const [newParamKey, setNewParamKey] = useState<string>('');
-  const [customParamAccordionOpen, setCustomParamAccordionOpen] = useState<boolean>(false);
+  // const [newParamKey, setNewParamKey] = useState<string>('');
+  // const [customParamAccordionOpen, setCustomParamAccordionOpen] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   // @ts-ignore Store event-parameter mapping to ensure proper relationship
   const [eventParamsMap, setEventParamsMap] = useState<EventParams>({});
@@ -167,7 +170,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   };
 
   // Add custom parameter
-  const addParameter = (): void => {
+  {/* const addParameter = (): void => {
     if (!newParamKey.trim()) return;
     
     // Split by newlines and commas
@@ -210,6 +213,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       setNewParamKey('');
     }
   };
+  */}
 
   // Fix missing functions
   const removeParameter = (paramKey: string): void => {
@@ -237,6 +241,22 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       setSelectedEvents(availableEvents);
     }
   }, [availableEvents]);
+
+// Helper to generate a display name for parameters
+  const getParameterDisplayName = (param: Parameter): string => {
+    // For non-prefixed parameters, just show the key
+    if (!param.key.includes('.')) {
+      return param.key;
+    }
+    
+    // For prefixed parameters, strip the prefix
+    return param.key.split('.').slice(1).join('.');
+  };
+
+  // Get a display name for the events in the UI
+  const getEventDisplayName = (eventName: string): string => {
+    return eventName === MANUAL_EVENT_NAME ? MANUAL_EVENT_DISPLAY_NAME : eventName;
+  };
 
 const getGroupedParameters = () => {
   const groups: Record<string, Parameter[]> = {};
@@ -267,32 +287,65 @@ const getGroupedParameters = () => {
   
   return groups;
 };
-  
-  const groupedParameters = getGroupedParameters();
-  
-  // Helper to generate a display name for parameters
-  const getParameterDisplayName = (param: Parameter): string => {
-    // For non-prefixed parameters, just show the key
-    if (!param.key.includes('.')) {
-      return param.key;
+
+  // Filter grouped parameters based on search query
+  const getFilteredGroupedParameters = () => {
+    const groups = getGroupedParameters();
+    
+    if (!searchQuery.trim()) {
+      return groups;
     }
     
-    // For prefixed parameters, strip the prefix
-    return param.key.split('.').slice(1).join('.');
+    const query = searchQuery.toLowerCase();
+    const filtered: Record<string, Parameter[]> = {};
+    
+    Object.entries(groups).forEach(([eventName, params]) => {
+      const eventDisplayName = getEventDisplayName(eventName).toLowerCase();
+      
+      // Check if event name matches
+      if (eventDisplayName.includes(query)) {
+        filtered[eventName] = params;
+        return;
+      }
+      
+      // Filter parameters that match the query
+      const matchingParams = params.filter(param => {
+        const displayName = getParameterDisplayName(param).toLowerCase();
+        return displayName.includes(query);
+      });
+      
+      // Only include the event if it has matching parameters
+      if (matchingParams.length > 0) {
+        filtered[eventName] = matchingParams;
+      }
+    });
+    
+    return filtered;
   };
-
-  // Get a display name for the events in the UI
-  const getEventDisplayName = (eventName: string): string => {
-    return eventName === MANUAL_EVENT_NAME ? MANUAL_EVENT_DISPLAY_NAME : eventName;
-  };
+  
+  const groupedParameters = getGroupedParameters();
+  const filteredGroupedParameters = getFilteredGroupedParameters();
 
   // Add helper function to get total event count
   const getEventCount = () => {
+    // Count events from availableEvents first (from cheap query)
+    const cheapQueryEvents = availableEvents.filter(e => 
+      !e.toLowerCase().startsWith('pageview') && 
+      !e.includes('/')
+    );
+    
+    if (cheapQueryEvents.length > 0) {
+      return cheapQueryEvents.length;
+    }
+    
+    // Fallback to counting from parameters (for expensive query with details)
     const uniqueEvents = new Set();
     parameters.forEach(param => {
       if (param.key.includes('.')) {
         const [eventName] = param.key.split('.');
-        uniqueEvents.add(eventName);
+        if (eventName !== MANUAL_EVENT_NAME) {
+          uniqueEvents.add(eventName);
+        }
       }
     });
     return uniqueEvents.size;
@@ -350,7 +403,7 @@ const getGroupedParameters = () => {
   return (
     <>
         <Heading level="2" size="small" spacing>
-          Tilgjengelig hendelser
+          Tilgjengelige hendelser
         </Heading>
         <ExpansionCard
           aria-label="Hendelsesdetaljer"
@@ -361,10 +414,10 @@ const getGroupedParameters = () => {
             <ExpansionCard.Title as="h3" size="small">
             {getEventCount() === 0 ? (
               <>
-                Besøk
+                Sidevisninger
               </>
             ): (
-              <>{getEventCount()} egendefinerte hendelser + besøk</>
+              <>{getEventCount()} egendefinerte hendelser + sidevisninger</>
             )}
             </ExpansionCard.Title>
           </ExpansionCard.Header>
@@ -374,27 +427,66 @@ const getGroupedParameters = () => {
                         {!isLoadingParameters && (
                 <Box borderRadius="medium">
                   <Heading level="3" size="xsmall" spacing className="mt-3">
-                     Egendefinerte hendelser og detaljer
+                     Egendefinerte hendelser
                   </Heading>
 
                   {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <BodyShort size="small" spacing className="text-gray-700 text-md pt-1 pb-3">
-                      Detaljer er forhåndsatt som tekst. Du kan endre til tall der det er relevant.
-                    </BodyShort>
+                    <List as="ul" size="small" className="text-gray-700 pb-1">
+                      <List.Item>Vi henter alltid hendelser fra de siste 2 ukene.</List.Item>
+                      <List.Item>Detaljer er forhåndsatt som tekst. Du kan endre til tall ved behov.</List.Item>
+                    </List>
                   )}
 
                   {/* Continue with existing Alert for no events */}
                   {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
                     <Alert variant="info" className="mt-3">
-                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 3 dagene. Juster tidsperioden under "innstillinger for hendelsesinnlasting" om nødvendig.
+                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 2 ukene.
                     </Alert>
+                  )}
+
+                  {!includeParams && onLoadDetailsClick && (
+                    <div className="mb-6">
+                      <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
+                        <div className="text-sm text-gray-800 mb-3">
+                          Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
+                        </div>
+                        <Button
+                          onClick={onLoadDetailsClick}
+                          size="xsmall"
+                          variant="secondary"
+                        >
+                          Hent hendelsesdetaljer
+                        </Button>
+                      </ReadMore>
+                    </div>
+                  )}
+
+                  {/* Search field for filtering events and parameters */}
+                  {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
+                    <div className="mb-4">
+                      <Search
+                        label="Søk i hendelser og detaljer"
+                        hideLabel={false}
+                        variant="simple"
+                        size="small"
+                        value={searchQuery}
+                        onChange={(value) => setSearchQuery(value)}
+                        onClear={() => setSearchQuery('')}
+                      />
+                    </div>
                   )}
 
                   {/* Continue with existing Accordion for custom parameters */}
                   {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
+                    <>
+                      {Object.keys(filteredGroupedParameters).length === 0 && searchQuery ? (
+                        <Alert variant="info" className="mt-3">
+                          Ingen hendelser eller detaljer matcher søket "{searchQuery}"
+                        </Alert>
+                      ) : (
                     <Accordion>
                       {/* Existing custom parameter accordion items */}
-                      {Object.keys(groupedParameters).map(eventName => (
+                      {Object.keys(filteredGroupedParameters).map(eventName => (
                         <Accordion.Item key={eventName}>
                           <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
                             <span className="flex items-center gap-2">
@@ -408,13 +500,17 @@ const getGroupedParameters = () => {
                                 </>
                               }
                               <span className="text-sm text-gray-600">
-                                ({groupedParameters[eventName]?.length || 0} {groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'})
+                                ({includeParams ? (
+                                  `${groupedParameters[eventName]?.length || 0} ${groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'}`
+                                ) : (
+                                  'detaljer ikke hentet'
+                                )})
                               </span>
                             </span>
                           </Accordion.Header>
                           <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
                             <VStack gap="3" className="-ml-8 mt-5">
-                              {groupedParameters[eventName]?.map((param) => {
+                              {filteredGroupedParameters[eventName]?.map((param) => {
                                 const displayName = getParameterDisplayName(param);
                                 
                                 return (
@@ -450,26 +546,22 @@ const getGroupedParameters = () => {
                         </Accordion.Item>
                       ))}
                     </Accordion>
-                  )}
-
-                  {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <BodyShort size="small" spacing className="text-md text-gray-700 mt-6">
-                      <strong>Mangler noen?</strong> Eventer og detaljer hentes inn for de siste 3 dagene, du kan justere tidsperioden under "innstillinger for hendelsesinnlasting".
-                    </BodyShort>
+                      )}
+                    </>
                   )}
 
                   <Heading level="3" size="xsmall" spacing className="mt-6">
                      Standard hendelser og detaljer
                   </Heading>
                   <p className="text-md text-gray-700 mb-4">
-                    Sidevisninger spores automatisk med mindre dette er skrudd av. 
+                    Sidevisninger og besøk spores automatisk, hvis ikke deaktivert.
                   </p>
           
-                  <ExpansionCard aria-label="Detaljer som følger med hendelser" size="small">
+                  <ExpansionCard aria-label="Standarddetaljer som følger med hendelser" size="small">
                     <ExpansionCard.Header>
                     <ExpansionCard.Title as="h3" size="small">
                       <span className="items-center gap-2">
-                        <BodyShort weight="semibold">Detaljer som følger med hendelser</BodyShort>
+                        <BodyShort weight="semibold">Standarddetaljer som følger med hendelser</BodyShort>
                         <span className="text-sm text-gray-600">
                           {Object.values(FILTER_COLUMNS).reduce((sum, group) => {
                             const filteredColumns = group.columns.filter(col => !EXCLUDED_PARAMS.includes(col.value));
@@ -515,7 +607,7 @@ const getGroupedParameters = () => {
                 </Box>
               )}
 
-              {/* Date Range Settings - Moved from WebsitePicker */}
+              {/* Date Range Settings - Moved from WebsitePicker
               <div>
                 <ReadMore className="mt-0" header="Innstillinger for hendelsesinnlasting">
                   <div className="space-y-4 mt-4">
@@ -557,20 +649,27 @@ const getGroupedParameters = () => {
                     )}
                   </div>
                 </ReadMore>
-              </div>
+              </div> */}
 
-              {/* Add Custom Parameters Section - Only when not loading */}
+              {/* 
+              {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                <BodyShort size="small" spacing className="text-md text-gray-700 mt-2">
+                  <strong>Mangler noen egendefinerte hendelser?</strong>
+                </BodyShort>
+              )}
+
+         
               {!isLoadingParameters && (
                 <div className="-mt-4 mb-2">
                   <ReadMore 
-                    header="Legg til hendelsesdetaljer manuelt" 
+                    header="Legg til hendelser manuelt" 
                     defaultOpen={customParamAccordionOpen}
                     onClick={() => setCustomParamAccordionOpen(!customParamAccordionOpen)}
                   >
                     <VStack gap="4">      
                       <div className="flex gap-2 mt-4 items-end">
                         <TextField 
-                          label="Hendelsesdetalj"
+                          label="Hendelse"
                           description="Du kan legge til flere med komma"
                           value={newParamKey}
                           onChange={(e: ChangeEvent<HTMLInputElement>) => setNewParamKey(e.target.value)}
@@ -590,6 +689,7 @@ const getGroupedParameters = () => {
                   </ReadMore>
                 </div>
               )}
+              */}
 
               {/* Confirmation Modal for removing manual parameters */}
               <Modal
@@ -616,6 +716,24 @@ const getGroupedParameters = () => {
             </VStack>
           </ExpansionCard.Content>
         </ExpansionCard>
+
+        {/* ReadMore for loading event details - Only show when details not loaded */}
+        {!includeParams && onLoadDetailsClick && (
+          <div className="mt-4">
+            <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
+              <div className="text-sm text-gray-800 mb-3">
+                Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
+              </div>
+              <Button
+                onClick={onLoadDetailsClick}
+                size="xsmall"
+                variant="secondary"
+              >
+                Hent hendelsesdetaljer
+              </Button>
+            </ReadMore>
+          </div>
+        )}
       </>
   );
 };

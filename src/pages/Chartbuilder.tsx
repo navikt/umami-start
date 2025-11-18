@@ -19,7 +19,7 @@ import {
   Filter,
   Website
 } from '../types/chart';
-import CopyButton from '../components/theme/CopyButton/CopyButton';
+//import CopyButton from '../components/theme/CopyButton/CopyButton';
 
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [
@@ -233,7 +233,7 @@ const ChartsPage = () => {
     orderBy: null,
     dateFormat: 'day',
     paramAggregation: 'unique',
-    limit: null
+    limit: 1000
   });
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [filters, setFilters] = useState<Filter[]>([]);
@@ -243,11 +243,14 @@ const ChartsPage = () => {
   const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
   
   // Add missing state variables for date range settings
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(3);
-  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(3);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(14);
+  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(14);
   const [dateChanged, setDateChanged] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
+  const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
+  const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
+  const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false); // Add state to request loading params
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -318,12 +321,29 @@ const ChartsPage = () => {
   };
 
   // Create refs to expose reset functions from child components
-  const chartFiltersRef = useRef<{ resetFilters: (silent?: boolean) => void }>(null);
+  const chartFiltersRef = useRef<{ resetFilters: (silent?: boolean) => void; enableCustomEvents: () => void }>(null);
   const summarizeRef = useRef<{ resetConfig: (silent?: boolean) => void }>(null);
   const displayOptionsRef = useRef<{ resetOptions: (silent?: boolean) => void }>(null);
 
   // Update the resetAll function
   const resetAll = () => {
+    // Clear available events and parameters
+    setAvailableEvents([]);
+    setParameters([]);
+    setDateRangeReady(false);
+    
+    // Reset the website selection
+    setConfig(prev => ({
+      ...prev,
+      website: null,
+      metrics: [],
+      groupByFields: [],
+      orderBy: null
+    }));
+    
+    // Toggle resetIncludeParams to trigger reset in WebsitePicker
+    setResetIncludeParams(prev => !prev);
+    
     // Pass silent=true to prevent individual alerts
     if (chartFiltersRef.current) {
       chartFiltersRef.current.resetFilters(true);
@@ -365,6 +385,11 @@ const ChartsPage = () => {
 
   const removeMetric = (index: number) => {
     setConfig(prev => {
+      // Guard: check if the metric exists
+      if (!prev.metrics[index]) {
+        return prev;
+      }
+      
       const newConfig = { ...prev };
       
       // Get the metric being removed
@@ -726,9 +751,9 @@ const ChartsPage = () => {
     }
     
     // Force usage of aliases to avoid TS errors
-    if(websiteAlias && sessionAlias) {
-      console.log('websiteAlias', websiteAlias);
-      console.log('sessionAlias', sessionAlias);
+    if (websiteAlias && sessionAlias) {
+      void websiteAlias;
+      void sessionAlias;
     }
 
     const requiredTables = getRequiredTables(config, filters);
@@ -1330,6 +1355,9 @@ const ChartsPage = () => {
     }));
     if (website && website.id !== config.website?.id) {
       setFilters([]);
+      setAvailableEvents([]);
+      setParameters([]);
+      setDateRangeReady(false);
       setConfig(prev => ({
         ...prev,
         website,
@@ -1385,14 +1413,16 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Umami grafbygger for Metabase
+        Umami grafbygger
       </Heading>
       <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
         Lurer du på hvordan folk bruker nettsiden eller appen din?
       </Heading>
-      <p className="text-gray-600 mb-10 prose text-lg">
-        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller i Metabase – som du enkelt kan dele med kollegaer.
+
+      <p className="text-gray-600 mb-10 text-lg max-w-[59vh]">
+        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
       </p>
+
 
       {/* Display the alert if it's active */}
       {alertInfo.show && (
@@ -1413,6 +1443,9 @@ const ChartsPage = () => {
                 onEventsLoad={handleEventsLoad}
                 dateRangeInDays={dateRangeInDays}
                 shouldReload={forceReload}
+                onIncludeParamsChange={setIncludeParams}
+                resetIncludeParams={resetIncludeParams}
+                requestIncludeParams={requestIncludeParams}
               />
             </section>
 
@@ -1430,6 +1463,8 @@ const ChartsPage = () => {
                     handleDateRangeChange={handleDateRangeChange}
                     dateChanged={dateChanged}
                     isLoading={isLoading}
+                    includeParams={includeParams}
+                    onLoadDetailsClick={() => setRequestIncludeParams(true)}
                   />
                 </section>
 
@@ -1488,13 +1523,19 @@ const ChartsPage = () => {
                     setParamAggregation={setParamAggregation}
                     setLimit={setLimit}
                     metrics={config.metrics}
+                    filters={filters}
+                    onEnableCustomEvents={() => {
+                      if (chartFiltersRef.current) {
+                        chartFiltersRef.current.enableCustomEvents();
+                      }
+                    }}
                   />
                 </section>
               </>
             )}
           </VStack>
 
-          <div className="mt-8 hidden lg:block">
+          <div className="mt-8 hidden lg:block mb-[40rem]">
             <List as="ul" title="Relaterte veiledninger" className="pt-4">
                 <List.Item>
                     <strong><Link target="_new" href={"/taksonomi"}>Taksonomi:</Link></strong> Guide til navngivning av hendelser.
@@ -1508,8 +1549,8 @@ const ChartsPage = () => {
           </div>
         </div>
 
-        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start">
-          <div className="overflow-y-auto">
+        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)]">
+          <div className="overflow-y-auto h-full">
             <SQLPreview 
               sql={generatedSQL} 
               activeStep={currentStep} 
@@ -1537,22 +1578,24 @@ const ChartsPage = () => {
           <Kontaktboks />
         </div>
       </div>
+      {/*  
       <CopyButton 
         textToCopy={generatedSQL} 
         visible={!!generatedSQL && 
           generatedSQL !== '-- Please select a website to generate SQL' && 
           !isBasicTemplate(generatedSQL)}
-      />
+      />*/}
     </div>
   );
 };
 
 // Helper function to check if SQL is basic template
+{/* 
 const isBasicTemplate = (sql: string): boolean => {
   if (!sql) return true;
   const selectPattern = /SELECT\s+(\s*FROM|\s*$)/i;
   return selectPattern.test(sql);
-};
+};*/}
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);

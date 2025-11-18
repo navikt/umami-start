@@ -6,7 +6,8 @@ import {
   DateFormat, 
   ColumnGroup,
   OrderBy,
-  Metric
+  Metric,
+  Filter
 } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton'; // Import AlertWithCloseButton
 
@@ -29,6 +30,8 @@ interface DisplayOptionsProps {
   setParamAggregation: (strategy: 'representative' | 'unique') => void;
   setLimit: (limit: number | null) => void;
   metrics: Metric[];
+  filters: Filter[];
+  onEnableCustomEvents?: () => void;
 }
 
 const DisplayOptions = forwardRef(({
@@ -48,18 +51,26 @@ const DisplayOptions = forwardRef(({
   setDateFormat,
   setParamAggregation,
   setLimit,
-  metrics
+  metrics,
+  filters,
+  onEnableCustomEvents
 }: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
+  const [showCustomLimit, setShowCustomLimit] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
   const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
     show: false,
     message: ''
   });
+  const [limitInput, setLimitInput] = useState<string>('');
+  const [eventNameWarning, setEventNameWarning] = useState<boolean>(false);
 
   // Add a ref to store the timeout ID
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Add a ref to store the event name warning timeout
+  const eventNameWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
@@ -79,7 +90,37 @@ const DisplayOptions = forwardRef(({
 
   const uniqueParameters = getUniqueParameters(parameters);
   
+  // Check if custom events (event_type = 2) are enabled in filters
+  const hasCustomEventsEnabled = filters.some(f => 
+    (f.column === 'event_type' && f.value === '2') ||
+    (f.column === 'event_name' && f.value && f.value !== '')
+  );
+  
   const handleAddGroupField = (field: string) => {
+    // Check if user is trying to add event_name or event_type without custom events enabled
+    if ((field === 'event_name' || field === 'event_type') && !hasCustomEventsEnabled) {
+      // Automatically enable custom events for the user
+      if (onEnableCustomEvents) {
+        onEnableCustomEvents();
+      }
+      
+      // Show success notification
+      setEventNameWarning(true);
+      
+      // Clear any existing timeout
+      if (eventNameWarningTimeoutRef.current) {
+        clearTimeout(eventNameWarningTimeoutRef.current);
+        eventNameWarningTimeoutRef.current = null;
+      }
+      
+      // Auto-hide notification after 20 seconds
+      eventNameWarningTimeoutRef.current = setTimeout(() => {
+        setEventNameWarning(false);
+        eventNameWarningTimeoutRef.current = null;
+      }, 20000);
+    }
+    
+    // Always add the field
     setActiveGroupings([...activeGroupings, field]);
     addGroupByField(field);
   };
@@ -92,7 +133,7 @@ const DisplayOptions = forwardRef(({
     
     clearOrderBy();
     setDateFormat('day');
-    setLimit(null);
+    setLimit(1000);
     setParamAggregation('representative');
     
     setActiveGroupingsTab('basic');
@@ -132,6 +173,9 @@ const DisplayOptions = forwardRef(({
       if (alertTimeoutRef.current) {
         clearTimeout(alertTimeoutRef.current);
       }
+      if (eventNameWarningTimeoutRef.current) {
+        clearTimeout(eventNameWarningTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -142,6 +186,11 @@ const DisplayOptions = forwardRef(({
   useEffect(() => {
     setActiveGroupings(groupByFields);
   }, [groupByFields]);
+
+  // Sync limitInput with limit prop
+  useEffect(() => {
+    setLimitInput(limit?.toString() || '');
+  }, [limit]);
 
   const hasCustomParameters = uniqueParameters.length > 0;
 
@@ -168,6 +217,23 @@ const DisplayOptions = forwardRef(({
               onClose={handleAlertClose}
             >
               {alertInfo.message}
+            </AlertWithCloseButton>
+          </div>
+        )}
+        
+        {eventNameWarning && (
+          <div className="mb-4">
+            <AlertWithCloseButton 
+              variant="info"
+              onClose={() => {
+                if (eventNameWarningTimeoutRef.current) {
+                  clearTimeout(eventNameWarningTimeoutRef.current);
+                  eventNameWarningTimeoutRef.current = null;
+                }
+                setEventNameWarning(false);
+              }}
+            >
+              <strong>Måling av egendefinerte hendelser aktivert:</strong> Du hadde kun valgt hendelsen "sidevisninger". Vi har automatisk aktivert hendelsen "Egendefinerte hendelser" for deg, som muliggjør gruppering på hendelsesnavn og hendelsestype.
             </AlertWithCloseButton>
           </div>
         )}
@@ -294,7 +360,7 @@ const DisplayOptions = forwardRef(({
                     description="F.eks. dato (dag, uker, måneder), enhet, nettlesertype, etc."
                     onChange={(e) => {
                       if (e.target.value) {
-                        addGroupByField(e.target.value);
+                        handleAddGroupField(e.target.value);
                         (e.target as HTMLSelectElement).value = '';
                       }
                     }}
@@ -489,36 +555,39 @@ const DisplayOptions = forwardRef(({
               </div>
               </>
             )}
-          </div>
-        </div>
 
-        <div>
-          <div className="flex flex-col gap-4">
-            <Switch className="-mt-1"
+            <Switch 
+              className="mt-1"
               size="small"
-              checked={limit !== null}
-              onChange={() => setLimit(limit === null ? 10 : null)}
+              description={limit && limit !== 1000
+                ? `Begrenser til ${limit} rader`
+                : 'F.eks. for en topp 10-liste (standard: 1000 rader)'}
+              checked={showCustomLimit}
+              onChange={(e) => {
+                setShowCustomLimit(e.target.checked);
+                if (!e.target.checked) {
+                  setLimit(1000);
+                  setLimitInput('1000');
+                }
+              }}
             >
               Begrens antall rader
             </Switch>
-            
-            {limit !== null && (
-              <>
+
+            {showCustomLimit && (
               <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
                 <TextField
                   label="Maksimalt antall rader"
-                  description="F.eks. for en topp 10-liste"
                   type="number"
-                  value={limit.toString()}
-                  onChange={(e) => {
-                    const value = e.target.value.trim();
-                    if (value === "") {
-                      setLimit(null);
+                  value={limitInput}
+                  onChange={(e) => setLimitInput(e.target.value)}
+                  onBlur={() => {
+                    const numValue = parseInt(limitInput, 10);
+                    if (!isNaN(numValue) && numValue > 0) {
+                      setLimit(numValue);
                     } else {
-                      const numValue = parseInt(value, 10);
-                      if (!isNaN(numValue) && numValue > 0) {
-                        setLimit(numValue);
-                      }
+                      setLimit(1000);
+                      setLimitInput('1000');
                     }
                   }}
                   min="1"
@@ -526,7 +595,6 @@ const DisplayOptions = forwardRef(({
                   className="flex-grow"
                 />
               </div>
-              </>
             )}
           </div>
         </div>

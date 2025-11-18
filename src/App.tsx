@@ -9,7 +9,7 @@ import routes from "./routes";
 import Footer from "./components/theme/Footer/Footer.tsx";
 import ScrollToTop from "./components/theme/ScrollToTop/ScrollToTop.tsx";
 import Header from "./components/theme/Header/Header.tsx";
-import { Helmet } from "react-helmet";
+import { useHead } from "@unhead/react";
 
 import "./App.css";
 
@@ -26,29 +26,31 @@ const ScrollToTopWrapper = () => {
 };
 
 function App() {
+  useHead({
+    script: [
+      {
+        defer: true,
+        src: "https://cdn.nav.no/team-researchops/sporing/sporing.js",
+        'data-host-url': "https://umami.nav.no",
+        'data-domains': "startumami.ansatt.nav.no",
+        'data-website-id': "8e935f84-fb1e-4d07-be28-410eb2ab8cb9"
+      },
+      {
+        type: 'text/javascript',
+        innerHTML: `
+          window.SKYRA_CONFIG = {
+            org: 'arbeids-og-velferdsetaten-nav'
+          };
+          var script = document.createElement('script');
+          script.src = 'https://survey.skyra.no/skyra-survey.js';
+          document.body.appendChild(script);
+        `
+      }
+    ]
+  });
+
   return (
     <>
-      <Helmet>
-        <script
-          defer
-          src="https://cdn.nav.no/team-researchops/sporing/sporing.js"
-          data-host-url="https://umami.nav.no"
-          data-domains="startumami.ansatt.nav.no"
-          data-website-id="8e935f84-fb1e-4d07-be28-410eb2ab8cb9"
-        ></script>
-        <script type="text/javascript">
-          {`
-            var script = document.createElement('script');
-            script.src = 'https://survey.skyra.no/skyra-survey.js';
-            script.onload = function() {
-                window.skyra.start({
-                    org: 'arbeids-og-velferdsetaten-nav'
-                });
-            };
-            document.body.appendChild(script);
-        `}
-        </script>
-      </Helmet>
       <Page>
         <Header />
         <Page.Block as="main" width="xl" gutters>

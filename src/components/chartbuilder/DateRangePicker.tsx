@@ -62,6 +62,18 @@ const DATE_RANGE_SUGGESTIONS = [
 // Add dynamic date range options
 const DYNAMIC_DATE_RANGES = [
   {
+    id: 'last7days',
+    label: 'Siste 7 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
+    id: 'last30days',
+    label: 'Siste 30 dager',
+    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
+    toSQL: "CURRENT_TIMESTAMP()"
+  },
+  {
     id: 'today_dynamic',
     label: 'I dag',
     fromSQL: "DATE_TRUNC(CURRENT_TIMESTAMP(), DAY)",
@@ -108,18 +120,6 @@ const DYNAMIC_DATE_RANGES = [
     label: 'I fjor',
     fromSQL: "TIMESTAMP(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), YEAR), INTERVAL 1 YEAR))",
     toSQL: "TIMESTAMP(DATE_TRUNC(CURRENT_DATE(), YEAR))"
-  },
-  {
-    id: 'last7days',
-    label: 'Siste 7 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
-  },
-  {
-    id: 'last30days',
-    label: 'Siste 30 dager',
-    fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)",
-    toSQL: "CURRENT_TIMESTAMP()"
   }
 ];
 
@@ -213,10 +213,6 @@ const DateRangePicker = forwardRef(({
 
   // Add state for filter applied alert
   const [showFilterApplied, setShowFilterApplied] = useState<boolean>(false);
-
-  const hasDateFilter = (): boolean => {
-    return filters.some(filter => filter.column === 'created_at');
-  };
 
   // Convert max days available to a specific date
   useEffect(() => {
@@ -534,14 +530,6 @@ const DateRangePicker = forwardRef(({
           {/* Frequent dates panel */}
           <Tabs.Panel value="frequent" className="pt-6">
             <div className="flex flex-wrap gap-2">
-              <Button 
-                variant={!hasDateFilter() || selectedDateRange === 'all' ? "primary" : "secondary"}
-                size="small"
-                onClick={() => applyDateRange('all')}
-                disabled={interactiveMode}
-              >
-                Alt
-              </Button>
               {DYNAMIC_DATE_RANGES.map((period) => (
                 <Button
                   key={period.id}
@@ -557,6 +545,14 @@ const DateRangePicker = forwardRef(({
                   {period.label}
                 </Button>
               ))}
+               {/*<Button 
+                variant={!hasDateFilter() || selectedDateRange === 'all' ? "primary" : "secondary"}
+                size="small"
+                onClick={() => applyDateRange('all')}
+                disabled={interactiveMode}
+              >
+                Alt
+              </Button>*/}
             </div>
           </Tabs.Panel>
           
