@@ -23,10 +23,12 @@ FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:518
 
 WORKDIR /app
 
-# Copy only necessary files from builder
+# Copy package files and install production dependencies only
+COPY --from=builder /app/package.json /app/yarn.lock ./
+RUN yarn install --production --frozen-lockfile
+
+# Copy built assets and runtime files from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/.nais ./.nais
 

@@ -12,33 +12,24 @@
     "start": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
     "@fluentui/react": "^8.125.1",
     "@fluentui/react-charting": "^5.25.2",
-    "@google-cloud/bigquery": "^8.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@navikt/ds-css": "^7.33.3",
     "@navikt/ds-react": "^7.33.3",
     "@navikt/ds-tailwind": "^7.8.0",
     "@tailwindcss/typography": "^0.5.15",
-    "@unhead/react": "^2.0.19",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "lucide-react": "^0.553.0",
-    "path": "^0.12.7",
-    "prismjs": "^1.30.0",
-    "react": "^19.2.0",
-    "react-code-blocks": "^0.1.6",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6",
-    "react-simple-code-editor": "^0.14.1",
-    "sql-formatter": "^15.6.10",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.16.0",
     "@types/prismjs": "^1.26.5",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@unhead/react": "^2.0.19",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "autoprefixer": "^10.4.22",
     "concurrently": "^9.2.1",
@@ -46,10 +37,19 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^16.5.0",
+    "lucide-react": "^0.553.0",
     "postcss": "^8.4.49",
+    "prismjs": "^1.30.0",
+    "react": "^19.2.0",
+    "react-code-blocks": "^0.1.6",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.6",
+    "react-simple-code-editor": "^0.14.1",
+    "sql-formatter": "^15.6.10",
     "tailwindcss": "^3.4.16",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "xlsx": "^0.18.5"
   }
 }
