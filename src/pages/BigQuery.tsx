@@ -23,7 +23,7 @@ export default function BigQuery() {
     // Initialize state with empty string to avoid showing default until we check URL
     const [query, setQuery] = useState('');
     const [validateError, setValidateError] = useState<string | null>(null);
-        const [showValidation, setShowValidation] = useState(false);
+    const [showValidation, setShowValidation] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [estimate, setEstimate] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -37,10 +37,10 @@ export default function BigQuery() {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const sqlParam = urlParams.get('sql');
-        
+
         console.log('URL search params:', window.location.search);
         console.log('SQL param:', sqlParam);
-        
+
         if (sqlParam) {
             try {
                 // URL params are already decoded by URLSearchParams
@@ -183,25 +183,25 @@ export default function BigQuery() {
     // Prepare chart data functions
     const prepareLineChartData = (includeAverage: boolean = false) => {
         if (!result || !result.data || result.data.length === 0) return null;
-        
+
         const data = result.data;
         const keys = Object.keys(data[0]);
-        
+
         // Need at least 2 columns (x-axis and y-axis)
         if (keys.length < 2) return null;
-        
+
         console.log('Preparing LineChart with keys:', keys);
         console.log('Sample row:', data[0]);
-        
+
         // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
         if (keys.length === 3) {
             const xKey = keys[0];
             const seriesKey = keys[1]; // e.g., 'browser'
             const yKey = keys[2]; // e.g., 'Unike_besokende'
-            
+
             // Group data by series
             const seriesMap = new Map<string, any[]>();
-            
+
             data.forEach((row: any) => {
                 const rawSeriesValue = row[seriesKey];
                 const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
@@ -209,10 +209,10 @@ export default function BigQuery() {
                 if (!seriesMap.has(seriesValue)) {
                     seriesMap.set(seriesValue, []);
                 }
-                
+
                 const xValue = row[xKey];
                 const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-                
+
                 let x: number | Date;
                 if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
                     x = new Date(xValue);
@@ -221,7 +221,7 @@ export default function BigQuery() {
                 } else {
                     x = new Date(xValue).getTime() || 0;
                 }
-                
+
                 seriesMap.get(seriesValue)!.push({
                     x,
                     y: yValue,
@@ -229,7 +229,7 @@ export default function BigQuery() {
                     yAxisCalloutData: String(yValue),
                 });
             });
-            
+
             // Convert to line chart format with colors
             // Using colorblind-friendly palette with good contrast
             const colors = [
@@ -250,7 +250,7 @@ export default function BigQuery() {
                     lineBorderWidth: '2',
                 },
             }));
-            
+
             // Calculate average line across all data points (only if requested)
             if (includeAverage) {
                 // Collect all unique x values
@@ -261,7 +261,7 @@ export default function BigQuery() {
                         allXValues.add(xVal);
                     });
                 });
-                
+
                 // For each x value, calculate the average y value across all series
                 const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
                     const yValues: number[] = [];
@@ -274,17 +274,17 @@ export default function BigQuery() {
                             yValues.push(point.y);
                         }
                     });
-                    
-                    const avgY = yValues.length > 0 
-                        ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length 
+
+                    const avgY = yValues.length > 0
+                        ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
                         : 0;
-                    
+
                     // Find original xAxisCalloutData from any series
                     const originalPoint = lineChartData[0].data.find((p: any) => {
                         const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
                         return pxVal === xVal;
                     });
-                    
+
                     return {
                         x: new Date(xVal),
                         y: avgY,
@@ -292,7 +292,7 @@ export default function BigQuery() {
                         yAxisCalloutData: avgY.toFixed(2),
                     };
                 });
-                
+
                 // Add average line to the chart
                 lineChartData.push({
                     legend: 'Gjennomsnitt',
@@ -304,9 +304,9 @@ export default function BigQuery() {
                     } as any,
                 });
             }
-            
+
             console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
-            
+
             return {
                 data: {
                     lineChartData,
@@ -314,15 +314,15 @@ export default function BigQuery() {
                 enabledLegendsWrapLines: true,
             };
         }
-        
+
         // Single line: assume first column is x-axis and second is y-axis
         const xKey = keys[0];
         const yKey = keys[1];
-        
+
         const chartPoints = data.map((row: any, index: number) => {
             const xValue = row[xKey];
             const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-            
+
             let x: number | Date;
             if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
                 x = new Date(xValue);
@@ -331,7 +331,7 @@ export default function BigQuery() {
             } else {
                 x = index;
             }
-            
+
             return {
                 x,
                 y: yValue,
@@ -339,9 +339,9 @@ export default function BigQuery() {
                 yAxisCalloutData: String(yValue),
             };
         });
-        
+
         console.log('Single-line chart points:', chartPoints.slice(0, 3));
-        
+
         // Build the line chart data array
         const lineChartData: any[] = [{
             legend: yKey,
@@ -351,12 +351,12 @@ export default function BigQuery() {
                 lineBorderWidth: '2',
             },
         }];
-        
+
         // Add average line (only if requested)
         if (includeAverage) {
             // Calculate average y value for horizontal average line
             const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
-            
+
             // Create average line points (horizontal line across all x values)
             const averageLinePoints = chartPoints.map((point: any) => ({
                 x: point.x,
@@ -364,7 +364,7 @@ export default function BigQuery() {
                 xAxisCalloutData: point.xAxisCalloutData,
                 yAxisCalloutData: avgY.toFixed(2),
             }));
-            
+
             lineChartData.push({
                 legend: 'Gjennomsnitt',
                 data: averageLinePoints,
@@ -375,7 +375,7 @@ export default function BigQuery() {
                 } as any,
             });
         }
-        
+
         return {
             data: {
                 lineChartData,
@@ -383,44 +383,44 @@ export default function BigQuery() {
             enabledLegendsWrapLines: true,
         };
     };
-    
+
     const prepareBarChartData = () => {
         if (!result || !result.data || result.data.length === 0) return null;
-        
+
         const data = result.data;
-        
+
         // Only show bar chart if 12 or fewer items
         if (data.length > 12) return null;
-        
+
         const keys = Object.keys(data[0]);
-        
+
         // Need at least 2 columns (label and value)
         if (keys.length < 2) return null;
-        
+
         // Assume first column is label and second is value
         const labelKey = keys[0];
         const valueKey = keys[1];
-        
+
         console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
         console.log('Sample row:', data[0]);
-        
+
         // Calculate total for percentages
         const total = data.reduce((sum: number, row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             return sum + value;
         }, 0);
-        
+
         console.log('Total value for bar chart:', total);
-        
+
         const barChartData = data.map((row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-            
+
             // Use label for x-axis, with translation
             const rawLabel = row[labelKey];
             const translatedLabel = translateValue(labelKey, rawLabel);
             const label = String(translatedLabel || 'Ukjent');
-            
+
             return {
                 x: label,
                 y: value,
@@ -430,9 +430,9 @@ export default function BigQuery() {
                 legend: label,
             };
         });
-        
+
         console.log('VerticalBarChart data points:', barChartData.slice(0, 3));
-        
+
         return {
             data: barChartData,
             barWidth: 'auto' as 'auto',
@@ -456,49 +456,49 @@ export default function BigQuery() {
             },
         };
     };
-    
+
     const preparePieChartData = () => {
         if (!result || !result.data || result.data.length === 0) return null;
-        
+
         const data = result.data;
-        
+
         // Only show pie chart if 12 or fewer items
         if (data.length > 12) return null;
-        
+
         const keys = Object.keys(data[0]);
-        
+
         // Need at least 2 columns (label and value)
         if (keys.length < 2) return null;
-        
+
         // Assume first column is label and second is value
         const labelKey = keys[0];
         const valueKey = keys[1];
-        
+
         console.log('Preparing PieChart with keys:', { labelKey, valueKey });
         console.log('Sample row:', data[0]);
-        
+
         // Calculate total for percentages
         const total = data.reduce((sum: number, row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             return sum + value;
         }, 0);
-        
+
         console.log('Total value for pie chart:', total);
-        
+
         const pieChartData = data.map((row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             const rawLabel = row[labelKey];
             const translatedLabel = translateValue(labelKey, rawLabel);
             const label = String(translatedLabel || 'Ukjent');
-            
+
             return {
                 y: value,
                 x: label,
             };
         });
-        
+
         console.log('PieChart data points:', pieChartData.slice(0, 3));
-        
+
         return {
             data: pieChartData,
             total,
@@ -514,9 +514,7 @@ export default function BigQuery() {
                 Kjør SQL-spørringer mot Umami datasettet i BigQuery.
             </BodyLong>
             <div className="flex flex-col md:flex-row gap-8 -mt-3 min-w-0">
-                {/* Main content */}
                 <div className="flex-1 space-y-6 min-w-0">
-                    {/* Available Tables Section using ReadMore with subtitles */}
                     <ReadMore header="Tilgjengelige tabeller" size="small" className="mb-6">
                         <ul className="space-y-3">
                             <li className="flex flex-col gap-1">
@@ -536,12 +534,12 @@ export default function BigQuery() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Personer</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_session</span>
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.session</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_session'); }}
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.session'); }}
                                     >
                                         Kopier
                                     </Button>
@@ -550,19 +548,19 @@ export default function BigQuery() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Alle hendelser</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website_event</span>
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.event</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website_event'); }}
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.event'); }}
                                     >
                                         Kopier
                                     </Button>
                                 </div>
                             </li>
                             <li className="flex flex-col gap-1">
-                                <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
+                                <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata (legacy)</span>
                                 <div className="flex items-center gap-2">
                                     <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_event_data</span>
                                     <Button
@@ -576,6 +574,66 @@ export default function BigQuery() {
                                 </div>
                             </li>
                         </ul>
+                        <ReadMore header="Umami (legacy)" size="small" className="mt-6 mb-6">
+                            <ul className="space-y-3">
+                                <li className="flex flex-col gap-1">
+                                    <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website</span>
+                                        <Button
+                                            size="xsmall"
+                                            variant="tertiary"
+                                            type="button"
+                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website'); }}
+                                        >
+                                            Kopier
+                                        </Button>
+                                    </div>
+                                </li>
+                                <li className="flex flex-col gap-1">
+                                    <span className="font-semibold text-sm mt-2">Personer</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_session</span>
+                                        <Button
+                                            size="xsmall"
+                                            variant="tertiary"
+                                            type="button"
+                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_session'); }}
+                                        >
+                                            Kopier
+                                        </Button>
+                                    </div>
+                                </li>
+                                <li className="flex flex-col gap-1">
+                                    <span className="font-semibold text-sm mt-2">Alle hendelser</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website_event</span>
+                                        <Button
+                                            size="xsmall"
+                                            variant="tertiary"
+                                            type="button"
+                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website_event'); }}
+                                        >
+                                            Kopier
+                                        </Button>
+                                    </div>
+                                </li>
+                                <li className="flex flex-col gap-1">
+                                    <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.event_data</span>
+                                        <Button
+                                            size="xsmall"
+                                            variant="tertiary"
+                                            type="button"
+                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.event_data'); }}
+                                        >
+                                            Kopier
+                                        </Button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </ReadMore>
                     </ReadMore>
                     {/* Query Input */}
                     <div>
@@ -615,10 +673,10 @@ export default function BigQuery() {
                                 {formatSuccess ? '✓ Formatert' : 'Formater SQL'}
                             </Button>
                             <Button size="small" variant="secondary" type="button" onClick={validateSQL}>Valider SQL</Button>
-                            <Button 
-                                size="small" 
-                                variant="secondary" 
-                                type="button" 
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                type="button"
                                 onClick={shareQuery}
                             >
                                 {shareSuccess ? '✓ Lenke kopiert' : 'Del spørring'}
@@ -720,14 +778,14 @@ export default function BigQuery() {
                         </Alert>
                     )}
 
-                        {result && (
-                            <ReadMore header="Raw JSON" size="small" className="mb-4" defaultOpen>
-                                <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
-                            </ReadMore>
-                        )}
+                    {result && (
+                        <ReadMore header="Raw JSON" size="small" className="mb-4" defaultOpen>
+                            <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
+                        </ReadMore>
+                    )}
                 </div>
 
-                
+
                 {/* Aside: ResultsDisplay */}
                 <aside className="w-full md:w-[420px] lg:w-[500px] xl:w-[600px] md:min-w-0 flex-shrink">
                     <ResultsDisplay
