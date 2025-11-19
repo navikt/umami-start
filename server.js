@@ -379,6 +379,193 @@ app.get('/api/bigquery/websites', async (req, res) => {
     }
 });
 
+// Get user journeys from BigQuery
+app.post('/api/bigquery/journeys', async (req, res) => {
+    try {
+        const { websiteId, startUrl, days = 30, steps = 3, coverage = 0.90 } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = new Date().toISOString();
+
+        const query = `
+            WITH session_events AS (
+                SELECT
+                    session_id,
+                    url_path,
+                    created_at,
+                    MIN(CASE WHEN url_path = @startUrl THEN created_at END) 
+                        OVER (PARTITION BY session_id) AS start_time
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = @websiteId
+                    AND created_at BETWEEN @startDate AND @endDate
+                    AND event_type = 1 -- Pageview
+            ),
+            journey_steps AS (
+                SELECT
+                    session_id,
+                    url_path,
+                    LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS next_url,
+                    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) - 1 AS step
+                FROM session_events
+                WHERE start_time IS NOT NULL
+                    AND created_at >= start_time
+            ),
+            raw_flows AS (
+                SELECT
+                    step,
+                    url_path AS source,
+                    next_url AS target,
+                    COUNT(*) AS value
+                FROM journey_steps
+                WHERE step < @steps
+                    AND next_url IS NOT NULL
+                GROUP BY 1, 2, 3
+            ),
+            ranked AS (
+                SELECT
+                    *,
+                    SUM(value) OVER (PARTITION BY step) AS step_total,
+                    SUM(value) OVER (
+                        PARTITION BY step
+                        ORDER BY value DESC
+                        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                    ) AS cumulative_value
+                FROM raw_flows
+                ORDER BY step, value DESC
+            )
+            SELECT
+                step,
+                source,
+                target,
+                value
+            FROM ranked
+            WHERE cumulative_value / step_total <= @coverage
+            ORDER BY step, value DESC
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: {
+                websiteId,
+                startUrl,
+                startDate,
+                endDate,
+                steps,
+                coverage
+            }
+        });
+
+        // Get cost estimate
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: {
+                    websiteId,
+                    startUrl,
+                    startDate,
+                    endDate,
+                    steps,
+                    coverage
+                },
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+
+            console.log(`[User Journeys] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+        } catch (dryRunError) {
+            console.log('[User Journeys] Dry run failed:', dryRunError.message);
+        }
+
+        const [rows] = await job.getQueryResults();
+
+        // Transform to Sankey format
+        const nodes = [];
+        const links = [];
+        const nodeMap = new Map();
+
+        // Helper to get or create node index
+        const getNodeIndex = (name, step) => {
+            const id = `${step}:${name}`;
+            if (!nodeMap.has(id)) {
+                nodeMap.set(id, nodes.length);
+                nodes.push({
+                    nodeId: id,
+                    name: name,
+                    color: '#0056b3' // Default color
+                });
+            }
+            return nodeMap.get(id);
+        };
+
+        rows.forEach(row => {
+            const sourceIndex = getNodeIndex(row.source, row.step);
+            const targetIndex = getNodeIndex(row.target, row.step + 1);
+
+            links.push({
+                source: sourceIndex,
+                target: targetIndex,
+                value: parseInt(row.value)
+            });
+        });
+
+        // Get dry run stats for response
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: {
+                    websiteId,
+                    startUrl,
+                    startDate,
+                    endDate,
+                    steps,
+                    limit,
+                    minFlowValue
+                },
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+
+            queryStats = {
+                totalBytesProcessed: bytesProcessed,
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[User Journeys] Dry run failed:', dryRunError.message);
+        }
+
+        res.json({
+            nodes,
+            links,
+            queryStats
+        });
+
+    } catch (error) {
+        console.error('BigQuery journeys error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch user journeys'
+        });
+    }
+});
+
 // BigQuery dry run endpoint - estimate query cost
 app.post('/api/bigquery/estimate', async (req, res) => {
     try {
