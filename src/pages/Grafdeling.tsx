@@ -15,11 +15,11 @@ export default function Grafdeling() {
         const urlParams = new URLSearchParams(window.location.search);
         const sqlParam = urlParams.get('sql');
         const descParam = urlParams.get('beskrivelse') || urlParams.get('desc');
-        
+
         if (descParam) {
             setDescription(descParam);
         }
-        
+
         if (sqlParam) {
             setQuery(sqlParam);
             executeQuery(sqlParam);
@@ -65,25 +65,25 @@ export default function Grafdeling() {
     // Prepare chart data functions
     const prepareLineChartData = (includeAverage: boolean = false) => {
         if (!result || !result.data || result.data.length === 0) return null;
-        
+
         const data = result.data;
         const keys = Object.keys(data[0]);
-        
+
         // Need at least 2 columns (x-axis and y-axis)
         if (keys.length < 2) return null;
-        
+
         console.log('Preparing LineChart with keys:', keys);
         console.log('Sample row:', data[0]);
-        
+
         // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
         if (keys.length === 3) {
             const xKey = keys[0];
             const seriesKey = keys[1]; // e.g., 'browser'
             const yKey = keys[2]; // e.g., 'Unike_besokende'
-            
+
             // Group data by series
             const seriesMap = new Map<string, any[]>();
-            
+
             data.forEach((row: any) => {
                 const rawSeriesValue = row[seriesKey];
                 const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
@@ -91,10 +91,10 @@ export default function Grafdeling() {
                 if (!seriesMap.has(seriesValue)) {
                     seriesMap.set(seriesValue, []);
                 }
-                
+
                 const xValue = row[xKey];
                 const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-                
+
                 let x: number | Date;
                 if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
                     x = new Date(xValue);
@@ -103,7 +103,7 @@ export default function Grafdeling() {
                 } else {
                     x = new Date(xValue).getTime() || 0;
                 }
-                
+
                 seriesMap.get(seriesValue)!.push({
                     x,
                     y: yValue,
@@ -111,7 +111,7 @@ export default function Grafdeling() {
                     yAxisCalloutData: String(yValue),
                 });
             });
-            
+
             // Convert to line chart format with colors
             // Using colorblind-friendly palette with good contrast
             const colors = [
@@ -132,7 +132,7 @@ export default function Grafdeling() {
                     lineBorderWidth: '2',
                 },
             }));
-            
+
             // Calculate average line across all data points (only if requested)
             if (includeAverage) {
                 // Collect all unique x values
@@ -143,7 +143,7 @@ export default function Grafdeling() {
                         allXValues.add(xVal);
                     });
                 });
-                
+
                 // For each x value, calculate the average y value across all series
                 const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
                     const yValues: number[] = [];
@@ -156,17 +156,17 @@ export default function Grafdeling() {
                             yValues.push(point.y);
                         }
                     });
-                    
-                    const avgY = yValues.length > 0 
-                        ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length 
+
+                    const avgY = yValues.length > 0
+                        ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
                         : 0;
-                    
+
                     // Find original xAxisCalloutData from any series
                     const originalPoint = lineChartData[0].data.find((p: any) => {
                         const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
                         return pxVal === xVal;
                     });
-                    
+
                     return {
                         x: new Date(xVal),
                         y: avgY,
@@ -174,7 +174,7 @@ export default function Grafdeling() {
                         yAxisCalloutData: avgY.toFixed(2),
                     };
                 });
-                
+
                 // Add average line to the chart
                 lineChartData.push({
                     legend: 'Gjennomsnitt',
@@ -186,9 +186,9 @@ export default function Grafdeling() {
                     } as any,
                 });
             }
-            
+
             console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
-            
+
             return {
                 data: {
                     lineChartData,
@@ -196,15 +196,15 @@ export default function Grafdeling() {
                 enabledLegendsWrapLines: true,
             };
         }
-        
+
         // Single line: assume first column is x-axis and second is y-axis
         const xKey = keys[0];
         const yKey = keys[1];
-        
+
         const chartPoints = data.map((row: any, index: number) => {
             const xValue = row[xKey];
             const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-            
+
             let x: number | Date;
             if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
                 x = new Date(xValue);
@@ -213,7 +213,7 @@ export default function Grafdeling() {
             } else {
                 x = index;
             }
-            
+
             return {
                 x,
                 y: yValue,
@@ -221,9 +221,9 @@ export default function Grafdeling() {
                 yAxisCalloutData: String(yValue),
             };
         });
-        
+
         console.log('Single-line chart points:', chartPoints.slice(0, 3));
-        
+
         // Build the line chart data array
         const lineChartData: any[] = [{
             legend: yKey,
@@ -233,12 +233,12 @@ export default function Grafdeling() {
                 lineBorderWidth: '2',
             },
         }];
-        
+
         // Add average line (only if requested)
         if (includeAverage) {
             // Calculate average y value for horizontal average line
             const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
-            
+
             // Create average line points (horizontal line across all x values)
             const averageLinePoints = chartPoints.map((point: any) => ({
                 x: point.x,
@@ -246,7 +246,7 @@ export default function Grafdeling() {
                 xAxisCalloutData: point.xAxisCalloutData,
                 yAxisCalloutData: avgY.toFixed(2),
             }));
-            
+
             lineChartData.push({
                 legend: 'Gjennomsnitt',
                 data: averageLinePoints,
@@ -257,7 +257,7 @@ export default function Grafdeling() {
                 } as any,
             });
         }
-        
+
         return {
             data: {
                 lineChartData,
@@ -265,44 +265,44 @@ export default function Grafdeling() {
             enabledLegendsWrapLines: true,
         };
     };
-    
+
     const prepareBarChartData = () => {
         if (!result || !result.data || result.data.length === 0) return null;
-        
+
         const data = result.data;
-        
+
         // Only show bar chart if 12 or fewer items
         if (data.length > 12) return null;
-        
+
         const keys = Object.keys(data[0]);
-        
+
         // Need at least 2 columns (label and value)
         if (keys.length < 2) return null;
-        
+
         // Assume first column is label and second is value
         const labelKey = keys[0];
         const valueKey = keys[1];
-        
+
         console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
         console.log('Sample row:', data[0]);
-        
+
         // Calculate total for percentages
         const total = data.reduce((sum: number, row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             return sum + value;
         }, 0);
-        
+
         console.log('Total value for bar chart:', total);
-        
+
         const barChartData = data.map((row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-            
+
             // Use label for x-axis, with translation
             const rawLabel = row[labelKey];
             const translatedLabel = translateValue(labelKey, rawLabel);
             const label = String(translatedLabel || 'Ukjent');
-            
+
             return {
                 x: label,
                 y: value,
@@ -312,9 +312,9 @@ export default function Grafdeling() {
                 legend: label,
             };
         });
-        
+
         console.log('VerticalBarChart data points:', barChartData.slice(0, 3));
-        
+
         return {
             data: barChartData,
             barWidth: 'auto' as 'auto',
@@ -338,49 +338,49 @@ export default function Grafdeling() {
             },
         };
     };
-    
+
     const preparePieChartData = () => {
         if (!result || !result.data || result.data.length === 0) return null;
-        
+
         const data = result.data;
-        
+
         // Only show pie chart if 12 or fewer items
         if (data.length > 12) return null;
-        
+
         const keys = Object.keys(data[0]);
-        
+
         // Need at least 2 columns (label and value)
         if (keys.length < 2) return null;
-        
+
         // Assume first column is label and second is value
         const labelKey = keys[0];
         const valueKey = keys[1];
-        
+
         console.log('Preparing PieChart with keys:', { labelKey, valueKey });
         console.log('Sample row:', data[0]);
-        
+
         // Calculate total for percentages
         const total = data.reduce((sum: number, row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             return sum + value;
         }, 0);
-        
+
         console.log('Total value for pie chart:', total);
-        
+
         const pieChartData = data.map((row: any) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             const rawLabel = row[labelKey];
             const translatedLabel = translateValue(labelKey, rawLabel);
             const label = String(translatedLabel || 'Ukjent');
-            
+
             return {
                 y: value,
                 x: label,
             };
         });
-        
+
         console.log('PieChart data points:', pieChartData.slice(0, 3));
-        
+
         return {
             data: pieChartData,
             total,
@@ -444,6 +444,7 @@ export default function Grafdeling() {
                         sql={query}
                         showSqlCode={true}
                         showEditButton={true}
+                        hiddenTabs={result && result.data && result.data.length > 12 ? ['barchart', 'piechart'] : []}
                     />
                 </div>
             )}

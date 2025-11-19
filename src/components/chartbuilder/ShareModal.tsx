@@ -90,7 +90,8 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
       <Modal.Body>
         <div className="space-y-4">
           <Textarea
-            label="Kort beskrivende tittel"
+            label="Tittel"
+            description="Fullfør setningen: Grafen viser..."
             value={description}
             onChange={(e) => {
               const value = e.target.value;

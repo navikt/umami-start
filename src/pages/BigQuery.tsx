@@ -779,7 +779,7 @@ export default function BigQuery() {
                     )}
 
                     {result && (
-                        <ReadMore header="Raw JSON" size="small" className="mb-4" defaultOpen>
+                        <ReadMore header="JSON" size="small" className="mb-4" defaultOpen>
                             <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
                         </ReadMore>
                     )}

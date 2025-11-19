@@ -24,6 +24,7 @@ interface ResultsDisplayProps {
   sql?: string;
   showSqlCode?: boolean;
   showEditButton?: boolean;
+  hiddenTabs?: string[];
 }
 
 const ResultsDisplay = ({
@@ -42,6 +43,7 @@ const ResultsDisplay = ({
   prepareLineChartData,
   prepareBarChartData,
   preparePieChartData,
+  hiddenTabs: propHiddenTabs = [],
 }: ResultsDisplayProps) => {
   // Read initial tab from URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -58,11 +60,12 @@ const ResultsDisplay = ({
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
 
-  // Get hidden tabs from URL
+  // Get hidden tabs from URL or props
   const hiddenTabs = (() => {
     const urlParams = new URLSearchParams(window.location.search);
     const hideTabsParam = urlParams.get('hideTabs');
-    return hideTabsParam ? hideTabsParam.split(',') : [];
+    const urlHiddenTabs = hideTabsParam ? hideTabsParam.split(',') : [];
+    return [...new Set([...urlHiddenTabs, ...propHiddenTabs])];
   })();
 
   // Update URL when tab changes
