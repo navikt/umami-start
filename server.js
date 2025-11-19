@@ -427,46 +427,26 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     AND next_url IS NOT NULL
                     -- Ensure step 0 always starts from the specified start URL
                     AND (step > 0 OR url_path = @startUrl)
+                    -- Filter out self-loops (same page to same page)
+                    AND url_path != next_url
+                    -- Prevent start URL from appearing as source at steps > 0
+                    AND NOT (step > 0 AND url_path = @startUrl)
                 GROUP BY 1, 2, 3
             ),
-            -- Calculate total traffic per page across all flows
-            page_traffic AS (
-                SELECT url_path, SUM(flow_value) as total_value
-                FROM (
-                    SELECT source AS url_path, SUM(value) as flow_value
-                    FROM raw_flows
-                    GROUP BY source
-                    UNION ALL
-                    SELECT target AS url_path, SUM(value) as flow_value
-                    FROM raw_flows
-                    GROUP BY target
-                )
-                GROUP BY url_path
-            ),
-            -- Rank pages by total traffic
-            ranked_pages AS (
+            ranked AS (
                 SELECT
-                    url_path,
-                    total_value,
-                    ROW_NUMBER() OVER (ORDER BY total_value DESC) AS page_rank
-                FROM page_traffic
-            ),
-            -- Get top N pages
-            top_pages AS (
-                SELECT url_path
-                FROM ranked_pages
-                WHERE page_rank <= @limit
+                    *,
+                    ROW_NUMBER() OVER (PARTITION BY step ORDER BY value DESC) AS rank_in_step
+                FROM raw_flows
             )
-            -- Only include flows where both source and target are in top pages
             SELECT
-                f.step,
-                f.source,
-                f.target,
-                f.value
-            FROM raw_flows f
-            WHERE f.source IN (SELECT url_path FROM top_pages)
-                AND f.target IN (SELECT url_path FROM top_pages)
-            ORDER BY f.step, f.value DESC
+                step,
+                source,
+                target,
+                value
+            FROM ranked
+            WHERE rank_in_step <= @limit
+            ORDER BY step, value DESC
         `;
 
         const [job] = await bigquery.createQueryJob({
