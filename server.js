@@ -25,13 +25,13 @@ try {
     const bqConfig = {
         projectId: 'team-researchops-prod-01d6',
     };
-    
+
     // Priority order:
     // 1. GCP secret (bigquery-credentials from NAIS)
     // 2. Service account key file path from env (GOOGLE_APPLICATION_CREDENTIALS)
     // 3. Service account JSON from env (UMAMI_BIGQUERY)
     // 4. Local service account key file (./service-account-key.json)
-    
+
     if (process.env['bigquery-credentials']) {
         try {
             bqConfig.credentials = JSON.parse(process.env['bigquery-credentials']);
@@ -55,7 +55,7 @@ try {
         console.log('Attempting to use local service account key file:', localKeyPath);
         bqConfig.keyFilename = localKeyPath;
     }
-    
+
     bigquery = new BigQuery(bqConfig);
 } catch (error) {
     console.error('Failed to initialize BigQuery client:', error);
@@ -88,7 +88,7 @@ app.post('/api/bigquery', async (req, res) => {
         }
 
         if (!bigquery) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'BigQuery client not initialized',
                 details: 'Check server logs for initialization errors'
             })
@@ -101,14 +101,14 @@ app.post('/api/bigquery', async (req, res) => {
 
         const [rows] = await job.getQueryResults()
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             data: rows,
-            rowCount: rows.length 
+            rowCount: rows.length
         })
     } catch (error) {
         console.error('BigQuery error:', error)
-        res.status(500).json({ 
+        res.status(500).json({
             error: error.message || 'Failed to execute query',
             details: error.toString()
         })
@@ -122,7 +122,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
         const { startAt, endAt } = req.query;
 
         if (!bigquery) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'BigQuery client not initialized'
             })
         }
@@ -155,7 +155,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
         res.json({ events });
     } catch (error) {
         console.error('BigQuery events error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: error.message || 'Failed to fetch events'
         });
     }
@@ -168,7 +168,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         const { startAt, endAt, includeParams } = req.query;
 
         if (!bigquery) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'BigQuery client not initialized'
             })
         }
@@ -176,9 +176,9 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
         const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
         const withParams = includeParams === 'true';
-        
+
         console.log(`[Event Properties] Query: ${withParams ? 'EXPENSIVE (with params)' : 'CHEAP (events only)'} - includeParams=${includeParams}`);
-        
+
         // Query depends on whether we need parameters or not
         const query = withParams ? `
             SELECT
@@ -234,7 +234,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
                 },
                 dryRun: true
             });
-            
+
             const [dryRunMetadata] = await dryRunJob.getMetadata();
             estimatedBytes = dryRunMetadata.statistics?.totalBytesProcessed || '0';
             const estimatedGb = (Number(estimatedBytes) / (1024 ** 3)).toFixed(2);
@@ -255,14 +255,14 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         });
 
         const [rows] = await job.getQueryResults();
-        
+
         // Get job statistics for bytes processed from metadata
         const [metadata] = await job.getMetadata();
         const bytesProcessed = metadata.statistics?.totalBytesProcessed || estimatedBytes;
         const gbProcessed = (Number(bytesProcessed) / (1024 ** 3)).toFixed(2);
-        
+
         // Format the response based on query type
-        const properties = withParams 
+        const properties = withParams
             ? rows.map(row => ({
                 eventName: row.event_name,
                 propertyName: row.data_key,
@@ -284,7 +284,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         });
     } catch (error) {
         console.error('BigQuery event properties error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: error.message || 'Failed to fetch event properties'
         });
     }
@@ -296,7 +296,7 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
         const { websiteId } = req.params;
 
         if (!bigquery) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'BigQuery client not initialized'
             })
         }
@@ -318,7 +318,7 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
         });
 
         const [rows] = await job.getQueryResults();
-        
+
         if (rows.length > 0 && rows[0].mindate) {
             res.json({
                 mindate: rows[0].mindate.value,
@@ -332,8 +332,49 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
         }
     } catch (error) {
         console.error('BigQuery daterange error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: error.message || 'Failed to fetch date range'
+        });
+    }
+});
+
+// Get websites from BigQuery
+app.get('/api/bigquery/websites', async (req, res) => {
+    try {
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const query = `
+            SELECT DISTINCT
+                website_id as id,
+                name,
+                domain,
+                share_id as shareId,
+                team_id as teamId,
+                created_at as createdAt
+            FROM \`team-researchops-prod-01d6.umami.public_website\`
+            WHERE deleted_at IS NULL
+              AND name IS NOT NULL
+            ORDER BY name
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1'
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        res.json({
+            data: rows
+        });
+    } catch (error) {
+        console.error('BigQuery websites error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch websites'
         });
     }
 });
@@ -348,7 +389,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
         }
 
         if (!bigquery) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'BigQuery client not initialized',
                 details: 'Check server logs for initialization errors'
             })
@@ -364,14 +405,14 @@ app.post('/api/bigquery/estimate', async (req, res) => {
         const stats = job.metadata.statistics;
         const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);
         const totalBytesBilled = parseInt(stats.query?.totalBytesBilled || totalBytesProcessed);
-        
+
         // BigQuery pricing: $6.25 per TB (as of 2024)
         // First 1 TB per month is free
         const costPerTB = 6.25;
         const bytesPerTB = 1024 * 1024 * 1024 * 1024;
         const estimatedCostUSD = (totalBytesBilled / bytesPerTB) * costPerTB;
 
-        res.json({ 
+        res.json({
             success: true,
             totalBytesProcessed: totalBytesProcessed,
             totalBytesBilled: totalBytesBilled,
@@ -382,7 +423,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
         })
     } catch (error) {
         console.error('BigQuery estimate error:', error)
-        res.status(500).json({ 
+        res.status(500).json({
             error: error.message || 'Failed to estimate query',
             details: error.toString()
         })
@@ -391,7 +432,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
 
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
-const server = app.listen(8080, () => { 
+const server = app.listen(8080, () => {
     console.log('Listening on port 8080')
     console.log('Server timeout set to 2 minutes')
 })

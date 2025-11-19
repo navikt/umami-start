@@ -36,27 +36,34 @@ function TeamWebsites() {
     const [selectedItem, setSelectedItem] = useState<{ name: string; id: string }>({ name: '', id: '' });
     const [showDevApps, setShowDevApps] = useState<boolean>(false);
     const ref = useRef<HTMLDialogElement>(null);
-    const baseUrl = window.location.hostname === 'localhost' ? 'https://reops-proxy.intern.nav.no' : 'https://reops-proxy.ansatt.nav.no';
+
 
     useEffect(() => {
-        Promise.all([
-            fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
-                credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-            }).then(response => response.json()),
-            fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
-                credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-            }).then(response => response.json())
-        ])
-            .then(([data1, data2]) => {
-                const combinedData = [...data1.data, ...data2.data];
-                combinedData.sort((a, b) => {
-                    if (a.teamId === b.teamId) {
+        const baseUrl = ''; // Use relative path for local API
+
+        fetch(`${baseUrl}/api/bigquery/websites`)
+            .then(response => response.json())
+            .then((response) => {
+                const websitesData = response.data || [];
+
+                // Deduplicate by name to avoid key collisions
+                const uniqueWebsites = websitesData.filter((website: Website, index: number, self: Website[]) =>
+                    index === self.findIndex((w) => w.name === website.name)
+                );
+
+                // Sort by teamId (Dev first, then Prod) and then by name
+                uniqueWebsites.sort((a: Website, b: Website) => {
+                    const teamIdA = a.teamId || '';
+                    const teamIdB = b.teamId || '';
+
+                    if (teamIdA === teamIdB) {
                         return a.name.localeCompare(b.name);
                     }
-                    return b.teamId.localeCompare(a.teamId);
+                    return teamIdB.localeCompare(teamIdA);
                 });
-                setData(combinedData);
-                setFilteredData(combinedData);
+
+                setData(uniqueWebsites);
+                setFilteredData(uniqueWebsites);
             })
             .catch(error => console.error("Error fetching data:", error));
     }, []);
@@ -73,9 +80,10 @@ function TeamWebsites() {
                 }
 
                 // Regular environment filtering
-                const envMatch = showDevApps 
-                    ? website.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30'
-                    : website.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b';
+                const teamId = website.teamId || '';
+                const envMatch = showDevApps
+                    ? teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30'
+                    : teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b';
 
                 // Then apply other search criteria if there's a search query
                 if (searchQuery === "") {
@@ -83,7 +91,7 @@ function TeamWebsites() {
                 } else {
                     const searchLower = searchQuery.toLowerCase();
                     const nameMatches = website.name.toLowerCase().includes(searchLower);
-                    const domainMatches = website.domain.toLowerCase().includes(searchLower);
+                    const domainMatches = website.domain && website.domain.toLowerCase().includes(searchLower);
                     return envMatch && (nameMatches || domainMatches);
                 }
             });
@@ -113,7 +121,7 @@ function TeamWebsites() {
                         size="small"
                     />
                 </form>
-                <Switch 
+                <Switch
                     size="small"
                     position="right"
                     checked={showDevApps}
@@ -123,54 +131,73 @@ function TeamWebsites() {
                 </Switch>
             </div>
             <div style={{ overflowX: 'auto' }} >
-            {/* Display the count of websites shown */}
-            <div className="my-2 text-md text-gray-700">
-                {filteredData?.length || 0} nettsider/apper
-            </div>
-            <Table zebraStripes={true}>
-                <Table.Header>
-                    <Table.Row>
-                        <Table.HeaderCell scope="col">Umami-prosjekt</Table.HeaderCell>
-                        <Table.HeaderCell scope="col">Miljø</Table.HeaderCell>
-                        <Table.HeaderCell scope="col">Hoveddomene</Table.HeaderCell>
-                        <Table.HeaderCell scope="col">Opprettet</Table.HeaderCell>
-                        <Table.HeaderCell scope="col">Sporingskode</Table.HeaderCell>
-                    </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                    {filteredData && filteredData.map(({id, name, domain, createdAt, teamId}) => (
-                        <Table.Row key={id}>
-                            <Table.HeaderCell scope="row">
-                                    {name}
-                            </Table.HeaderCell>
-                            <Table.DataCell>
-                                <Tag variant={teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'success' : 'alt1'}>
-                                    {teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'prod' : 'dev'}
-                                </Tag>
-                            </Table.DataCell>
-                            <Table.DataCell>{domain}</Table.DataCell>
-                            <Table.DataCell>
-                                {new Date(createdAt).toLocaleDateString('nb-NO', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                })}
-                            </Table.DataCell>
-                            <Table.DataCell>
-                                <Button
-                                    variant="primary"
-                                    size="small"
-                                    onClick={() => handleButtonClick(name, id)}
-                                >
-                                    Sporingskode
-                                </Button>
-                            </Table.DataCell>
+                {/* Display the count of websites shown */}
+                <div className="my-2 text-md text-gray-700">
+                    {filteredData?.length || 0} nettsider/apper
+                </div>
+                <Table zebraStripes={true}>
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.HeaderCell scope="col">Umami-prosjekt</Table.HeaderCell>
+                            <Table.HeaderCell scope="col">Miljø</Table.HeaderCell>
+                            <Table.HeaderCell scope="col">Hoveddomene</Table.HeaderCell>
+                            <Table.HeaderCell scope="col">Opprettet</Table.HeaderCell>
+                            <Table.HeaderCell scope="col">Sporingskode</Table.HeaderCell>
                         </Table.Row>
-                    ))}
-                </Table.Body>
-            </Table>
+                    </Table.Header>
+                    <Table.Body>
+                        {filteredData && filteredData.map(({ id, name, domain, createdAt, teamId }) => (
+                            <Table.Row key={id}>
+                                <Table.HeaderCell scope="row">
+                                    {name}
+                                </Table.HeaderCell>
+                                <Table.DataCell>
+                                    <Tag variant={teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'success' : 'alt1'}>
+                                        {teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'prod' : 'dev'}
+                                    </Tag>
+                                </Table.DataCell>
+                                <Table.DataCell>{domain}</Table.DataCell>
+                                <Table.DataCell>
+                                    {(() => {
+                                        if (!createdAt) return 'Ukjent dato';
+
+                                        let dateStr;
+
+                                        // Handle BigQuery timestamp format { value: string }
+                                        if (typeof createdAt === 'object' && createdAt !== null && 'value' in createdAt) {
+                                            dateStr = (createdAt as any).value;
+                                        } else {
+                                            dateStr = createdAt;
+                                        }
+
+                                        const date = new Date(dateStr);
+
+                                        if (isNaN(date.getTime())) {
+                                            return 'Ugyldig dato';
+                                        }
+
+                                        return date.toLocaleDateString('nb-NO', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric'
+                                        });
+                                    })()}
+                                </Table.DataCell>
+                                <Table.DataCell>
+                                    <Button
+                                        variant="primary"
+                                        size="small"
+                                        onClick={() => handleButtonClick(name, id)}
+                                    >
+                                        Sporingskode
+                                    </Button>
+                                </Table.DataCell>
+                            </Table.Row>
+                        ))}
+                    </Table.Body>
+                </Table>
             </div>
-            <SporingsModal ref={ref} selectedItem={selectedItem}/>
+            <SporingsModal ref={ref} selectedItem={selectedItem} />
         </>
     );
 }
