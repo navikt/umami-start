@@ -7,9 +7,9 @@ import { Website } from '../types/chart';
 const UserJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [startUrl, setStartUrl] = useState<string>('/');
-    const [steps, setSteps] = useState<number>(3);
-    const [limit, setLimit] = useState<number>(30);
-    const [limitInput, setLimitInput] = useState<string>('30');
+    const [steps, setSteps] = useState<number>(2);
+    const [limit, setLimit] = useState<number>(15);
+    const [limitInput, setLimitInput] = useState<string>('15');
     const [data, setData] = useState<IChartProps | null>(null);
     const [rawData, setRawData] = useState<{ nodes: any[], links: any[] } | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -103,7 +103,7 @@ const UserJourney = () => {
                             />
 
                             <TextField
-                                label="Start URL"
+                                label="Start URL-sti"
                                 description="Hvilken side starter reisen på? (f.eks. /)"
                                 value={startUrl}
                                 onChange={(e) => setStartUrl(e.target.value)}

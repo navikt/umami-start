@@ -423,19 +423,7 @@ const WebsitePicker = ({
                 }
               }}
             >
-              nav.no (prod)
-            </Button>
-            <Button
-              size="xsmall"
-              variant="secondary"
-              onClick={() => {
-                const website = websites.find(w => w.id === 'c44a6db3-c974-4316-b433-214f87e80b4d');
-                if (website) {
-                  handleWebsiteChange(website);
-                }
-              }}
-            >
-              nav.no (dev)
+              nav.no
             </Button>
           </div>
         )}

@@ -382,7 +382,7 @@ app.get('/api/bigquery/websites', async (req, res) => {
 // Get user journeys from BigQuery
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
-        const { websiteId, startUrl, days = 30, steps = 3, coverage = 0.90 } = req.body;
+        const { websiteId, startUrl, days = 30, steps = 3, limit = 30 } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -425,28 +425,48 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 FROM journey_steps
                 WHERE step < @steps
                     AND next_url IS NOT NULL
+                    -- Ensure step 0 always starts from the specified start URL
+                    AND (step > 0 OR url_path = @startUrl)
                 GROUP BY 1, 2, 3
             ),
-            ranked AS (
+            -- Calculate total traffic per page across all flows
+            page_traffic AS (
+                SELECT url_path, SUM(flow_value) as total_value
+                FROM (
+                    SELECT source AS url_path, SUM(value) as flow_value
+                    FROM raw_flows
+                    GROUP BY source
+                    UNION ALL
+                    SELECT target AS url_path, SUM(value) as flow_value
+                    FROM raw_flows
+                    GROUP BY target
+                )
+                GROUP BY url_path
+            ),
+            -- Rank pages by total traffic
+            ranked_pages AS (
                 SELECT
-                    *,
-                    SUM(value) OVER (PARTITION BY step) AS step_total,
-                    SUM(value) OVER (
-                        PARTITION BY step
-                        ORDER BY value DESC
-                        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                    ) AS cumulative_value
-                FROM raw_flows
-                ORDER BY step, value DESC
+                    url_path,
+                    total_value,
+                    ROW_NUMBER() OVER (ORDER BY total_value DESC) AS page_rank
+                FROM page_traffic
+            ),
+            -- Get top N pages
+            top_pages AS (
+                SELECT url_path
+                FROM ranked_pages
+                WHERE page_rank <= @limit
             )
+            -- Only include flows where both source and target are in top pages
             SELECT
-                step,
-                source,
-                target,
-                value
-            FROM ranked
-            WHERE cumulative_value / step_total <= @coverage
-            ORDER BY step, value DESC
+                f.step,
+                f.source,
+                f.target,
+                f.value
+            FROM raw_flows f
+            WHERE f.source IN (SELECT url_path FROM top_pages)
+                AND f.target IN (SELECT url_path FROM top_pages)
+            ORDER BY f.step, f.value DESC
         `;
 
         const [job] = await bigquery.createQueryJob({
@@ -458,7 +478,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 startDate,
                 endDate,
                 steps,
-                coverage
+                limit
             }
         });
 
@@ -473,7 +493,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     startDate,
                     endDate,
                     steps,
-                    coverage
+                    limit
                 },
                 dryRun: true
             });
@@ -532,8 +552,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     startDate,
                     endDate,
                     steps,
-                    limit,
-                    minFlowValue
+                    limit
                 },
                 dryRun: true
             });
