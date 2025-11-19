@@ -30,4 +30,4 @@ spec:
       cpu: 50m
       memory: 128Mi
   ingresses:
-    - https://startumami-dev.ansatt.dev.nav.no
+    - https://startumami-dev.ansatt.nav.no

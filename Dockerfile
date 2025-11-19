@@ -34,4 +34,4 @@ COPY --from=builder /app/.nais ./.nais
 
 EXPOSE 8080
 
-CMD ["node", "server.js"]
+CMD ["server.js"]
