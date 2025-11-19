@@ -6,6 +6,7 @@ import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, A
 import { translateValue } from '../../lib/translations';
 import SqlCodeDisplay from './SqlCodeDisplay';
 import ShareModal from './ShareModal';
+import { encode } from '@toon-format/toon';
 
 interface ResultsDisplayProps {
   result: any;
@@ -49,7 +50,7 @@ const ResultsDisplay = ({
     const validTabs = ['table', 'linechart', 'areachart', 'barchart', 'piechart'];
     return tabParam && validTabs.includes(tabParam) ? tabParam : 'table';
   });
-  
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -187,26 +188,25 @@ const ResultsDisplay = ({
     URL.revokeObjectURL(url);
   };
 
-  // Function to convert results to JSONL (JSON Lines)
-  const downloadJSONL = () => {
+  // Function to convert results to TOON (Token-Oriented Object Notation)
+  const downloadTOON = () => {
     if (!result || !result.data || result.data.length === 0) return;
 
-    // Create translated data for JSONL export (one JSON object per line)
-    const jsonlContent = result.data
-      .map((row: any) => {
-        const translatedRow: any = {};
-        Object.keys(row).forEach((key) => {
-          translatedRow[key] = translateValue(key, row[key]);
-        });
-        return JSON.stringify(translatedRow);
-      })
-      .join('\n');
+    // Create translated data for TOON export
+    const translatedData = result.data.map((row: any) => {
+      const translatedRow: any = {};
+      Object.keys(row).forEach((key) => {
+        translatedRow[key] = translateValue(key, row[key]);
+      });
+      return translatedRow;
+    });
 
-    const blob = new Blob([jsonlContent], { type: 'application/jsonl;charset=utf-8;' });
+    const toonContent = encode(translatedData);
+    const blob = new Blob([toonContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `query_results_${new Date().toISOString().slice(0, 10)}.jsonl`);
+    link.setAttribute('download', `query_results_${new Date().toISOString().slice(0, 10)}.toon`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -217,7 +217,7 @@ const ResultsDisplay = ({
   return (
     <div className="space-y-2 mb-6">
       {!hideHeading && <Heading level="2" size="small">Vis resultater</Heading>}
-      
+
       <div className="bg-green-50 p-4 rounded-md border border-green-100">
         {/* Only show button if no results yet */}
         {!result && !error && (
@@ -304,30 +304,30 @@ const ResultsDisplay = ({
                         });
 
                         // Sort the filtered data
-                        const sortedData = sortColumn 
+                        const sortedData = sortColumn
                           ? [...filteredData].sort((a: any, b: any) => {
-                              const aVal = a[sortColumn];
-                              const bVal = b[sortColumn];
-                              
-                              // Handle null/undefined values
-                              if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1;
-                              if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1;
-                              
-                              // Numeric comparison
-                              if (typeof aVal === 'number' && typeof bVal === 'number') {
-                                return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-                              }
-                              
-                              // String comparison
-                              const aStr = String(aVal).toLowerCase();
-                              const bStr = String(bVal).toLowerCase();
-                              
-                              if (sortDirection === 'asc') {
-                                return aStr.localeCompare(bStr, 'nb-NO');
-                              } else {
-                                return bStr.localeCompare(aStr, 'nb-NO');
-                              }
-                            })
+                            const aVal = a[sortColumn];
+                            const bVal = b[sortColumn];
+
+                            // Handle null/undefined values
+                            if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1;
+                            if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1;
+
+                            // Numeric comparison
+                            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                              return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+                            }
+
+                            // String comparison
+                            const aStr = String(aVal).toLowerCase();
+                            const bStr = String(bVal).toLowerCase();
+
+                            if (sortDirection === 'asc') {
+                              return aStr.localeCompare(bStr, 'nb-NO');
+                            } else {
+                              return bStr.localeCompare(aStr, 'nb-NO');
+                            }
+                          })
                           : filteredData;
 
                         if (sortedData.length === 0) {
@@ -378,19 +378,19 @@ const ResultsDisplay = ({
                                             key={cellIdx}
                                             className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
                                           >
-                      {typeof translatedValue === 'number'
-                        ? translatedValue.toLocaleString('nb-NO')
-                        : translatedValue !== null && translatedValue !== undefined
-                        ? (typeof translatedValue === 'object'
-                          ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
-                            ? translatedValue.toISOString()
-                            : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
-                              ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
-                                ? new Date(translatedValue.value).toISOString()
-                                : String(translatedValue.value))
-                              : JSON.stringify(translatedValue)))
-                          : String(translatedValue))
-                        : '-'}
+                                            {typeof translatedValue === 'number'
+                                              ? translatedValue.toLocaleString('nb-NO')
+                                              : translatedValue !== null && translatedValue !== undefined
+                                                ? (typeof translatedValue === 'object'
+                                                  ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
+                                                    ? translatedValue.toISOString()
+                                                    : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
+                                                      ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
+                                                        ? new Date(translatedValue.value).toISOString()
+                                                        : String(translatedValue.value))
+                                                      : JSON.stringify(translatedValue)))
+                                                  : String(translatedValue))
+                                                : '-'}
                                           </td>
                                         );
                                       })}
@@ -438,7 +438,7 @@ const ResultsDisplay = ({
                     const chartData = prepareLineChartData(showAverage);
                     console.log('Line Chart Data:', chartData);
                     console.log('Raw Result Data:', result.data);
-                    
+
                     if (!chartData) {
                       return (
                         <Alert variant="info">
@@ -481,7 +481,7 @@ const ResultsDisplay = ({
                 <div className="border rounded-lg bg-white p-4">
                   {(() => {
                     const baseChartData = prepareLineChartData(false);
-                    
+
                     if (!baseChartData) {
                       return (
                         <Alert variant="info">
@@ -489,16 +489,16 @@ const ResultsDisplay = ({
                         </Alert>
                       );
                     }
-                    
+
                     // Check if we have multiple series
                     const hasMultipleSeries = baseChartData.data.lineChartData && baseChartData.data.lineChartData.length > 1;
-                    
+
                     // Transform data for percentage view if needed
                     let chartData = baseChartData;
                     if (isPercentageStacked && baseChartData.data.lineChartData) {
                       // Create a map of x values to total y values
                       const xTotals = new Map<number, number>();
-                      
+
                       // Calculate totals for each x value
                       baseChartData.data.lineChartData.forEach((series: any) => {
                         series.data.forEach((point: any) => {
@@ -507,7 +507,7 @@ const ResultsDisplay = ({
                           xTotals.set(xVal, currentTotal + point.y);
                         });
                       });
-                      
+
                       // Transform each series to percentages
                       const percentageData = baseChartData.data.lineChartData.map((series: any) => ({
                         ...series,
@@ -515,7 +515,7 @@ const ResultsDisplay = ({
                           const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
                           const total = xTotals.get(xVal) || 1;
                           const percentage = (point.y / total) * 100;
-                          
+
                           return {
                             ...point,
                             y: percentage,
@@ -524,7 +524,7 @@ const ResultsDisplay = ({
                           };
                         }),
                       }));
-                      
+
                       chartData = {
                         ...baseChartData,
                         data: {
@@ -532,7 +532,7 @@ const ResultsDisplay = ({
                         },
                       };
                     }
-                    
+
                     return (
                       <div style={{ overflow: 'visible' }}>
                         {hasMultipleSeries && (
@@ -592,7 +592,7 @@ const ResultsDisplay = ({
                     const hasValidBarData = Array.isArray(chartData.data) && chartData.data.some((item) => {
                       return !Number.isNaN(item.y) && typeof item.y === 'number' && item.y !== 0;
                     });
-                    
+
                     if (!hasValidBarData) {
                       return (
                         <Alert variant="info">
@@ -650,7 +650,7 @@ const ResultsDisplay = ({
                     }
                     // Check if all y values are NaN or if no valid values exist
                     const hasValidY = Array.isArray(chartData.data) && chartData.data.some((item) => !Number.isNaN(item.y) && item.y !== 0);
-                    
+
                     if (!hasValidY || (Array.isArray(chartData.data) && chartData.data.every((item) => Number.isNaN(item.y)))) {
                       return (
                         <Alert variant="info">
@@ -658,7 +658,7 @@ const ResultsDisplay = ({
                         </Alert>
                       );
                     }
-                    
+
                     return (
                       <div>
                         <div className="flex flex-col items-center">
@@ -748,12 +748,12 @@ const ResultsDisplay = ({
                   Last ned JSON
                 </Button>
                 <Button
-                  onClick={downloadJSONL}
+                  onClick={downloadTOON}
                   variant="secondary"
                   size="small"
                   icon={<Download size={16} />}
                 >
-                  Last ned JSONL
+                  Last ned TOON
                 </Button>
               </div>
             </ReadMore>
@@ -762,23 +762,23 @@ const ResultsDisplay = ({
             {showSqlCode && sql && (
               <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
             )}
-            
+
           </div>
         )}
 
-            {/* Share Button */}
-            {sql && (
-              <div className="mt-3 flex justify-end">
-                <Button
-                  onClick={() => setShowShareModal(true)}
-                  variant="secondary"
-                  size="small"
-                  icon={<Share2 size={18} />}
-                >
-                  Del tabell & graf
-                </Button>
-              </div>
-            )}
+        {/* Share Button */}
+        {sql && (
+          <div className="mt-3 flex justify-end">
+            <Button
+              onClick={() => setShowShareModal(true)}
+              variant="secondary"
+              size="small"
+              icon={<Share2 size={18} />}
+            >
+              Del tabell & graf
+            </Button>
+          </div>
+        )}
 
 
         {result && result.data && result.data.length === 0 && (
