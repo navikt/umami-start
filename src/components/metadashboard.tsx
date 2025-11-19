@@ -1,4 +1,4 @@
-import {Search, Alert, BodyShort, Link, ReadMore, List} from "@navikt/ds-react";
+import { Search, Alert, BodyShort, Link, ReadMore, List } from "@navikt/ds-react";
 import { useState, useEffect } from "react";
 
 interface Website {
@@ -11,34 +11,35 @@ interface Website {
 }
 
 function Metadashboard() {
-    const baseUrl = window.location.hostname === 'localhost' ? 'https://reops-proxy.intern.nav.no' : 'https://reops-proxy.ansatt.nav.no';
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
 
     useEffect(() => {
-        Promise.all([
-            fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
-                credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-            }).then(response => response.json()),
-            fetch(`${baseUrl}/umami/api/teams/bceb3300-a2fb-4f73-8cec-7e3673072b30/websites`, {
-                credentials: window.location.hostname === 'localhost' ? 'omit' : 'include'
-            }).then(response => response.json())
-        ])
-            .then(([data1, data2]) => {
-                const team1Data = data1.data.filter((item: Website) => 
-                    item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
+        const baseUrl = ''; // Use relative path for local API
+
+        fetch(`${baseUrl}/api/bigquery/websites`)
+            .then(response => response.json())
+            .then((response) => {
+                const websitesData = response.data || [];
+
+                // Filter for prod websites only
+                const prodWebsites = websitesData.filter((website: Website) =>
+                    website.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
                 );
-                const team2Data = data2.data.filter((item: Website) => 
-                    item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
-                    item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
+
+                // Filter out exactly "nav.no"
+                const filteredItems = prodWebsites.filter((item: Website) => item.domain !== "nav.no");
+
+                // Deduplicate by domain
+                const uniqueWebsites = filteredItems.filter((website: Website, index: number, self: Website[]) =>
+                    index === self.findIndex((w) => w.domain === website.domain)
                 );
-                
-                const combinedData = [...team1Data, ...team2Data];
-                // Filter out exactly "nav.no" from the list, preserve items like "www.nav.no"
-                const filteredItems = combinedData.filter(item => item.domain !== "nav.no");
-                filteredItems.sort((a, b) => a.domain.localeCompare(b.domain));
-                setFilteredData(filteredItems);
+
+                // Sort by domain
+                uniqueWebsites.sort((a: Website, b: Website) => a.domain.localeCompare(b.domain));
+
+                setFilteredData(uniqueWebsites);
             })
             .catch(error => console.error("Error fetching data:", error));
     }, []);
