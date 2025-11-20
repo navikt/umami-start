@@ -28,7 +28,7 @@ const routes = [
     { path: "/sok", component: <Sok /> },
     { path: "/sql", component: <BigQuery /> },
     { path: "/grafdeling", component: <Grafdeling /> },
-    { path: "/brukerreise", component: <UserJourney /> }
+    { path: "/brukerreiser", component: <UserJourney /> }
 
 ];
 
