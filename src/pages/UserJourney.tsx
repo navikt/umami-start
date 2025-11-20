@@ -20,6 +20,38 @@ const UserJourney = () => {
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
+    // Helper function to normalize URL input - extracts path from full URLs
+    const normalizeUrlToPath = (input: string): string => {
+        if (!input.trim()) return '/';
+
+        const trimmed = input.trim();
+
+        try {
+            // Check if input looks like a full URL (contains protocol)
+            if (trimmed.includes('://')) {
+                const url = new URL(trimmed);
+                return url.pathname;
+            }
+
+            // Check if input looks like a domain without protocol
+            // e.g., "nav.no/arbeid" or "www.nav.no/arbeid"
+            // Pattern: contains a dot and doesn't start with /
+            if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
+                // Prepend protocol and try to parse
+                const url = new URL('https://' + trimmed);
+                console.log('[URL Normalization] Domain without protocol detected:', trimmed, '→', url.pathname);
+                return url.pathname;
+            }
+        } catch (e) {
+            // If URL parsing fails, treat as path
+            console.log('[URL Normalization] Parse error, using as-is:', trimmed);
+        }
+
+        // Already a path or invalid URL - return as-is
+        console.log('[URL Normalization] Already a path:', trimmed);
+        return trimmed;
+    };
+
     const downloadCSV = () => {
         if (!rawData || !rawData.links || rawData.links.length === 0) return;
 
@@ -192,7 +224,7 @@ const UserJourney = () => {
                                 label="Start URL-sti"
                                 description="Hvilken side starter reisen på? (f.eks. /)"
                                 value={startUrl}
-                                onChange={(e) => setStartUrl(e.target.value)}
+                                onChange={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}
                             />
 
                             <Select
