@@ -348,16 +348,17 @@ app.get('/api/bigquery/websites', async (req, res) => {
         }
 
         const query = `
-            SELECT DISTINCT
+            SELECT
                 website_id as id,
-                name,
-                domain,
-                share_id as shareId,
-                team_id as teamId,
-                created_at as createdAt
+                ANY_VALUE(name) as name,
+                ANY_VALUE(domain) as domain,
+                ANY_VALUE(share_id) as shareId,
+                ANY_VALUE(team_id) as teamId,
+                ANY_VALUE(created_at) as createdAt
             FROM \`team-researchops-prod-01d6.umami.public_website\`
             WHERE deleted_at IS NULL
               AND name IS NOT NULL
+            GROUP BY website_id
             ORDER BY name
         `;
 
