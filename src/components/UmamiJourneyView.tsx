@@ -42,7 +42,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
     const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
     // Process data
-    const { stepsData, nodeValues, adjacency, reverseAdjacency } = useMemo(() => {
+    const { stepsData, adjacency, reverseAdjacency } = useMemo(() => {
         if (!nodes || nodes.length === 0) return { stepsData: [], nodeValues: new Map(), adjacency: [], reverseAdjacency: [] };
 
         const stepsMap = new Map<number, Node[]>();
