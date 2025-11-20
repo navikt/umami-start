@@ -671,7 +671,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
 // Get funnel data from BigQuery
 app.post('/api/bigquery/funnel', async (req, res) => {
     try {
-        const { websiteId, urls, days = 14 } = req.body;
+        const { websiteId, urls, days = 14, onlyDirectEntry = true } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -697,9 +697,9 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             END
         `;
 
-        // 1. Base events CTE
+        // 1. Base events CTE with LAG for strict mode
         let query = `
-            WITH events AS (
+            WITH events_raw AS (
                 SELECT 
                     session_id,
                     ${normalizeUrlSql} as url_path,
@@ -709,6 +709,12 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                   AND created_at BETWEEN @startDate AND @endDate
                   AND event_type = 1 -- Pageview
             ),
+            events AS (
+                SELECT 
+                    *,
+                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
+                FROM events_raw
+            ),
         `;
 
         // 2. Generate CTEs for each step
@@ -717,6 +723,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             const prevStepName = `step${index}`;
 
             if (index === 0) {
+                // Step 1: Always any visit to the first URL
                 return `
             ${stepName} AS (
                 SELECT session_id, MIN(created_at) as time${index + 1}
@@ -725,7 +732,22 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 GROUP BY session_id
             )`;
             } else {
-                return `
+                if (onlyDirectEntry) {
+                    // Strict mode: Current URL must be visited immediately after Previous URL
+                    // We join on session_id and ensure the current event's prev_url_path matches the previous step's URL
+                    return `
+            ${stepName} AS (
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                FROM events e
+                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+                WHERE e.url_path = @url${index} 
+                  AND e.created_at > prev.time${index}
+                  AND e.prev_url_path = @url${index - 1} -- Strict check: Immediate predecessor
+                GROUP BY e.session_id
+            )`;
+                } else {
+                    // Loose mode: Eventual visit (standard funnel)
+                    return `
             ${stepName} AS (
                 SELECT e.session_id, MIN(e.created_at) as time${index + 1}
                 FROM events e
@@ -734,6 +756,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                   AND e.created_at > prev.time${index}
                 GROUP BY e.session_id
             )`;
+                }
             }
         });
 
@@ -752,6 +775,31 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         urls.forEach((url, index) => {
             params[`url${index}`] = url;
         });
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+
+            console.log(`[Funnel] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+        } catch (dryRunError) {
+            console.log('[Funnel] Dry run failed:', dryRunError.message);
+        }
 
         const [job] = await bigquery.createQueryJob({
             query: query,
@@ -774,7 +822,10 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             count: parseInt(row[`step${index + 1}_count`] || 0)
         }));
 
-        res.json({ data: funnelData });
+        res.json({
+            data: funnelData,
+            queryStats
+        });
 
     } catch (error) {
         console.error('BigQuery funnel error:', error);

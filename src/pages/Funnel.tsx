@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, Tabs } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, BodyShort, Tabs, Switch } from '@navikt/ds-react';
 import { Plus, Trash2, Download } from 'lucide-react';
 import WebsitePicker from '../components/WebsitePicker';
 import FunnelChart from '../components/FunnelChart';
@@ -14,6 +14,12 @@ const Funnel = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('vertical');
+    const [onlyDirectEntry, setOnlyDirectEntry] = useState<boolean>(true);
+    const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
+    const [queryStats, setQueryStats] = useState<{
+        totalBytesProcessedGB: string;
+        estimatedCostUSD: string;
+    } | null>(null);
 
     const downloadCSV = () => {
         if (!funnelData || funnelData.length === 0) return;
@@ -100,6 +106,8 @@ const Funnel = () => {
     const fetchData = async () => {
         if (!selectedWebsite) return;
 
+        setHasAttemptedFetch(true);
+
         // Validate URLs
         const normalizedUrls = urls.map(normalizeUrlToPath).filter(u => u.trim() !== '');
         if (normalizedUrls.length < 2) {
@@ -121,6 +129,7 @@ const Funnel = () => {
                     websiteId: selectedWebsite.id,
                     urls: normalizedUrls,
                     days: 14,
+                    onlyDirectEntry // Pass the toggle state to backend
                 }),
             });
 
@@ -128,12 +137,21 @@ const Funnel = () => {
                 throw new Error('Kunne ikke hente traktdata');
             }
 
-            const result = await response.json();
-            setFunnelData(result.data || []);
+            const data = await response.json();
 
+            if (data.error) {
+                setError(data.error);
+                setFunnelData([]);
+                setQueryStats(null);
+            } else {
+                setFunnelData(data.data);
+                setQueryStats(data.queryStats || null);
+            }
         } catch (err) {
-            console.error(err);
+            console.error('Error fetching funnel data:', err);
             setError('Det oppstod en feil ved henting av data.');
+            setFunnelData([]);
+            setQueryStats(null);
         } finally {
             setLoading(false);
         }
@@ -159,7 +177,7 @@ const Funnel = () => {
                                 onWebsiteChange={setSelectedWebsite}
                             />
 
-                            <div className="space-y-3">
+                            <div className="pt-2 space-y-3">
                                 <Heading level="3" size="xsmall">Definer steg ved å legge til URL-stier</Heading>
                                 {urls.map((url, index) => (
                                     <div key={index} className="flex items-end gap-2">
@@ -190,13 +208,23 @@ const Funnel = () => {
                                 </Button>
                             </div>
 
+                            <div className="pb-1 flex items-center gap-4 px-1">
+                                <Switch
+                                    checked={onlyDirectEntry}
+                                    onChange={(e) => setOnlyDirectEntry(e.target.checked)}
+                                    description="Flyt direkte fra steg til steg"
+                                >
+                                    Streng rekkefølge
+                                </Switch>
+                            </div>
+
                             <Button
                                 onClick={fetchData}
                                 disabled={!selectedWebsite || loading}
                                 loading={loading}
                                 className="w-full"
                             >
-                                Beregn trakt
+                                Lag trakt
                             </Button>
                         </div>
                     </div>
@@ -296,9 +324,16 @@ const Funnel = () => {
                         </Tabs>
                     )}
 
-                    {!loading && !error && funnelData.length === 0 && (
-                        <div className="flex justify-center items-center h-full text-gray-500">
-                            Velg nettside og definer steg for å se traktanalyse.
+                    {!loading && !error && funnelData.length === 0 && hasAttemptedFetch && (
+                        <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mt-4">
+                            Ingen data funnet for denne trakten i valgt periode.
+                        </div>
+                    )}
+
+                    {queryStats && (
+                        <div className="mt-6 text-xs text-gray-400 text-right font-mono">
+                            Processed: {queryStats.totalBytesProcessedGB} GB |
+                            Est. Cost: ${queryStats.estimatedCostUSD}
                         </div>
                     )}
                 </div>
