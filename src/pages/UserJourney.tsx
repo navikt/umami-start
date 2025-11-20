@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heading, TextField, Button, Alert, Loader, Select, Tabs } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, Select, Tabs, BodyShort } from '@navikt/ds-react';
 import { SankeyChart, IChartProps } from '@fluentui/react-charting';
 import { Download, Maximize2, Minimize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -160,7 +160,7 @@ const UserJourney = () => {
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
                     startUrl: normalizedStartUrl,
-                    days: 30,
+                    days: 14,
                     steps,
                     limit,
                 }),
@@ -211,9 +211,14 @@ const UserJourney = () => {
 
     return (
         <div className="py-8 max-w-[1600px] mx-auto">
-            <Heading level="1" size="xlarge" className="mb-8">
-                Brukerreiser
-            </Heading>
+            <div className="mb-8">
+                <Heading level="1" size="xlarge" className="mb-2">
+                    Brukerreiser
+                </Heading>
+                <BodyShort className="text-gray-600">
+                    Viser brukerreiser basert på de siste 14 dagene
+                </BodyShort>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                 <div className="space-y-6">

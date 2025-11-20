@@ -383,7 +383,7 @@ app.get('/api/bigquery/websites', async (req, res) => {
 // Get user journeys from BigQuery
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
-        const { websiteId, startUrl, days = 30, steps = 3, limit = 30 } = req.body;
+        const { websiteId, startUrl, days = 14, steps = 3, limit = 30 } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
