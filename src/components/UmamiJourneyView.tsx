@@ -255,7 +255,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                     {stepData.step}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900">
-                                    {stepData.totalValue.toLocaleString()} besøkende
+                                    {stepData.totalValue.toLocaleString('nb-NO')} besøkende
                                 </div>
                             </div>
 
@@ -285,17 +285,8 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                 backgroundColor: 'rgb(19, 17, 54)' // Custom theme color
                                             }}
                                         >
-                                            {/* Progress Bar Background */}
-                                            <div
-                                                className="absolute left-0 top-0 bottom-0 bg-white transition-all duration-500 ease-out"
-                                                style={{
-                                                    width: `${item.percentage}%`,
-                                                    opacity: 0.15
-                                                }}
-                                            />
-
                                             {/* Content */}
-                                            <div className="relative z-10 p-2.5 flex justify-between items-center gap-2 h-full">
+                                            <div className="relative z-10 p-2.5 flex justify-between items-center gap-2">
                                                 <div className="flex items-center gap-2 overflow-hidden">
                                                     <span className="text-gray-400 flex-shrink-0 text-xs">
                                                         📄
@@ -305,8 +296,16 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                     </span>
                                                 </div>
                                                 <span className="text-xs font-mono font-bold whitespace-nowrap">
-                                                    {item.value.toLocaleString()}
+                                                    {item.value.toLocaleString('nb-NO')}
                                                 </span>
+                                            </div>
+
+                                            {/* Percentage Bar - Bottom */}
+                                            <div className="absolute bottom-0 left-0 right-0 h-2 bg-white/30">
+                                                <div
+                                                    className="h-full bg-orange-400 transition-all duration-500 ease-out"
+                                                    style={{ width: `${item.percentage}%` }}
+                                                />
                                             </div>
                                         </div>
                                     );
