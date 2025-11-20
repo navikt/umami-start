@@ -327,9 +327,9 @@ const WebsitePicker = ({
       });
   }, []);
 
-  // Fetch events when a website is selected
+  // Fetch events when a website is selected (only if onEventsLoad callback is provided)
   useEffect(() => {
-    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId) {
+    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
       // Clear cache when website changes
       apiCache.current = {};
 
@@ -343,21 +343,21 @@ const WebsitePicker = ({
     }
   }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
 
-  // Reload when includeParams changes
+  // Reload when includeParams changes (only if onEventsLoad callback is provided)
   useEffect(() => {
-    if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current) {
+    if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current && onEventsLoad) {
       prevIncludeParams.current = includeParams;
       apiCache.current[selectedWebsite.id] = {};
       fetchEventNames(selectedWebsite.id, true, dateRangeInDays);
     }
-  }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays]);
+  }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
 
 
-  // Combine the reload effects to avoid loops
+  // Combine the reload effects to avoid loops (only if onEventsLoad callback is provided)
   useEffect(() => {
-    // Only proceed if we have a selected website
-    if (!selectedWebsite) return;
+    // Only proceed if we have a selected website and onEventsLoad callback
+    if (!selectedWebsite || !onEventsLoad) return;
 
     const dateRangeChanged = externalDateRange !== prevExternalDateRange.current;
     const reloadFlagChanged = shouldReload !== prevShouldReload.current;
@@ -381,7 +381,7 @@ const WebsitePicker = ({
       // Always use API data when explicitly reloading
       fetchEventNames(selectedWebsite.id, true, externalDateRange || dateRangeInDays);
     }
-  }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays]);
+  }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
 
   return (

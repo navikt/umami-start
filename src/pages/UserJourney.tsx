@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Heading, TextField, Button, Alert, Loader, Select, Tabs } from '@navikt/ds-react';
 import { SankeyChart, IChartProps } from '@fluentui/react-charting';
+import { Download } from 'lucide-react';
+import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
 
@@ -15,6 +17,88 @@ const UserJourney = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('sankey');
+
+    const downloadCSV = () => {
+        if (!rawData || !rawData.links || rawData.links.length === 0) return;
+
+        const headers = ['Steg', 'Fra side', 'Til side', 'Antall brukere'];
+        const csvRows = [
+            headers.join(','),
+            ...rawData.links.map((link: any) => {
+                const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
+                const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
+                const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
+                const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
+
+                const escapeCSV = (val: any) => {
+                    const str = val !== null && val !== undefined ? String(val) : '';
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return '"' + str.replace(/"/g, '""') + '"';
+                    }
+                    return str;
+                };
+
+                return [
+                    step,
+                    escapeCSV(sourceNode?.name || '-'),
+                    escapeCSV(targetNode?.name || '-'),
+                    link.value
+                ].join(',');
+            })
+        ];
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `brukerreiser_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const downloadExcel = () => {
+        if (!rawData || !rawData.links || rawData.links.length === 0) return;
+
+        const worksheetData = [
+            ['Steg', 'Fra side', 'Til side', 'Antall brukere'],
+            ...rawData.links.map((link: any) => {
+                const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
+                const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
+                const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
+                const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
+
+                return [
+                    step,
+                    sourceNode?.name || '-',
+                    targetNode?.name || '-',
+                    link.value
+                ];
+            })
+        ];
+
+        const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
+        const workbook = XLSXUtils.book_new();
+        XLSXUtils.book_append_sheet(workbook, worksheet, 'Brukerreiser');
+
+        const wbout = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `brukerreiser_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
@@ -183,6 +267,24 @@ const UserJourney = () => {
 
                             <Tabs.Panel value="table" className="pt-4">
                                 <div className="border rounded-lg overflow-hidden">
+                                    <div className="flex gap-2 p-3 bg-gray-50 border-b">
+                                        <Button
+                                            size="small"
+                                            variant="secondary"
+                                            onClick={downloadCSV}
+                                            icon={<Download size={16} />}
+                                        >
+                                            Last ned CSV
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            variant="secondary"
+                                            onClick={downloadExcel}
+                                            icon={<Download size={16} />}
+                                        >
+                                            Last ned Excel
+                                        </Button>
+                                    </div>
                                     <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-100 sticky top-0">

@@ -398,9 +398,20 @@ app.post('/api/bigquery/journeys', async (req, res) => {
             WITH session_events AS (
                 SELECT
                     session_id,
-                    url_path,
+                    CASE 
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END as url_path,
                     created_at,
-                    MIN(CASE WHEN url_path = @startUrl THEN created_at END) 
+                    MIN(CASE 
+                        WHEN (CASE 
+                            WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                            THEN '/'
+                            ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                        END) = @startUrl 
+                        THEN created_at 
+                    END) 
                         OVER (PARTITION BY session_id) AS start_time
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
@@ -411,11 +422,31 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 SELECT
                     session_id,
                     url_path,
-                    LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS next_url,
-                    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) - 1 AS step
+                    created_at,
+                    LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS next_url
                 FROM session_events
                 WHERE start_time IS NOT NULL
                     AND created_at >= start_time
+            ),
+            start_positions AS (
+                SELECT
+                    session_id,
+                    MIN(created_at) as first_pageview_time,
+                    MIN(CASE WHEN url_path = @startUrl THEN created_at END) as first_start_url_time
+                FROM journey_steps
+                GROUP BY session_id
+                HAVING MIN(created_at) = MIN(CASE WHEN url_path = @startUrl THEN created_at END)
+            ),
+            renumbered_steps AS (
+                SELECT
+                    j.session_id,
+                    j.url_path,
+                    j.next_url,
+                    ROW_NUMBER() OVER (PARTITION BY j.session_id ORDER BY j.created_at) - 1 AS step
+                FROM journey_steps j
+                INNER JOIN start_positions sp 
+                    ON j.session_id = sp.session_id 
+                    AND j.created_at >= sp.first_pageview_time
             ),
             raw_flows AS (
                 SELECT
@@ -423,15 +454,17 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     url_path AS source,
                     next_url AS target,
                     COUNT(*) AS value
-                FROM journey_steps
+                FROM renumbered_steps
                 WHERE step < @steps
                     AND next_url IS NOT NULL
-                    -- Ensure step 0 always starts from the specified start URL
-                    AND (step > 0 OR url_path = @startUrl)
                     -- Filter out self-loops (same page to same page)
                     AND url_path != next_url
+                    -- Ensure step 0 ONLY has the start URL as source
+                    AND (step > 0 OR url_path = @startUrl)
                     -- Prevent start URL from appearing as source at steps > 0
                     AND NOT (step > 0 AND url_path = @startUrl)
+                    -- Prevent start URL from appearing as target at steps > 0 (no back-navigation to start)
+                    AND NOT (step > 0 AND next_url = @startUrl)
                 GROUP BY 1, 2, 3
             ),
             ranked AS (
