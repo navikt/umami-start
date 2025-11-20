@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Heading, TextField, Button, Alert, Loader, Select, Tabs } from '@navikt/ds-react';
 import { SankeyChart, IChartProps } from '@fluentui/react-charting';
-import { Download } from 'lucide-react';
+import { Download, Maximize2, Minimize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import WebsitePicker from '../components/WebsitePicker';
+import UmamiJourneyView from '../components/UmamiJourneyView';
 import { Website } from '../types/chart';
 
 const UserJourney = () => {
@@ -16,7 +17,8 @@ const UserJourney = () => {
     const [rawData, setRawData] = useState<{ nodes: any[], links: any[] } | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<string>('sankey');
+    const [activeTab, setActiveTab] = useState<string>('steps');
+    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
     const downloadCSV = () => {
         if (!rawData || !rawData.links || rawData.links.length === 0) return;
@@ -250,17 +252,78 @@ const UserJourney = () => {
                     {!loading && data && (data as any).SankeyChartData?.nodes?.length > 0 && (
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
+                                <Tabs.Tab value="steps" label="Stegvisning" />
                                 <Tabs.Tab value="sankey" label="Brukerflyt" />
                                 <Tabs.Tab value="table" label="Tabell" />
                             </Tabs.List>
 
                             <Tabs.Panel value="sankey" className="pt-4">
-                                <div style={{ height: '600px', width: '100%' }}>
-                                    <SankeyChart
-                                        data={data}
-                                        height={600}
-                                        width={1000}
-                                        shouldResize={1000}
+                                <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8' : ''}`}>
+                                    {isFullscreen && (
+                                        <div className="mb-4 flex justify-end">
+                                            <Button
+                                                size="small"
+                                                variant="tertiary"
+                                                onClick={() => setIsFullscreen(false)}
+                                                icon={<Minimize2 size={20} />}
+                                            >
+                                                Lukk fullskjerm
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {!isFullscreen && (
+                                        <div className="mb-2 flex justify-end">
+                                            <Button
+                                                size="small"
+                                                variant="tertiary"
+                                                onClick={() => setIsFullscreen(true)}
+                                                icon={<Maximize2 size={20} />}
+                                            >
+                                                Fullskjerm
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '600px', width: '100%' }}>
+                                        <SankeyChart
+                                            data={data}
+                                            height={isFullscreen ? window.innerHeight - 120 : 600}
+                                            width={isFullscreen ? window.innerWidth - 100 : 1000}
+                                            shouldResize={isFullscreen ? window.innerWidth - 100 : 1000}
+                                        />
+                                    </div>
+                                </div>
+                            </Tabs.Panel>
+
+                            <Tabs.Panel value="steps" className="pt-4">
+                                <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8' : ''}`}>
+                                    {isFullscreen && (
+                                        <div className="mb-4 flex justify-end">
+                                            <Button
+                                                size="small"
+                                                variant="tertiary"
+                                                onClick={() => setIsFullscreen(false)}
+                                                icon={<Minimize2 size={20} />}
+                                            >
+                                                Lukk fullskjerm
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {!isFullscreen && (
+                                        <div className="mb-2 flex justify-end">
+                                            <Button
+                                                size="small"
+                                                variant="tertiary"
+                                                onClick={() => setIsFullscreen(true)}
+                                                icon={<Maximize2 size={20} />}
+                                            >
+                                                Fullskjerm
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <UmamiJourneyView
+                                        nodes={rawData?.nodes || []}
+                                        links={rawData?.links || []}
+                                        isFullscreen={isFullscreen}
                                     />
                                 </div>
                             </Tabs.Panel>
