@@ -16,10 +16,7 @@ const Funnel = () => {
     const [activeTab, setActiveTab] = useState<string>('vertical');
     const [onlyDirectEntry, setOnlyDirectEntry] = useState<boolean>(true);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
-    const [queryStats, setQueryStats] = useState<{
-        totalBytesProcessedGB: string;
-        estimatedCostUSD: string;
-    } | null>(null);
+
 
     const downloadCSV = () => {
         if (!funnelData || funnelData.length === 0) return;
@@ -142,16 +139,16 @@ const Funnel = () => {
             if (data.error) {
                 setError(data.error);
                 setFunnelData([]);
-                setQueryStats(null);
+
             } else {
                 setFunnelData(data.data);
-                setQueryStats(data.queryStats || null);
+
             }
         } catch (err) {
             console.error('Error fetching funnel data:', err);
             setError('Det oppstod en feil ved henting av data.');
             setFunnelData([]);
-            setQueryStats(null);
+
         } finally {
             setLoading(false);
         }
@@ -330,12 +327,7 @@ const Funnel = () => {
                         </div>
                     )}
 
-                    {queryStats && (
-                        <div className="mt-6 text-xs text-gray-400 text-right font-mono">
-                            Processed: {queryStats.totalBytesProcessedGB} GB |
-                            Est. Cost: ${queryStats.estimatedCostUSD}
-                        </div>
-                    )}
+
                 </div>
             </div>
         </div>
