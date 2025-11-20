@@ -228,9 +228,9 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
     }
 
     return (
-        <div className="bg-white rounded-lg border border-gray-200 w-full overflow-x-auto p-6">
+        <div className={`bg-white rounded-lg border border-gray-200 w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}>
             {/* Inner container */}
-            <div className={`relative min-w-max ${isFullscreen ? 'h-full overflow-auto' : ''}`} ref={contentRef}>
+            <div className={`relative min-w-max ${isFullscreen ? '' : ''}`} ref={contentRef}>
 
                 {/* SVG Overlay */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">

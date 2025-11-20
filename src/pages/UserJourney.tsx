@@ -258,7 +258,7 @@ const UserJourney = () => {
                             </Tabs.List>
 
                             <Tabs.Panel value="sankey" className="pt-4">
-                                <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8' : ''}`}>
+                                <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
                                     {isFullscreen && (
                                         <div className="mb-4 flex justify-end">
                                             <Button
@@ -295,7 +295,7 @@ const UserJourney = () => {
                             </Tabs.Panel>
 
                             <Tabs.Panel value="steps" className="pt-4">
-                                <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8' : ''}`}>
+                                <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
                                     {isFullscreen && (
                                         <div className="mb-4 flex justify-end">
                                             <Button
