@@ -472,14 +472,32 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     *,
                     ROW_NUMBER() OVER (PARTITION BY step ORDER BY value DESC) AS rank_in_step
                 FROM raw_flows
+            ),
+            top_flows AS (
+                SELECT
+                    step,
+                    source,
+                    target,
+                    value
+                FROM ranked
+                WHERE rank_in_step <= @limit
+            ),
+            -- Collect all valid pages at each step (step 0 targets, step 1 targets, etc.)
+            valid_pages_per_step AS (
+                SELECT 0 as step, @startUrl as page
+                UNION ALL
+                SELECT step + 1 as step, target as page
+                FROM top_flows
             )
             SELECT
-                step,
-                source,
-                target,
-                value
-            FROM ranked
-            WHERE rank_in_step <= @limit
+                t.step,
+                t.source,
+                t.target,
+                t.value
+            FROM top_flows t
+            INNER JOIN valid_pages_per_step v
+                ON v.step = t.step
+                AND v.page = t.source
             ORDER BY step, value DESC
         `;
 
