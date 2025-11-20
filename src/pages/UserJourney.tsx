@@ -168,7 +168,7 @@ const UserJourney = () => {
     };
 
     return (
-        <div className="p-8 max-w-[1600px] mx-auto">
+        <div className="py-8 max-w-[1600px] mx-auto">
             <Heading level="1" size="xlarge" className="mb-8">
                 Brukerreiser
             </Heading>
