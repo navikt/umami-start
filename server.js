@@ -668,6 +668,122 @@ app.post('/api/bigquery/estimate', async (req, res) => {
     }
 })
 
+// Get funnel data from BigQuery
+app.post('/api/bigquery/funnel', async (req, res) => {
+    try {
+        const { websiteId, urls, days = 14 } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        if (!urls || !Array.isArray(urls) || urls.length < 2) {
+            return res.status(400).json({
+                error: 'At least 2 URLs are required for a funnel'
+            });
+        }
+
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = new Date().toISOString();
+
+        // Helper to generate the URL normalization SQL
+        const normalizeUrlSql = `
+            CASE 
+                WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                THEN '/'
+                ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+            END
+        `;
+
+        // 1. Base events CTE
+        let query = `
+            WITH events AS (
+                SELECT 
+                    session_id,
+                    ${normalizeUrlSql} as url_path,
+                    created_at
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = @websiteId
+                  AND created_at BETWEEN @startDate AND @endDate
+                  AND event_type = 1 -- Pageview
+            ),
+        `;
+
+        // 2. Generate CTEs for each step
+        const stepCtes = urls.map((url, index) => {
+            const stepName = `step${index + 1}`;
+            const prevStepName = `step${index}`;
+
+            if (index === 0) {
+                return `
+            ${stepName} AS (
+                SELECT session_id, MIN(created_at) as time${index + 1}
+                FROM events
+                WHERE url_path = @url${index}
+                GROUP BY session_id
+            )`;
+            } else {
+                return `
+            ${stepName} AS (
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                FROM events e
+                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+                WHERE e.url_path = @url${index} 
+                  AND e.created_at > prev.time${index}
+                GROUP BY e.session_id
+            )`;
+            }
+        });
+
+        query += stepCtes.join(',') + `
+            SELECT 
+                ${urls.map((_, i) => `(SELECT COUNT(*) FROM step${i + 1}) as step${i + 1}_count`).join(',\n                ')}
+        `;
+
+        // Create params object
+        const params = {
+            websiteId,
+            startDate,
+            endDate
+        };
+
+        urls.forEach((url, index) => {
+            params[`url${index}`] = url;
+        });
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        if (rows.length === 0) {
+            return res.json({ data: [] });
+        }
+
+        const row = rows[0];
+
+        // Format for frontend
+        const funnelData = urls.map((url, index) => ({
+            step: index,
+            url: url,
+            count: parseInt(row[`step${index + 1}_count`] || 0)
+        }));
+
+        res.json({ data: funnelData });
+
+    } catch (error) {
+        console.error('BigQuery funnel error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch funnel data'
+        });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {

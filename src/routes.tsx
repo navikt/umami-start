@@ -13,6 +13,7 @@ import Sok from "./pages/Sok.tsx";
 import BigQuery from "./pages/BigQuery.tsx";
 import Grafdeling from "./pages/Grafdeling.tsx";
 import UserJourney from "./pages/UserJourney.tsx";
+import Funnel from "./pages/Funnel.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -28,7 +29,8 @@ const routes = [
     { path: "/sok", component: <Sok /> },
     { path: "/sql", component: <BigQuery /> },
     { path: "/grafdeling", component: <Grafdeling /> },
-    { path: "/brukerreiser", component: <UserJourney /> }
+    { path: "/brukerreiser", component: <UserJourney /> },
+    { path: "/trakt", component: <Funnel /> }
 
 ];
 
