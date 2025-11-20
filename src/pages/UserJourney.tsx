@@ -9,7 +9,7 @@ import { Website } from '../types/chart';
 
 const UserJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [startUrl, setStartUrl] = useState<string>('/');
+    const [startUrl, setStartUrl] = useState<string>('');
     const [steps, setSteps] = useState<number>(2);
     const [limit, setLimit] = useState<number>(15);
     const [limitInput, setLimitInput] = useState<string>('15');
@@ -24,7 +24,7 @@ const UserJourney = () => {
     const normalizeUrlToPath = (input: string): string => {
         if (!input.trim()) return '/';
 
-        const trimmed = input.trim();
+        let trimmed = input.trim();
 
         try {
             // Check if input looks like a full URL (contains protocol)
@@ -33,22 +33,27 @@ const UserJourney = () => {
                 return url.pathname;
             }
 
+            // Handle cases like "/nav.no/arbeid" - remove leading slash if it looks like a domain
+            if (trimmed.startsWith('/') && trimmed.includes('.')) {
+                const withoutLeadingSlash = trimmed.substring(1);
+                // Check if removing the slash reveals a domain pattern
+                if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
+                    trimmed = withoutLeadingSlash;
+                }
+            }
+
             // Check if input looks like a domain without protocol
             // e.g., "nav.no/arbeid" or "www.nav.no/arbeid"
-            // Pattern: contains a dot and doesn't start with /
+            // Pattern: contains a dot, doesn't start with /, and has a path separator
             if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
                 // Prepend protocol and try to parse
                 const url = new URL('https://' + trimmed);
-                console.log('[URL Normalization] Domain without protocol detected:', trimmed, '→', url.pathname);
                 return url.pathname;
             }
         } catch (e) {
             // If URL parsing fails, treat as path
-            console.log('[URL Normalization] Parse error, using as-is:', trimmed);
         }
 
-        // Already a path or invalid URL - return as-is
-        console.log('[URL Normalization] Already a path:', trimmed);
         return trimmed;
     };
 
@@ -142,8 +147,11 @@ const UserJourney = () => {
         setData(null);
         setRawData(null);
 
+        // Normalize the URL behind the scenes before sending to API
+        const normalizedStartUrl = normalizeUrlToPath(startUrl);
+
         try {
-            console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl, steps, limit });
+            console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl: normalizedStartUrl, steps, limit });
             const response = await fetch('/api/bigquery/journeys', {
                 method: 'POST',
                 headers: {
@@ -151,7 +159,7 @@ const UserJourney = () => {
                 },
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
-                    startUrl,
+                    startUrl: normalizedStartUrl,
                     days: 30,
                     steps,
                     limit,
@@ -210,10 +218,6 @@ const UserJourney = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <Heading level="2" size="medium" className="mb-4">
-                            Konfigurasjon
-                        </Heading>
-
                         <div className="space-y-4">
                             <WebsitePicker
                                 selectedWebsite={selectedWebsite}
@@ -224,7 +228,7 @@ const UserJourney = () => {
                                 label="Start URL-sti"
                                 description="Hvilken side starter reisen på? (f.eks. /)"
                                 value={startUrl}
-                                onChange={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}
+                                onChange={(e) => setStartUrl(e.target.value)}
                             />
 
                             <Select
@@ -421,12 +425,6 @@ const UserJourney = () => {
                     {!loading && data && (data as any).SankeyChartData?.nodes?.length === 0 && (
                         <div className="flex justify-center items-center h-full text-gray-500">
                             Ingen data funnet for valgt periode og start-URL.
-                        </div>
-                    )}
-
-                    {!loading && !data && !error && (
-                        <div className="flex justify-center items-center h-full text-gray-500">
-                            Velg nettside og start-URL for å se brukerreiser.
                         </div>
                     )}
                 </div>
