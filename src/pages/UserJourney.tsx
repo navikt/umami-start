@@ -253,7 +253,7 @@ const UserJourney = () => {
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
                                 <Tabs.Tab value="steps" label="Stegvisning" />
-                                <Tabs.Tab value="sankey" label="Brukerflyt" />
+                                <Tabs.Tab value="sankey" label="Flytdiagram" />
                                 <Tabs.Tab value="table" label="Tabell" />
                             </Tabs.List>
 
@@ -330,24 +330,6 @@ const UserJourney = () => {
 
                             <Tabs.Panel value="table" className="pt-4">
                                 <div className="border rounded-lg overflow-hidden">
-                                    <div className="flex gap-2 p-3 bg-gray-50 border-b">
-                                        <Button
-                                            size="small"
-                                            variant="secondary"
-                                            onClick={downloadCSV}
-                                            icon={<Download size={16} />}
-                                        >
-                                            Last ned CSV
-                                        </Button>
-                                        <Button
-                                            size="small"
-                                            variant="secondary"
-                                            onClick={downloadExcel}
-                                            icon={<Download size={16} />}
-                                        >
-                                            Last ned Excel
-                                        </Button>
-                                    </div>
                                     <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-100 sticky top-0">
@@ -380,6 +362,24 @@ const UserJourney = () => {
                                     </div>
                                     <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t">
                                         {rawData && `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}
+                                    </div>
+                                    <div className="flex gap-2 p-3 bg-gray-50 border-b">
+                                        <Button
+                                            size="small"
+                                            variant="secondary"
+                                            onClick={downloadCSV}
+                                            icon={<Download size={16} />}
+                                        >
+                                            Last ned CSV
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            variant="secondary"
+                                            onClick={downloadExcel}
+                                            icon={<Download size={16} />}
+                                        >
+                                            Last ned Excel
+                                        </Button>
                                     </div>
                                 </div>
                             </Tabs.Panel>

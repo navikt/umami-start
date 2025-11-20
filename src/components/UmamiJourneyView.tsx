@@ -255,7 +255,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                     {stepData.step}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900">
-                                    {stepData.totalValue.toLocaleString()} visitors
+                                    {stepData.totalValue.toLocaleString()} besøkende
                                 </div>
                             </div>
 
