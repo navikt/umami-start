@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:5181bb4b6a9129064acae4632ea92f3f991dd30d63c5d804fe59b9ad70faa544
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:04b63fd9bb5b997aeafc317af52266f8af7104a6c54b121afdf3e3fa447ca938
 
 WORKDIR /app
 
