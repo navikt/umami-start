@@ -839,7 +839,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
 // Get retention data from BigQuery
 app.post('/api/bigquery/retention', async (req, res) => {
     try {
-        const { websiteId, days = 14, urlPath } = req.body;
+        const { websiteId, startDate, endDate, urlPath } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -847,9 +847,13 @@ app.post('/api/bigquery/retention', async (req, res) => {
             })
         }
 
-        // We look at the last 30 days to get enough data for 14 day retention
-        const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        const endDate = new Date().toISOString();
+        // Calculate the maximum days for retention based on the date range
+        // This represents the maximum number of days someone from the earliest cohort
+        // could have retention data (e.g., if month starts Nov 1 and today is Nov 22, maxDays = 21)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        const maxDays = Math.max(daysDiff, 31); // Allow up to 31 days for full month retention
 
         // Helper to generate the URL normalization SQL (same as in journeys/funnel)
         const normalizeUrlSql = `
@@ -860,6 +864,8 @@ app.post('/api/bigquery/retention', async (req, res) => {
             END
         `;
 
+        // If urlPath is provided, we filter the cohort
+        // The cohort is defined as users who visited the specific URL on their first seen date
         const query = `
             WITH user_first_seen AS (
                 SELECT
@@ -873,7 +879,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
                     SELECT 1 
                     FROM \`team-researchops-prod-01d6.umami.public_website_event\` e2 
                     WHERE e2.session_id = e.session_id 
-                      AND DATE(e2.created_at) = DATE(e.created_at) -- Check visits on the SAME day as the event being aggregated (which is effectively checking the first day)
+                      AND DATE(e2.created_at) = DATE(e.created_at)
                       AND ${normalizeUrlSql.replace(/url_path/g, 'e2.url_path')} = @urlPath
                   )` : ''}
                 GROUP BY session_id
@@ -893,7 +899,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
                     DATE_DIFF(a.activity_date, u.first_seen_date, DAY) as day_diff
                 FROM user_first_seen u
                 JOIN user_activity a ON u.session_id = a.session_id
-                WHERE a.activity_date >= u.first_seen_date
+                WHERE DATE_DIFF(a.activity_date, u.first_seen_date, DAY) >= 0
             ),
             cohort_sizes AS (
                 SELECT
@@ -907,7 +913,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
                     r.day_diff,
                     COUNT(DISTINCT r.session_id) as returning_users
                 FROM retention_base r
-                WHERE r.day_diff <= @days
+                WHERE r.day_diff <= @maxDays
                 GROUP BY r.day_diff
             )
             SELECT
@@ -922,7 +928,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
             websiteId,
             startDate,
             endDate,
-            days
+            maxDays
         };
 
         if (urlPath) {

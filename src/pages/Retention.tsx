@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Heading, Button, Alert, Loader, BodyShort, Tabs, TextField, Switch } from '@navikt/ds-react';
+import { Heading, Button, Alert, Loader, BodyShort, Tabs, TextField, Radio, RadioGroup } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
 import WebsitePicker from '../components/WebsitePicker';
@@ -8,8 +8,8 @@ import { Website } from '../types/chart';
 
 const Retention = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [wholeSite, setWholeSite] = useState<boolean>(false);
     const [urlPath, setUrlPath] = useState<string>('');
+    const [period, setPeriod] = useState<string>('current_month');
     const [retentionData, setRetentionData] = useState<any[]>([]);
     const [chartData, setChartData] = useState<ILineChartProps | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -63,7 +63,22 @@ const Retention = () => {
         setChartData(null);
         setHasAttemptedFetch(true);
 
-        const normalizedUrl = wholeSite ? '' : normalizeUrlToPath(urlPath);
+        const normalizedUrl = normalizeUrlToPath(urlPath);
+
+        // Calculate date range based on period
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date;
+
+        if (period === 'current_month') {
+            // First day of current month to now
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
+        } else {
+            // First day to last day of previous month
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
+        }
 
         try {
             const response = await fetch('/api/bigquery/retention', {
@@ -73,7 +88,8 @@ const Retention = () => {
                 },
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
-                    days: 14,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
                     urlPath: normalizedUrl
                 }),
             });
@@ -155,7 +171,7 @@ const Retention = () => {
                     Retensjon
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Viser hvor mange brukere som kommer tilbake etter sitt første besøk (Dag 0 - Dag 14)
+                    Viser hvor mange brukere som kommer tilbake etter sitt første besøk.
                 </BodyShort>
             </div>
 
@@ -168,26 +184,21 @@ const Retention = () => {
                                 onWebsiteChange={setSelectedWebsite}
                             />
 
-                            <Switch
-                                checked={wholeSite}
-                                onChange={(e) => {
-                                    setWholeSite(e.target.checked);
-                                    if (e.target.checked) {
-                                        setUrlPath('');
-                                    }
-                                }}
+                            <RadioGroup
+                                legend="Periode"
+                                value={period}
+                                onChange={(val: string) => setPeriod(val)}
                             >
-                                Hele nettsiden
-                            </Switch>
+                                <Radio value="current_month">Denne måneden</Radio>
+                                <Radio value="last_month">Forrige måned</Radio>
+                            </RadioGroup>
 
-                            {!wholeSite && (
-                                <TextField
-                                    label="Url-sti"
-                                    description="F.eks. / for forsiden"
-                                    value={urlPath}
-                                    onChange={(e) => setUrlPath(e.target.value)}
-                                />
-                            )}
+                            <TextField
+                                label="Url-sti (valgfritt)"
+                                description="F.eks. / for forsiden"
+                                value={urlPath}
+                                onChange={(e) => setUrlPath(e.target.value)}
+                            />
 
                             <Button
                                 onClick={fetchData}
