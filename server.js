@@ -835,6 +835,167 @@ app.post('/api/bigquery/funnel', async (req, res) => {
     }
 });
 
+
+// Get retention data from BigQuery
+app.post('/api/bigquery/retention', async (req, res) => {
+    try {
+        const { websiteId, days = 14, urlPath } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        // We look at the last 30 days to get enough data for 14 day retention
+        const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = new Date().toISOString();
+
+        // Helper to generate the URL normalization SQL (same as in journeys/funnel)
+        const normalizeUrlSql = `
+            CASE 
+                WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                THEN '/'
+                ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+            END
+        `;
+
+        const query = `
+            WITH user_first_seen AS (
+                SELECT
+                    session_id,
+                    MIN(DATE(created_at)) as first_seen_date
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                WHERE website_id = @websiteId
+                  AND created_at BETWEEN @startDate AND @endDate
+                  ${urlPath ? `
+                  AND EXISTS (
+                    SELECT 1 
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e2 
+                    WHERE e2.session_id = e.session_id 
+                      AND DATE(e2.created_at) = DATE(e.created_at) -- Check visits on the SAME day as the event being aggregated (which is effectively checking the first day)
+                      AND ${normalizeUrlSql.replace(/url_path/g, 'e2.url_path')} = @urlPath
+                  )` : ''}
+                GROUP BY session_id
+            ),
+            user_activity AS (
+                SELECT DISTINCT
+                    session_id,
+                    DATE(created_at) as activity_date
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = @websiteId
+                  AND created_at BETWEEN @startDate AND @endDate
+            ),
+            retention_base AS (
+                SELECT
+                    u.session_id,
+                    u.first_seen_date,
+                    DATE_DIFF(a.activity_date, u.first_seen_date, DAY) as day_diff
+                FROM user_first_seen u
+                JOIN user_activity a ON u.session_id = a.session_id
+                WHERE a.activity_date >= u.first_seen_date
+            ),
+            cohort_sizes AS (
+                SELECT
+                    first_seen_date,
+                    COUNT(DISTINCT session_id) as cohort_size
+                FROM user_first_seen
+                GROUP BY first_seen_date
+            ),
+            retention_counts AS (
+                SELECT
+                    r.day_diff,
+                    COUNT(DISTINCT r.session_id) as returning_users
+                FROM retention_base r
+                WHERE r.day_diff <= @days
+                GROUP BY r.day_diff
+            )
+            SELECT
+                rc.day_diff as day,
+                rc.returning_users,
+                (SELECT COUNT(DISTINCT session_id) FROM user_first_seen) as total_users
+            FROM retention_counts rc
+            ORDER BY rc.day_diff
+        `;
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            days
+        };
+
+        if (urlPath) {
+            params.urlPath = urlPath;
+        }
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+
+            console.log(`[Retention] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+        } catch (dryRunError) {
+            console.log('[Retention] Dry run failed:', dryRunError.message);
+        }
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        // Process rows to calculate percentages relative to Day 0
+        // Note: The SQL above aggregates all cohorts together.
+        // Day 0 count represents the total number of unique users in the period (approx).
+        // But strictly speaking, for retention curve, Day 0 should be 100%.
+
+        let day0Count = 0;
+        const day0Row = rows.find(r => r.day === 0);
+        if (day0Row) {
+            day0Count = parseInt(day0Row.returning_users);
+        }
+
+        const data = rows.map(row => {
+            const count = parseInt(row.returning_users);
+            const percentage = day0Count > 0 ? Math.round((count / day0Count) * 100) : 0;
+            return {
+                day: row.day,
+                returning_users: count,
+                percentage: percentage
+            };
+        });
+
+        res.json({
+            data,
+            queryStats
+        });
+
+    } catch (error) {
+        console.error('BigQuery retention error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch retention data'
+        });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {

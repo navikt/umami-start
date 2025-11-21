@@ -14,6 +14,7 @@ import BigQuery from "./pages/BigQuery.tsx";
 import Grafdeling from "./pages/Grafdeling.tsx";
 import UserJourney from "./pages/UserJourney.tsx";
 import Funnel from "./pages/Funnel.tsx";
+import Retention from "./pages/Retention.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -30,7 +31,8 @@ const routes = [
     { path: "/sql", component: <BigQuery /> },
     { path: "/grafdeling", component: <Grafdeling /> },
     { path: "/brukerreiser", component: <UserJourney /> },
-    { path: "/trakt", component: <Funnel /> }
+    { path: "/trakt", component: <Funnel /> },
+    { path: "/retention", component: <Retention /> }
 
 ];
 
