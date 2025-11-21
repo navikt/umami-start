@@ -383,16 +383,13 @@ app.get('/api/bigquery/websites', async (req, res) => {
 // Get user journeys from BigQuery
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
-        const { websiteId, startUrl, days = 14, steps = 3, limit = 30 } = req.body;
+        const { websiteId, startUrl, startDate, endDate, steps = 3, limit = 30 } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
             })
         }
-
-        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-        const endDate = new Date().toISOString();
 
         const query = `
             WITH session_events AS (
@@ -671,7 +668,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
 // Get funnel data from BigQuery
 app.post('/api/bigquery/funnel', async (req, res) => {
     try {
-        const { websiteId, urls, days = 14, onlyDirectEntry = true } = req.body;
+        const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -684,9 +681,6 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 error: 'At least 2 URLs are required for a funnel'
             });
         }
-
-        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-        const endDate = new Date().toISOString();
 
         // Helper to generate the URL normalization SQL
         const normalizeUrlSql = `
@@ -839,7 +833,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
 // Get retention data from BigQuery
 app.post('/api/bigquery/retention', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath } = req.body;
+        const { websiteId, startDate, endDate, urlPath, businessDaysOnly } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -891,6 +885,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
+                  ${businessDaysOnly ? `AND EXTRACT(DAYOFWEEK FROM DATE(created_at)) NOT IN (1, 7)` : ''}
             ),
             retention_base AS (
                 SELECT

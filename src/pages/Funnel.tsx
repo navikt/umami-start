@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, Tabs, Switch } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, BodyShort, Tabs, Switch, Radio, RadioGroup } from '@navikt/ds-react';
 import { Plus, Trash2, Download } from 'lucide-react';
 import WebsitePicker from '../components/WebsitePicker';
 import FunnelChart from '../components/FunnelChart';
@@ -10,6 +10,7 @@ import { Website } from '../types/chart';
 const Funnel = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [urls, setUrls] = useState<string[]>(['', '']); // Start with 2 empty steps
+    const [period, setPeriod] = useState<string>('current_month');
     const [funnelData, setFunnelData] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -116,6 +117,19 @@ const Funnel = () => {
         setError(null);
         setFunnelData([]);
 
+        // Calculate date range based on period
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date;
+
+        if (period === 'current_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+
         try {
             const response = await fetch('/api/bigquery/funnel', {
                 method: 'POST',
@@ -125,8 +139,9 @@ const Funnel = () => {
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
                     urls: normalizedUrls,
-                    days: 14,
-                    onlyDirectEntry // Pass the toggle state to backend
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    onlyDirectEntry
                 }),
             });
 
@@ -161,7 +176,7 @@ const Funnel = () => {
                     Traktanalyse
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Viser traktanalyse basert på de siste 14 dagene
+                    Se hvor mange folk som fullfører en stegvis prosess, og hvor de faller fra
                 </BodyShort>
             </div>
 
@@ -169,10 +184,21 @@ const Funnel = () => {
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                         <div className="space-y-4">
-                            <WebsitePicker
-                                selectedWebsite={selectedWebsite}
-                                onWebsiteChange={setSelectedWebsite}
-                            />
+                            <div className="pb-2">
+                                <WebsitePicker
+                                    selectedWebsite={selectedWebsite}
+                                    onWebsiteChange={setSelectedWebsite}
+                                />
+                            </div>
+
+                            <RadioGroup
+                                legend="Periode"
+                                value={period}
+                                onChange={(val: string) => setPeriod(val)}
+                            >
+                                <Radio value="current_month">Denne måneden</Radio>
+                                <Radio value="last_month">Forrige måned</Radio>
+                            </RadioGroup>
 
                             <div className="pt-2 space-y-3">
                                 <Heading level="3" size="xsmall">Legg til URL-stier for hvert steg</Heading>

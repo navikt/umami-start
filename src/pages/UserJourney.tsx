@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heading, TextField, Button, Alert, Loader, Select, Tabs, BodyShort } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, Select, Tabs, BodyShort, Radio, RadioGroup } from '@navikt/ds-react';
 import { SankeyChart, IChartProps } from '@fluentui/react-charting';
 import { Download, Maximize2, Minimize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -10,6 +10,7 @@ import { Website } from '../types/chart';
 const UserJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [startUrl, setStartUrl] = useState<string>('');
+    const [period, setPeriod] = useState<string>('current_month');
     const [steps, setSteps] = useState<number>(2);
     const [limit, setLimit] = useState<number>(15);
     const [limitInput, setLimitInput] = useState<string>('15');
@@ -150,6 +151,19 @@ const UserJourney = () => {
         // Normalize the URL behind the scenes before sending to API
         const normalizedStartUrl = normalizeUrlToPath(startUrl);
 
+        // Calculate date range based on period
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date;
+
+        if (period === 'current_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+
         try {
             console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl: normalizedStartUrl, steps, limit });
             const response = await fetch('/api/bigquery/journeys', {
@@ -160,7 +174,8 @@ const UserJourney = () => {
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
                     startUrl: normalizedStartUrl,
-                    days: 14,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
                     steps,
                     limit,
                 }),
@@ -216,7 +231,7 @@ const UserJourney = () => {
                     Brukerreiser
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Viser brukerreiser basert på de siste 14 dagene
+                    Se hvilke veier folk tar gjennom nettsiden
                 </BodyShort>
             </div>
 
@@ -224,14 +239,25 @@ const UserJourney = () => {
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                         <div className="space-y-4">
-                            <WebsitePicker
-                                selectedWebsite={selectedWebsite}
-                                onWebsiteChange={setSelectedWebsite}
-                            />
+                            <div className="pb-2">
+                                <WebsitePicker
+                                    selectedWebsite={selectedWebsite}
+                                    onWebsiteChange={setSelectedWebsite}
+                                />
+                            </div>
+
+                            <RadioGroup
+                                legend="Periode"
+                                value={period}
+                                onChange={(val: string) => setPeriod(val)}
+                            >
+                                <Radio value="current_month">Denne måneden</Radio>
+                                <Radio value="last_month">Forrige måned</Radio>
+                            </RadioGroup>
 
                             <TextField
                                 label="Start URL-sti"
-                                description="Hvilken side starter reisen på? (f.eks. /)"
+                                description="Startsiden for reisen"
                                 value={startUrl}
                                 onChange={(e) => setStartUrl(e.target.value)}
                             />

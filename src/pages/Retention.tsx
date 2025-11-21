@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Heading, Button, Alert, Loader, BodyShort, Tabs, TextField, Radio, RadioGroup } from '@navikt/ds-react';
+import { Heading, Button, Alert, Loader, BodyShort, Tabs, TextField, Radio, RadioGroup, Switch } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
 import WebsitePicker from '../components/WebsitePicker';
@@ -10,6 +10,7 @@ const Retention = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [urlPath, setUrlPath] = useState<string>('');
     const [period, setPeriod] = useState<string>('current_month');
+    const [businessDaysOnly, setBusinessDaysOnly] = useState<boolean>(false);
     const [retentionData, setRetentionData] = useState<any[]>([]);
     const [chartData, setChartData] = useState<ILineChartProps | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -90,7 +91,8 @@ const Retention = () => {
                     websiteId: selectedWebsite.id,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
-                    urlPath: normalizedUrl
+                    urlPath: normalizedUrl,
+                    businessDaysOnly
                 }),
             });
 
@@ -179,10 +181,12 @@ const Retention = () => {
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                         <div className="space-y-4">
-                            <WebsitePicker
-                                selectedWebsite={selectedWebsite}
-                                onWebsiteChange={setSelectedWebsite}
-                            />
+                            <div className="pb-2">
+                                <WebsitePicker
+                                    selectedWebsite={selectedWebsite}
+                                    onWebsiteChange={setSelectedWebsite}
+                                />
+                            </div>
 
                             <RadioGroup
                                 legend="Periode"
@@ -199,6 +203,13 @@ const Retention = () => {
                                 value={urlPath}
                                 onChange={(e) => setUrlPath(e.target.value)}
                             />
+
+                            <Switch
+                                checked={businessDaysOnly}
+                                onChange={(e) => setBusinessDaysOnly(e.target.checked)}
+                            >
+                                Kun virkedager
+                            </Switch>
 
                             <Button
                                 onClick={fetchData}
