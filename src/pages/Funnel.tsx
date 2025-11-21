@@ -175,7 +175,7 @@ const Funnel = () => {
                             />
 
                             <div className="pt-2 space-y-3">
-                                <Heading level="3" size="xsmall">Definer steg ved å legge til URL-stier</Heading>
+                                <Heading level="3" size="xsmall">Legg til URL-stier for hvert steg</Heading>
                                 {urls.map((url, index) => (
                                     <div key={index} className="flex items-end gap-2">
                                         <TextField
