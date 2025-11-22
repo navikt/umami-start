@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, AreaChart, PieChart } from '@fluentui/react-charting';
+import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart } from '@fluentui/react-charting';
 import { translateValue } from '../../lib/translations';
 import SqlCodeDisplay from './SqlCodeDisplay';
 import ShareModal from './ShareModal';
@@ -577,7 +577,7 @@ const ResultsDisplay = ({
                     const chartData = prepareBarChartData();
                     console.log('Bar Chart Data:', chartData);
                     // Check if too many items
-                    let displayData: { x: string; y: number }[] = [];
+                    let displayData: IVerticalBarChartDataPoint[] = [];
                     let limitMessage = null;
 
                     if (chartData && Array.isArray(chartData.data)) {
@@ -641,29 +641,6 @@ const ResultsDisplay = ({
                         </div>
                         <div className="mt-2 text-xs text-gray-500 text-center">
                           Viser {displayData.length} kategorier (hover over stolpene for detaljer)
-                        </div>
-                      </div>
-                    );
-                    return (
-                      <div className="w-full">
-                        <div className="overflow-y-auto max-h-[500px]" style={{ overflow: 'visible' }}>
-                          <style>{`
-                            .bar-chart-hide-xaxis .ms-Chart-xAxis text,
-                            .bar-chart-hide-xaxis g[class*="xAxis"] text {
-                              display: none !important;
-                            }
-                          `}</style>
-                          <div className="bar-chart-hide-xaxis">
-                            <VerticalBarChart
-                              data={chartData.data}
-                              barWidth={chartData.barWidth}
-                              yAxisTickCount={chartData.yAxisTickCount}
-                              margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500 text-center">
-                          Viser {Array.isArray(chartData.data) ? chartData.data.length : 0} kategorier (hover over stolpene for detaljer)
                         </div>
                       </div>
                     );
