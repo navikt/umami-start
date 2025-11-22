@@ -507,7 +507,10 @@ const WebsitePicker = ({
             <Button
               size="small"
               variant="secondary"
-              onClick={() => setShowPicker(true)}
+              onClick={() => {
+                handleWebsiteChange(null); // Clear selection
+                setShowPicker(true); // Show picker
+              }}
             >
               Bytt nettside eller app
             </Button>
