@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { UNSAFE_Combobox, Alert, ProgressBar, Button } from '@navikt/ds-react';
+import { PadlockLockedIcon } from '@navikt/aksel-icons';
 
 interface Website {
   id: string;
@@ -39,6 +40,43 @@ interface WebsiteApiResponse {
 }
 
 const API_TIMEOUT_MS = 120000; // timeout
+const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const WEBSITES_CACHE_KEY = 'umami_websites_cache';
+const SELECTED_WEBSITE_CACHE_KEY = 'umami_selected_website';
+
+// LocalStorage helper functions
+const saveToLocalStorage = (key: string, data: any) => {
+  try {
+    const item = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(key, JSON.stringify(item));
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
+};
+
+const getFromLocalStorage = <T,>(key: string, maxAgeMs: number = CACHE_EXPIRY_MS): T | null => {
+  try {
+    const itemStr = localStorage.getItem(key);
+    if (!itemStr) return null;
+
+    const item = JSON.parse(itemStr);
+    const now = Date.now();
+
+    // Check if cache has expired
+    if (now - item.timestamp > maxAgeMs) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return item.data as T;
+  } catch (error) {
+    console.error('Error reading from localStorage:', error);
+    return null;
+  }
+};
 
 const timeoutPromise = (ms: number) => {
   return new Promise((_, reject) => {
@@ -118,6 +156,14 @@ const WebsitePicker = ({
   const handleWebsiteChange = useCallback((website: Website | null) => {
     onWebsiteChange(website);
     updateUrlWithWebsiteId(website);
+
+    // Save/clear selected website in localStorage
+    if (website) {
+      saveToLocalStorage(SELECTED_WEBSITE_CACHE_KEY, website);
+    } else {
+      localStorage.removeItem(SELECTED_WEBSITE_CACHE_KEY);
+    }
+
     // Reset to cheap query when switching websites
     setIncludeParams(false);
   }, [onWebsiteChange, updateUrlWithWebsiteId]);
@@ -298,34 +344,89 @@ const WebsitePicker = ({
     }
   }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, includeParams]);
 
+  // State to control whether to show the picker
+  const [showPicker, setShowPicker] = useState<boolean>(false);
+
+  // Load websites only when showPicker is true
   useEffect(() => {
-    if (websitesLoaded.current) {
+    if (!showPicker || websitesLoaded.current) {
+      return;
+    }
+
+    setIsInitialLoading(true);
+
+    // Try to load websites from cache first
+    const cachedWebsites = getFromLocalStorage<Website[]>(WEBSITES_CACHE_KEY);
+
+    if (cachedWebsites && cachedWebsites.length > 0) {
+      console.log('Using cached websites list');
+      setWebsites(cachedWebsites);
+      websitesLoaded.current = true;
       setIsInitialLoading(false);
       return;
     }
 
-    setIsInitialLoading(true); // Show loading state for initial load
+    // If no cache, fetch from API
+    const baseUrl = '';
 
-    const baseUrl = ''; // Use relative path for local API
-
-    // Only fetch websites list once
     fetch(`${baseUrl}/api/bigquery/websites`)
       .then(response => response.json() as Promise<WebsiteApiResponse>)
       .then((response) => {
         const websitesData = response.data || [];
-        // Deduplicate by name to avoid key collisions in Combobox
         const uniqueWebsites = websitesData.filter((website: Website, index: number, self: Website[]) =>
           index === self.findIndex((w) => w.name === website.name)
         );
         setWebsites(uniqueWebsites);
-        websitesLoaded.current = true; // Mark as loaded
-        setIsInitialLoading(false); // Clear initial loading
+        saveToLocalStorage(WEBSITES_CACHE_KEY, uniqueWebsites);
+        websitesLoaded.current = true;
+        setIsInitialLoading(false);
       })
       .catch(error => {
         console.error("Error fetching websites:", error);
-        setIsInitialLoading(false); // Clear loading even on error
+        setIsInitialLoading(false);
       });
-  }, []);
+  }, [showPicker]);
+
+  // On mount, try to restore from localStorage
+  useEffect(() => {
+    if (initialUrlChecked.current) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const websiteIdFromUrl = urlParams.get('websiteId');
+
+    // Priority 1: URL parameter (need to load websites to find it)
+    if (websiteIdFromUrl) {
+      setShowPicker(true); // This will trigger website loading
+      initialUrlChecked.current = true;
+      return;
+    }
+
+    // Priority 2: localStorage cache
+    const cachedWebsite = getFromLocalStorage<Website>(SELECTED_WEBSITE_CACHE_KEY);
+    if (cachedWebsite && !selectedWebsite) {
+      console.log('[WebsitePicker] Restoring from localStorage:', cachedWebsite.name);
+      onWebsiteChange(cachedWebsite);
+      updateUrlWithWebsiteId(cachedWebsite);
+    }
+
+    initialUrlChecked.current = true;
+  }, [selectedWebsite, onWebsiteChange, updateUrlWithWebsiteId]);
+
+  // Check for website ID in URL after websites are loaded
+  useEffect(() => {
+    if (!websitesLoaded.current || websites.length === 0) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const websiteIdFromUrl = urlParams.get('websiteId');
+
+    if (websiteIdFromUrl && (!selectedWebsite || selectedWebsite.id !== websiteIdFromUrl)) {
+      const website = websites.find(w => w.id === websiteIdFromUrl);
+      if (website) {
+        console.log('[WebsitePicker] Applying website from URL:', website.name);
+        onWebsiteChange(website);
+      }
+    }
+  }, [websites, selectedWebsite, onWebsiteChange]);
 
   // Fetch events when a website is selected (only if onEventsLoad callback is provided)
   useEffect(() => {
@@ -386,58 +487,91 @@ const WebsitePicker = ({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg border shadow-sm ">
+      <div className="space-y-4 p-4 bg-gray-50 rounded-lg border shadow-sm">
         {error && (
           <Alert variant="error" className="mb-4">
             {error}
           </Alert>
         )}
-        <UNSAFE_Combobox
-          label={selectedWebsite ? "Nettside eller app" : "Velg nettside eller app"}
-          options={websites.map(website => ({
-            label: website.name,
-            value: website.name,
-            website: website
-          }))}
-          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
-          onToggleSelected={(option: string, isSelected: boolean) => {
-            if (isSelected) {
-              const website = websites.find(w => w.name === option);
-              handleWebsiteChange(website || null); // Use the new handler
-            } else {
-              handleWebsiteChange(null); // Use the new handler
-            }
-          }}
-          clearButton
-        />
-        {!selectedWebsite && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-sm">Hurtigvalg:</span>
+
+        {/* Show selected website with change button */}
+        {selectedWebsite && !showPicker ? (
+          <div>
+            <label className="navds-label navds-label--medium mb-2 block">Nettside eller app</label>
+            <div className="bg-white border border-gray-300 border-l-4 border-l-blue-600 p-2 rounded mb-3">
+              <div className="flex items-center gap-2">
+                <PadlockLockedIcon className="text-blue-600" aria-hidden="true" />
+                <div className="text-lg font-semibold text-gray-900">{selectedWebsite.name}</div>
+              </div>
+            </div>
             <Button
-              size="xsmall"
+              size="small"
               variant="secondary"
-              onClick={() => {
-                const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
-                if (website) {
-                  handleWebsiteChange(website);
-                }
-              }}
+              onClick={() => setShowPicker(true)}
             >
-              nav.no
-            </Button>
-            <Button
-              size="xsmall"
-              variant="secondary"
-              onClick={() => {
-                const website = websites.find(w => w.id === '83b80c84-b551-4dff-a679-f21be5fa0453');
-                if (website) {
-                  handleWebsiteChange(website);
-                }
-              }}
-            >
-              navet
+              Bytt nettside eller app
             </Button>
           </div>
+        ) : (
+          /* Show combobox when changing or no selection */
+          <>
+            <UNSAFE_Combobox
+              label="Velg nettside eller app"
+              options={websites.map(website => ({
+                label: website.name,
+                value: website.name,
+                website: website
+              }))}
+              selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+              onToggleSelected={(option: string, isSelected: boolean) => {
+                if (isSelected) {
+                  const website = websites.find(w => w.name === option);
+                  if (website) {
+                    handleWebsiteChange(website);
+                    setShowPicker(false); // Hide picker after selection
+                  }
+                } else {
+                  handleWebsiteChange(null);
+                }
+              }}
+              clearButton
+            />
+            {!selectedWebsite && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm">Hurtigvalg:</span>
+                <Button
+                  size="xsmall"
+                  variant="secondary"
+                  onClick={() => {
+                    const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
+                    if (website) {
+                      handleWebsiteChange(website);
+                      setShowPicker(false);
+                    } else {
+                      setShowPicker(true); // Load websites if not in cache
+                    }
+                  }}
+                >
+                  nav.no
+                </Button>
+                <Button
+                  size="xsmall"
+                  variant="secondary"
+                  onClick={() => {
+                    const website = websites.find(w => w.id === '83b80c84-b551-4dff-a679-f21be5fa0453');
+                    if (website) {
+                      handleWebsiteChange(website);
+                      setShowPicker(false);
+                    } else {
+                      setShowPicker(true); // Load websites if not in cache
+                    }
+                  }}
+                >
+                  navet
+                </Button>
+              </div>
+            )}
+          </>
         )}
 
         {selectedWebsite && includeParams && (
@@ -448,28 +582,30 @@ const WebsitePicker = ({
           </div>
         )}
       </div>
-      {showLoading && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span>Laster inn hendelser...</span>
-            {estimatedGbProcessed && (
-              <span className="text-sm text-gray-600">(estimert {estimatedGbProcessed} GB)</span>
-            )}
-            {gbProcessed && (
-              <span className="text-sm text-gray-600">(faktisk {gbProcessed} GB)</span>
-            )}
+      {
+        showLoading && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span>Laster inn hendelser...</span>
+              {estimatedGbProcessed && (
+                <span className="text-sm text-gray-600">(estimert {estimatedGbProcessed} GB)</span>
+              )}
+              {gbProcessed && (
+                <span className="text-sm text-gray-600">(faktisk {gbProcessed} GB)</span>
+              )}
+            </div>
+            <ProgressBar
+              size="small"
+              simulated={{
+                seconds: 10,
+                onTimeout: () => { }
+              }}
+              aria-label="Laster inn data"
+            />
           </div>
-          <ProgressBar
-            size="small"
-            simulated={{
-              seconds: 10,
-              onTimeout: () => { }
-            }}
-            aria-label="Laster inn data"
-          />
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 
