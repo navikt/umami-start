@@ -175,7 +175,7 @@ const UserComposition = () => {
                                 loading={loading}
                                 className="w-full"
                             >
-                                Hent data
+                                Vis brukersammensetning
                             </Button>
                         </div>
                     </div>
@@ -229,16 +229,10 @@ const UserComposition = () => {
                             </Tabs>
                         </>
                     )}
-
-                    {!loading && !error && !data && (
-                        <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mt-4">
-                            Velg nettside og klikk "Hent data" for å se brukersammensetning.
-                        </div>
-                    )}
                 </div>
 
-                <AnalyticsNavigation currentPage="brukersammensetning" />
             </div>
+            <AnalyticsNavigation currentPage="brukersammensetning" />
         </div>
     );
 };

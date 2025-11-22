@@ -477,8 +477,8 @@ const UserJourney = () => {
                     )}
                 </div>
 
-                <AnalyticsNavigation currentPage="brukerreiser" />
             </div>
+            <AnalyticsNavigation currentPage="brukerreiser" />
         </div>
     );
 };

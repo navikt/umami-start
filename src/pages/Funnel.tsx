@@ -356,9 +356,8 @@ const Funnel = () => {
 
 
                 </div>
-
-                <AnalyticsNavigation currentPage="trakt" />
             </div>
+            <AnalyticsNavigation currentPage="trakt" />
         </div>
     );
 };

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Heading, VStack } from '@navikt/ds-react';
-import Kontaktboks from '../components/kontaktboks';
 import WebsitePicker from '../components/WebsitePicker';
 import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import SQLPreview from '../components/chartbuilder/sqlpreview';
@@ -1537,8 +1536,7 @@ const ChartsPage = () => {
           </VStack>
 
           <div className="mt-8 hidden lg:block mb-[40rem]">
-            <AnalyticsNavigation variant="list" currentPage="grafbygger" />
-            <Kontaktboks />
+            <AnalyticsNavigation currentPage="grafbygger" />
           </div>
         </div>
 
@@ -1558,9 +1556,7 @@ const ChartsPage = () => {
         </div>
 
         <div className="order-3 lg:hidden">
-          <AnalyticsNavigation variant="list" currentPage="grafbygger" />
-
-          <Kontaktboks />
+          <AnalyticsNavigation currentPage="grafbygger" />
         </div>
       </div>
       {/*  

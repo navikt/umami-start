@@ -1,14 +1,15 @@
-import { BodyShort, Link, List } from '@navikt/ds-react';
+import { Link, List } from '@navikt/ds-react';
+import Kontaktboks from './kontaktboks';
 
 type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
-    variant?: 'inline' | 'list';
+
     className?: string;
 }
 
-const AnalyticsNavigation = ({ currentPage, variant = 'inline', className = '' }: AnalyticsNavigationProps) => {
+const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigationProps) => {
     const pages = [
         {
             id: 'brukerreiser',
@@ -47,9 +48,8 @@ const AnalyticsNavigation = ({ currentPage, variant = 'inline', className = '' }
         ? pages.filter(page => page.id !== currentPage)
         : pages;
 
-    // List variant (for Chartbuilder)
-    if (variant === 'list') {
-        return (
+    return (
+        <>
             <List as="ul" title="Andre graftyper" className={`pt-4 ${className}`}>
                 {displayPages.map(page => (
                     <List.Item key={page.id}>
@@ -57,22 +57,8 @@ const AnalyticsNavigation = ({ currentPage, variant = 'inline', className = '' }
                     </List.Item>
                 ))}
             </List>
-        );
-    }
-
-    // Inline variant (for analytics pages)
-    return (
-        <div className={`mt-8 pt-6 border-t border-gray-200 ${className}`}>
-            <BodyShort className="text-gray-600 mb-3">Andre graftyper:</BodyShort>
-            <div className="flex flex-wrap gap-4">
-                {displayPages.map((page, index) => (
-                    <span key={page.id}>
-                        <Link href={page.href}>{page.label}</Link>
-                        {index < displayPages.length - 1 && <span className="ml-4">•</span>}
-                    </span>
-                ))}
-            </div>
-        </div>
+            <Kontaktboks />
+        </>
     );
 };
 

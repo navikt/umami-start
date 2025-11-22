@@ -308,8 +308,8 @@ const Retention = () => {
                     )}
                 </div>
 
-                <AnalyticsNavigation currentPage="brukerlojalitet" />
             </div>
+            <AnalyticsNavigation currentPage="brukerlojalitet" />
         </div>
     );
 };
