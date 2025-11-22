@@ -1,5 +1,5 @@
-import { Search, Alert, BodyShort, Link, ReadMore, List } from "@navikt/ds-react";
-import { useState, useEffect } from "react";
+import { Search, Alert, BodyShort, Link, ReadMore, List, Skeleton } from "@navikt/ds-react";
+import { useState } from "react";
 
 interface Website {
     id: string;
@@ -14,8 +14,13 @@ function Metadashboard() {
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
+    const [hasLoadedData, setHasLoadedData] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    useEffect(() => {
+    const loadWebsitesData = () => {
+        if (hasLoadedData) return; // Avoid redundant fetches
+
+        setIsLoading(true);
         const baseUrl = ''; // Use relative path for local API
 
         fetch(`${baseUrl}/api/bigquery/websites`)
@@ -40,9 +45,20 @@ function Metadashboard() {
                 uniqueWebsites.sort((a: Website, b: Website) => a.domain.localeCompare(b.domain));
 
                 setFilteredData(uniqueWebsites);
+                setHasLoadedData(true);
+                setIsLoading(false);
             })
-            .catch(error => console.error("Error fetching data:", error));
-    }, []);
+            .catch(error => {
+                console.error("Error fetching data:", error);
+                setIsLoading(false);
+            });
+    };
+
+    const handleReadMoreToggle = (open: boolean) => {
+        if (open && !hasLoadedData) {
+            loadWebsitesData();
+        }
+    };
 
     const handleSearchChange = (value: string) => {
         setSearchQuery(value);
@@ -91,14 +107,24 @@ function Metadashboard() {
                     />
                     {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
-                <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider / apper støttes?">
-                    <List as="ul">
-                        {filteredData && filteredData.map(item => (
-                            <List.Item key={item.id}>
-                                {item.domain}
-                            </List.Item>
-                        ))}
-                    </List>
+                <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider / apper støttes?" onOpenChange={handleReadMoreToggle}>
+                    {isLoading ? (
+                        <List as="ul">
+                            {[...Array(3)].map((_, index) => (
+                                <List.Item key={`skeleton-${index}`}>
+                                    <Skeleton variant="text" width="60%" />
+                                </List.Item>
+                            ))}
+                        </List>
+                    ) : (
+                        <List as="ul">
+                            {filteredData && filteredData.map(item => (
+                                <List.Item key={item.id}>
+                                    {item.domain}
+                                </List.Item>
+                            ))}
+                        </List>
+                    )}
                     <BodyShort>
                         Savner du en nettside eller app? <Link href="/komigang">Følg kom-i-gang-guiden!</Link>
                     </BodyShort>
