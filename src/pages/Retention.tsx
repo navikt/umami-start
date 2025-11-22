@@ -4,6 +4,7 @@ import { Heading, Button, Alert, Loader, BodyShort, Tabs, TextField, Radio, Radi
 import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
 import WebsitePicker from '../components/WebsitePicker';
+import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import { Website } from '../types/chart';
 
 const Retention = () => {
@@ -307,36 +308,7 @@ const Retention = () => {
                     )}
                 </div>
 
-                {/* Cross-navigation */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                    <BodyShort className="text-gray-600 mb-3">Andre graftyper:</BodyShort>
-                    <div className="flex gap-3">
-                        <Button
-                            as="a"
-                            href="/brukerreiser"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Brukerreiser
-                        </Button>
-                        <Button
-                            as="a"
-                            href="/trakt"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Traktanalyse
-                        </Button>
-                        <Button
-                            as="a"
-                            href="/grafbygger"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Grafbygger
-                        </Button>
-                    </div>
-                </div>
+                <AnalyticsNavigation currentPage="brukerlojalitet" />
             </div>
         </div>
     );

@@ -4,6 +4,7 @@ import { Plus, Trash2, Download } from 'lucide-react';
 import WebsitePicker from '../components/WebsitePicker';
 import FunnelChart from '../components/FunnelChart';
 import HorizontalFunnelChart from '../components/HorizontalFunnelChart';
+import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import { Website } from '../types/chart';
 
 
@@ -356,36 +357,7 @@ const Funnel = () => {
 
                 </div>
 
-                {/* Cross-navigation */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                    <BodyShort className="text-gray-600 mb-3">Andre graftyper:</BodyShort>
-                    <div className="flex gap-3">
-                        <Button
-                            as="a"
-                            href="/brukerreiser"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Brukerreiser
-                        </Button>
-                        <Button
-                            as="a"
-                            href="/brukerlojalitet"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Brukerlojalitet
-                        </Button>
-                        <Button
-                            as="a"
-                            href="/grafbygger"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Grafbygger
-                        </Button>
-                    </div>
-                </div>
+                <AnalyticsNavigation currentPage="trakt" />
             </div>
         </div>
     );

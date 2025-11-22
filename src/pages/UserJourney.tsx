@@ -5,6 +5,7 @@ import { Download, Maximize2, Minimize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import WebsitePicker from '../components/WebsitePicker';
 import UmamiJourneyView from '../components/UmamiJourneyView';
+import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import { Website } from '../types/chart';
 
 const UserJourney = () => {
@@ -460,36 +461,7 @@ const UserJourney = () => {
                     )}
                 </div>
 
-                {/* Cross-navigation */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                    <BodyShort className="text-gray-600 mb-3">Andre graftyper:</BodyShort>
-                    <div className="flex gap-3">
-                        <Button
-                            as="a"
-                            href="/trakt"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Traktanalyse
-                        </Button>
-                        <Button
-                            as="a"
-                            href="/brukerlojalitet"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Brukerlojalitet
-                        </Button>
-                        <Button
-                            as="a"
-                            href="/grafbygger"
-                            variant="secondary"
-                            size="small"
-                        >
-                            Grafbygger
-                        </Button>
-                    </div>
-                </div>
+                <AnalyticsNavigation currentPage="brukerreiser" />
             </div>
         </div>
     );
