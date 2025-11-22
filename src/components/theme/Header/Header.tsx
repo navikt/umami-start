@@ -43,11 +43,11 @@ export default function Header() {
               <Dropdown.Menu.List>
                 <Dropdown.Menu.List.Item
                   as={Link}
-                  href="/komigang"
+                  href="/oppsett"
                   className="no-underline"
                 >
-                  <BookIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Guide</span>
+                  <CogIcon aria-hidden fontSize="1.5rem" />
+                  <span className="whitespace-nowrap">Oppsett</span>
                 </Dropdown.Menu.List.Item>
                 <Dropdown.Menu.List.Item
                   as={Link}
@@ -57,24 +57,15 @@ export default function Header() {
                   <ComponentIcon aria-hidden fontSize="1.5rem" />
                   <span className="whitespace-nowrap">Taksonomi</span>
                 </Dropdown.Menu.List.Item>
-                <Dropdown.Menu.List.Item
-                  as={Link}
-                  href="/grafbygger"
-                  target="_blank"
-                  className="no-underline"
-                >
-                  <AreaChartIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Lag grafer</span>
-                </Dropdown.Menu.List.Item>
-                <Dropdown.Menu.List.Item
-                  as={Link}
-                  href="/oppsett"
-                  className="no-underline"
-                >
-                  <CogIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Oppsett</span>
-                </Dropdown.Menu.List.Item>
               </Dropdown.Menu.List>
+              <Dropdown.Menu.List.Item
+                as={Link}
+                href="/komigang"
+                className="no-underline"
+              >
+                <BookIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Guide</span>
+              </Dropdown.Menu.List.Item>
             </Dropdown.Menu>
           </Dropdown>
         ) : (
@@ -82,11 +73,11 @@ export default function Header() {
             <div className="flex items-center w-full"></div>
             <div className="flex flex-grow">
               <Link
-                href="/komigang"
+                href="/oppsett"
                 className={linkButton}
               >
-                <BookIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Guide</span>
+                <CogIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Oppsett</span>
               </Link>
               <Link
                 href="/taksonomi"
@@ -96,18 +87,11 @@ export default function Header() {
                 <span className="whitespace-nowrap">Taksonomi</span>
               </Link>
               <Link
-                href="/grafbygger"
+                href="/komigang"
                 className={linkButton}
               >
-                <AreaChartIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Lag grafer</span>
-              </Link>
-              <Link
-                href="/oppsett"
-                className={linkButton}
-              >
-                <CogIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Oppsett</span>
+                <BookIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Guide</span>
               </Link>
             </div>
           </div>
