@@ -26,10 +26,6 @@ try {
         projectId: 'team-researchops-prod-01d6',
     };
 
-    console.log('==========================================');
-    console.log('Initializing BigQuery Client');
-    console.log('==========================================');
-
     // Priority order:
     // 1. GCP secret (bigquery-credentials from NAIS)
     // 2. Service account key file path from env (GOOGLE_APPLICATION_CREDENTIALS)
