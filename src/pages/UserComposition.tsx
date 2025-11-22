@@ -138,7 +138,7 @@ const UserComposition = () => {
                     Brukersammensetning
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Se hvilke enheter, nettlesere, språk og land de besøkende kommer fra
+                    Se informasjon om besøkende.
                 </BodyShort>
             </div>
 

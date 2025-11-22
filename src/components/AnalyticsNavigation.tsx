@@ -38,7 +38,7 @@ const AnalyticsNavigation = ({ currentPage, variant = 'inline', className = '' }
             id: 'brukersammensetning',
             href: '/brukersammensetning',
             label: 'Brukersammensetning',
-            description: 'Se info om besøkende'
+            description: 'Se informasjon om besøkende'
         }
     ];
 
