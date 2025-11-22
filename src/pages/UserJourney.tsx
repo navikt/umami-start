@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Heading, TextField, Button, Alert, Loader, Select, Tabs, BodyShort, Radio, RadioGroup } from '@navikt/ds-react';
 import { SankeyChart, IChartProps } from '@fluentui/react-charting';
 import { Download, Maximize2, Minimize2 } from 'lucide-react';
@@ -21,6 +21,22 @@ const UserJourney = () => {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+    const [containerWidth, setContainerWidth] = useState<number>(1000);
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+
+    // Measure container width for responsive chart sizing
+    useEffect(() => {
+        const updateWidth = () => {
+            if (chartContainerRef.current) {
+                const width = chartContainerRef.current.offsetWidth;
+                setContainerWidth(width - 40); // Subtract padding
+            }
+        };
+
+        updateWidth();
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, [data, activeTab]);
 
     // Helper function to normalize URL input - extracts path from full URLs
     const normalizeUrlToPath = (input: string): string => {
@@ -304,7 +320,7 @@ const UserJourney = () => {
                     </div>
                 </div>
 
-                <div className="md:col-span-2 min-h-[600px] bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                     {error && (
                         <Alert variant="error" className="mb-4">
                             {error}
@@ -325,7 +341,7 @@ const UserJourney = () => {
                                 <Tabs.Tab value="table" label="Tabell" />
                             </Tabs.List>
 
-                            <Tabs.Panel value="sankey" className="pt-4">
+                            <Tabs.Panel value="sankey" className="pt-2">
                                 <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
                                     {isFullscreen && (
                                         <div className="mb-4 flex justify-end">
@@ -351,12 +367,12 @@ const UserJourney = () => {
                                             </Button>
                                         </div>
                                     )}
-                                    <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '600px', width: '100%' }}>
+                                    <div ref={chartContainerRef} style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', width: '100%' }}>
                                         <SankeyChart
                                             data={data}
-                                            height={isFullscreen ? window.innerHeight - 120 : 600}
-                                            width={isFullscreen ? window.innerWidth - 100 : 1000}
-                                            shouldResize={isFullscreen ? window.innerWidth - 100 : 1000}
+                                            height={isFullscreen ? window.innerHeight - 120 : 700}
+                                            width={isFullscreen ? window.innerWidth - 100 : containerWidth}
+                                            shouldResize={isFullscreen ? window.innerWidth - 100 : containerWidth}
                                         />
                                     </div>
                                 </div>
