@@ -12,6 +12,15 @@ const __dirname = path.dirname(__filename)
 const app = express()
 app.use(express.json())
 
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+
 // Set server timeout to 2 minutes for BigQuery queries
 app.use((req, res, next) => {
     req.setTimeout(120000) // 2 minutes
@@ -410,8 +419,20 @@ app.get('/api/bigquery/websites', async (req, res) => {
 
         const [rows] = await job.getQueryResults();
 
+        // Map rows to handle BigQuery timestamp objects
+        const data = rows.map(row => {
+            let createdAt = row.createdAt;
+            if (createdAt && typeof createdAt === 'object' && createdAt.value) {
+                createdAt = createdAt.value;
+            }
+            return {
+                ...row,
+                createdAt
+            };
+        });
+
         res.json({
-            data: rows
+            data: data
         });
     } catch (error) {
         console.error('BigQuery websites error:', error);

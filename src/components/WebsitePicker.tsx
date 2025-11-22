@@ -7,6 +7,7 @@ interface Website {
   name: string;
   domain: string;
   teamId: string;
+  createdAt: string;
 }
 
 interface WebsitePickerProps {
@@ -30,7 +31,6 @@ interface EventProperty {
 // Cache for API responses
 interface ApiCache {
   [websiteId: string]: {
-    dateRange?: { mindate: string; maxdate: string };
     properties?: EventProperty[];
   }
 }
@@ -242,7 +242,9 @@ const WebsitePicker = ({
   }, []);
 
   // @ts-ignore
-  const fetchEventNames = useCallback(async (websiteId: string, forceFresh = false, daysToFetch = dateRangeInDays) => {
+  // @ts-ignore
+  const fetchEventNames = useCallback(async (website: Website, forceFresh = false, daysToFetch = dateRangeInDays) => {
+    const websiteId = website.id;
     if (fetchInProgress.current[websiteId]) return;
 
     fetchInProgress.current[websiteId] = true;
@@ -257,21 +259,22 @@ const WebsitePicker = ({
       // Use local API endpoint that queries BigQuery
       const apiBase = '/api/bigquery';
 
-      // Add timeout to date range fetch
-      const dateRangeResponse = await Promise.race([
-        fetch(`${apiBase}/websites/${websiteId}/daterange`),
-        timeoutPromise(API_TIMEOUT_MS)
-      ]);
-      // @ts-ignore
-      const dateRange = await dateRangeResponse.json();
+      // Calculate max available days using website creation date
+      const endDate = new Date();
+      const startDate = website.createdAt ? new Date(website.createdAt) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
-      // Calculate max available days
-      const endDate = new Date(dateRange.maxdate);
-      const startDate = new Date(dateRange.mindate);
-      const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      // Calculate difference in milliseconds
+      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+      // Convert to days and round up to include partial days
+      let totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Ensure totalDays is valid and at least 1
+      if (isNaN(totalDays) || totalDays < 1) {
+        totalDays = 1;
+      }
 
       // Use the daysToFetch parameter instead of the state variable
-      const calculatedEndDate = new Date(dateRange.maxdate);
+      const calculatedEndDate = new Date();
       const calculatedStartDate = new Date(calculatedEndDate);
       calculatedStartDate.setDate(calculatedStartDate.getDate() - daysToFetch);
 
@@ -441,7 +444,7 @@ const WebsitePicker = ({
       // Clear cache when website changes
       apiCache.current = {};
 
-      fetchEventNames(selectedWebsite.id, false, dateRangeInDays)
+      fetchEventNames(selectedWebsite, false, dateRangeInDays)
         .finally(() => {
           setLoadedWebsiteId(selectedWebsite.id);
         });
@@ -456,7 +459,7 @@ const WebsitePicker = ({
     if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current && onEventsLoad) {
       prevIncludeParams.current = includeParams;
       apiCache.current[selectedWebsite.id] = {};
-      fetchEventNames(selectedWebsite.id, true, dateRangeInDays);
+      fetchEventNames(selectedWebsite, true, dateRangeInDays);
     }
   }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
@@ -487,7 +490,7 @@ const WebsitePicker = ({
       apiCache.current[selectedWebsite.id] = {};
 
       // Always use API data when explicitly reloading
-      fetchEventNames(selectedWebsite.id, true, externalDateRange || dateRangeInDays);
+      fetchEventNames(selectedWebsite, true, externalDateRange || dateRangeInDays);
     }
   }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays, onEventsLoad]);
 

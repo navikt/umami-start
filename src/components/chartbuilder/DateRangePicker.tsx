@@ -5,28 +5,28 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 // Date range suggestions for quick date filtering
 const DATE_RANGE_SUGGESTIONS = [
-{
+  {
     id: 'today',
     label: 'I dag',
     getRange: () => {
-        const today = new Date();
-        return {
+      const today = new Date();
+      return {
         from: today,
         to: today
-        };
+      };
     }
-    },
-    {
+  },
+  {
     id: 'yesterday',
     label: 'I går',
     getRange: () => {
-        const yesterday = subDays(new Date(), 1);
-        return {
+      const yesterday = subDays(new Date(), 1);
+      return {
         from: yesterday,
         to: yesterday
-        };
+      };
     }
-    },
+  },
   {
     id: 'thismonth',
     label: 'Denne måneden',
@@ -180,8 +180,8 @@ interface DateRangePickerProps {
   maxDaysAvailable: number;
   selectedDateRange: string;
   setSelectedDateRange: (range: string) => void;
-  customPeriodInputs: Record<number, {amount: string, unit: string}>;
-  setCustomPeriodInputs: (inputs: Record<number, {amount: string, unit: string}>) => void;
+  customPeriodInputs: Record<number, { amount: string, unit: string }>;
+  setCustomPeriodInputs: (inputs: Record<number, { amount: string, unit: string }>) => void;
   interactiveMode: boolean;
   setInteractiveMode: (mode: boolean) => void;
 }
@@ -224,7 +224,7 @@ const DateRangePicker = forwardRef(({
   }, [maxDaysAvailable]);
 
   // Generate SQL for date range
-  const generateDateRangeSQL = (from: Date, to: Date): {fromSQL: string, toSQL: string} => {
+  const generateDateRangeSQL = (from: Date, to: Date): { fromSQL: string, toSQL: string } => {
     const fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
     const toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
     return { fromSQL: fromSql, toSQL: toSql };
@@ -233,7 +233,7 @@ const DateRangePicker = forwardRef(({
   // Function to generate SQL for previous periods - updated for better BigQuery compatibility
   const generatePreviousPeriodSQL = (amount: string, unit: string): { fromSQL: string, toSQL: string } => {
     // Handle different time units correctly for BigQuery
-    switch(unit.toLowerCase()) {
+    switch (unit.toLowerCase()) {
       case 'minute':
         return {
           fromSQL: `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${amount} MINUTE)`,
@@ -285,13 +285,13 @@ const DateRangePicker = forwardRef(({
   // Apply a custom date range picked from the calendar
   const applyCustomDateRange = (from: Date, to: Date) => {
     setSelectedDateRange('custom');
-    
+
     // Generate SQL expressions
     const { fromSQL, toSQL } = generateDateRangeSQL(from, to);
-    
+
     // Find existing date filters
     const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
-    
+
     // Create new date range filters
     const newFilters = [
       {
@@ -307,7 +307,7 @@ const DateRangePicker = forwardRef(({
         dateRangeType: 'custom'
       }
     ];
-    
+
     // Update filters
     setFilters([...filtersWithoutDate, ...newFilters]);
   };
@@ -320,43 +320,43 @@ const DateRangePicker = forwardRef(({
       setSelectedRange(undefined);
       return;
     }
-    
+
     if (selectedDateRange === rangeId) {
       setSelectedDateRange('all');
       setFilters(filters.filter(f => f.column !== 'created_at'));
       setSelectedRange(undefined);
       return;
     }
-    
+
     // Handle fixed date ranges
     if (dateMode === 'fixed') {
       const dateRange = DATE_RANGE_SUGGESTIONS.find(dr => dr.id === rangeId);
       if (!dateRange) return;
-      
+
       setSelectedDateRange(rangeId);
-      
+
       // Get date range from the suggestion
       const range = dateRange.getRange();
-      
+
       // Apply the range
       applyCustomDateRange(range.from, range.to);
-      
+
       // Update the date picker UI
       setSelectedRange({
         from: range.from,
         to: range.to
       });
-    } 
+    }
     // Handle dynamic date ranges
     else {
       const dynamicRange = DYNAMIC_DATE_RANGES.find(dr => dr.id === rangeId);
       if (!dynamicRange) return;
-      
+
       setSelectedDateRange(rangeId);
-      
+
       // Find existing date filters
       const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
-      
+
       // Create new dynamic date range filters
       const newFilters = [
         {
@@ -372,10 +372,10 @@ const DateRangePicker = forwardRef(({
           dateRangeType: 'dynamic'
         }
       ];
-      
+
       // Update filters
       setFilters([...filtersWithoutDate, ...newFilters]);
-      
+
       // Clear the date picker UI since it's not relevant for dynamic dates
       setSelectedRange(undefined);
     }
@@ -384,11 +384,11 @@ const DateRangePicker = forwardRef(({
   // Add function to handle interactive mode toggle
   const handleInteractiveModeToggle = (checked: boolean) => {
     setInteractiveMode(checked);
-    
+
     if (checked) {
       // Remove existing date filters
       const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
-      
+
       // Add Metabase parameter filter
       setFilters([
         ...filtersWithoutDate,
@@ -400,17 +400,17 @@ const DateRangePicker = forwardRef(({
           interactive: true
         }
       ]);
-      
+
       // Clear date range selection
       setSelectedDateRange('');
       setSelectedRange(undefined);
     } else {
       // Remove interactive date filter
-      const filtersWithoutInteractive = filters.filter(f => 
+      const filtersWithoutInteractive = filters.filter(f =>
         !(f.column === 'created_at' && f.interactive === true)
       );
       setFilters(filtersWithoutInteractive);
-      
+
       // Ensure we clear the current internal state
       setTimeout(() => {
         // Apply "All" by default when turning off interactive mode
@@ -441,14 +441,15 @@ const DateRangePicker = forwardRef(({
   // Get message about available data range
   const getStartDateDisplay = (): string => {
     if (!maxDaysAvailable) return 'Velg nettside for å se tilgjengelig data.';
-    
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - maxDaysAvailable);
-    
+
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - maxDaysAvailable);
+
     const day = String(startDate.getDate()).padStart(2, '0');
     const month = String(startDate.getMonth() + 1).padStart(2, '0');
     const year = startDate.getFullYear();
-    
+
     return `Data er tilgjengelig fra ${day}.${month}.${year} til i dag.`;
   };
 
@@ -474,7 +475,7 @@ const DateRangePicker = forwardRef(({
   const handleTabChange = (value: string) => {
     const newDateMode = value as 'frequent' | 'dynamic' | 'fixed' | 'interactive';
     setDateMode(newDateMode);
-    
+
     // Automatically toggle interactive mode based on tab selection
     if (newDateMode === 'interactive') {
       // Turn ON interactive mode when interactive tab is selected
@@ -492,10 +493,10 @@ const DateRangePicker = forwardRef(({
     // Remove date filters
     const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
     setFilters(filtersWithoutDate);
-    
+
     // Reset UI state
     setSelectedDateRange('all');
-    
+
     // Keep the current inputs but don't apply them
     // We're just removing the active filter
   };
@@ -513,10 +514,10 @@ const DateRangePicker = forwardRef(({
       <Heading level="3" size="xsmall" spacing>
         Dato
       </Heading>
-      
-      <div className="mt-3 bg-white p-4 rounded-md border shadow-inner"> 
-        <Tabs 
-          value={dateMode} 
+
+      <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+        <Tabs
+          value={dateMode}
           onChange={handleTabChange}
           size="small"
         >
@@ -526,7 +527,7 @@ const DateRangePicker = forwardRef(({
             <Tabs.Tab value="fixed" label="Bestemte" />
             <Tabs.Tab value="interactive" label="Filtervalg i Metabase" />
           </Tabs.List>
-          
+
           {/* Frequent dates panel */}
           <Tabs.Panel value="frequent" className="pt-6">
             <div className="flex flex-wrap gap-2">
@@ -545,7 +546,7 @@ const DateRangePicker = forwardRef(({
                   {period.label}
                 </Button>
               ))}
-               {/*<Button 
+              {/*<Button 
                 variant={!hasDateFilter() || selectedDateRange === 'all' ? "primary" : "secondary"}
                 size="small"
                 onClick={() => applyDateRange('all')}
@@ -555,19 +556,19 @@ const DateRangePicker = forwardRef(({
               </Button>*/}
             </div>
           </Tabs.Panel>
-          
+
           {/* Dynamic dates panel - Chips for navigation, Buttons for actions */}
           <Tabs.Panel value="dynamic" className="pt-6">
             <div className="mb-2">
               <Chips className="mb-6">
-                <Chips.Toggle 
+                <Chips.Toggle
                   selected={relativeMode === 'previous'}
                   onClick={() => setRelativeMode('previous')}
                   checkmark={false}
                 >
                   Forrige...
                 </Chips.Toggle>
-                <Chips.Toggle 
+                <Chips.Toggle
                   selected={relativeMode === 'current'}
                   onClick={() => setRelativeMode('current')}
                   checkmark={false}
@@ -587,7 +588,7 @@ const DateRangePicker = forwardRef(({
                         if (!interactiveMode) {
                           // Create a synthetic ID to apply this date range
                           setSelectedDateRange(period.id);
-                          
+
                           // Apply the date filters directly and consistently
                           const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
                           setFilters([
@@ -614,7 +615,7 @@ const DateRangePicker = forwardRef(({
                   ))}
                 </div>
               )}
-              
+
               {/* Keep the existing previous period interface unchanged */}
               {relativeMode === 'previous' && (
                 <div className="flex items-end gap-4">
@@ -688,7 +689,7 @@ const DateRangePicker = forwardRef(({
                             dateRangeType: 'dynamic'
                           }
                         ]);
-                        
+
                         // Show success alert when filter is applied
                         showSuccessAlert();
                       }}
@@ -709,14 +710,14 @@ const DateRangePicker = forwardRef(({
                 </div>
               )}
             </div>
-                    {/* Show success alert when filter is applied */}
-        {showFilterApplied && (
-          <Alert variant="success" size="small" className="mt-4 mb-4">
-            Datovalget er lagt til som et filter
-          </Alert>
-        )}
+            {/* Show success alert when filter is applied */}
+            {showFilterApplied && (
+              <Alert variant="success" size="small" className="mt-4 mb-4">
+                Datovalget er lagt til som et filter
+              </Alert>
+            )}
           </Tabs.Panel>
-          
+
           {/* Fixed dates panel with DatePicker */}
           <Tabs.Panel value="fixed" className="pt-6">
             <DatePicker
@@ -770,15 +771,15 @@ const DateRangePicker = forwardRef(({
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
                   <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
-                    <svg 
-                      width="16" 
-                      height="16" 
-                      viewBox="0 0 16 16" 
-                      fill="none" 
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
                       className="text-green-600"
                     >
-                      <path 
-                        d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" 
+                      <path
+                        d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z"
                         fill="currentColor"
                       />
                     </svg>
@@ -790,7 +791,7 @@ const DateRangePicker = forwardRef(({
                 </div>
               </div>
             </div>
-                
+
             <ExpansionCard aria-label="Guide for Metabase-integrasjon" size="small">
               <ExpansionCard.Header>
                 <ExpansionCard.Title size="small">Slik kobler du til datofilteret i Metabase</ExpansionCard.Title>

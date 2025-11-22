@@ -59,6 +59,7 @@ export interface Website {
   domain: string;
   name: string;
   teamId: string;
+  createdAt: string;
 }
 
 export interface WebsitePickerProps {
