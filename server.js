@@ -274,7 +274,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         // Dry run to estimate bytes processed
         let estimatedBytes = '0';
         try {
-            const dryRunJob = await bigquery.createQueryJob({
+            const [dryRunJob] = await bigquery.createQueryJob({
                 query: query,
                 location: 'europe-north1',
                 params: {
@@ -285,7 +285,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
                 dryRun: true
             });
 
-            const [dryRunMetadata] = await dryRunJob.getMetadata();
+            const dryRunMetadata = dryRunJob.metadata;
             estimatedBytes = dryRunMetadata.statistics?.totalBytesProcessed || '0';
             const estimatedGb = (Number(estimatedBytes) / (1024 ** 3)).toFixed(2);
             console.log(`[Event Properties] Estimated bytes: ${estimatedGb} GB`);
