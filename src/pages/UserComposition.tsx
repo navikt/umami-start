@@ -60,6 +60,10 @@ const UserComposition = () => {
                 setError(result.error);
             } else {
                 setData(result.data);
+                // If current tab is 'custom' but no custom data exists, switch to 'browser'
+                if (activeCategory === 'custom' && !result.data.some((item: any) => item.category === 'custom')) {
+                    setActiveCategory('browser');
+                }
                 setQueryStats(result.queryStats);
             }
         } catch (err) {
@@ -78,13 +82,20 @@ const UserComposition = () => {
         // The backend should return rows with 'category', 'value', 'count'
         const categoryData = data.filter((row: any) => row.category === activeCategory);
 
+        // Calculate total for percentage
+        const total = categoryData.reduce((sum: number, row: any) => sum + row.count, 0);
+
         // Transform to what ResultsDisplay expects (array of objects)
-        // We want to show the value (e.g., "Chrome") and the count
+        // We want to show the value (e.g., "Chrome"), the count, and the percentage
         return {
-            data: categoryData.map((row: any) => ({
-                [activeCategory]: row.value,
-                'Antall': row.count
-            }))
+            data: categoryData.map((row: any) => {
+                const percentage = total > 0 ? ((row.count / total) * 100).toFixed(1) : '0.0';
+                return {
+                    [activeCategory]: row.value,
+                    'Antall': row.count,
+                    'Andel': `${percentage}%`
+                };
+            })
         };
     };
 
@@ -193,6 +204,9 @@ const UserComposition = () => {
                                     <Tabs.Tab value="screen" label="Skjerm" />
                                     <Tabs.Tab value="language" label="Språk" />
                                     <Tabs.Tab value="country" label="Land" />
+                                    {data?.data?.some((item: any) => item.category === 'custom') && (
+                                        <Tabs.Tab value="custom" label="Egendefinert" />
+                                    )}
                                 </Tabs.List>
 
                                 <div className="mt-6">

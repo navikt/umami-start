@@ -577,13 +577,30 @@ const ResultsDisplay = ({
                     const chartData = prepareBarChartData();
                     console.log('Bar Chart Data:', chartData);
                     // Check if too many items
-                    if (result && result.data && result.data.length > 12) {
-                      return (
-                        <Alert variant="info">
-                          Stolpediagram vises kun for resultater med maks 12 rader. Dette resultatet har {result.data.length} rader.
-                        </Alert>
-                      );
+                    let displayData: { x: string; y: number }[] = [];
+                    let limitMessage = null;
+
+                    if (chartData && Array.isArray(chartData.data)) {
+                      if (chartData.data.length > 12) {
+                        const top11 = chartData.data.slice(0, 11);
+                        const others = chartData.data.slice(11);
+                        const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
+
+                        displayData = [
+                          ...top11,
+                          { x: 'Andre', y: otherSum }
+                        ];
+
+                        limitMessage = (
+                          <Alert variant="info" className="mb-4">
+                            Viser topp 11 kategorier, pluss "Andre" som samler de resterende {others.length} kategoriene.
+                          </Alert>
+                        );
+                      } else {
+                        displayData = chartData.data;
+                      }
                     }
+
                     if (!chartData || !chartData.data || (Array.isArray(chartData.data) && chartData.data.length === 0)) {
                       return (
                         <Alert variant="info">
@@ -592,7 +609,7 @@ const ResultsDisplay = ({
                       );
                     }
                     // Check if all y values are NaN, 0, or invalid
-                    const hasValidBarData = Array.isArray(chartData.data) && chartData.data.some((item) => {
+                    const hasValidBarData = Array.isArray(displayData) && displayData.some((item) => {
                       return !Number.isNaN(item.y) && typeof item.y === 'number' && item.y !== 0;
                     });
 
@@ -603,6 +620,30 @@ const ResultsDisplay = ({
                         </Alert>
                       );
                     }
+                    return (
+                      <div className="w-full">
+                        {limitMessage}
+                        <div className="overflow-y-auto max-h-[500px]" style={{ overflow: 'visible' }}>
+                          <style>{`
+                            .bar-chart-hide-xaxis .ms-Chart-xAxis text,
+                            .bar-chart-hide-xaxis g[class*="xAxis"] text {
+                              display: none !important;
+                            }
+                          `}</style>
+                          <div className="bar-chart-hide-xaxis">
+                            <VerticalBarChart
+                              data={displayData}
+                              barWidth={chartData.barWidth}
+                              yAxisTickCount={chartData.yAxisTickCount}
+                              margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500 text-center">
+                          Viser {displayData.length} kategorier (hover over stolpene for detaljer)
+                        </div>
+                      </div>
+                    );
                     return (
                       <div className="w-full">
                         <div className="overflow-y-auto max-h-[500px]" style={{ overflow: 'visible' }}>
@@ -637,14 +678,31 @@ const ResultsDisplay = ({
                     const chartData = preparePieChartData();
                     console.log('Pie Chart Data:', chartData);
                     // Check if too many items
-                    if (result && result.data && result.data.length > 12) {
-                      return (
-                        <Alert variant="info">
-                          Sirkeldiagram vises kun for resultater med maks 12 rader. Dette resultatet har {result.data.length} rader.
-                        </Alert>
-                      );
+                    let displayData: any[] = [];
+                    let limitMessage = null;
+
+                    if (chartData && Array.isArray(chartData.data)) {
+                      if (chartData.data.length > 12) {
+                        const top11 = chartData.data.slice(0, 11);
+                        const others = chartData.data.slice(11);
+                        const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
+
+                        displayData = [
+                          ...top11,
+                          { x: 'Andre', y: otherSum }
+                        ];
+
+                        limitMessage = (
+                          <Alert variant="info" className="mb-4">
+                            Viser topp 11 kategorier, pluss "Andre" som samler de resterende {others.length} kategoriene.
+                          </Alert>
+                        );
+                      } else {
+                        displayData = chartData.data;
+                      }
                     }
-                    if (!chartData) {
+
+                    if (!chartData || !chartData.data || (Array.isArray(chartData.data) && chartData.data.length === 0)) {
                       return (
                         <Alert variant="info">
                           Kunne ikke lage sirkeldiagram fra dataene. Trenger minst to kolonner (kategori og verdi).
@@ -652,9 +710,9 @@ const ResultsDisplay = ({
                       );
                     }
                     // Check if all y values are NaN or if no valid values exist
-                    const hasValidY = Array.isArray(chartData.data) && chartData.data.some((item) => !Number.isNaN(item.y) && item.y !== 0);
+                    const hasValidY = Array.isArray(displayData) && displayData.some((item) => !Number.isNaN(item.y) && item.y !== 0);
 
-                    if (!hasValidY || (Array.isArray(chartData.data) && chartData.data.every((item) => Number.isNaN(item.y)))) {
+                    if (!hasValidY || (Array.isArray(displayData) && displayData.every((item) => Number.isNaN(item.y)))) {
                       return (
                         <Alert variant="info">
                           Klarer ikke å vise sirkeldiagram, egner seg trolig ikke for denne grafen.
@@ -664,6 +722,7 @@ const ResultsDisplay = ({
 
                     return (
                       <div>
+                        {limitMessage}
                         <div className="flex flex-col items-center">
                           <style>{`
                             /* Make the labels transparent but keep them for hover functionality */
@@ -694,17 +753,19 @@ const ResultsDisplay = ({
                           `}</style>
                           <div className="pie-chart-wrapper">
                             <PieChart
-                              data={chartData.data}
+                              data={displayData}
                               width={600}
                               height={400}
                               chartTitle=""
                             />
                           </div>
                           <div className="mt-4 text-md text-gray-800 text-center">
-                            <p>Viser {chartData.data.length} kategorier med prosentandeler:</p>
+                            <p>Viser {displayData.length} kategorier med prosentandeler:</p>
                             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
-                              {chartData.data.map((item, idx) => {
-                                const percentage = ((item.y / chartData.total) * 100).toFixed(1);
+                              {displayData.map((item, idx) => {
+                                // Ensure chartData is not null before accessing total
+                                const total = chartData ? chartData.total : 0;
+                                const percentage = ((item.y / total) * 100).toFixed(1);
                                 // Skip displaying if percentage is NaN
                                 if (isNaN(parseFloat(percentage))) return null;
                                 return (

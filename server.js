@@ -26,6 +26,10 @@ try {
         projectId: 'team-researchops-prod-01d6',
     };
 
+    console.log('==========================================');
+    console.log('Initializing BigQuery Client');
+    console.log('==========================================');
+
     // Priority order:
     // 1. GCP secret (bigquery-credentials from NAIS)
     // 2. Service account key file path from env (GOOGLE_APPLICATION_CREDENTIALS)
@@ -35,30 +39,46 @@ try {
     if (process.env['bigquery-credentials']) {
         try {
             bqConfig.credentials = JSON.parse(process.env['bigquery-credentials']);
-            console.log('Using credentials from bigquery-credentials secret (NAIS)');
+            console.log('✓ Using credentials from bigquery-credentials secret (NAIS)');
         } catch (e) {
-            console.error('Failed to parse bigquery-credentials:', e.message);
+            console.error('✗ Failed to parse bigquery-credentials:', e.message);
         }
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        console.log('Using service account from GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+        console.log('✓ Using service account from GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
         bqConfig.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
     } else if (process.env.UMAMI_BIGQUERY) {
         try {
             bqConfig.credentials = JSON.parse(process.env.UMAMI_BIGQUERY);
-            console.log('Using credentials from UMAMI_BIGQUERY env variable');
+            console.log('✓ Using credentials from UMAMI_BIGQUERY env variable');
         } catch (e) {
-            console.error('Failed to parse UMAMI_BIGQUERY:', e.message);
+            console.error('✗ Failed to parse UMAMI_BIGQUERY:', e.message);
         }
     } else {
         // Try local service account key file
         const localKeyPath = path.join(__dirname, 'service-account-key.json');
-        console.log('Attempting to use local service account key file:', localKeyPath);
+        console.log('✓ Using local service account key file:', localKeyPath);
         bqConfig.keyFilename = localKeyPath;
     }
 
+    console.log('Creating BigQuery client with config:', {
+        projectId: bqConfig.projectId,
+        hasCredentials: !!bqConfig.credentials,
+        hasKeyFilename: !!bqConfig.keyFilename
+    });
+
     bigquery = new BigQuery(bqConfig);
+
+    console.log('✓ BigQuery client initialized successfully');
+    console.log('==========================================');
 } catch (error) {
-    console.error('Failed to initialize BigQuery client:', error);
+    console.error('==========================================');
+    console.error('✗ FAILED TO INITIALIZE BIGQUERY CLIENT');
+    console.error('==========================================');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    if (error.code) console.error('Error Code:', error.code);
+    if (error.errors) console.error('Error Details:', JSON.stringify(error.errors, null, 2));
+    console.error('==========================================');
 }
 
 const buildPath = path.join(path.resolve(__dirname, './dist'))
@@ -83,23 +103,33 @@ app.post('/api/bigquery', async (req, res) => {
     try {
         const { query } = req.body
 
+        console.log('[BigQuery API] Request received');
+
         if (!query) {
+            console.error('[BigQuery API] Error: Query is required');
             return res.status(400).json({ error: 'Query is required' })
         }
 
         if (!bigquery) {
+            console.error('[BigQuery API] Error: BigQuery client not initialized');
             return res.status(500).json({
                 error: 'BigQuery client not initialized',
                 details: 'Check server logs for initialization errors'
             })
         }
 
+        console.log('[BigQuery API] Submitting query...');
+
         const [job] = await bigquery.createQueryJob({
             query: query,
             location: 'europe-north1',
         })
 
+        console.log('[BigQuery API] Query job created, waiting for results...');
+
         const [rows] = await job.getQueryResults()
+
+        console.log('[BigQuery API] Query successful, returned', rows.length, 'rows');
 
         res.json({
             success: true,
@@ -107,10 +137,25 @@ app.post('/api/bigquery', async (req, res) => {
             rowCount: rows.length
         })
     } catch (error) {
-        console.error('BigQuery error:', error)
+        console.error('==========================================');
+        console.error('[BigQuery API] ERROR');
+        console.error('==========================================');
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+        console.error('Error name:', error.name);
+        if (error.errors) {
+            console.error('Error details:', JSON.stringify(error.errors, null, 2));
+        }
+        if (error.response) {
+            console.error('Error response:', JSON.stringify(error.response, null, 2));
+        }
+        console.error('Full error:', error);
+        console.error('==========================================');
+
         res.status(500).json({
             error: error.message || 'Failed to execute query',
-            details: error.toString()
+            details: error.toString(),
+            code: error.code
         })
     }
 })
@@ -1105,8 +1150,15 @@ app.post('/api/bigquery/composition', async (req, res) => {
 
     } catch (error) {
         console.error('BigQuery composition error:', error);
+
+        // Detailed connection error logging
+        if (error.code) console.error('Error Code:', error.code);
+        if (error.errors) console.error('Error Details:', JSON.stringify(error.errors, null, 2));
+        if (error.response) console.error('Error Response:', JSON.stringify(error.response, null, 2));
+
         res.status(500).json({
-            error: error.message || 'Failed to fetch composition data'
+            error: error.message || 'Failed to fetch composition data',
+            details: error.errors || error.response
         });
     }
 });
