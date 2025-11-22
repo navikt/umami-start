@@ -574,8 +574,8 @@ app.post('/api/bigquery/journeys', async (req, res) => {
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
-            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
-            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
 
             console.log(`[User Journeys] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
         } catch (dryRunError) {
@@ -633,8 +633,8 @@ app.post('/api/bigquery/journeys', async (req, res) => {
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
-            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
-            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
 
             queryStats = {
                 totalBytesProcessed: bytesProcessed,
@@ -697,8 +697,8 @@ app.post('/api/bigquery/estimate', async (req, res) => {
             totalBytesProcessed: totalBytesProcessed,
             totalBytesBilled: totalBytesBilled,
             totalBytesProcessedMB: (totalBytesProcessed / (1024 * 1024)).toFixed(2),
-            totalBytesProcessedGB: (totalBytesProcessed / (1024 * 1024 * 1024)).toFixed(2),
-            estimatedCostUSD: estimatedCostUSD.toFixed(6),
+            totalBytesProcessedGB: (totalBytesProcessed / (1024 * 1024 * 1024)).toFixed(1),
+            estimatedCostUSD: estimatedCostUSD.toFixed(3),
             cacheHit: stats.query?.cacheHit || false,
         })
     } catch (error) {
@@ -827,8 +827,8 @@ app.post('/api/bigquery/funnel', async (req, res) => {
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
-            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
-            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
 
             queryStats = {
                 totalBytesProcessedGB: gbProcessed,
@@ -987,8 +987,8 @@ app.post('/api/bigquery/retention', async (req, res) => {
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
-            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
-            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
 
             queryStats = {
                 totalBytesProcessedGB: gbProcessed,
@@ -1122,8 +1122,8 @@ app.post('/api/bigquery/composition', async (req, res) => {
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
-            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
-            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
 
             queryStats = {
                 totalBytesProcessedGB: gbProcessed,
