@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { 
+import {
   Heading,
-  Button, 
-  VStack, 
-  HStack, 
+  Button,
+  VStack,
+  HStack,
   Accordion,
   BodyShort,
   Alert,
@@ -76,13 +76,13 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   // const [customParamAccordionOpen, setCustomParamAccordionOpen] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  
+
   // @ts-ignore Store event-parameter mapping to ensure proper relationship
   const [eventParamsMap, setEventParamsMap] = useState<EventParams>({});
-  
+
   // Rename isLoading state to isLoadingParameters to avoid conflict with prop
   const [isLoadingParameters, setIsLoadingParameters] = useState<boolean>(true);
-  
+
   // Extract event-parameter map from the input parameters list
   useEffect(() => {
     const eventMap: EventParams = {};
@@ -92,17 +92,17 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       if (param.key.includes('.')) {
         const [eventName, ...rest] = param.key.split('.');
         const paramName = rest.join('.');
-        
+
         if (!eventMap[eventName]) {
           eventMap[eventName] = [];
         }
-        
+
         if (!eventMap[eventName].includes(paramName)) {
           eventMap[eventName].push(paramName);
         }
       }
     });
-    
+
     setEventParamsMap(eventMap);
   }, [parameters]);
 
@@ -115,38 +115,38 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       if (param.key.includes('.')) {
         const [eventName, ...rest] = param.key.split('.');
         const paramName = rest.join('.');
-        
+
         if (!eventMap[eventName]) {
           eventMap[eventName] = [];
         }
-        
+
         if (!eventMap[eventName].includes(paramName)) {
           eventMap[eventName].push(paramName);
         }
       }
     });
-    
+
     setEventParamsMap(eventMap);
 
     // Update our cache of parameters by event
     const parametersByEvent: Record<string, Parameter[]> = {};
-    
+
     parameters.forEach(param => {
       if (param.key.includes('.')) {
         const [eventName] = param.key.split('.');
-        
+
         if (!parametersByEvent[eventName]) {
           parametersByEvent[eventName] = [];
         }
-        
+
         // Only add if not already in the cache
         if (!parametersByEvent[eventName].some(p => p.key === param.key)) {
           parametersByEvent[eventName].push(param);
         }
       }
     });
-    
-    
+
+
     // Indicate we're done loading after initial parameters are processed
     setIsLoadingParameters(false);
   }, [parameters]);
@@ -154,7 +154,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
   // Check if we already have manual parameters on component mount
   useEffect(() => {
     const hasManual = parameters.some(p => p.key.startsWith(`${MANUAL_EVENT_NAME}.`));
-    
+
     // If we have manual parameters but the event is not selected, select it
     if (hasManual && !selectedEvents.includes(MANUAL_EVENT_NAME)) {
       setSelectedEvents(prev => [...prev, MANUAL_EVENT_NAME]);
@@ -242,13 +242,13 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     }
   }, [availableEvents]);
 
-// Helper to generate a display name for parameters
+  // Helper to generate a display name for parameters
   const getParameterDisplayName = (param: Parameter): string => {
     // For non-prefixed parameters, just show the key
     if (!param.key.includes('.')) {
       return param.key;
     }
-    
+
     // For prefixed parameters, strip the prefix
     return param.key.split('.').slice(1).join('.');
   };
@@ -258,86 +258,86 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
     return eventName === MANUAL_EVENT_NAME ? MANUAL_EVENT_DISPLAY_NAME : eventName;
   };
 
-const getGroupedParameters = () => {
-  const groups: Record<string, Parameter[]> = {};
-  
-  // Create a group for each selected event
-  selectedEvents.forEach(event => {
-    // Initialize the group even if there are no parameters
-    groups[event] = [];
-    
-    // Get all parameters for this event
-    const eventParams = parameters.filter(p => p.key.startsWith(`${event}.`));
-    
-    // Deduplicate parameters by their base name
-    const uniqueParams = new Map<string, Parameter>();
-    
-    eventParams.forEach(param => {
-      const baseName = param.key.split('.')[1]; // Get parameter name without event prefix
-      if (!uniqueParams.has(baseName)) {
-        uniqueParams.set(baseName, param);
+  const getGroupedParameters = () => {
+    const groups: Record<string, Parameter[]> = {};
+
+    // Create a group for each selected event
+    selectedEvents.forEach(event => {
+      // Initialize the group even if there are no parameters
+      groups[event] = [];
+
+      // Get all parameters for this event
+      const eventParams = parameters.filter(p => p.key.startsWith(`${event}.`));
+
+      // Deduplicate parameters by their base name
+      const uniqueParams = new Map<string, Parameter>();
+
+      eventParams.forEach(param => {
+        const baseName = param.key.split('.')[1]; // Get parameter name without event prefix
+        if (!uniqueParams.has(baseName)) {
+          uniqueParams.set(baseName, param);
+        }
+      });
+
+      // Add parameters if we have any
+      if (uniqueParams.size > 0) {
+        groups[event] = Array.from(uniqueParams.values());
       }
     });
-    
-    // Add parameters if we have any
-    if (uniqueParams.size > 0) {
-      groups[event] = Array.from(uniqueParams.values());
-    }
-  });
-  
-  return groups;
-};
+
+    return groups;
+  };
 
   // Filter grouped parameters based on search query
   const getFilteredGroupedParameters = () => {
     const groups = getGroupedParameters();
-    
+
     if (!searchQuery.trim()) {
       return groups;
     }
-    
+
     const query = searchQuery.toLowerCase();
     const filtered: Record<string, Parameter[]> = {};
-    
+
     Object.entries(groups).forEach(([eventName, params]) => {
       const eventDisplayName = getEventDisplayName(eventName).toLowerCase();
-      
+
       // Check if event name matches
       if (eventDisplayName.includes(query)) {
         filtered[eventName] = params;
         return;
       }
-      
+
       // Filter parameters that match the query
       const matchingParams = params.filter(param => {
         const displayName = getParameterDisplayName(param).toLowerCase();
         return displayName.includes(query);
       });
-      
+
       // Only include the event if it has matching parameters
       if (matchingParams.length > 0) {
         filtered[eventName] = matchingParams;
       }
     });
-    
+
     return filtered;
   };
-  
+
   const groupedParameters = getGroupedParameters();
   const filteredGroupedParameters = getFilteredGroupedParameters();
 
   // Add helper function to get total event count
   const getEventCount = () => {
     // Count events from availableEvents first (from cheap query)
-    const cheapQueryEvents = availableEvents.filter(e => 
-      !e.toLowerCase().startsWith('pageview') && 
+    const cheapQueryEvents = availableEvents.filter(e =>
+      !e.toLowerCase().startsWith('pageview') &&
       !e.includes('/')
     );
-    
+
     if (cheapQueryEvents.length > 0) {
       return cheapQueryEvents.length;
     }
-    
+
     // Fallback to counting from parameters (for expensive query with details)
     const uniqueEvents = new Set();
     parameters.forEach(param => {
@@ -353,7 +353,7 @@ const getGroupedParameters = () => {
 
   // Helper function to get parameter descriptions
   const getParamDescription = (key: string): string => {
-    switch(key) {
+    switch (key) {
       // Event basics
       case 'event_name': return 'Navnet på hendelsen som ble registrert';
       case 'event_type': return 'Type hendelse (sidevisning eller tilpasset)';
@@ -362,7 +362,7 @@ const getGroupedParameters = () => {
       case 'website_id': return 'ID for nettstedet';
       case 'website_domain': return 'Domenenavn for nettstedet';
       case 'website_name': return 'Navn på nettstedet';
-      
+
       // Page details
       case 'url_path': return 'Sidens relative adresse';
       case 'url_query': return 'Parametre etter ? i adressefeltet';
@@ -370,7 +370,7 @@ const getGroupedParameters = () => {
       case 'referrer_domain': return 'Henvisningsdomene';
       case 'referrer_path': return 'Henvisningssti';
       case 'referrer_query': return 'Henvisningsspørring';
-      
+
       // Visitor details
       case 'session_id': return 'Unik ID for hver bruker';
       case 'visit_id': return 'Unik ID for hvert besøk';
@@ -382,11 +382,11 @@ const getGroupedParameters = () => {
       case 'country': return 'Basert på IP-adresse';
       case 'subdivision1': return 'Region eller fylke';
       case 'city': return 'Basert på IP-adresse';
-      
+
       default: return '';
     }
   };
-  
+
   // Helper function to determine parameter type
   const getParamType = (key: string): string => {
     if (['session_id', 'visit_id', 'event_id', 'website_id'].includes(key)) {
@@ -402,163 +402,158 @@ const getGroupedParameters = () => {
 
   return (
     <>
-        <Heading level="2" size="small" spacing>
-          Tilgjengelige hendelser
-        </Heading>
-        <ExpansionCard
-          aria-label="Hendelsesdetaljer"
-          defaultOpen={false}
-          size="small"
-        >
-          <ExpansionCard.Header>
-            <ExpansionCard.Title as="h3" size="small">
+      <Heading level="2" size="small" spacing>
+        Tilgjengelige hendelser
+      </Heading>
+      <ExpansionCard
+        aria-label="Hendelsesdetaljer"
+        defaultOpen={false}
+        size="small"
+      >
+        <ExpansionCard.Header>
+          <ExpansionCard.Title as="h3" size="small">
             {getEventCount() === 0 ? (
               <>
                 Sidevisninger
               </>
-            ): (
+            ) : (
               <>{getEventCount()} egendefinerte hendelser + sidevisninger</>
             )}
-            </ExpansionCard.Title>
-          </ExpansionCard.Header>
-          <ExpansionCard.Content>
-            <VStack gap="6">
-                        {/* Parameters Section - Only shown when events are selected and not loading */}
-                        {!isLoadingParameters && (
-                <Box borderRadius="medium">
-                  <Heading level="3" size="xsmall" spacing className="mt-3">
-                     Egendefinerte hendelser
-                  </Heading>
+          </ExpansionCard.Title>
+        </ExpansionCard.Header>
+        <ExpansionCard.Content>
+          <VStack gap="6">
+            {/* Parameters Section - Only shown when events are selected and not loading */}
+            {!isLoadingParameters && (
+              <Box borderRadius="medium">
+                <Heading level="3" size="xsmall" spacing className="mt-3">
+                  Egendefinerte hendelser
+                </Heading>
 
-                  {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                    <List as="ul" size="small" className="text-gray-700 pb-1">
-                      <List.Item>Vi henter alltid hendelser fra de siste 2 ukene.</List.Item>
-                      <List.Item>Detaljer er forhåndsatt som tekst. Du kan endre til tall ved behov.</List.Item>
-                    </List>
-                  )}
+                {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
+                  <List as="ul" size="small" className="text-gray-700 pb-1">
+                    <List.Item>Vi henter alltid hendelser fra de siste 2 ukene.</List.Item>
+                    <List.Item>Detaljer er forhåndsatt som tekst. Du kan endre til tall ved behov.</List.Item>
+                  </List>
+                )}
 
-                  {/* Continue with existing Alert for no events */}
-                  {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
-                    <Alert variant="info" className="mt-3">
-                      Ingen egendefinerte hendelser eller detaljer funnet for de siste 2 ukene.
-                    </Alert>
-                  )}
+                {/* Continue with existing Alert for no events */}
+                {!isLoadingParameters && availableEvents.length === 0 && !parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
+                  <Alert variant="info" className="mt-3">
+                    Ingen egendefinerte hendelser eller detaljer funnet for de siste 2 ukene.
+                  </Alert>
+                )}
 
-                  {!includeParams && onLoadDetailsClick && (
-                    <div className="mb-6">
-                      <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
-                        <div className="text-sm text-gray-800 mb-3">
-                          Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
-                        </div>
-                        <Button
-                          onClick={onLoadDetailsClick}
-                          size="xsmall"
-                          variant="secondary"
-                        >
-                          Hent hendelsesdetaljer
-                        </Button>
-                      </ReadMore>
-                    </div>
-                  )}
+                {!includeParams && onLoadDetailsClick && (
+                  <div className="mb-6">
+                    <Button
+                      onClick={onLoadDetailsClick}
+                      size="xsmall"
+                      variant="secondary"
+                    >
+                      Hent hendelsesdetaljer
+                    </Button>
+                  </div>
+                )}
 
-                  {/* Search field for filtering events and parameters */}
-                  {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
-                    <div className="mb-4">
-                      <Search
-                        label="Søk i hendelser og detaljer"
-                        hideLabel={false}
-                        variant="simple"
-                        size="small"
-                        value={searchQuery}
-                        onChange={(value) => setSearchQuery(value)}
-                        onClear={() => setSearchQuery('')}
-                      />
-                    </div>
-                  )}
+                {/* Search field for filtering events and parameters */}
+                {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
+                  <div className="mb-4">
+                    <Search
+                      label="Søk i hendelser og detaljer"
+                      hideLabel={false}
+                      variant="simple"
+                      size="small"
+                      value={searchQuery}
+                      onChange={(value) => setSearchQuery(value)}
+                      onClear={() => setSearchQuery('')}
+                    />
+                  </div>
+                )}
 
-                  {/* Continue with existing Accordion for custom parameters */}
-                  {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
-                    <>
-                      {Object.keys(filteredGroupedParameters).length === 0 && searchQuery ? (
-                        <Alert variant="info" className="mt-3">
-                          Ingen hendelser eller detaljer matcher søket "{searchQuery}"
-                        </Alert>
-                      ) : (
-                    <Accordion>
-                      {/* Existing custom parameter accordion items */}
-                      {Object.keys(filteredGroupedParameters).map(eventName => (
-                        <Accordion.Item key={eventName}>
-                          <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
-                            <span className="flex items-center gap-2">
-                            {
-                                (eventName && getEventDisplayName(eventName) && 
-                                getEventDisplayName(eventName) !== "null") ? 
-                                  getEventDisplayName(eventName) : 
-                                  <>
-                                  sidevisning
-                                  <Tag size="xsmall" variant="info" className="whitespace-nowrap">tilknyttet standard</Tag>
-                                </>
-                              }
-                              <span className="text-sm text-gray-600">
-                                ({includeParams ? (
-                                  `${groupedParameters[eventName]?.length || 0} ${groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'}`
-                                ) : (
-                                  'detaljer ikke hentet'
-                                )})
+                {/* Continue with existing Accordion for custom parameters */}
+                {!isLoadingParameters && (availableEvents.length > 0 || parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME))) && (
+                  <>
+                    {Object.keys(filteredGroupedParameters).length === 0 && searchQuery ? (
+                      <Alert variant="info" className="mt-3">
+                        Ingen hendelser eller detaljer matcher søket "{searchQuery}"
+                      </Alert>
+                    ) : (
+                      <Accordion>
+                        {/* Existing custom parameter accordion items */}
+                        {Object.keys(filteredGroupedParameters).map(eventName => (
+                          <Accordion.Item key={eventName}>
+                            <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
+                              <span className="flex items-center gap-2">
+                                {
+                                  (eventName && getEventDisplayName(eventName) &&
+                                    getEventDisplayName(eventName) !== "null") ?
+                                    getEventDisplayName(eventName) :
+                                    <>
+                                      sidevisning
+                                      <Tag size="xsmall" variant="info" className="whitespace-nowrap">tilknyttet standard</Tag>
+                                    </>
+                                }
+                                <span className="text-sm text-gray-600">
+                                  ({includeParams ? (
+                                    `${groupedParameters[eventName]?.length || 0} ${groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'}`
+                                  ) : (
+                                    'detaljer ikke hentet'
+                                  )})
+                                </span>
                               </span>
-                            </span>
-                          </Accordion.Header>
-                          <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
-                            <VStack gap="3" className="-ml-8 mt-5">
-                              {filteredGroupedParameters[eventName]?.map((param) => {
-                                const displayName = getParameterDisplayName(param);
-                                
-                                return (
-                                  <div 
-                                    key={param.key}
-                                    className="flex items-center justify-between p-3 bg-white rounded border"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{displayName}</span>
-                                    </div>
-                                    <HStack gap="2">
-                                      <Button
-                                        variant="secondary"
-                                        size="small"
-                                        onClick={() => toggleParameterType(param.key, param.type)}
-                                        className="min-w-[80px]"
-                                      >
-                                        {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
-                                      </Button>
-                                      {parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
-                                      <Button
-                                        variant="tertiary"
-                                        size="small"
-                                        onClick={() => removeParameter(param.key)}
-                                      >Fjern</Button>
-                                      )}
-                                    </HStack>
-                                  </div>
-                                );
-                              })}
-                            </VStack>
-                          </Accordion.Content>
-                        </Accordion.Item>
-                      ))}
-                    </Accordion>
-                      )}
-                    </>
-                  )}
+                            </Accordion.Header>
+                            <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
+                              <VStack gap="3" className="-ml-8 mt-5">
+                                {filteredGroupedParameters[eventName]?.map((param) => {
+                                  const displayName = getParameterDisplayName(param);
 
-                  <Heading level="3" size="xsmall" spacing className="mt-6">
-                     Standard hendelser og detaljer
-                  </Heading>
-                  <p className="text-md text-gray-700 mb-4">
-                    Sidevisninger og besøk spores automatisk, hvis ikke deaktivert.
-                  </p>
-          
-                  <ExpansionCard aria-label="Standarddetaljer som følger med hendelser" size="small">
-                    <ExpansionCard.Header>
+                                  return (
+                                    <div
+                                      key={param.key}
+                                      className="flex items-center justify-between p-3 bg-white rounded border"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{displayName}</span>
+                                      </div>
+                                      <HStack gap="2">
+                                        <Button
+                                          variant="secondary"
+                                          size="small"
+                                          onClick={() => toggleParameterType(param.key, param.type)}
+                                          className="min-w-[80px]"
+                                        >
+                                          {param.type === 'string' ? '📝 Tekst' : '🔢 Tall'}
+                                        </Button>
+                                        {parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) && (
+                                          <Button
+                                            variant="tertiary"
+                                            size="small"
+                                            onClick={() => removeParameter(param.key)}
+                                          >Fjern</Button>
+                                        )}
+                                      </HStack>
+                                    </div>
+                                  );
+                                })}
+                              </VStack>
+                            </Accordion.Content>
+                          </Accordion.Item>
+                        ))}
+                      </Accordion>
+                    )}
+                  </>
+                )}
+
+                <Heading level="3" size="xsmall" spacing className="mt-6">
+                  Standard hendelser og detaljer
+                </Heading>
+                <p className="text-md text-gray-700 mb-4">
+                  Sidevisninger og besøk spores automatisk, hvis ikke deaktivert.
+                </p>
+
+                <ExpansionCard aria-label="Standarddetaljer som følger med hendelser" size="small">
+                  <ExpansionCard.Header>
                     <ExpansionCard.Title as="h3" size="small">
                       <span className="items-center gap-2">
                         <BodyShort weight="semibold">Standarddetaljer som følger med hendelser</BodyShort>
@@ -569,45 +564,45 @@ const getGroupedParameters = () => {
                           }, 0)} detaljer
                         </span>
                       </span>
-                      </ExpansionCard.Title>
-                    </ExpansionCard.Header>
-                    <ExpansionCard.Content>
-                      <VStack gap="3">
-                        <div className="flex flex-col gap-3">
-                          {/* Map through FILTER_COLUMNS categories */}
-                          {Object.entries(FILTER_COLUMNS).map(([key, group]) => (
-                            <div key={key}>
-                              <div className="mb-2">
-                                <BodyShort weight="semibold">{group.label}</BodyShort>
-                              </div>
-                              {group.columns
-                                .filter(column => !EXCLUDED_PARAMS.includes(column.value))
-                                .map(column => (
-                                  <div 
-                                    key={column.value}
-                                    className="flex items-center justify-between p-3 bg-white rounded border mb-2"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{column.label}</span>
-                                      <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
-                                    </div>
-                                    <HStack gap="2">
-                                      <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
-                                    </HStack>
-                                  </div>
-                                ))}
+                    </ExpansionCard.Title>
+                  </ExpansionCard.Header>
+                  <ExpansionCard.Content>
+                    <VStack gap="3">
+                      <div className="flex flex-col gap-3">
+                        {/* Map through FILTER_COLUMNS categories */}
+                        {Object.entries(FILTER_COLUMNS).map(([key, group]) => (
+                          <div key={key}>
+                            <div className="mb-2">
+                              <BodyShort weight="semibold">{group.label}</BodyShort>
                             </div>
-                          ))}
-                        </div>
-                      </VStack>
-                    </ExpansionCard.Content>
-                  </ExpansionCard>
+                            {group.columns
+                              .filter(column => !EXCLUDED_PARAMS.includes(column.value))
+                              .map(column => (
+                                <div
+                                  key={column.value}
+                                  className="flex items-center justify-between p-3 bg-white rounded border mb-2"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{column.label}</span>
+                                    <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
+                                  </div>
+                                  <HStack gap="2">
+                                    <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
+                                  </HStack>
+                                </div>
+                              ))}
+                          </div>
+                        ))}
+                      </div>
+                    </VStack>
+                  </ExpansionCard.Content>
+                </ExpansionCard>
 
- 
-                </Box>
-              )}
 
-              {/* Date Range Settings - Moved from WebsitePicker
+              </Box>
+            )}
+
+            {/* Date Range Settings - Moved from WebsitePicker
               <div>
                 <ReadMore className="mt-0" header="Innstillinger for hendelsesinnlasting">
                   <div className="space-y-4 mt-4">
@@ -651,7 +646,7 @@ const getGroupedParameters = () => {
                 </ReadMore>
               </div> */}
 
-              {/* 
+            {/* 
               {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
                 <BodyShort size="small" spacing className="text-md text-gray-700 mt-2">
                   <strong>Mangler noen egendefinerte hendelser?</strong>
@@ -691,50 +686,50 @@ const getGroupedParameters = () => {
               )}
               */}
 
-              {/* Confirmation Modal for removing manual parameters */}
-              <Modal
-                open={showConfirmModal}
-                onClose={() => setShowConfirmModal(false)}
-                header={{ heading: "Fjerne manuelt lagt til parametere?" }}
-                width="small"
-              >
-                <Modal.Body>
-                  <p>
-                    Ved å fjerne denne gruppen vil alle manuelt lagt til parametere bli slettet.
-                    Er du sikker på at du vil fortsette?
-                  </p>
-                </Modal.Body>
-                <Modal.Footer>
-                  <Button variant="danger" onClick={confirmRemoveManualParameters}>
-                    Ja, fjern parametere
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
-                    Avbryt
-                  </Button>
-                </Modal.Footer>
-              </Modal>
-            </VStack>
-          </ExpansionCard.Content>
-        </ExpansionCard>
+            {/* Confirmation Modal for removing manual parameters */}
+            <Modal
+              open={showConfirmModal}
+              onClose={() => setShowConfirmModal(false)}
+              header={{ heading: "Fjerne manuelt lagt til parametere?" }}
+              width="small"
+            >
+              <Modal.Body>
+                <p>
+                  Ved å fjerne denne gruppen vil alle manuelt lagt til parametere bli slettet.
+                  Er du sikker på at du vil fortsette?
+                </p>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="danger" onClick={confirmRemoveManualParameters}>
+                  Ja, fjern parametere
+                </Button>
+                <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
+                  Avbryt
+                </Button>
+              </Modal.Footer>
+            </Modal>
+          </VStack>
+        </ExpansionCard.Content>
+      </ExpansionCard>
 
-        {/* ReadMore for loading event details - Only show when details not loaded */}
-        {!includeParams && onLoadDetailsClick && (
-          <div className="mt-4">
-            <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
-              <div className="text-sm text-gray-800 mb-3">
-                Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
-              </div>
-              <Button
-                onClick={onLoadDetailsClick}
-                size="xsmall"
-                variant="secondary"
-              >
-                Hent hendelsesdetaljer
-              </Button>
-            </ReadMore>
-          </div>
-        )}
-      </>
+      {/* ReadMore for loading event details - Only show when details not loaded */}
+      {!includeParams && onLoadDetailsClick && (
+        <div className="mt-4">
+          <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
+            <div className="text-sm text-gray-800 mb-3">
+              Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
+            </div>
+            <Button
+              onClick={onLoadDetailsClick}
+              size="xsmall"
+              variant="secondary"
+            >
+              Hent hendelsesdetaljer
+            </Button>
+          </ReadMore>
+        </div>
+      )}
+    </>
   );
 };
 
