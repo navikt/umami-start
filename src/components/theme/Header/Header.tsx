@@ -2,7 +2,6 @@ import {
   MenuHamburgerIcon,
   BookIcon,
   ComponentIcon,
-  AreaChartIcon,
   CogIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
