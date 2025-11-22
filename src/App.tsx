@@ -25,6 +25,22 @@ const ScrollToTopWrapper = () => {
   return <ScrollToTop />;
 };
 
+// Create a wrapper component for Page Layout
+const PageLayout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+
+  if (isHome) {
+    return <main style={{ width: "100%" }}>{children}</main>;
+  }
+
+  return (
+    <Page.Block as="main" width="xl" gutters>
+      {children}
+    </Page.Block>
+  );
+};
+
 function App() {
   useHead({
     script: [
@@ -53,16 +69,16 @@ function App() {
     <>
       <Page>
         <Header />
-        <Page.Block as="main" width="xl" gutters>
-          <Router>
+        <Router>
+          <PageLayout>
             <Routes>
               {routes.map(({ path, component }) => (
                 <Route key={path} path={path} element={component} />
               ))}
             </Routes>
             <ScrollToTopWrapper />
-          </Router>
-        </Page.Block>
+          </PageLayout>
+        </Router>
       </Page>
       <Footer />
     </>

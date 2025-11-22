@@ -274,7 +274,7 @@ const UserJourney = () => {
 
                             <TextField
                                 label="Start URL-sti"
-                                description="Startsiden for reisen"
+                                description="F.eks. / for forsiden"
                                 value={startUrl}
                                 onChange={(e) => setStartUrl(e.target.value)}
                             />

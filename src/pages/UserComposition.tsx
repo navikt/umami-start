@@ -164,7 +164,7 @@ const UserComposition = () => {
 
                             <TextField
                                 label="Sidesti (valgfritt)"
-                                description="F.eks. /arbeid/soke-jobb"
+                                description="F.eks. / for forsiden"
                                 value={pagePath}
                                 onChange={(e) => setPagePath(e.target.value)}
                             />

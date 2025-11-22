@@ -1,4 +1,4 @@
-import { Link, List } from '@navikt/ds-react';
+import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from './kontaktboks';
 
 type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning';
@@ -49,16 +49,19 @@ const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigatio
         : pages;
 
     return (
-        <>
-            <List as="ul" title="Andre graftyper" className={`pt-4 ${className}`}>
+        <div className="mt-12">
+            <Heading as="h3" size="medium">Andre graftyper</Heading>
+            <List as="ul" className={`pt-2 ${className}`}>
                 {displayPages.map(page => (
                     <List.Item key={page.id}>
                         <strong><Link href={page.href}>{page.label}:</Link></strong> {page.description}.
                     </List.Item>
                 ))}
             </List>
-            <Kontaktboks />
-        </>
+            <div className="mt-12">
+                <Kontaktboks />
+            </div>
+        </div>
     );
 };
 
