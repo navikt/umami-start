@@ -997,6 +997,120 @@ app.post('/api/bigquery/retention', async (req, res) => {
     }
 });
 
+// Get user composition data from BigQuery
+app.post('/api/bigquery/composition', async (req, res) => {
+    try {
+        const { websiteId, startDate, endDate, urlPath } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        // Helper to generate the URL normalization SQL
+        const normalizeUrlSql = `
+            CASE 
+                WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                THEN '/'
+                ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+            END
+        `;
+
+        // Base query to select relevant sessions
+        // If urlPath is provided, we filter sessions that visited that URL
+        const query = `
+            WITH relevant_sessions AS (
+                SELECT
+                    s.browser,
+                    s.os,
+                    s.device,
+                    s.screen,
+                    s.language,
+                    s.country
+                FROM \`team-researchops-prod-01d6.umami.public_session\` s
+                WHERE s.website_id = @websiteId
+                  AND s.created_at BETWEEN @startDate AND @endDate
+                  ${urlPath ? `
+                  AND EXISTS (
+                    SELECT 1 
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e 
+                    WHERE e.session_id = s.session_id 
+                      AND e.website_id = @websiteId
+                      AND e.created_at BETWEEN @startDate AND @endDate
+                      AND ${normalizeUrlSql.replace(/url_path/g, 'e.url_path')} = @urlPath
+                  )` : ''}
+            )
+            SELECT 'browser' as category, browser as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            UNION ALL
+            SELECT 'os' as category, os as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            UNION ALL
+            SELECT 'device' as category, device as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            UNION ALL
+            SELECT 'screen' as category, screen as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            UNION ALL
+            SELECT 'language' as category, language as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            UNION ALL
+            SELECT 'country' as category, country as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            ORDER BY category, count DESC
+        `;
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate
+        };
+
+        if (urlPath) {
+            params.urlPath = urlPath;
+        }
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(4);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(6);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+
+            console.log(`[Composition] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+        } catch (dryRunError) {
+            console.log('[Composition] Dry run failed:', dryRunError.message);
+        }
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        res.json({
+            data: rows,
+            queryStats
+        });
+
+    } catch (error) {
+        console.error('BigQuery composition error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch composition data'
+        });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {

@@ -1,6 +1,6 @@
 import { BodyShort, Link, List } from '@navikt/ds-react';
 
-type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger';
+type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
@@ -33,6 +33,12 @@ const AnalyticsNavigation = ({ currentPage, variant = 'inline', className = '' }
             href: '/grafbygger',
             label: 'Grafbygger',
             description: 'Lag tilpassede grafer'
+        },
+        {
+            id: 'brukersammensetning',
+            href: '/brukersammensetning',
+            label: 'Brukersammensetning',
+            description: 'Se hvem brukerne dine er'
         }
     ];
 

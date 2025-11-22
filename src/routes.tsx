@@ -15,6 +15,7 @@ import Grafdeling from "./pages/Grafdeling.tsx";
 import UserJourney from "./pages/UserJourney.tsx";
 import Funnel from "./pages/Funnel.tsx";
 import Retention from "./pages/Retention.tsx";
+import UserComposition from "./pages/UserComposition.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -32,8 +33,8 @@ const routes = [
     { path: "/grafdeling", component: <Grafdeling /> },
     { path: "/brukerreiser", component: <UserJourney /> },
     { path: "/trakt", component: <Funnel /> },
-    { path: "/brukerlojalitet", component: <Retention /> }
-
+    { path: "/brukerlojalitet", component: <Retention /> },
+    { path: "/brukersammensetning", component: <UserComposition /> }
 ];
 
 export default routes;
