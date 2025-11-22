@@ -177,13 +177,14 @@ const WebsitePicker = ({
       if (websiteIdFromUrl) {
         const website = websites.find(w => w.id === websiteIdFromUrl);
         if (website && !selectedWebsite) {
-          onWebsiteChange(website);
+          handleWebsiteChange(website); // Use handleWebsiteChange to ensure caching
+          setShowPicker(false); // Hide picker to display locked view
         }
       }
 
       initialUrlChecked.current = true;
     }
-  }, [websites, selectedWebsite, onWebsiteChange]);
+  }, [websites, selectedWebsite, handleWebsiteChange]);
 
   // Handle browser back/forward navigation
   useEffect(() => {
@@ -195,11 +196,17 @@ const WebsitePicker = ({
         if (websiteIdFromUrl) {
           const website = websites.find(w => w.id === websiteIdFromUrl);
           if (website && (!selectedWebsite || website.id !== selectedWebsite.id)) {
+            // Note: We call onWebsiteChange here instead of handleWebsiteChange
+            // because handleWebsiteChange would update the URL again via pushState,
+            // which we don't want during popstate (back/forward navigation)
             onWebsiteChange(website);
+            // But we still need to save to localStorage
+            saveToLocalStorage(SELECTED_WEBSITE_CACHE_KEY, website);
           }
         } else if (selectedWebsite) {
           // No website ID in URL, but we have a selected website, clear it
           onWebsiteChange(null);
+          localStorage.removeItem(SELECTED_WEBSITE_CACHE_KEY);
         }
       }
     };
@@ -405,12 +412,11 @@ const WebsitePicker = ({
     const cachedWebsite = getFromLocalStorage<Website>(SELECTED_WEBSITE_CACHE_KEY);
     if (cachedWebsite && !selectedWebsite) {
       console.log('[WebsitePicker] Restoring from localStorage:', cachedWebsite.name);
-      onWebsiteChange(cachedWebsite);
-      updateUrlWithWebsiteId(cachedWebsite);
+      handleWebsiteChange(cachedWebsite); // Use handleWebsiteChange to ensure URL is updated
     }
 
     initialUrlChecked.current = true;
-  }, [selectedWebsite, onWebsiteChange, updateUrlWithWebsiteId]);
+  }, [selectedWebsite, handleWebsiteChange]);
 
   // Check for website ID in URL after websites are loaded
   useEffect(() => {
@@ -419,14 +425,15 @@ const WebsitePicker = ({
     const urlParams = new URLSearchParams(window.location.search);
     const websiteIdFromUrl = urlParams.get('websiteId');
 
-    if (websiteIdFromUrl && (!selectedWebsite || selectedWebsite.id !== websiteIdFromUrl)) {
+    if (websiteIdFromUrl) {
       const website = websites.find(w => w.id === websiteIdFromUrl);
       if (website) {
         console.log('[WebsitePicker] Applying website from URL:', website.name);
-        onWebsiteChange(website);
+        handleWebsiteChange(website);
+        setShowPicker(false);
       }
     }
-  }, [websites, selectedWebsite, onWebsiteChange]);
+  }, [websites, handleWebsiteChange]);
 
   // Fetch events when a website is selected (only if onEventsLoad callback is provided)
   useEffect(() => {
