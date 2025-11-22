@@ -1538,10 +1538,13 @@ const ChartsPage = () => {
           <div className="mt-8 hidden lg:block mb-[40rem]">
             <List as="ul" title="Andre graftyper" className="pt-4">
               <List.Item>
+                <strong><Link href={"/brukerreiser"}>Brukerreiser:</Link></strong> Se hvilke veier folk tar gjennom nettsiden.
+              </List.Item>
+              <List.Item>
                 <strong><Link href={"/trakt"}>Traktanalyse:</Link></strong> Se hvor folk faller fra i en prosess.
               </List.Item>
               <List.Item>
-                <strong><Link href={"/brukerreiser"}>Brukerreiser:</Link></strong> Se hvor folk beveger seg på nettstedet.
+                <strong><Link href={"/brukerlojalitet"}>Brukerlojalitet:</Link></strong> Se hvor mange som kommer tilbake.
               </List.Item>
             </List>
             <Kontaktboks />

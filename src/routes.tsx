@@ -32,7 +32,7 @@ const routes = [
     { path: "/grafdeling", component: <Grafdeling /> },
     { path: "/brukerreiser", component: <UserJourney /> },
     { path: "/trakt", component: <Funnel /> },
-    { path: "/retention", component: <Retention /> }
+    { path: "/brukerlojalitet", component: <Retention /> }
 
 ];
 

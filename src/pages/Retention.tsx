@@ -170,7 +170,7 @@ const Retention = () => {
         <div className="py-8 max-w-[1600px] mx-auto">
             <div className="mb-8">
                 <Heading level="1" size="xlarge" className="mb-2">
-                    Retensjon
+                    Brukerlojalitet
                 </Heading>
                 <BodyShort className="text-gray-600">
                     Viser hvor mange brukere som kommer tilbake etter sitt første besøk.
@@ -305,6 +305,37 @@ const Retention = () => {
                             Ingen data funnet for valgt periode.
                         </div>
                     )}
+                </div>
+
+                {/* Cross-navigation */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <BodyShort className="text-gray-600 mb-3">Andre graftyper:</BodyShort>
+                    <div className="flex gap-3">
+                        <Button
+                            as="a"
+                            href="/brukerreiser"
+                            variant="secondary"
+                            size="small"
+                        >
+                            Brukerreiser
+                        </Button>
+                        <Button
+                            as="a"
+                            href="/trakt"
+                            variant="secondary"
+                            size="small"
+                        >
+                            Traktanalyse
+                        </Button>
+                        <Button
+                            as="a"
+                            href="/grafbygger"
+                            variant="secondary"
+                            size="small"
+                        >
+                            Grafbygger
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

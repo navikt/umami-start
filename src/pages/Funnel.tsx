@@ -355,6 +355,37 @@ const Funnel = () => {
 
 
                 </div>
+
+                {/* Cross-navigation */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <BodyShort className="text-gray-600 mb-3">Andre graftyper:</BodyShort>
+                    <div className="flex gap-3">
+                        <Button
+                            as="a"
+                            href="/brukerreiser"
+                            variant="secondary"
+                            size="small"
+                        >
+                            Brukerreiser
+                        </Button>
+                        <Button
+                            as="a"
+                            href="/brukerlojalitet"
+                            variant="secondary"
+                            size="small"
+                        >
+                            Brukerlojalitet
+                        </Button>
+                        <Button
+                            as="a"
+                            href="/grafbygger"
+                            variant="secondary"
+                            size="small"
+                        >
+                            Grafbygger
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );
