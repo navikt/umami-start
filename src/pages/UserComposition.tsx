@@ -163,7 +163,7 @@ const UserComposition = () => {
                             </RadioGroup>
 
                             <TextField
-                                label="Sidesti (valgfritt)"
+                                label="URL-sti (valgfritt)"
                                 description="F.eks. / for forsiden"
                                 value={pagePath}
                                 onChange={(e) => setPagePath(e.target.value)}
