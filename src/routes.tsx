@@ -38,7 +38,7 @@ const routes = [
     { path: "/trakt", component: <Funnel /> },
     { path: "/brukerlojalitet", component: <Retention /> },
     { path: "/brukersammensetning", component: <UserComposition /> },
-    { path: "/event-explorer", component: <EventExplorer /> }
+    { path: "/utforsk-hendelser", component: <EventExplorer /> }
 ];
 
 export default routes;
