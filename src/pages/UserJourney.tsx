@@ -248,7 +248,7 @@ const UserJourney = () => {
                     Brukerreiser
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Se hvilke veier folk tar gjennom nettsiden
+                    Se hvilke veier folk tar på nettsiden.
                 </BodyShort>
             </div>
 

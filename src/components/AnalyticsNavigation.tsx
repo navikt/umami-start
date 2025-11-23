@@ -32,8 +32,8 @@ const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigatio
         {
             id: 'grafbygger',
             href: '/grafbygger',
-            label: 'Grafbygger',
-            description: 'Lag tilpassede grafer'
+            label: 'Tilpasset analyse',
+            description: 'Lag egne grafer eller tabeller'
         },
         {
             id: 'brukersammensetning',

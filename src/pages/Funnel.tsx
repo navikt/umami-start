@@ -177,7 +177,7 @@ const Funnel = () => {
                     Traktanalyse
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Se hvor mange folk som fullfører en stegvis prosess, og hvor de faller fra
+                    Se hvor folk faller fra i en prosess.
                 </BodyShort>
             </div>
 

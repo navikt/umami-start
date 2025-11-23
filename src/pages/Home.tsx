@@ -7,7 +7,7 @@ function Home() {
         {
             id: 'grafbygger',
             href: '/grafbygger',
-            label: 'Segmentering',
+            label: 'Tilpasset analyse',
             description: 'Lag egne grafer eller tabeller'
         },
         {

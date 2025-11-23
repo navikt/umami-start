@@ -174,7 +174,7 @@ const Retention = () => {
                     Brukerlojalitet
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Viser hvor mange brukere som kommer tilbake etter sitt første besøk.
+                    Se hvor mange som kommer tilbake etter sitt første besøk.
                 </BodyShort>
             </div>
 
