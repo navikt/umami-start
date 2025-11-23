@@ -425,7 +425,6 @@ const ResultsDisplay = ({
                         {queryStats && (
                           <span>
                             Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                            {parseFloat(queryStats.estimatedCostUSD) > 0 && ` • Kostnad: $${queryStats.estimatedCostUSD}`}
                           </span>
                         )}
                       </div>

@@ -218,7 +218,7 @@ const Retention = () => {
                                 loading={loading}
                                 className="w-full"
                             >
-                                Vis retensjon
+                                Vis brukerlojalitet
                             </Button>
                         </div>
                     </div>
