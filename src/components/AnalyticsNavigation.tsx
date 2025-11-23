@@ -11,6 +11,12 @@ interface AnalyticsNavigationProps {
 
 export const analyticsPages = [
     {
+        id: 'grafbygger',
+        href: '/grafbygger',
+        label: 'Tilpasset analyse',
+        description: 'Lag egne grafer eller tabeller'
+    },
+    {
         id: 'brukerreiser',
         href: '/brukerreiser',
         label: 'Brukerreiser',
@@ -27,12 +33,6 @@ export const analyticsPages = [
         href: '/brukerlojalitet',
         label: 'Brukerlojalitet',
         description: 'Se hvor mange som kommer tilbake'
-    },
-    {
-        id: 'grafbygger',
-        href: '/grafbygger',
-        label: 'Tilpasset analyse',
-        description: 'Lag egne grafer eller tabeller'
     },
     {
         id: 'brukersammensetning',
