@@ -169,7 +169,7 @@ app.post('/api/bigquery', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt } = req.query;
+        const { startAt, endAt, urlPath } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -180,27 +180,46 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
         const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
         const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
 
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                url_path = @urlPath 
+                OR url_path = @urlPathSlash 
+                OR url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
         const query = `
-            SELECT DISTINCT event_name
+            SELECT event_name, COUNT(*) as count
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
               AND created_at BETWEEN @startDate AND @endDate
               AND event_name IS NOT NULL
-            ORDER BY event_name
+            ${urlFilter}
+            GROUP BY event_name
+            ORDER BY count DESC
         `;
 
         const [job] = await bigquery.createQueryJob({
             query: query,
             location: 'europe-north1',
-            params: {
-                websiteId: websiteId,
-                startDate: startDate,
-                endDate: endDate
-            }
+            params: params
         });
 
         const [rows] = await job.getQueryResults();
-        const events = rows.map(row => row.event_name);
+        const events = rows.map(row => ({
+            name: row.event_name,
+            count: parseInt(row.count)
+        }));
 
         res.json({ events });
     } catch (error) {
@@ -215,7 +234,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, includeParams } = req.query;
+        const { startAt, endAt, includeParams, eventName, urlPath } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -227,7 +246,31 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
         const withParams = includeParams === 'true';
 
-        console.log(`[Event Properties] Query: ${withParams ? 'EXPENSIVE (with params)' : 'CHEAP (events only)'} - includeParams=${includeParams}`);
+        console.log(`[Event Properties] Query: ${withParams ? 'EXPENSIVE (with params)' : 'CHEAP (events only)'} - includeParams=${includeParams} eventName=${eventName} urlPath=${urlPath}`);
+
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                e.url_path = @urlPath 
+                OR e.url_path = @urlPathSlash 
+                OR e.url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        let eventFilter = '';
+        if (eventName) {
+            eventFilter = `AND e.event_name = @eventName`;
+            params.eventName = eventName;
+        }
 
         // Query depends on whether we need parameters or not
         const query = withParams ? `
@@ -252,6 +295,8 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name IS NOT NULL
             AND p.data_key IS NOT NULL
+            ${urlFilter}
+            ${eventFilter}
             GROUP BY
                 e.event_name,
                 p.data_key,
@@ -263,10 +308,12 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             SELECT 
                 event_name,
                 COUNT(*) AS total
-            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             WHERE website_id = @websiteId
             AND created_at BETWEEN @startDate AND @endDate
             AND event_name IS NOT NULL
+            ${urlFilter}
+            ${eventFilter}
             GROUP BY event_name
             ORDER BY event_name
         `;
@@ -277,11 +324,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             const [dryRunJob] = await bigquery.createQueryJob({
                 query: query,
                 location: 'europe-north1',
-                params: {
-                    websiteId: websiteId,
-                    startDate: startDate,
-                    endDate: endDate
-                },
+                params: params,
                 dryRun: true
             });
 
@@ -297,11 +340,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         const [job] = await bigquery.createQueryJob({
             query: query,
             location: 'europe-north1',
-            params: {
-                websiteId: websiteId,
-                startDate: startDate,
-                endDate: endDate
-            }
+            params: params
         });
 
         const [rows] = await job.getQueryResults();
@@ -336,6 +375,87 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         console.error('BigQuery event properties error:', error);
         res.status(500).json({
             error: error.message || 'Failed to fetch event properties'
+        });
+    }
+});
+
+// Get event series data (time series)
+app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const { startAt, endAt, eventName, urlPath, interval = 'day' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                url_path = @urlPath 
+                OR url_path = @urlPathSlash 
+                OR url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        let eventFilter = '';
+        if (eventName) {
+            eventFilter = `AND event_name = @eventName`;
+            params.eventName = eventName;
+        }
+
+        // Determine time truncation based on interval
+        let timeTrunc = 'DAY';
+        if (interval === 'hour') timeTrunc = 'HOUR';
+        if (interval === 'week') timeTrunc = 'WEEK';
+        if (interval === 'month') timeTrunc = 'MONTH';
+
+        const query = `
+            SELECT
+                TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                COUNT(*) as count
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+            WHERE website_id = @websiteId
+            AND created_at BETWEEN @startDate AND @endDate
+            AND event_name IS NOT NULL
+            ${urlFilter}
+            ${eventFilter}
+            GROUP BY 1
+            ORDER BY 1
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        const data = rows.map(row => ({
+            time: row.time.value,
+            count: parseInt(row.count)
+        }));
+
+        res.json({ data });
+    } catch (error) {
+        console.error('BigQuery event series error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch event series'
         });
     }
 });
@@ -384,6 +504,179 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
         console.error('BigQuery daterange error:', error);
         res.status(500).json({
             error: error.message || 'Failed to fetch date range'
+        });
+    }
+});
+
+// Get values for a specific event parameter
+app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const { startAt, endAt, eventName, parameterName, urlPath } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            eventName,
+            parameterName
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                e.url_path = @urlPath 
+                OR e.url_path = @urlPathSlash 
+                OR e.url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        const query = `
+            SELECT
+                p.string_value,
+                COUNT(*) as count
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+            JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                ON e.event_id = d.website_event_id
+            CROSS JOIN UNNEST(d.event_parameters) AS p
+            WHERE e.website_id = @websiteId
+            AND e.created_at BETWEEN @startDate AND @endDate
+            AND d.created_at BETWEEN @startDate AND @endDate
+            AND e.event_name = @eventName
+            AND p.data_key = @parameterName
+            ${urlFilter}
+            GROUP BY 1
+            ORDER BY 2 DESC
+            LIMIT 100
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        const values = rows.map(row => ({
+            value: row.string_value,
+            count: parseInt(row.count)
+        }));
+
+        res.json({ values });
+    } catch (error) {
+        console.error('BigQuery event parameter values error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch event parameter values'
+        });
+    }
+});
+
+// Get latest N events with all parameter values
+app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const { startAt, endAt, eventName, urlPath, limit = '20' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            eventName,
+            limit: parseInt(limit)
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                e.url_path = @urlPath 
+                OR e.url_path = @urlPathSlash 
+                OR e.url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        const query = `
+            SELECT
+                e.event_id,
+                e.created_at,
+                ARRAY_AGG(STRUCT(p.data_key, p.string_value) ORDER BY p.data_key) as parameters
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+            JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                ON e.event_id = d.website_event_id
+            LEFT JOIN UNNEST(d.event_parameters) AS p
+            WHERE e.website_id = @websiteId
+            AND e.created_at BETWEEN @startDate AND @endDate
+            AND d.created_at BETWEEN @startDate AND @endDate
+            AND e.event_name = @eventName
+            ${urlFilter}
+            GROUP BY e.event_id, e.created_at
+            ORDER BY e.created_at DESC
+            LIMIT @limit
+        `;
+
+        console.log('[Latest Events] Query params:', params);
+        console.log('[Latest Events] URL filter:', urlFilter);
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        console.log(`[Latest Events] Found ${rows.length} events`);
+        if (rows.length > 0) {
+            console.log('[Latest Events] First row sample:', JSON.stringify(rows[0], null, 2));
+        }
+
+        const events = rows.map(row => {
+            const properties = {};
+            if (row.parameters) {
+                row.parameters.forEach(param => {
+                    if (param.data_key && param.string_value) {
+                        properties[param.data_key] = param.string_value;
+                    }
+                });
+            }
+
+            return {
+                website_event_id: row.event_id,
+                created_at: row.created_at.value,
+                properties
+            };
+        });
+
+        console.log(`[Latest Events] Returning ${events.length} events`);
+        res.json({ events });
+    } catch (error) {
+        console.error('BigQuery latest events error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch latest events'
         });
     }
 });

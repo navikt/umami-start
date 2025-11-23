@@ -1,40 +1,10 @@
 import { Heading, LinkPanel, Page } from "@navikt/ds-react";
 import Metadashboard from "../components/metadashboard.tsx";
 import Kontaktboks from "../components/kontaktboks.tsx";
+import { analyticsPages } from "../components/AnalyticsNavigation.tsx";
 
 function Home() {
-    const analyticsPages = [
-        {
-            id: 'grafbygger',
-            href: '/grafbygger',
-            label: 'Tilpasset analyse',
-            description: 'Lag egne grafer eller tabeller'
-        },
-        {
-            id: 'brukerreiser',
-            href: '/brukerreiser',
-            label: 'Brukerreiser',
-            description: 'Se hvilke veier folk tar på nettsiden'
-        },
-        {
-            id: 'trakt',
-            href: '/trakt',
-            label: 'Traktanalyse',
-            description: 'Se hvor folk faller fra i en prosess'
-        },
-        {
-            id: 'brukerlojalitet',
-            href: '/brukerlojalitet',
-            label: 'Brukerlojalitet',
-            description: 'Se hvor mange som kommer tilbake'
-        },
-        {
-            id: 'brukersammensetning',
-            href: '/brukersammensetning',
-            label: 'Brukersammensetning',
-            description: 'Se informasjon om besøkende'
-        }
-    ];
+
 
     return (
         <>

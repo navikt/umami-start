@@ -562,12 +562,12 @@ export default function BigQuery() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_event_data</span>
+                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.event_data</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_event_data'); }}
+                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.event_data'); }}
                                     >
                                         Kopier
                                     </Button>
@@ -621,12 +621,12 @@ export default function BigQuery() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.event_data</span>
+                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_event_data</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.event_data'); }}
+                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_event_data'); }}
                                         >
                                             Kopier
                                         </Button>

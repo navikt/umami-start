@@ -17,6 +17,7 @@ import UserJourney from "./pages/UserJourney.tsx";
 import Funnel from "./pages/Funnel.tsx";
 import Retention from "./pages/Retention.tsx";
 import UserComposition from "./pages/UserComposition.tsx";
+import EventExplorer from "./pages/EventExplorer.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -36,7 +37,8 @@ const routes = [
     { path: "/brukerreiser", component: <UserJourney /> },
     { path: "/trakt", component: <Funnel /> },
     { path: "/brukerlojalitet", component: <Retention /> },
-    { path: "/brukersammensetning", component: <UserComposition /> }
+    { path: "/brukersammensetning", component: <UserComposition /> },
+    { path: "/event-explorer", component: <EventExplorer /> }
 ];
 
 export default routes;
