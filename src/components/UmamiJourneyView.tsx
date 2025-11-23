@@ -228,7 +228,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
     }
 
     return (
-        <div className={`bg-white rounded-lg border border-gray-200 w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}>
+        <div className={`bg-white w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}>
             {/* Inner container */}
             <div className={`relative min-w-max ${isFullscreen ? '' : ''}`} ref={contentRef}>
 
