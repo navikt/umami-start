@@ -189,6 +189,7 @@ const Funnel = () => {
                                 <WebsitePicker
                                     selectedWebsite={selectedWebsite}
                                     onWebsiteChange={setSelectedWebsite}
+                                    variant="minimal"
                                 />
                             </div>
 

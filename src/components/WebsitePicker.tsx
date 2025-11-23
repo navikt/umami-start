@@ -19,6 +19,7 @@ interface WebsitePickerProps {
   onIncludeParamsChange?: (includeParams: boolean) => void; // Callback to notify parent of includeParams state
   resetIncludeParams?: boolean; // Add flag to reset includeParams
   requestIncludeParams?: boolean; // Add flag to request loading params
+  variant?: 'default' | 'minimal'; // Add variant prop
 }
 
 interface EventProperty {
@@ -94,7 +95,8 @@ const WebsitePicker = ({
   shouldReload = false,
   onIncludeParamsChange,
   resetIncludeParams = false,
-  requestIncludeParams = false
+  requestIncludeParams = false,
+  variant = 'default'
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -496,8 +498,8 @@ const WebsitePicker = ({
 
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg border shadow-sm">
+    <div className={`space-y-4 ${variant === 'minimal' ? 'mb-1' : ''}`}>
+      <div className={`space-y-4 ${variant === 'default' ? 'p-4 bg-gray-50 rounded-lg border shadow-sm' : ''}`}>
         {error && (
           <Alert variant="error" className="mb-4">
             {error}

@@ -150,6 +150,7 @@ const UserComposition = () => {
                                 <WebsitePicker
                                     selectedWebsite={selectedWebsite}
                                     onWebsiteChange={setSelectedWebsite}
+                                    variant="minimal"
                                 />
                             </div>
 
