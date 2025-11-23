@@ -355,7 +355,7 @@ const WebsitePicker = ({
   }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, includeParams]);
 
   // State to control whether to show the picker
-  const [showPicker, setShowPicker] = useState<boolean>(false);
+  const [showPicker, setShowPicker] = useState<boolean>(!selectedWebsite);
 
   // Load websites only when showPicker is true
   useEffect(() => {
