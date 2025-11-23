@@ -1,10 +1,10 @@
 
 import { useState } from 'react';
-import { Heading, Button, Alert, Loader, BodyShort, Tabs, TextField, Radio, RadioGroup, Switch } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
+import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
-import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import { Website } from '../types/chart';
 
 const Retention = () => {
@@ -168,150 +168,134 @@ const Retention = () => {
     };
 
     return (
-        <div className="py-8 max-w-[1600px] mx-auto">
-            <div className="mb-8">
-                <Heading level="1" size="xlarge" className="mb-2">
-                    Brukerlojalitet
-                </Heading>
-                <BodyShort className="text-gray-600">
-                    Se hvor mange som kommer tilbake etter sitt første besøk.
-                </BodyShort>
-            </div>
+        <ChartLayout
+            title="Brukerlojalitet"
+            description="Se hvor mange som kommer tilbake etter sitt første besøk."
+            currentPage="brukerlojalitet"
+            filters={
+                <>
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsite}
+                        onWebsiteChange={setSelectedWebsite}
+                        variant="minimal"
+                    />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div className="space-y-4">
-                            <div className="pb-2">
-                                <WebsitePicker
-                                    selectedWebsite={selectedWebsite}
-                                    onWebsiteChange={setSelectedWebsite}
-                                    variant="minimal"
+                    <RadioGroup
+                        legend="Periode"
+                        value={period}
+                        onChange={(val: string) => setPeriod(val)}
+                    >
+                        <Radio value="current_month">Denne måneden</Radio>
+                        <Radio value="last_month">Forrige måned</Radio>
+                    </RadioGroup>
+
+                    <TextField
+                        label="Url-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={urlPath}
+                        onChange={(e) => setUrlPath(e.target.value)}
+                    />
+
+                    <Switch
+                        checked={businessDaysOnly}
+                        onChange={(e) => setBusinessDaysOnly(e.target.checked)}
+                    >
+                        Kun virkedager
+                    </Switch>
+
+                    <Button
+                        onClick={fetchData}
+                        disabled={!selectedWebsite || loading}
+                        loading={loading}
+                        className="w-full"
+                    >
+                        Vis brukerlojalitet
+                    </Button>
+                </>
+            }
+        >
+            {error && (
+                <Alert variant="error" className="mb-4">
+                    {error}
+                </Alert>
+            )}
+
+            {loading && (
+                <div className="flex justify-center items-center h-full">
+                    <Loader size="xlarge" title="Beregner retensjon..." />
+                </div>
+            )}
+
+            {!loading && retentionData.length > 0 && (
+                <Tabs value={activeTab} onChange={setActiveTab}>
+                    <Tabs.List>
+                        <Tabs.Tab value="chart" label="Linjediagram" />
+                        <Tabs.Tab value="table" label="Tabell" />
+                    </Tabs.List>
+
+                    <Tabs.Panel value="chart" className="pt-4">
+                        <div style={{ width: '100%', height: '500px' }}>
+                            {chartData && (
+                                <LineChart
+                                    data={chartData.data}
+                                    legendsOverflowText={'Overflow Items'}
+                                    yAxisTickFormat={(d: any) => `${d}% `}
+                                    height={500}
+                                    width={800}
                                 />
+                            )}
+                        </div>
+                    </Tabs.Panel>
+
+                    <Tabs.Panel value="table" className="pt-4">
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dag</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall brukere</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Prosent</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {retentionData.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    Dag {item.day}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {item.returning_users.toLocaleString('nb-NO')}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {item.percentage}%
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <RadioGroup
-                                legend="Periode"
-                                value={period}
-                                onChange={(val: string) => setPeriod(val)}
-                            >
-                                <Radio value="current_month">Denne måneden</Radio>
-                                <Radio value="last_month">Forrige måned</Radio>
-                            </RadioGroup>
-
-                            <TextField
-                                label="Url-sti (valgfritt)"
-                                description="F.eks. / for forsiden"
-                                value={urlPath}
-                                onChange={(e) => setUrlPath(e.target.value)}
-                            />
-
-                            <Switch
-                                checked={businessDaysOnly}
-                                onChange={(e) => setBusinessDaysOnly(e.target.checked)}
-                            >
-                                Kun virkedager
-                            </Switch>
-
-                            <Button
-                                onClick={fetchData}
-                                disabled={!selectedWebsite || loading}
-                                loading={loading}
-                                className="w-full"
-                            >
-                                Vis brukerlojalitet
-                            </Button>
+                            <div className="flex gap-2 p-3 bg-gray-50 border-t">
+                                <Button
+                                    size="small"
+                                    variant="secondary"
+                                    onClick={downloadCSV}
+                                    icon={<Download size={16} />}
+                                >
+                                    Last ned CSV
+                                </Button>
+                            </div>
                         </div>
-                    </div>
+                    </Tabs.Panel>
+                </Tabs>
+            )}
+
+            {!loading && !error && retentionData.length === 0 && hasAttemptedFetch && (
+                <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mt-4">
+                    Ingen data funnet for valgt periode.
                 </div>
-
-                <div className="md:col-span-2 min-h-[600px] bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    {error && (
-                        <Alert variant="error" className="mb-4">
-                            {error}
-                        </Alert>
-                    )}
-
-                    {loading && (
-                        <div className="flex justify-center items-center h-full">
-                            <Loader size="xlarge" title="Beregner retensjon..." />
-                        </div>
-                    )}
-
-                    {!loading && retentionData.length > 0 && (
-                        <Tabs value={activeTab} onChange={setActiveTab}>
-                            <Tabs.List>
-                                <Tabs.Tab value="chart" label="Linjediagram" />
-                                <Tabs.Tab value="table" label="Tabell" />
-                            </Tabs.List>
-
-                            <Tabs.Panel value="chart" className="pt-4">
-                                <div style={{ width: '100%', height: '500px' }}>
-                                    {chartData && (
-                                        <LineChart
-                                            data={chartData.data}
-                                            legendsOverflowText={'Overflow Items'}
-                                            yAxisTickFormat={(d: any) => `${d}% `}
-                                            height={500}
-                                            width={800}
-                                        />
-                                    )}
-                                </div>
-                            </Tabs.Panel>
-
-                            <Tabs.Panel value="table" className="pt-4">
-                                <div className="border rounded-lg overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-100">
-                                                <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dag</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall brukere</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Prosent</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
-                                                {retentionData.map((item, index) => (
-                                                    <tr key={index} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                            Dag {item.day}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {item.returning_users.toLocaleString('nb-NO')}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {item.percentage}%
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="flex gap-2 p-3 bg-gray-50 border-t">
-                                        <Button
-                                            size="small"
-                                            variant="secondary"
-                                            onClick={downloadCSV}
-                                            icon={<Download size={16} />}
-                                        >
-                                            Last ned CSV
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Tabs.Panel>
-                        </Tabs>
-                    )}
-
-                    {!loading && !error && retentionData.length === 0 && hasAttemptedFetch && (
-                        <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mt-4">
-                            Ingen data funnet for valgt periode.
-                        </div>
-                    )}
-                </div>
-
-            </div>
-            <AnalyticsNavigation currentPage="brukerlojalitet" />
-        </div>
+            )}
+        </ChartLayout>
     );
 };
 

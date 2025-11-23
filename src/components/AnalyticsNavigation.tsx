@@ -1,7 +1,7 @@
 import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from './kontaktboks';
 
-type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer';
+export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;

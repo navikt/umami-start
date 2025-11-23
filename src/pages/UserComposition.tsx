@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, Radio, RadioGroup, Tabs } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Radio, RadioGroup, Tabs } from '@navikt/ds-react';
+import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
-import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
 import { Website } from '../types/chart';
 
@@ -132,109 +132,93 @@ const UserComposition = () => {
     const prepareLineChartData = () => null;
 
     return (
-        <div className="py-8 max-w-[1600px] mx-auto">
-            <div className="mb-8">
-                <Heading level="1" size="xlarge" className="mb-2">
-                    Brukersammensetning
-                </Heading>
-                <BodyShort className="text-gray-600">
-                    Se informasjon om besøkende.
-                </BodyShort>
-            </div>
+        <ChartLayout
+            title="Brukersammensetning"
+            description="Se informasjon om besøkende."
+            currentPage="brukersammensetning"
+            filters={
+                <>
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsite}
+                        onWebsiteChange={setSelectedWebsite}
+                        variant="minimal"
+                    />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div className="space-y-4">
-                            <div className="pb-2">
-                                <WebsitePicker
-                                    selectedWebsite={selectedWebsite}
-                                    onWebsiteChange={setSelectedWebsite}
-                                    variant="minimal"
-                                />
-                            </div>
+                    <RadioGroup
+                        legend="Periode"
+                        value={period}
+                        onChange={(val: string) => setPeriod(val)}
+                    >
+                        <Radio value="current_month">Denne måneden</Radio>
+                        <Radio value="last_month">Forrige måned</Radio>
+                    </RadioGroup>
 
-                            <RadioGroup
-                                legend="Periode"
-                                value={period}
-                                onChange={(val: string) => setPeriod(val)}
-                            >
-                                <Radio value="current_month">Denne måneden</Radio>
-                                <Radio value="last_month">Forrige måned</Radio>
-                            </RadioGroup>
+                    <TextField
+                        label="URL-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={pagePath}
+                        onChange={(e) => setPagePath(e.target.value)}
+                    />
 
-                            <TextField
-                                label="URL-sti (valgfritt)"
-                                description="F.eks. / for forsiden"
-                                value={pagePath}
-                                onChange={(e) => setPagePath(e.target.value)}
+                    <Button
+                        onClick={fetchData}
+                        disabled={!selectedWebsite || loading}
+                        loading={loading}
+                        className="w-full"
+                    >
+                        Vis brukersammensetning
+                    </Button>
+                </>
+            }
+        >
+            {error && (
+                <Alert variant="error" className="mb-4">
+                    {error}
+                </Alert>
+            )}
+
+            {loading && (
+                <div className="flex justify-center items-center h-full">
+                    <Loader size="xlarge" title="Henter data..." />
+                </div>
+            )}
+
+            {!loading && data && (
+                <>
+                    <Tabs value={activeCategory} onChange={setActiveCategory}>
+                        <Tabs.List>
+                            <Tabs.Tab value="browser" label="Nettleser" />
+                            <Tabs.Tab value="os" label="Operativsystem" />
+                            <Tabs.Tab value="device" label="Enhet" />
+                            <Tabs.Tab value="screen" label="Skjerm" />
+                            <Tabs.Tab value="language" label="Språk" />
+                            <Tabs.Tab value="country" label="Land" />
+                            {data?.data?.some((item: any) => item.category === 'custom') && (
+                                <Tabs.Tab value="custom" label="Egendefinert" />
+                            )}
+                        </Tabs.List>
+
+                        <div className="mt-6">
+                            <ResultsDisplay
+                                result={getCategoryData()}
+                                loading={false}
+                                error={null}
+                                queryStats={queryStats}
+                                lastAction="run"
+                                showLoadingMessage={false}
+                                executeQuery={() => { }}
+                                handleRetry={() => { }}
+                                prepareLineChartData={prepareLineChartData}
+                                prepareBarChartData={prepareBarChartData}
+                                preparePieChartData={preparePieChartData}
+                                hideHeading={true}
+                                hiddenTabs={['linechart', 'areachart']}
                             />
-
-                            <Button
-                                onClick={fetchData}
-                                disabled={!selectedWebsite || loading}
-                                loading={loading}
-                                className="w-full"
-                            >
-                                Vis brukersammensetning
-                            </Button>
                         </div>
-                    </div>
-                </div>
-
-                <div className="md:col-span-2 min-h-[600px] bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    {error && (
-                        <Alert variant="error" className="mb-4">
-                            {error}
-                        </Alert>
-                    )}
-
-                    {loading && (
-                        <div className="flex justify-center items-center h-full">
-                            <Loader size="xlarge" title="Henter data..." />
-                        </div>
-                    )}
-
-                    {!loading && data && (
-                        <>
-                            <Tabs value={activeCategory} onChange={setActiveCategory}>
-                                <Tabs.List>
-                                    <Tabs.Tab value="browser" label="Nettleser" />
-                                    <Tabs.Tab value="os" label="Operativsystem" />
-                                    <Tabs.Tab value="device" label="Enhet" />
-                                    <Tabs.Tab value="screen" label="Skjerm" />
-                                    <Tabs.Tab value="language" label="Språk" />
-                                    <Tabs.Tab value="country" label="Land" />
-                                    {data?.data?.some((item: any) => item.category === 'custom') && (
-                                        <Tabs.Tab value="custom" label="Egendefinert" />
-                                    )}
-                                </Tabs.List>
-
-                                <div className="mt-6">
-                                    <ResultsDisplay
-                                        result={getCategoryData()}
-                                        loading={false}
-                                        error={null}
-                                        queryStats={queryStats}
-                                        lastAction="run"
-                                        showLoadingMessage={false}
-                                        executeQuery={() => { }}
-                                        handleRetry={() => { }}
-                                        prepareLineChartData={prepareLineChartData}
-                                        prepareBarChartData={prepareBarChartData}
-                                        preparePieChartData={preparePieChartData}
-                                        hideHeading={true}
-                                        hiddenTabs={['linechart', 'areachart']}
-                                    />
-                                </div>
-                            </Tabs>
-                        </>
-                    )}
-                </div>
-
-            </div>
-            <AnalyticsNavigation currentPage="brukersammensetning" />
-        </div>
+                    </Tabs>
+                </>
+            )}
+        </ChartLayout>
     );
 };
 
