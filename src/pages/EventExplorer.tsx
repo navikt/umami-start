@@ -272,10 +272,10 @@ const EventExplorer = () => {
         <div className="py-8 max-w-[1600px] mx-auto">
             <div className="mb-8">
                 <Heading level="1" size="xlarge" className="mb-2">
-                    Utforsk egendefinerte hendelser
+                    Egendefinerte hendelser
                 </Heading>
                 <BodyShort className="text-gray-600">
-                    Utforsk hendelser og deres parametere.
+                    Utforsk egendefinerte hendelser.
                 </BodyShort>
             </div>
 
@@ -635,11 +635,11 @@ const EventExplorer = () => {
                         </div>
                     )}
 
-                    {!hasSearched && !loadingEvents && (
+                    {/* {!hasSearched && !loadingEvents && (
                         <div className="flex justify-center items-center h-full text-gray-500">
                             Velg nettside og trykk "Vis hendelser" for å starte.
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
             <AnalyticsNavigation currentPage="event-explorer" />

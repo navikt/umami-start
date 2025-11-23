@@ -43,7 +43,7 @@ export const analyticsPages = [
     {
         id: 'event-explorer',
         href: '/event-explorer',
-        label: 'Utforsk hendelser',
+        label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
     }
 ];
