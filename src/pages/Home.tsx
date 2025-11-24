@@ -41,9 +41,9 @@ function Home() {
                     ))}
                 </div>
 
-                <div style={{ marginBottom: '80px' }}>
-                    <Heading spacing={true} as="h3" size="medium" style={{ marginBottom: '16px' }}>Lag grafer og tabeller for Metabase</Heading>
-                    <p style={{ fontSize: '18px', lineHeight: '1.6', maxWidth: '65ch' }}>
+                <div className="mb-20">
+                    <Heading spacing={true} as="h3" size="medium" className="pb-1">Lag grafer og tabeller for Metabase</Heading>
+                    <p className="text-xl leading-relaxed max-w-prose">
                         <Link href="/grafbygger">Grafbyggeren</Link> hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
                     </p>
                 </div>
