@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup } from '@navikt/ds-react';
-import { SankeyChart, IChartProps } from '@fluentui/react-charting';
-import { Download, Maximize2, Minimize2 } from 'lucide-react';
+import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
+import { Download, Minimize2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -21,22 +21,6 @@ const UserJourney = () => {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-    const [containerWidth, setContainerWidth] = useState<number>(1000);
-    const chartContainerRef = useRef<HTMLDivElement>(null);
-
-    // Measure container width for responsive chart sizing
-    useEffect(() => {
-        const updateWidth = () => {
-            if (chartContainerRef.current) {
-                const width = chartContainerRef.current.offsetWidth;
-                setContainerWidth(width - 40); // Subtract padding
-            }
-        };
-
-        updateWidth();
-        window.addEventListener('resize', updateWidth);
-        return () => window.removeEventListener('resize', updateWidth);
-    }, [data, activeTab]);
 
     // Helper function to normalize URL input - extracts path from full URLs
     const normalizeUrlToPath = (input: string): string => {
@@ -359,13 +343,10 @@ const UserJourney = () => {
                             )}
                                  */}
 
-                            <div ref={chartContainerRef} style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', width: '100%' }}>
-                                <SankeyChart
-                                    data={data}
-                                    height={isFullscreen ? window.innerHeight - 120 : 700}
-                                    width={isFullscreen ? window.innerWidth - 100 : containerWidth}
-                                    shouldResize={isFullscreen ? window.innerWidth - 100 : containerWidth}
-                                />
+                            <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', width: '100%' }}>
+                                <ResponsiveContainer>
+                                    <SankeyChart data={data} />
+                                </ResponsiveContainer>
                             </div>
                         </div>
                     </Tabs.Panel>

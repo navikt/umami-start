@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heading, BodyShort } from '@navikt/ds-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import AnalyticsNavigation, { type AnalyticsPage } from './AnalyticsNavigation';
@@ -19,6 +19,15 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     currentPage
 }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    // Trigger window resize event when sidebar toggles to help charts resize
+    useEffect(() => {
+        // Small delay to ensure DOM has updated
+        const timer = setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [isSidebarOpen]);
 
     return (
         <div className="py-8 max-w-[1600px] mx-auto">

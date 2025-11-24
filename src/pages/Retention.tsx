@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch } from '@navikt/ds-react';
-import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
+import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -236,13 +236,13 @@ const Retention = () => {
                     <Tabs.Panel value="chart" className="pt-4">
                         <div style={{ width: '100%', height: '500px' }}>
                             {chartData && (
-                                <LineChart
-                                    data={chartData.data}
-                                    legendsOverflowText={'Overflow Items'}
-                                    yAxisTickFormat={(d: any) => `${d}% `}
-                                    height={500}
-                                    width={800}
-                                />
+                                <ResponsiveContainer>
+                                    <LineChart
+                                        data={chartData.data}
+                                        legendsOverflowText={'Overflow Items'}
+                                        yAxisTickFormat={(d: any) => `${d}% `}
+                                    />
+                                </ResponsiveContainer>
                             )}
                         </div>
                     </Tabs.Panel>
