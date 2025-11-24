@@ -45,7 +45,8 @@ const TrafficAnalysis = () => {
         let endDate: Date;
 
         if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            // Use UTC to avoid timezone issues where local midnight is previous month in UTC
+            startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
             endDate = now;
         } else {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -66,7 +67,7 @@ const TrafficAnalysis = () => {
             }
 
             // Always fetch flow data as it's needed for the tabs
-            await fetchFlowData(startDate, endDate);
+            await fetchFlowData(startDate, endDate, metricType);
 
         } catch (err: any) {
             console.error('Error fetching traffic data:', err);
@@ -76,7 +77,7 @@ const TrafficAnalysis = () => {
         }
     };
 
-    const fetchFlowData = async (providedStartDate?: Date, providedEndDate?: Date) => {
+    const fetchFlowData = async (providedStartDate?: Date, providedEndDate?: Date, metricTypeOverride?: string) => {
         if (!selectedWebsite) return;
 
         // Use provided dates or calculate them
@@ -89,7 +90,8 @@ const TrafficAnalysis = () => {
         } else {
             const now = new Date();
             if (period === 'current_month') {
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                // Use UTC to avoid timezone issues where local midnight is previous month in UTC
+                startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
                 endDate = now;
             } else {
                 startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -97,10 +99,12 @@ const TrafficAnalysis = () => {
             }
         }
 
+        const metricToUse = metricTypeOverride || submittedMetricType;
+
         try {
             // Fetch Flow Data
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${submittedMetricType}`;
+            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${metricToUse}`;
             const flowResponse = await fetch(flowUrl);
             if (!flowResponse.ok) throw new Error('Kunne ikke hente trafikkflyt');
             const flowResult = await flowResponse.json();
@@ -242,7 +246,9 @@ const TrafficAnalysis = () => {
                     <Table.Header>
                         <Table.Row>
                             <Table.HeaderCell>Navn</Table.HeaderCell>
-                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                            <Table.HeaderCell align="right">
+                                {submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                            </Table.HeaderCell>
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
