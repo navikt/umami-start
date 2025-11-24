@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Heading, BodyShort } from '@navikt/ds-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import AnalyticsNavigation, { AnalyticsPage } from './AnalyticsNavigation';
+import AnalyticsNavigation, { type AnalyticsPage } from './AnalyticsNavigation';
 
 interface ChartLayoutProps {
     title: string;
