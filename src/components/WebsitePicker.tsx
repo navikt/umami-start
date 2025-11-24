@@ -20,6 +20,8 @@ interface WebsitePickerProps {
   resetIncludeParams?: boolean; // Add flag to reset includeParams
   requestIncludeParams?: boolean; // Add flag to request loading params
   variant?: 'default' | 'minimal'; // Add variant prop
+  disableAutoEvents?: boolean; // Add flag to disable auto-fetching of events
+  requestLoadEvents?: boolean; // Add flag to manually trigger event loading
 }
 
 interface EventProperty {
@@ -96,7 +98,9 @@ const WebsitePicker = ({
   onIncludeParamsChange,
   resetIncludeParams = false,
   requestIncludeParams = false,
-  variant = 'default'
+  variant = 'default',
+  disableAutoEvents = false,
+  requestLoadEvents = false
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -243,11 +247,34 @@ const WebsitePicker = ({
     };
   }, []);
 
+  const [fullEventsLoadedId, setFullEventsLoadedId] = useState<string | null>(null);
+
   // @ts-ignore
   // @ts-ignore
-  const fetchEventNames = useCallback(async (website: Website, forceFresh = false, daysToFetch = dateRangeInDays) => {
+  const fetchEventNames = useCallback(async (website: Website, forceFresh = false, daysToFetch = dateRangeInDays, metadataOnly = false) => {
     const websiteId = website.id;
     if (fetchInProgress.current[websiteId]) return;
+
+    // Calculate max available days using website creation date
+    const endDate = new Date();
+    const startDate = website.createdAt ? new Date(website.createdAt) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+    // Calculate difference in milliseconds
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    // Convert to days and round up to include partial days
+    let totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Ensure totalDays is valid and at least 1
+    if (isNaN(totalDays) || totalDays < 1) {
+      totalDays = 1;
+    }
+
+    if (metadataOnly) {
+      if (onEventsLoad) {
+        onEventsLoad([], [], totalDays);
+      }
+      return;
+    }
 
     fetchInProgress.current[websiteId] = true;
     setError(null); // Clear any previous errors
@@ -260,20 +287,6 @@ const WebsitePicker = ({
 
       // Use local API endpoint that queries BigQuery
       const apiBase = '/api/bigquery';
-
-      // Calculate max available days using website creation date
-      const endDate = new Date();
-      const startDate = website.createdAt ? new Date(website.createdAt) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-
-      // Calculate difference in milliseconds
-      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-      // Convert to days and round up to include partial days
-      let totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      // Ensure totalDays is valid and at least 1
-      if (isNaN(totalDays) || totalDays < 1) {
-        totalDays = 1;
-      }
 
       // Use the daysToFetch parameter instead of the state variable
       const calculatedEndDate = new Date();
@@ -442,19 +455,37 @@ const WebsitePicker = ({
 
   // Fetch events when a website is selected (only if onEventsLoad callback is provided)
   useEffect(() => {
-    if (selectedWebsite && selectedWebsite.id !== loadedWebsiteId && onEventsLoad) {
-      // Clear cache when website changes
-      apiCache.current = {};
-
-      fetchEventNames(selectedWebsite, false, dateRangeInDays)
-        .finally(() => {
-          setLoadedWebsiteId(selectedWebsite.id);
-        });
-    } else if (!selectedWebsite && loadedWebsiteId) {
-      // Clear loadedWebsiteId when website is deselected/reset
-      setLoadedWebsiteId(null);
+    if (!selectedWebsite || !onEventsLoad) {
+      if (!selectedWebsite && loadedWebsiteId) {
+        setLoadedWebsiteId(null);
+        setFullEventsLoadedId(null);
+      }
+      return;
     }
-  }, [selectedWebsite?.id, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays]);
+
+    const isNewWebsite = selectedWebsite.id !== loadedWebsiteId;
+    const needsFullLoad = requestLoadEvents && fullEventsLoadedId !== selectedWebsite.id;
+
+    if (isNewWebsite) {
+      if (disableAutoEvents && !requestLoadEvents) {
+        // Metadata only fetch
+        fetchEventNames(selectedWebsite, false, dateRangeInDays, true);
+        setLoadedWebsiteId(selectedWebsite.id);
+        setFullEventsLoadedId(null);
+      } else {
+        // Full fetch
+        apiCache.current = {};
+        fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+        setLoadedWebsiteId(selectedWebsite.id);
+        setFullEventsLoadedId(selectedWebsite.id);
+      }
+    } else if (needsFullLoad) {
+      // We are on the same website, but now requesting full load
+      apiCache.current = {};
+      fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+      setFullEventsLoadedId(selectedWebsite.id);
+    }
+  }, [selectedWebsite, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, disableAutoEvents, requestLoadEvents, fullEventsLoadedId]);
 
   // Reload when includeParams changes (only if onEventsLoad callback is provided)
   useEffect(() => {

@@ -14,15 +14,15 @@ const EVENT_TYPES = [
 
 // Filter suggestions to make common filters easier to apply
 const FILTER_SUGGESTIONS = [
-  { 
+  {
     id: 'pageviews',
-    label: 'Besøk (sidevisninger)', 
+    label: 'Besøk (sidevisninger)',
     filters: [{ column: 'event_type', operator: '=', value: '1' }],
     description: 'Viser kun sidevisninger'
   },
-  { 
+  {
     id: 'custom_events',
-    label: 'Egendefinerte hendelser', 
+    label: 'Egendefinerte hendelser',
     filters: [{ column: 'event_type', operator: '=', value: '2' }],
     description: 'Viser kun egendefinerte hendelser'
   }
@@ -35,6 +35,7 @@ interface ChartFiltersProps {
   setFilters: (filters: Filter[]) => void;
   availableEvents?: string[];
   maxDaysAvailable?: number; // Added this prop to receive date range info
+  onEnableCustomEvents?: () => void;
 }
 
 const ChartFilters = forwardRef(({
@@ -42,10 +43,11 @@ const ChartFilters = forwardRef(({
   parameters,
   setFilters,
   availableEvents = [],
-  maxDaysAvailable = 365 // Default to a year if not provided
+  maxDaysAvailable = 365, // Default to a year if not provided
+  onEnableCustomEvents
 }: ChartFiltersProps, ref) => {
   // Add state for custom period inputs
-  const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, {amount: string, unit: string}>>({});
+  const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, { amount: string, unit: string }>>({});
   // Change to store array instead of single string
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(['pageviews']);
   // Add state for selected date range - default to last 7 days
@@ -64,15 +66,15 @@ const ChartFilters = forwardRef(({
   // Add these new state variables
   const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific' | 'interactive'>('all');
   const [customEventsMode, setCustomEventsMode] = useState<'all' | 'specific' | 'interactive'>('all');
-  
+
   // Add alert state
-  const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
+  const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
     message: ''
   });
-  
+
   // Add a separate alert state for staging area
-  const [stagingAlertInfo, setStagingAlertInfo] = useState<{show: boolean, message: string}>({
+  const [stagingAlertInfo, setStagingAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
     message: ''
   });
@@ -87,8 +89,8 @@ const ChartFilters = forwardRef(({
     // Filter out null or undefined events and then filter for custom events
     return availableEvents
       .filter(event => event != null) // Filter out null/undefined events
-      .filter(event => 
-        !event.toLowerCase().startsWith('pageview') && 
+      .filter(event =>
+        !event.toLowerCase().startsWith('pageview') &&
         !event.includes('/')
       );
   }, [availableEvents]);
@@ -99,13 +101,13 @@ const ChartFilters = forwardRef(({
     availableEvents.forEach(event => {
       // Skip null events
       if (event == null) return;
-      
+
       // Check if it's a pageview event (starts with '/' or contains 'pageview')
       if (event.startsWith('/')) {
         paths.add(event);
       }
     });
-    
+
     // Sort paths alphabetically
     return Array.from(paths).sort((a, b) => a.localeCompare(b));
   }, [availableEvents]);
@@ -123,10 +125,10 @@ const ChartFilters = forwardRef(({
       // Check if this is an interactive filter
       if (stagingFilter.operator === 'INTERACTIVE') {
         // Generate parameter name based on column name
-        const paramName = stagingFilter.column === 'url_path' ? 'url_sti' : 
-                          stagingFilter.column === 'event_name' ? 'hendelse' :
-                          stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-        
+        const paramName = stagingFilter.column === 'url_path' ? 'url_sti' :
+          stagingFilter.column === 'event_name' ? 'hendelse' :
+            stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
         // Create interactive filter
         const interactiveFilter = {
           ...stagingFilter,
@@ -135,29 +137,29 @@ const ChartFilters = forwardRef(({
           metabaseParam: true,
           interactive: true
         };
-        
+
         setFilters([...filters, interactiveFilter]);
       } else {
         // Regular filter
         setFilters([...filters, stagingFilter]);
       }
-      
+
       setStagingFilter(null);
-      
+
       // Show alert in the staging area
       if (stagingAlertTimeoutRef.current) {
         clearTimeout(stagingAlertTimeoutRef.current);
         stagingAlertTimeoutRef.current = null;
       }
-      
+
       setStagingAlertInfo({
         show: true,
         message: `Filter lagt til under aktive filter`
       });
-      
+
       // Auto-hide staging alert after 4 seconds
       stagingAlertTimeoutRef.current = setTimeout(() => {
-        setStagingAlertInfo(prev => ({...prev, show: false}));
+        setStagingAlertInfo(prev => ({ ...prev, show: false }));
         stagingAlertTimeoutRef.current = null;
       }, 4000);
     }
@@ -167,8 +169,8 @@ const ChartFilters = forwardRef(({
     const filterToRemove = filters[index];
     // Check if this filter was added by a suggestion
     const isSuggestionFilter = FILTER_SUGGESTIONS.some(suggestion =>
-      suggestion.filters.some(f => 
-        f.column === filterToRemove.column && 
+      suggestion.filters.some(f =>
+        f.column === filterToRemove.column &&
         f.operator === filterToRemove.operator &&
         f.value === filterToRemove.value
       )
@@ -177,17 +179,17 @@ const ChartFilters = forwardRef(({
     if (isSuggestionFilter) {
       setSelectedEventTypes([]);
     }
-    
+
     // If removing date filter, clear date range selection
     if (filterToRemove.column === 'created_at') {
       setSelectedDateRange('');
     }
-    
+
     setFilters(filters.filter((_, i) => i !== index));
   };
 
   const updateFilter = (index: number, updates: Partial<Filter>) => {
-    setFilters(filters.map((filter, i) => 
+    setFilters(filters.map((filter, i) =>
       i === index ? { ...filter, ...updates } : filter
     ));
   };
@@ -195,7 +197,7 @@ const ChartFilters = forwardRef(({
   // Replace toggleFilterSuggestion with new handler
   const handleEventTypeChange = (eventType: string, isChecked: boolean) => {
     let newSelection = [...selectedEventTypes];
-    
+
     if (isChecked) {
       if (!newSelection.includes(eventType)) {
         newSelection.push(eventType);
@@ -203,26 +205,26 @@ const ChartFilters = forwardRef(({
     } else {
       newSelection = newSelection.filter(type => type !== eventType);
     }
-    
+
     setSelectedEventTypes(newSelection);
-    
+
     // Remove any existing event_type filters
-    const cleanFilters = filters.filter(existingFilter => 
+    const cleanFilters = filters.filter(existingFilter =>
       existingFilter.column !== 'event_type'
     );
-    
+
     // Add new filters based on selection
     const filtersToApply = [...cleanFilters];
-    
+
     // If both types are selected, use the IN operator
     if (newSelection.includes('pageviews') && newSelection.includes('custom_events')) {
-      filtersToApply.push({ 
-        column: 'event_type', 
-        operator: 'IN', 
+      filtersToApply.push({
+        column: 'event_type',
+        operator: 'IN',
         value: '1',
         multipleValues: ['1', '2']
       });
-    } 
+    }
     // If only one type is selected, use the = operator
     else if (newSelection.includes('pageviews')) {
       filtersToApply.push({ column: 'event_type', operator: '=', value: '1' });
@@ -230,9 +232,9 @@ const ChartFilters = forwardRef(({
     else if (newSelection.includes('custom_events')) {
       filtersToApply.push({ column: 'event_type', operator: '=', value: '2' });
     }
-    
+
     setFilters(filtersToApply);
-    
+
     // Only reset these selections when fully unchecking a section, not when adding
     if (!isChecked) {
       if (eventType === 'pageviews') {
@@ -251,30 +253,30 @@ const ChartFilters = forwardRef(({
   const handleCustomEventsChange = (selectedEvents: string[], operator: string = eventNameOperator) => {
     setCustomEvents(selectedEvents);
     setEventNameOperator(operator);
-    
+
     // Find and remove any existing event_name filters
     const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
-    
+
     // Only add event_name filter if events are selected
     if (selectedEvents.length > 0) {
       // For IN operator, use multipleValues
       if (operator === 'IN') {
         setFilters([
           ...filtersWithoutEventNames,
-          { 
-            column: 'event_name', 
-            operator: 'IN', 
+          {
+            column: 'event_name',
+            operator: 'IN',
             value: selectedEvents[0],
             multipleValues: selectedEvents
           }
         ]);
-      } 
+      }
       // For other operators (LIKE, STARTS_WITH, etc.), use normal format
       else {
         setFilters([
           ...filtersWithoutEventNames,
-          { 
-            column: 'event_name', 
+          {
+            column: 'event_name',
             operator: operator,
             value: selectedEvents[0]
           }
@@ -290,32 +292,32 @@ const ChartFilters = forwardRef(({
   const handlePathsChange = (paths: string[], operator: string = urlPathOperator) => {
     setSelectedPaths(paths);
     setUrlPathOperator(operator);
-    
+
     // Find and remove any existing url_path filters
-    const filtersWithoutPaths = filters.filter(f => 
+    const filtersWithoutPaths = filters.filter(f =>
       !(f.column === 'url_path')
     );
-    
+
     // Only add url_path filter if paths are selected
     if (paths.length > 0) {
       // For IN operator, use multipleValues
       if (operator === 'IN') {
         setFilters([
           ...filtersWithoutPaths,
-          { 
-            column: 'url_path', 
-            operator: 'IN', 
+          {
+            column: 'url_path',
+            operator: 'IN',
             value: paths[0],
             multipleValues: paths
           }
         ]);
-      } 
+      }
       // For other operators (LIKE, STARTS_WITH, etc.), use normal format
       else {
         setFilters([
           ...filtersWithoutPaths,
-          { 
-            column: 'url_path', 
+          {
+            column: 'url_path',
             operator: operator,
             value: paths[0]
           }
@@ -359,7 +361,7 @@ const ChartFilters = forwardRef(({
         fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
         toSQL: "CURRENT_TIMESTAMP()"
       };
-      
+
       setFilters([
         ...filters,
         {
@@ -445,7 +447,7 @@ const ChartFilters = forwardRef(({
   const resetFilters = (silent = false) => {
     // Ensure filters are completely cleared
     setFilters([]);
-    
+
     // Reset UI state but keep 'pageviews' suggestion active
     setSelectedEventTypes(['pageviews']);
     setSelectedDateRange('');
@@ -457,11 +459,11 @@ const ChartFilters = forwardRef(({
     setCustomPeriodInputs({});
     setStagingFilter(null);
     setInteractiveMode(false);
-    
+
     // Close all filter panels
     setActiveFilters(false);
     setAdvancedFilters(false);
-    
+
     // Force immediate UI update for filter count by using a setTimeout with 0ms
     setTimeout(() => {
       // Apply initial pageviews filter
@@ -470,10 +472,10 @@ const ChartFilters = forwardRef(({
         setFilters([...pageviewsFilter.filters]);
       }
     }, 0);
-    
+
     // Clear date picker state through ref
     dateRangePickerRef.current?.clearDateRange();
-    
+
     // Only show alert if not silent
     if (!silent) {
       // Clear any existing timeout
@@ -481,14 +483,14 @@ const ChartFilters = forwardRef(({
         clearTimeout(alertTimeoutRef.current);
         alertTimeoutRef.current = null;
       }
-      
+
       setAlertInfo({
         show: true,
         message: 'Alle filtre ble tilbakestilt'
       });
-      
+
       alertTimeoutRef.current = setTimeout(() => {
-        setAlertInfo(prev => ({...prev, show: false}));
+        setAlertInfo(prev => ({ ...prev, show: false }));
         alertTimeoutRef.current = null;
       }, 4000);
     }
@@ -497,26 +499,26 @@ const ChartFilters = forwardRef(({
   // Add function to handle setting a filter as interactive
   const handleSetInteractiveFilter = (index: number, column: string) => {
     // Generate parameter name based on column name
-    const paramName = column === 'url_path' ? 'url_sti' : 
-                      column === 'event_name' ? 'hendelse' :
-                      column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    
+    const paramName = column === 'url_path' ? 'url_sti' :
+      column === 'event_name' ? 'hendelse' :
+        column.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
     updateFilter(index, {
       operator: '=',
       value: `{{${paramName}}}`,
       metabaseParam: true,
       interactive: true
     });
-    
+
     // Show success alert
     setAlertInfo({
       show: true,
       message: `Filter for ${column} satt til interaktiv modus.`
     });
-    
+
     // Auto-hide alert after 5 seconds
     setTimeout(() => {
-      setAlertInfo(prev => ({...prev, show: false}));
+      setAlertInfo(prev => ({ ...prev, show: false }));
     }, 4000);
   };
 
@@ -529,7 +531,7 @@ const ChartFilters = forwardRef(({
       clearTimeout(alertTimeoutRef.current);
       alertTimeoutRef.current = null;
     }
-    setAlertInfo(prev => ({...prev, show: false}));
+    setAlertInfo(prev => ({ ...prev, show: false }));
   };
 
   const handleStagingAlertClose = () => {
@@ -537,7 +539,7 @@ const ChartFilters = forwardRef(({
       clearTimeout(stagingAlertTimeoutRef.current);
       stagingAlertTimeoutRef.current = null;
     }
-    setStagingAlertInfo(prev => ({...prev, show: false}));
+    setStagingAlertInfo(prev => ({ ...prev, show: false }));
   };
 
   // Clear timeouts when component unmounts
@@ -569,11 +571,11 @@ const ChartFilters = forwardRef(({
         <Heading level="2" size="small" spacing>
           Hvilke hendelser vil du inkludere?
         </Heading>
-        
+
         {/* Add reset button next to the heading */}
-        <Button 
-          variant="tertiary" 
-          size="small" 
+        <Button
+          variant="tertiary"
+          size="small"
           onClick={() => resetFilters(false)} // Explicitly pass false to show alert
           className="mb-2"
         >
@@ -581,12 +583,12 @@ const ChartFilters = forwardRef(({
         </Button>
       </div>
 
-      <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative"> 
+      <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative">
         <div>
           {/* Show alert if it's active */}
           {alertInfo.show && (
             <div className="mb-4">
-              <AlertWithCloseButton 
+              <AlertWithCloseButton
                 variant="success"
                 onClose={handleAlertClose}
               >
@@ -594,7 +596,7 @@ const ChartFilters = forwardRef(({
               </AlertWithCloseButton>
             </div>
           )}
-          
+
           {/* Replace the Velg hendelse section with EventSelector component */}
           <EventSelector
             selectedEventTypes={selectedEventTypes}
@@ -615,6 +617,7 @@ const ChartFilters = forwardRef(({
             customEventsList={customEventsList}
             filters={filters}
             OPERATORS={OPERATORS}
+            onEnableCustomEvents={onEnableCustomEvents}
           />
 
           {/* Date Range Picker - Now AFTER event selection */}
@@ -637,7 +640,7 @@ const ChartFilters = forwardRef(({
               Flere filtervalg
             </Heading>
             <Switch className="mt-1" checked={advancedFilters} onChange={() => setAdvancedFilters(!advancedFilters)}>Legg til flere filtre</Switch>
-            
+
             {advancedFilters && (
               <div className="mb-4">
 
@@ -669,12 +672,12 @@ const ChartFilters = forwardRef(({
                           ))}
                       </optgroup>
                     ))}
-                    
+
                     {parameters.length > 0 && (
                       <optgroup label="Egendefinerte">
                         {uniqueParameters.map(param => (
-                          <option 
-                            key={`param_${param.key}`} 
+                          <option
+                            key={`param_${param.key}`}
                             value={`param_${getCleanParamName(param)}`}
                           >
                             {getParamDisplayName(param)}
@@ -688,7 +691,7 @@ const ChartFilters = forwardRef(({
                 {/* Show staging alert if it's active */}
                 {stagingAlertInfo.show && (
                   <div className="mb-4 mt-4">
-                    <AlertWithCloseButton 
+                    <AlertWithCloseButton
                       variant="success"
                       onClose={handleStagingAlertClose}
                     >
@@ -720,8 +723,8 @@ const ChartFilters = forwardRef(({
                           {parameters.length > 0 && (
                             <optgroup label="Egendefinerte">
                               {uniqueParameters.map(param => (
-                                <option 
-                                  key={`param_${param.key}`} 
+                                <option
+                                  key={`param_${param.key}`}
                                   value={`param_${getCleanParamName(param)}`}
                                 >
                                   {getParamDisplayName(param)}
@@ -747,7 +750,7 @@ const ChartFilters = forwardRef(({
                           </Select>
                         )}
                       </div>
-                      
+
                       {/* Value inputs based on column type */}
                       <div className="mt-3">
                         {/* Show info for interactive filters */}
@@ -757,66 +760,66 @@ const ChartFilters = forwardRef(({
                               <strong>Filtervalg i Metabase:</strong> Dette filteret vil bli brukt som filtervalg i Metabase.
                             </p>
                             <p className="mt-1 text-xs text-gray-600">
-                              Parameter vil være {stagingFilter.column === 'url_path' ? 'url_sti' : 
-                                                stagingFilter.column === 'event_name' ? 'hendelse' :
-                                                stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_')}
+                              Parameter vil være {stagingFilter.column === 'url_path' ? 'url_sti' :
+                                stagingFilter.column === 'event_name' ? 'hendelse' :
+                                  stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_')}
                             </p>
                           </div>
                         )}
-                        
+
                         {/* Event type dropdown */}
-                        {!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator || '') && 
-                        stagingFilter.column === 'event_type' && (
-                          <Select
-                            label="Hendelsestype"
-                            value={stagingFilter.value || ''}
-                            onChange={(e) => setStagingFilter({ ...stagingFilter, value: e.target.value })}
-                            size="small"
-                          >
-                            <option value="">Velg hendelsestype</option>
-                            {EVENT_TYPES.map(type => (
-                              <option key={type.value} value={type.value}>
-                                {type.label}
-                              </option>
-                            ))}
-                          </Select>
-                        )}
+                        {!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator || '') &&
+                          stagingFilter.column === 'event_type' && (
+                            <Select
+                              label="Hendelsestype"
+                              value={stagingFilter.value || ''}
+                              onChange={(e) => setStagingFilter({ ...stagingFilter, value: e.target.value })}
+                              size="small"
+                            >
+                              <option value="">Velg hendelsestype</option>
+                              {EVENT_TYPES.map(type => (
+                                <option key={type.value} value={type.value}>
+                                  {type.label}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
 
                         {/* Replace all other value inputs with Combobox */}
-                        {!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator || '') && 
-                        stagingFilter.column !== 'event_type' && 
-                        stagingFilter.column !== 'created_at' && (
-                          <UNSAFE_Combobox
-                            label="Verdi"
-                            description={stagingFilter.column === 'url_path' ? "Velg eller skriv inn URL-stier" : 
-                                        stagingFilter.column === 'event_name' ? "Velg eller skriv inn hendelser" : 
-                                        "Velg eller skriv inn verdier"}
-                            options={getOptionsForColumn(stagingFilter.column, availableEvents, availablePaths)}
-                            selectedOptions={stagingFilter.multipleValues?.map(v => v || '') || 
-                                            (stagingFilter.value ? [stagingFilter.value] : [])}
-                            onToggleSelected={(option, isSelected) => {
-                              if (option) {
-                                const currentValues = stagingFilter.multipleValues || 
-                                                    (stagingFilter.value ? [stagingFilter.value] : []);
-                                const newValues = isSelected 
-                                  ? [...new Set([...currentValues, option])]  // Ensure unique values
-                                  : currentValues.filter(val => val !== option);
-                                
-                                setStagingFilter({
-                                  ...stagingFilter,
-                                  operator: newValues.length > 1 ? 'IN' : stagingFilter.operator,
-                                  multipleValues: newValues.length > 0 ? newValues : undefined,
-                                  value: newValues.length > 0 ? newValues[0] : ''
-                                });
-                              }
-                            }}
-                            isMultiSelect={true}
-                            size="small"
-                            clearButton
-                            allowNewValues={stagingFilter.column !== 'event_type'}
-                            shouldAutocomplete={false}
-                          />
-                        )}
+                        {!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator || '') &&
+                          stagingFilter.column !== 'event_type' &&
+                          stagingFilter.column !== 'created_at' && (
+                            <UNSAFE_Combobox
+                              label="Verdi"
+                              description={stagingFilter.column === 'url_path' ? "Velg eller skriv inn URL-stier" :
+                                stagingFilter.column === 'event_name' ? "Velg eller skriv inn hendelser" :
+                                  "Velg eller skriv inn verdier"}
+                              options={getOptionsForColumn(stagingFilter.column, availableEvents, availablePaths)}
+                              selectedOptions={stagingFilter.multipleValues?.map(v => v || '') ||
+                                (stagingFilter.value ? [stagingFilter.value] : [])}
+                              onToggleSelected={(option, isSelected) => {
+                                if (option) {
+                                  const currentValues = stagingFilter.multipleValues ||
+                                    (stagingFilter.value ? [stagingFilter.value] : []);
+                                  const newValues = isSelected
+                                    ? [...new Set([...currentValues, option])]  // Ensure unique values
+                                    : currentValues.filter(val => val !== option);
+
+                                  setStagingFilter({
+                                    ...stagingFilter,
+                                    operator: newValues.length > 1 ? 'IN' : stagingFilter.operator,
+                                    multipleValues: newValues.length > 0 ? newValues : undefined,
+                                    value: newValues.length > 0 ? newValues[0] : ''
+                                  });
+                                }
+                              }}
+                              isMultiSelect={true}
+                              size="small"
+                              clearButton
+                              allowNewValues={stagingFilter.column !== 'event_type'}
+                              shouldAutocomplete={false}
+                            />
+                          )}
                       </div>
 
                       {/* Action buttons at the bottom */}
@@ -842,12 +845,12 @@ const ChartFilters = forwardRef(({
               </div>
             )}
           </div>
-          
+
           {/* Active filters section */}
           <Switch className="-mt-1 -mb-1" checked={activeFilters} onChange={() => setActiveFilters(!activeFilters)}>
             {filters.length === 0 ? 'Vis aktive filtre' : `Vis aktive filter (${getActiveFilterCount()})`}
           </Switch>
-          
+
           {activeFilters && (
             <>
               <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
@@ -863,7 +866,7 @@ const ChartFilters = forwardRef(({
                     {filters.some(isDateRangeFilter) && (
                       <div className="bg-gray-50 p-4 rounded-md border shadow-sm">Datofilter er lagt til</div>
                     )}
-                    
+
                     {/* Only show non-date range filters in the regular filter list */}
                     {filters.map((filter, index) => !isDateRangeFilter(filter) && (
                       <div key={index} className="bg-gray-50 p-4 rounded-md border shadow-sm">
@@ -888,8 +891,8 @@ const ChartFilters = forwardRef(({
                                 {parameters.length > 0 && (
                                   <optgroup label="Egendefinerte">
                                     {uniqueParameters.map(param => (
-                                      <option 
-                                        key={`param_${param.key}`} 
+                                      <option
+                                        key={`param_${param.key}`}
                                         value={`param_${getCleanParamName(param)}`}
                                       >
                                         {getParamDisplayName(param)}
@@ -898,7 +901,7 @@ const ChartFilters = forwardRef(({
                                   </optgroup>
                                 )}
                               </Select>
-                              
+
                               {/* Add interactive toggle button */}
                               {filter.interactive ? (
                                 <div className="ml-2 mb-1">
@@ -916,7 +919,7 @@ const ChartFilters = forwardRef(({
                                   Gjør til filtervalg
                                 </Button>
                               )}
-                              
+
                               {filter.column !== 'created_at' && !filter.interactive && (
                                 <Select
                                   label="Operator"
@@ -932,7 +935,7 @@ const ChartFilters = forwardRef(({
                                 </Select>
                               )}
                             </div>
-                            
+
                             {/* Show parameter name for interactive filters */}
                             {filter.interactive ? (
                               <div className="mt-3 bg-blue-50 p-3 rounded text-sm">
@@ -949,33 +952,33 @@ const ChartFilters = forwardRef(({
                                 <div className="mt-3">
                                   <UNSAFE_Combobox
                                     label="Verdi"
-                                    description={filter.column === 'url_path' ? "Velg eller skriv inn URL-stier" : 
-                                                filter.column === 'event_name' ? "Velg eller skriv inn hendelser" : 
-                                                "Velg eller skriv inn verdier"}
+                                    description={filter.column === 'url_path' ? "Velg eller skriv inn URL-stier" :
+                                      filter.column === 'event_name' ? "Velg eller skriv inn hendelser" :
+                                        "Velg eller skriv inn verdier"}
                                     options={getOptionsForColumn(filter.column, availableEvents, availablePaths)}
-                                    selectedOptions={filter.multipleValues?.map(v => v || '') || 
-                                                    (filter.value ? [filter.value] : [])}
+                                    selectedOptions={filter.multipleValues?.map(v => v || '') ||
+                                      (filter.value ? [filter.value] : [])}
                                     onToggleSelected={(option, isSelected) => {
                                       if (option) {
-                                        const currentValues = filter.multipleValues || 
-                                                            (filter.value ? [filter.value] : []);
-                                        const newValues = isSelected 
+                                        const currentValues = filter.multipleValues ||
+                                          (filter.value ? [filter.value] : []);
+                                        const newValues = isSelected
                                           ? [...new Set([...currentValues, option])]  // Ensure unique values
                                           : currentValues.filter(val => val !== option);
-                                      
-                                      updateFilter(index, {
-                                        operator: newValues.length > 1 ? 'IN' : filter.operator,
-                                        multipleValues: newValues.length > 0 ? newValues : undefined,
-                                        value: newValues.length > 0 ? newValues[0] : ''
-                                      });
-                                    }
-                                  }}
-                                  isMultiSelect={true}
-                                  size="small"
-                                  clearButton
-                                  allowNewValues={filter.column !== 'event_type'}
-                                  shouldAutocomplete={false}
-                                />
+
+                                        updateFilter(index, {
+                                          operator: newValues.length > 1 ? 'IN' : filter.operator,
+                                          multipleValues: newValues.length > 0 ? newValues : undefined,
+                                          value: newValues.length > 0 ? newValues[0] : ''
+                                        });
+                                      }
+                                    }}
+                                    isMultiSelect={true}
+                                    size="small"
+                                    clearButton
+                                    allowNewValues={filter.column !== 'event_type'}
+                                    shouldAutocomplete={false}
+                                  />
                                 </div>
                               )
                             )}

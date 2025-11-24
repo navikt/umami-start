@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Heading, VStack } from '@navikt/ds-react';
+import { Heading, VStack, Switch } from '@navikt/ds-react';
 import WebsitePicker from '../components/WebsitePicker';
 import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import SQLPreview from '../components/chartbuilder/sqlpreview';
@@ -251,6 +251,8 @@ const ChartsPage = () => {
   const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
   const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false); // Add state to request loading params
+  const [eventsRequested, setEventsRequested] = useState<boolean>(false); // State to trigger event fetching
+  const [showEventExplorer, setShowEventExplorer] = useState<boolean>(false); // State to control explorer visibility
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1380,7 +1382,7 @@ const ChartsPage = () => {
     }
   }, []);
 
-  const handleEventsLoad = (events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
+  const handleEventsLoad = useCallback((events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
     setAvailableEvents(events);
     if (autoParameters) {
       setParameters(autoParameters);
@@ -1390,7 +1392,7 @@ const ChartsPage = () => {
     }
     setDateRangeReady(true);
     setIsLoading(false);
-  };
+  }, []);
 
   const setParamAggregation = (strategy: 'representative' | 'unique') => {
     setConfig(prev => ({
@@ -1446,26 +1448,41 @@ const ChartsPage = () => {
                 onIncludeParamsChange={setIncludeParams}
                 resetIncludeParams={resetIncludeParams}
                 requestIncludeParams={requestIncludeParams}
+                disableAutoEvents={true}
+                requestLoadEvents={eventsRequested}
               />
             </section>
 
             {config.website && dateRangeReady && (
               <>
                 {/* Step 1: Explorer - Keep this in original position for learning purposes */}
-                <section className="mt-4">
-                  <EventParameterSelector
-                    availableEvents={availableEvents}
-                    parameters={parameters}
-                    setParameters={setParameters}
-                    maxDaysAvailable={maxDaysAvailable}
-                    dateRangeInDays={dateRangeInDays}
-                    tempDateRangeInDays={tempDateRangeInDays}
-                    handleDateRangeChange={handleDateRangeChange}
-                    dateChanged={dateChanged}
-                    isLoading={isLoading}
-                    includeParams={includeParams}
-                    onLoadDetailsClick={() => setRequestIncludeParams(true)}
-                  />
+                <section className='mb-1'>
+                  <div>
+                    <Switch
+                      checked={showEventExplorer}
+                      onChange={() => setShowEventExplorer(!showEventExplorer)}
+                    >
+                      Vis hendelsesutforsker
+                    </Switch>
+
+                    {showEventExplorer && (
+                      <div className="mt-4">
+                        <EventParameterSelector
+                          availableEvents={availableEvents}
+                          parameters={parameters}
+                          setParameters={setParameters}
+                          maxDaysAvailable={maxDaysAvailable}
+                          dateRangeInDays={dateRangeInDays}
+                          tempDateRangeInDays={tempDateRangeInDays}
+                          handleDateRangeChange={handleDateRangeChange}
+                          dateChanged={dateChanged}
+                          isLoading={isLoading}
+                          includeParams={includeParams}
+                          onLoadDetailsClick={() => setRequestIncludeParams(true)}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </section>
 
                 {/* Step 2: What to Calculate (Metrics) - Simplified to just metrics */}
@@ -1495,6 +1512,9 @@ const ChartsPage = () => {
                     setFilters={setFilters}
                     availableEvents={availableEvents}
                     maxDaysAvailable={maxDaysAvailable}
+                    onEnableCustomEvents={() => {
+                      setEventsRequested(true);
+                    }}
                   />
                 </section>
 
