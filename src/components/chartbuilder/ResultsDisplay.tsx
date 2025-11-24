@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart } from '@fluentui/react-charting';
+import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../lib/translations';
 import SqlCodeDisplay from './SqlCodeDisplay';
 import ShareModal from './ShareModal';
@@ -459,16 +459,18 @@ const ResultsDisplay = ({
                             Vis gjennomsnitt
                           </Switch>
                         </div>
-                        <LineChart
-                          data={chartData.data}
-                          height={400}
-                          legendsOverflowText="Flere"
-                          yAxisTickCount={10}
-                          allowMultipleShapesForPoints={false}
-                          enablePerfOptimization={true}
-                          width={700}
-                          margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                        />
+                        <div style={{ width: '100%', height: '400px' }}>
+                          <ResponsiveContainer>
+                            <LineChart
+                              data={chartData.data}
+                              legendsOverflowText="Flere"
+                              yAxisTickCount={10}
+                              allowMultipleShapesForPoints={false}
+                              enablePerfOptimization={true}
+                              margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                            />
+                          </ResponsiveContainer>
+                        </div>
                         <div className="mt-2 text-xs text-gray-500">
                           Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
                         </div>
@@ -548,17 +550,19 @@ const ResultsDisplay = ({
                             </Switch>
                           </div>
                         )}
-                        <AreaChart
-                          data={chartData.data}
-                          height={400}
-                          legendsOverflowText="Flere"
-                          yAxisTickCount={isPercentageStacked ? 5 : 10}
-                          width={700}
-                          enablePerfOptimization={true}
-                          margins={{ left: 50, right: 50, top: 20, bottom: 35 }}
-                          yMinValue={isPercentageStacked ? 0 : undefined}
-                          yMaxValue={isPercentageStacked ? 100 : undefined}
-                        />
+                        <div style={{ width: '100%', height: '400px' }}>
+                          <ResponsiveContainer>
+                            <AreaChart
+                              data={chartData.data}
+                              legendsOverflowText="Flere"
+                              yAxisTickCount={isPercentageStacked ? 5 : 10}
+                              enablePerfOptimization={true}
+                              margins={{ left: 50, right: 50, top: 20, bottom: 35 }}
+                              yMinValue={isPercentageStacked ? 0 : undefined}
+                              yMaxValue={isPercentageStacked ? 100 : undefined}
+                            />
+                          </ResponsiveContainer>
+                        </div>
                         <div className="mt-2 text-xs text-gray-500">
                           Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
                           {isPercentageStacked && ' (prosent av totalen per tidspunkt)'}
@@ -629,13 +633,15 @@ const ResultsDisplay = ({
                               display: none !important;
                             }
                           `}</style>
-                          <div className="bar-chart-hide-xaxis">
-                            <VerticalBarChart
-                              data={displayData}
-                              barWidth={chartData.barWidth}
-                              yAxisTickCount={chartData.yAxisTickCount}
-                              margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                            />
+                          <div className="bar-chart-hide-xaxis" style={{ width: '100%', height: '500px' }}>
+                            <ResponsiveContainer>
+                              <VerticalBarChart
+                                data={displayData}
+                                barWidth={chartData.barWidth}
+                                yAxisTickCount={chartData.yAxisTickCount}
+                                margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                              />
+                            </ResponsiveContainer>
                           </div>
                         </div>
                         <div className="mt-2 text-xs text-gray-500 text-center">
@@ -727,13 +733,13 @@ const ResultsDisplay = ({
                               color: #262626 !important;
                             }
                           `}</style>
-                          <div className="pie-chart-wrapper">
-                            <PieChart
-                              data={displayData}
-                              width={600}
-                              height={400}
-                              chartTitle=""
-                            />
+                          <div className="pie-chart-wrapper" style={{ width: '100%', height: '400px' }}>
+                            <ResponsiveContainer>
+                              <PieChart
+                                data={displayData}
+                                chartTitle=""
+                              />
+                            </ResponsiveContainer>
                           </div>
                           <div className="mt-4 text-md text-gray-800 text-center">
                             <p>Viser {displayData.length} kategorier med prosentandeler:</p>
