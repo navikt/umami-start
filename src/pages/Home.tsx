@@ -1,4 +1,4 @@
-import { Heading, LinkPanel, Page } from "@navikt/ds-react";
+import { Heading, Link, LinkCard, Page } from "@navikt/ds-react";
 import Metadashboard from "../components/metadashboard.tsx";
 import Kontaktboks from "../components/kontaktboks.tsx";
 import { analyticsPages } from "../components/AnalyticsNavigation.tsx";
@@ -29,14 +29,23 @@ function Home() {
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                     gap: '16px',
-                    marginBottom: '80px'
+                    marginBottom: '40px'
                 }}>
                     {analyticsPages.filter(page => page.id !== 'grafbygger').map(page => (
-                        <LinkPanel key={page.id} href={page.href} border>
-                            <LinkPanel.Title>{page.label}</LinkPanel.Title>
-                            <LinkPanel.Description>{page.description}</LinkPanel.Description>
-                        </LinkPanel>
+                        <LinkCard key={page.id}>
+                            <LinkCard.Title>
+                                <LinkCard.Anchor href={page.href}>{page.label}</LinkCard.Anchor>
+                            </LinkCard.Title>
+                            <LinkCard.Description>{page.description}</LinkCard.Description>
+                        </LinkCard>
                     ))}
+                </div>
+
+                <div className="my-16">
+                    <Heading spacing={true} as="h3" size="medium">Lag egne grafer og tabeller med Grafbyggeren</Heading>
+                    <p className="text-lg max-w-prose">
+                        <Link href="/grafbygger">Grafbyggeren</Link>  hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
+                    </p>
                 </div>
 
                 <Kontaktboks />
