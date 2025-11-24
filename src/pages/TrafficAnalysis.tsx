@@ -230,7 +230,7 @@ const TrafficAnalysis = () => {
             const source = item.source;
             if (source.startsWith('/')) return 'Intern';
             if (source === 'Direkte / Annet') return 'Direkte';
-            if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo')) return 'Søk';
+            if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo')) return 'Søkemotorer';
             if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) return 'Sosiale medier';
             return 'Andre nettsider';
         }, item => !item.source.startsWith('/')); // Exclude internal from channels list? Or include? User asked for "Sources (trafikkilder) - channels". Usually excludes internal.
