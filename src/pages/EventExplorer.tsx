@@ -329,32 +329,34 @@ const EventExplorer = () => {
                             Viser hendelser for URL-sti: {pagePath}
                         </BodyShort>
                     )}
-                    <Table size="small">
-                        <Table.Header>
-                            <Table.Row>
-                                <Table.HeaderCell>Navn</Table.HeaderCell>
-                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                <Table.HeaderCell></Table.HeaderCell>
-                            </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                            {events.map((event) => (
-                                <Table.Row key={event.name}>
-                                    <Table.DataCell>{event.name}</Table.DataCell>
-                                    <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
-                                    <Table.DataCell>
-                                        <Button
-                                            size="xsmall"
-                                            variant="secondary"
-                                            onClick={() => setSelectedEvent(event.name)}
-                                        >
-                                            Utforsk
-                                        </Button>
-                                    </Table.DataCell>
+                    <div className="overflow-x-auto">
+                        <Table size="small">
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.HeaderCell>Navn</Table.HeaderCell>
+                                    <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                    <Table.HeaderCell></Table.HeaderCell>
                                 </Table.Row>
-                            ))}
-                        </Table.Body>
-                    </Table>
+                            </Table.Header>
+                            <Table.Body>
+                                {events.map((event) => (
+                                    <Table.Row key={event.name}>
+                                        <Table.DataCell>{event.name}</Table.DataCell>
+                                        <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                        <Table.DataCell>
+                                            <Button
+                                                size="xsmall"
+                                                variant="secondary"
+                                                onClick={() => setSelectedEvent(event.name)}
+                                            >
+                                                Utforsk
+                                            </Button>
+                                        </Table.DataCell>
+                                    </Table.Row>
+                                ))}
+                            </Table.Body>
+                        </Table>
+                    </div>
                 </div>
             )}
 
@@ -383,8 +385,8 @@ const EventExplorer = () => {
                     {!loadingData && seriesData.length > 0 && (
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
-                                <Tabs.Tab value="usage" label="Hendelseslogg" />
-                                <Tabs.Tab value="parameters" label="Parametere" />
+                                <Tabs.Tab value="usage" label="Bruk av hendelse" />
+                                <Tabs.Tab value="parameters" label="Hendelsdetaljer" />
                             </Tabs.List>
 
                             {/* Usage Tab */}
@@ -416,7 +418,7 @@ const EventExplorer = () => {
                                 <div>
                                     {!selectedParameterForDrilldown ? (
                                         <>
-                                            <Heading level="3" size="small" className="mb-4">Parametere</Heading>
+                                            <Heading level="3" size="small" className="mb-4">Hendelsesdetaljer</Heading>
 
                                             {!hasLoadedValues && propertiesData.length > 0 && (
                                                 <div className="mb-4">
@@ -426,37 +428,39 @@ const EventExplorer = () => {
                                                         onClick={fetchAllParameterValues}
                                                         loading={loadingValues}
                                                     >
-                                                        Vis verdier
+                                                        Vis utsnitt av verdier
                                                     </Button>
                                                 </div>
                                             )}
                                             {propertiesData.length > 0 ? (
-                                                <Table size="small">
-                                                    <Table.Header>
-                                                        <Table.Row>
-                                                            <Table.HeaderCell>Navn</Table.HeaderCell>
-                                                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                            <Table.HeaderCell></Table.HeaderCell>
-                                                        </Table.Row>
-                                                    </Table.Header>
-                                                    <Table.Body>
-                                                        {propertiesData.map((prop, idx) => (
-                                                            <Table.Row key={idx}>
-                                                                <Table.DataCell>{prop.propertyName}</Table.DataCell>
-                                                                <Table.DataCell align="right">{prop.total.toLocaleString('nb-NO')}</Table.DataCell>
-                                                                <Table.DataCell>
-                                                                    <Button
-                                                                        size="xsmall"
-                                                                        variant="secondary"
-                                                                        onClick={() => setSelectedParameterForDrilldown(prop.propertyName)}
-                                                                    >
-                                                                        Utforsk
-                                                                    </Button>
-                                                                </Table.DataCell>
+                                                <div className="overflow-x-auto">
+                                                    <Table size="small">
+                                                        <Table.Header>
+                                                            <Table.Row>
+                                                                <Table.HeaderCell>Navn</Table.HeaderCell>
+                                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                                <Table.HeaderCell></Table.HeaderCell>
                                                             </Table.Row>
-                                                        ))}
-                                                    </Table.Body>
-                                                </Table>
+                                                        </Table.Header>
+                                                        <Table.Body>
+                                                            {propertiesData.map((prop, idx) => (
+                                                                <Table.Row key={idx}>
+                                                                    <Table.DataCell>{prop.propertyName}</Table.DataCell>
+                                                                    <Table.DataCell align="right">{prop.total.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                    <Table.DataCell>
+                                                                        <Button
+                                                                            size="xsmall"
+                                                                            variant="secondary"
+                                                                            onClick={() => setSelectedParameterForDrilldown(prop.propertyName)}
+                                                                        >
+                                                                            Utforsk
+                                                                        </Button>
+                                                                    </Table.DataCell>
+                                                                </Table.Row>
+                                                            ))}
+                                                        </Table.Body>
+                                                    </Table>
+                                                </div>
                                             ) : (
                                                 <BodyShort>Ingen parametere funnet for denne hendelsen.</BodyShort>
                                             )}
@@ -515,7 +519,7 @@ const EventExplorer = () => {
                                                         {/* Top Values Tab */}
                                                         <Tabs.Panel value="top" className="pt-4">
                                                             <Heading level="4" size="small" className="mb-4">
-                                                                Topp 20 verdier per parameter
+                                                                Topp 20 verdier per hendelsesdetaljer
                                                             </Heading>
                                                             <div className="space-y-6">
                                                                 {propertiesData.map((prop, propIdx) => {
@@ -527,24 +531,26 @@ const EventExplorer = () => {
                                                                             <Heading level="5" size="xsmall" className="mb-3">
                                                                                 {prop.propertyName}
                                                                             </Heading>
-                                                                            <Table size="small">
-                                                                                <Table.Header>
-                                                                                    <Table.Row>
-                                                                                        <Table.HeaderCell>Verdi</Table.HeaderCell>
-                                                                                        <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                                                    </Table.Row>
-                                                                                </Table.Header>
-                                                                                <Table.Body>
-                                                                                    {values.map((val, valIdx) => (
-                                                                                        <Table.Row key={valIdx}>
-                                                                                            <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
-                                                                                                {val.value || '(tom)'}
-                                                                                            </Table.DataCell>
-                                                                                            <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                            <div className="overflow-x-auto">
+                                                                                <Table size="small">
+                                                                                    <Table.Header>
+                                                                                        <Table.Row>
+                                                                                            <Table.HeaderCell>Verdi</Table.HeaderCell>
+                                                                                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
                                                                                         </Table.Row>
-                                                                                    ))}
-                                                                                </Table.Body>
-                                                                            </Table>
+                                                                                    </Table.Header>
+                                                                                    <Table.Body>
+                                                                                        {values.map((val, valIdx) => (
+                                                                                            <Table.Row key={valIdx}>
+                                                                                                <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
+                                                                                                    {val.value || '(tom)'}
+                                                                                                </Table.DataCell>
+                                                                                                <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                                            </Table.Row>
+                                                                                        ))}
+                                                                                    </Table.Body>
+                                                                                </Table>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -576,24 +582,26 @@ const EventExplorer = () => {
                                                     Topp 20 verdier
                                                 </Heading>
                                                 {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).length > 0 ? (
-                                                    <Table size="small">
-                                                        <Table.Header>
-                                                            <Table.Row>
-                                                                <Table.HeaderCell>Verdi</Table.HeaderCell>
-                                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                            </Table.Row>
-                                                        </Table.Header>
-                                                        <Table.Body>
-                                                            {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).map((val, idx) => (
-                                                                <Table.Row key={idx}>
-                                                                    <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
-                                                                        {val.value || '(tom)'}
-                                                                    </Table.DataCell>
-                                                                    <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                    <div className="overflow-x-auto">
+                                                        <Table size="small">
+                                                            <Table.Header>
+                                                                <Table.Row>
+                                                                    <Table.HeaderCell>Verdi</Table.HeaderCell>
+                                                                    <Table.HeaderCell align="right">Antall</Table.HeaderCell>
                                                                 </Table.Row>
-                                                            ))}
-                                                        </Table.Body>
-                                                    </Table>
+                                                            </Table.Header>
+                                                            <Table.Body>
+                                                                {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).map((val, idx) => (
+                                                                    <Table.Row key={idx}>
+                                                                        <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
+                                                                            {val.value || '(tom)'}
+                                                                        </Table.DataCell>
+                                                                        <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                    </Table.Row>
+                                                                ))}
+                                                            </Table.Body>
+                                                        </Table>
+                                                    </div>
                                                 ) : (
                                                     <>
                                                         <Skeleton variant="text" width={80} height={20} />
