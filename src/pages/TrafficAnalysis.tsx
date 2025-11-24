@@ -342,14 +342,7 @@ const TrafficAnalysis = () => {
                     <Tabs.Panel value="flow" className="pt-4">
                         <div className="flex flex-col gap-4">
                             <Alert variant="info" size="small">
-                                <div className="flex flex-col gap-1">
-                                    <div>Viser topp 100 trafikkflyter sortert etter volum. Kilder med lavere trafikk vises ikke.</div>
-                                    {flowQueryStats && (
-                                        <div className="text-xs">
-                                            Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
-                                        </div>
-                                    )}
-                                </div>
+                                Viser topp 100 trafikkflyter sortert etter volum. Kilder med lavere trafikk vises ikke.
                             </Alert>
                             <div className="flex gap-2">
                                 <Chips>
@@ -383,6 +376,12 @@ const TrafficAnalysis = () => {
                                     </div>
                                 )}
                             </div>
+
+                            {flowQueryStats && (
+                                <div className="text-sm text-gray-600 text-right">
+                                    Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </div>
                     </Tabs.Panel>
                 </Tabs>

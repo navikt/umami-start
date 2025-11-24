@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, RadioGroup, Radio, Table, Tabs, Skeleton } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, BodyShort, RadioGroup, Radio, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
+import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
+import { Download, ArrowLeft } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
-import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
 import { Website } from '../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
-import { ArrowLeft } from 'lucide-react';
 
 const EventExplorer = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -16,6 +16,7 @@ const EventExplorer = () => {
     const [dateRange, setDateRange] = useState<'thisMonth' | 'lastMonth'>('thisMonth');
     const [hasSearched, setHasSearched] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('usage');
+    const [showAverage, setShowAverage] = useState<boolean>(false);
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
@@ -260,9 +261,7 @@ const EventExplorer = () => {
         };
     };
 
-    // We don't use these but ResultsDisplay needs them
-    const prepareBarChartData = () => null;
-    const preparePieChartData = () => null;
+
 
     const handleBackToEvents = () => {
         setSelectedEvent('');
@@ -393,26 +392,107 @@ const EventExplorer = () => {
 
                             {/* Usage Tab */}
                             <Tabs.Panel value="usage" className="pt-6">
-                                <ResultsDisplay
-                                    result={{
-                                        data: seriesData.map(item => ({
-                                            'Dato': new Date(item.time).toLocaleDateString('nb-NO'),
-                                            'Antall': item.count
-                                        }))
-                                    }}
-                                    loading={false}
-                                    error={null}
-                                    queryStats={queryStats}
-                                    lastAction="run"
-                                    showLoadingMessage={false}
-                                    executeQuery={() => { }}
-                                    handleRetry={() => { }}
-                                    prepareLineChartData={prepareLineChartData}
-                                    prepareBarChartData={prepareBarChartData}
-                                    preparePieChartData={preparePieChartData}
-                                    hideHeading={true}
-                                    hiddenTabs={['areachart', 'barchart', 'piechart']}
-                                />
+                                <div className="flex flex-col gap-8">
+                                    {/* Chart */}
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex justify-end -mb-5">
+                                            <Switch
+                                                checked={showAverage}
+                                                onChange={(e) => setShowAverage(e.target.checked)}
+                                                size="small"
+                                            >
+                                                Vis gjennomsnitt
+                                            </Switch>
+                                        </div>
+                                        <div style={{ width: '100%', height: '400px' }}>
+                                            {(() => {
+                                                const chartData = prepareLineChartData(showAverage);
+                                                return chartData ? (
+                                                    <ResponsiveContainer>
+                                                        <LineChart
+                                                            data={chartData.data}
+                                                            legendsOverflowText={'Overflow Items'}
+                                                            yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                            yAxisTickCount={10}
+                                                            allowMultipleShapesForPoints={false}
+                                                            enablePerfOptimization={true}
+                                                            margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                        />
+                                                    </ResponsiveContainer>
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                                        Ingen data tilgjengelig for diagram
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+
+                                    {/* Table */}
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-100">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dato</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {seriesData.map((item, index) => (
+                                                        <tr key={index} className="hover:bg-gray-50">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                                {new Date(item.time).toLocaleDateString('nb-NO')}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                {item.count.toLocaleString('nb-NO')}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="small"
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                        const headers = ['Dato', 'Antall'];
+                                                        const csvRows = [
+                                                            headers.join(','),
+                                                            ...seriesData.map((item) => {
+                                                                return [
+                                                                    new Date(item.time).toLocaleDateString('nb-NO'),
+                                                                    item.count
+                                                                ].join(',');
+                                                            })
+                                                        ];
+                                                        const csvContent = csvRows.join('\n');
+                                                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                        const link = document.createElement('a');
+                                                        const url = URL.createObjectURL(blob);
+                                                        link.setAttribute('href', url);
+                                                        link.setAttribute('download', `${selectedEvent}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                                        link.style.visibility = 'hidden';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                        URL.revokeObjectURL(url);
+                                                    }}
+                                                    icon={<Download size={16} />}
+                                                >
+                                                    Last ned CSV
+                                                </Button>
+                                            </div>
+                                            {queryStats && (
+                                                <span className="text-sm text-gray-600">
+                                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </Tabs.Panel>
 
                             {/* Parameters Tab */}
