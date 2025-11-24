@@ -57,14 +57,16 @@ export default function Header() {
                   <span className="whitespace-nowrap">Taksonomi</span>
                 </Dropdown.Menu.List.Item>
               </Dropdown.Menu.List>
-              <Dropdown.Menu.List.Item
-                as={Link}
-                href="/komigang"
-                className="no-underline"
-              >
-                <BookIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Guide</span>
-              </Dropdown.Menu.List.Item>
+              <Dropdown.Menu.List>
+                <Dropdown.Menu.List.Item
+                  as={Link}
+                  href="/komigang"
+                  className="no-underline"
+                >
+                  <BookIcon aria-hidden fontSize="1.5rem" />
+                  <span className="whitespace-nowrap">Guide</span>
+                </Dropdown.Menu.List.Item>
+              </Dropdown.Menu.List>
             </Dropdown.Menu>
           </Dropdown>
         ) : (
