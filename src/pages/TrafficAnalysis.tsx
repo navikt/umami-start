@@ -272,7 +272,7 @@ const TrafficAnalysis = () => {
     return (
         <ChartLayout
             title="Trafikkanalyse"
-            description="Se besøk over tid og hvor trafikken kommer fra."
+            description="Se besøk over tid og trafikkilder."
             currentPage="trafikkanalyse"
             filters={
                 <>
