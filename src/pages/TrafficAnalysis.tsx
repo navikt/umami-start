@@ -23,7 +23,7 @@ const TrafficAnalysis = () => {
     const [seriesData, setSeriesData] = useState<any[]>([]);
     const [flowData, setFlowData] = useState<any[]>([]);
     const [seriesQueryStats, setSeriesQueryStats] = useState<any>(null);
-    const [flowQueryStats, setFlowQueryStats] = useState<any>(null);
+    const [setFlowQueryStats] = useState<any>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
