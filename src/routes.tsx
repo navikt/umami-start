@@ -40,6 +40,7 @@ const routes = [
     { path: "/brukerlojalitet", component: <Retention /> },
     { path: "/brukersammensetning", component: <UserComposition /> },
     { path: "/utforsk-hendelser", component: <EventExplorer /> },
+    { path: "/datastruktur", component: <EventExplorer /> },
     { path: "/trafikkanalyse", component: <TrafficAnalysis /> }
 ];
 
