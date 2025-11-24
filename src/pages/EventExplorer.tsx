@@ -24,6 +24,7 @@ const EventExplorer = () => {
     const [loadingData, setLoadingData] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [queryStats, setQueryStats] = useState<any>(null);
+    const [eventsQueryStats, setEventsQueryStats] = useState<any>(null);
 
     // Parameter values state - now storing values for ALL parameters
     const [allParameterValues, setAllParameterValues] = useState<Record<string, { value: string; count: number }[]>>({});
@@ -73,6 +74,9 @@ const EventExplorer = () => {
 
             const result = await response.json();
             setEvents(result.events || []);
+            if (result.queryStats) {
+                setEventsQueryStats(result.queryStats);
+            }
         } catch (err) {
             console.error('Error fetching events:', err);
             setError('Kunne ikke hente hendelser.');
@@ -358,6 +362,11 @@ const EventExplorer = () => {
                             </Table.Body>
                         </Table>
                     </div>
+                    {eventsQueryStats && (
+                        <div className="text-sm text-gray-600 text-right mt-2">
+                            Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                        </div>
+                    )}
                 </div>
             )}
 

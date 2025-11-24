@@ -31,7 +31,7 @@ function Home() {
                     gap: '16px',
                     marginBottom: '80px'
                 }}>
-                    {analyticsPages.map(page => (
+                    {analyticsPages.filter(page => page.id !== 'grafbygger').map(page => (
                         <LinkPanel key={page.id} href={page.href} border>
                             <LinkPanel.Title>{page.label}</LinkPanel.Title>
                             <LinkPanel.Description>{page.description}</LinkPanel.Description>

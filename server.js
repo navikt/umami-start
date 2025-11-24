@@ -221,7 +221,31 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
             count: parseInt(row.count)
         }));
 
-        res.json({ events });
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessed: bytesProcessed,
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Events] Dry run failed:', dryRunError.message);
+        }
+
+        res.json({ events, queryStats });
     } catch (error) {
         console.error('BigQuery events error:', error);
         res.status(500).json({

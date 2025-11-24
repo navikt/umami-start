@@ -77,7 +77,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                 </div>
             </div>
 
-            {currentPage && <AnalyticsNavigation currentPage={currentPage} />}
+            {currentPage && currentPage !== 'grafbygger' && <AnalyticsNavigation currentPage={currentPage} />}
         </div>
     );
 };
