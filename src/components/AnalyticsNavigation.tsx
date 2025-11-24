@@ -1,7 +1,7 @@
 import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from './kontaktboks';
 
-export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer';
+export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
@@ -15,6 +15,18 @@ export const analyticsPages = [
         href: '/grafbygger',
         label: 'Tilpasset analyse',
         description: 'Lag egne grafer eller tabeller'
+    },
+    {
+        id: 'trafikkanalyse',
+        href: '/trafikkanalyse',
+        label: 'Trafikkanalyse',
+        description: 'Se besøk over tid og trafikkflyt'
+    },
+    {
+        id: 'brukersammensetning',
+        href: '/brukersammensetning',
+        label: 'Brukersammensetning',
+        description: 'Se informasjon om besøkende'
     },
     {
         id: 'brukerreiser',
@@ -33,12 +45,6 @@ export const analyticsPages = [
         href: '/brukerlojalitet',
         label: 'Brukerlojalitet',
         description: 'Se hvor mange som kommer tilbake'
-    },
-    {
-        id: 'brukersammensetning',
-        href: '/brukersammensetning',
-        label: 'Brukersammensetning',
-        description: 'Se informasjon om besøkende'
     },
     {
         id: 'event-explorer',

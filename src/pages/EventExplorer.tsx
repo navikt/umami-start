@@ -124,10 +124,12 @@ const EventExplorer = () => {
                 const propsResult = await propsResponse.json();
 
                 setPropertiesData(propsResult.properties || []);
-                setQueryStats({
-                    totalBytesProcessedGB: propsResult.gbProcessed,
-                    estimatedCostUSD: propsResult.estimatedGbProcessed // Approximate
-                });
+                if (propsResult.gbProcessed) {
+                    setQueryStats({
+                        totalBytesProcessedGB: propsResult.gbProcessed,
+                        estimatedCostUSD: ((parseFloat(propsResult.gbProcessed) / 1024) * 6.25).toFixed(3)
+                    });
+                }
 
             } catch (err) {
                 console.error('Error fetching data:', err);

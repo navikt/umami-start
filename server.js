@@ -681,6 +681,265 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
     }
 });
 
+// Get traffic series data (visits over time)
+app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const { startAt, endAt, urlPath, interval = 'day' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                url_path = @urlPath 
+                OR url_path = @urlPathSlash 
+                OR url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        // Determine time truncation based on interval
+        let timeTrunc = 'DAY';
+        if (interval === 'hour') timeTrunc = 'HOUR';
+        if (interval === 'week') timeTrunc = 'WEEK';
+        if (interval === 'month') timeTrunc = 'MONTH';
+
+        const query = `
+            SELECT
+                TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                COUNT(*) as count
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+            WHERE website_id = @websiteId
+            AND created_at BETWEEN @startDate AND @endDate
+            AND event_type = 1 -- Pageview
+            ${urlFilter}
+            GROUP BY 1
+            ORDER BY 1
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        const data = rows.map(row => ({
+            time: row.time.value,
+            count: parseInt(row.count)
+        }));
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessed: bytesProcessed,
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Traffic Series] Dry run failed:', dryRunError.message);
+        }
+
+        res.json({ data, queryStats });
+    } catch (error) {
+        console.error('BigQuery traffic series error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch traffic series'
+        });
+    }
+});
+
+// Get traffic flow data (Source -> Landing -> Next)
+app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const { startAt, endAt, limit = '50' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        let query;
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate,
+            limit: parseInt(limit)
+        };
+
+        if (req.query.urlPath) {
+            // Page-centric flow: Source -> Specific Page -> Next
+            params.urlPath = req.query.urlPath;
+            query = `
+                WITH session_events AS (
+                    SELECT
+                        session_id,
+                        referrer_domain,
+                        CASE 
+                            WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                            THEN '/'
+                            ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                        END as url_path,
+                        created_at
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    WHERE website_id = @websiteId
+                      AND created_at BETWEEN @startDate AND @endDate
+                      AND event_type = 1 -- Pageview
+                ),
+                events_with_context AS (
+                    SELECT
+                        session_id,
+                        url_path,
+                        referrer_domain,
+                        LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_page,
+                        LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as next_page
+                    FROM session_events
+                )
+                SELECT
+                    CASE
+                        WHEN prev_page IS NOT NULL THEN prev_page
+                        ELSE COALESCE(referrer_domain, 'Direkte / Annet')
+                    END as source,
+                    url_path as landing_page, -- Using 'landing_page' alias to match frontend expectation (it's the center node)
+                    COALESCE(next_page, 'Exit') as next_page,
+                    COUNT(*) as count
+                FROM events_with_context
+                WHERE url_path = @urlPath
+                GROUP BY 1, 2, 3
+                ORDER BY 4 DESC
+                LIMIT @limit
+            `;
+        } else {
+            // Default: Landing Page Flow (Source -> Landing Page -> Next)
+            query = `
+                WITH session_events AS (
+                    SELECT
+                        session_id,
+                        referrer_domain,
+                        CASE 
+                            WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                            THEN '/'
+                            ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                        END as url_path,
+                        created_at,
+                        ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) as rn
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    WHERE website_id = @websiteId
+                      AND created_at BETWEEN @startDate AND @endDate
+                      AND event_type = 1 -- Pageview
+                ),
+                session_starts AS (
+                    SELECT
+                        session_id,
+                        referrer_domain,
+                        url_path as landing_page,
+                        created_at
+                    FROM session_events
+                    WHERE rn = 1
+                ),
+                second_pages AS (
+                    SELECT
+                        session_id,
+                        url_path as second_page
+                    FROM session_events
+                    WHERE rn = 2
+                )
+                SELECT
+                    COALESCE(s.referrer_domain, 'Direkte / Annet') as source,
+                    s.landing_page,
+                    COALESCE(sp.second_page, 'Exit') as next_page,
+                    COUNT(*) as count
+                FROM session_starts s
+                LEFT JOIN second_pages sp ON s.session_id = sp.session_id
+                GROUP BY 1, 2, 3
+                ORDER BY 4 DESC
+                LIMIT @limit
+            `;
+        }
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        const data = rows.map(row => ({
+            source: row.source,
+            landingPage: row.landing_page,
+            nextPage: row.next_page,
+            count: parseInt(row.count)
+        }));
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessed: bytesProcessed,
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Traffic Flow] Dry run failed:', dryRunError.message);
+        }
+
+        res.json({ data, queryStats });
+    } catch (error) {
+        console.error('BigQuery traffic flow error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch traffic flow'
+        });
+    }
+});
+
 // Get websites from BigQuery
 app.get('/api/bigquery/websites', async (req, res) => {
     try {
