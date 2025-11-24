@@ -20,7 +20,7 @@ export const analyticsPages = [
         id: 'brukerreiser',
         href: '/brukerreiser',
         label: 'Brukerreiser',
-        description: 'Se hvilke veier folk tar gjennom nettsiden'
+        description: 'Se hvilke veier folk tar på nettsiden'
     },
     {
         id: 'trakt',
