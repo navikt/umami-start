@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Heading, BodyShort } from '@navikt/ds-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import AnalyticsNavigation, { AnalyticsPage } from './AnalyticsNavigation';
 
 interface ChartLayoutProps {
@@ -7,7 +8,7 @@ interface ChartLayoutProps {
     description: string;
     filters: React.ReactNode;
     children: React.ReactNode;
-    currentPage?: string;
+    currentPage?: AnalyticsPage;
 }
 
 const ChartLayout: React.FC<ChartLayoutProps> = ({
@@ -17,6 +18,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     children,
     currentPage
 }) => {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
     return (
         <div className="py-8 max-w-[1600px] mx-auto">
             <div className="mb-8">
@@ -29,13 +32,37 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
             </div>
 
             <div className="rounded-lg shadow-sm border border-gray-200 mb-8 bg-white">
-                <div className="flex flex-col md:flex-row min-h-[600px]">
-                    <div className="bg-[#fafafa] w-full md:w-1/3 p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]">
-                        <div className="space-y-6">
-                            {filters}
-                        </div>
-                    </div>
-                    <div className="w-full md:w-2/3 p-6">
+                <div className="flex flex-col md:flex-row min-h-[600px] relative">
+                    {isSidebarOpen && (
+                        <>
+                            <div className="bg-[#fafafa] w-full md:w-1/3 p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]">
+                                <div className="space-y-6">
+                                    {filters}
+                                </div>
+                            </div>
+                            {/* Collapse button on divider - hidden on mobile */}
+                            <button
+                                onClick={() => setIsSidebarOpen(false)}
+                                className="hidden md:flex absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
+                                title="Minimer filter"
+                                aria-label="Minimer filter"
+                            >
+                                <ChevronLeft size={16} className="text-blue-700" aria-hidden />
+                            </button>
+                        </>
+                    )}
+                    {!isSidebarOpen && (
+                        /* Expand button on left edge - hidden on mobile */
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="hidden md:flex absolute top-1/2 left-0 -translate-y-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
+                            title="Vis filter"
+                            aria-label="Vis filter"
+                        >
+                            <ChevronRight size={16} className="text-blue-700" aria-hidden />
+                        </button>
+                    )}
+                    <div className={`w-full ${isSidebarOpen ? 'md:w-2/3' : ''} p-6`}>
                         {children}
                     </div>
                 </div>
