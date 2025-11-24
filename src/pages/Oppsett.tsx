@@ -1,4 +1,4 @@
-import { BodyShort, Heading, Link, Alert } from "@navikt/ds-react";
+import { BodyShort, Heading, Link, InfoCard } from "@navikt/ds-react";
 import TeamWebsites from "../components/teamwebsites.tsx";
 import Kontaktboks from "../components/kontaktboks.tsx";
 
@@ -13,14 +13,19 @@ function Oppsett() {
                 Her finner du oversikt over alle Navs nettsider og apper som bruker Umami, og kan hente ut sporingskode for ditt prosjekt.
             </BodyShort>
 
-            <Alert variant="info" className="mb-8 max-w-[800px]">
-                <Heading spacing size="small" level="2">
-                    Kom i gang
-                </Heading>
-                <BodyShort>
-                    Følg <Link href="/komigang">kom-i-gang-guiden</Link> for å lære hvordan du setter opp Umami for din nettside eller app.
-                </BodyShort>
-            </Alert>
+            <InfoCard data-color="info" className="mb-8 max-w-[800px]">
+                <InfoCard.Header>
+                    <InfoCard.Title>Kom i gang</InfoCard.Title>
+                </InfoCard.Header>
+                <InfoCard.Content>
+                    <BodyShort spacing>
+                        Følg <Link href="/komigang">kom-i-gang-guiden</Link> for å lære hvordan du setter opp Umami for din nettside eller app.
+                    </BodyShort>
+                    <BodyShort>
+                        Kontakt <Link target="_blank" href="https://nav-it.slack.com/archives/C02UGFS2J4B">#ResearchOps på Slack</Link> for å få sporingskode til nettsiden eller appen din.
+                    </BodyShort>
+                </InfoCard.Content>
+            </InfoCard>
 
             <Heading spacing as="h2" size="medium" className="mt-12 mb-6">
                 Alle nettsider og apper med Umami

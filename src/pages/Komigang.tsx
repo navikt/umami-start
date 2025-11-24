@@ -23,8 +23,7 @@ function Komigang() {
                             href={"https://github.com/navikt/nav-dekoratoren-moduler/blob/main/README.md#getanalyticsinstance"}>Dokumentasjon for sporing til dekoratøren</Link>
                     </List.Item>
                     <List.Item>
-                        <Link
-                            href={"https://nav-it.slack.com/archives/C02UGFS2J4B"}>Kontakt ResearchOps ved behov for egen sporingskode.</Link>
+                        Kontakt <Link target="_blank" href={"https://nav-it.slack.com/archives/C02UGFS2J4B"}>#ResearchOps på Slack</Link> for å få sporingskode til nettsiden eller appen din.
                     </List.Item>
                 </List>
 
@@ -71,7 +70,7 @@ function Komigang() {
                 <List.Item>
                     <strong>Sporingskode:</strong> <Link target="_blank"
                         href={`https://nav-it.slack.com/archives/C02UGFS2J4B`}>Kontakt
-                        Team ResearchOps</Link> for å få sporingskode til nettsiden eller appen din.
+                        #ResearchOps på Slack</Link> for å få sporingskode til nettsiden eller appen din.
                 </List.Item>
                 <List.Item>
                     <strong>Taksonomi:</strong> <Link target="_blank"

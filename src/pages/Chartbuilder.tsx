@@ -1456,7 +1456,7 @@ const ChartsPage = () => {
             {config.website && dateRangeReady && (
               <>
                 {/* Step 1: Explorer - Keep this in original position for learning purposes */}
-                <section className='mb-1'>
+                <section className='mb-0'>
                   <div>
                     <Switch
                       checked={showEventExplorer}
