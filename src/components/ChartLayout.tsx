@@ -52,7 +52,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             {/* Collapse button on divider - hidden on mobile */}
                             <button
                                 onClick={() => setIsSidebarOpen(false)}
-                                className="hidden md:flex absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
+                                className="hidden md:flex absolute top-3 left-1/3 -translate-x-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
                                 title="Minimer filter"
                                 aria-label="Minimer filter"
                             >
@@ -64,7 +64,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                         /* Expand button on left edge - hidden on mobile */
                         <button
                             onClick={() => setIsSidebarOpen(true)}
-                            className="hidden md:flex absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
+                            className="hidden md:flex absolute top-3 left-0 -translate-x-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
                             title="Vis filter"
                             aria-label="Vis filter"
                         >
