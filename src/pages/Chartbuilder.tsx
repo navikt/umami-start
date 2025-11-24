@@ -1415,7 +1415,7 @@ const ChartsPage = () => {
   return (
     <div className="w-full max-w-[1600px]">
       <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Tilpasset analyse med Grafbyggeren
+        Grafbyggeren
       </Heading>
       <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
         Lurer du på hvordan folk bruker nettsiden eller appen din?
@@ -1456,7 +1456,7 @@ const ChartsPage = () => {
             {config.website && dateRangeReady && (
               <>
                 {/* Step 1: Explorer - Keep this in original position for learning purposes */}
-                <section className='mb-0'>
+                <section className='-mb-3'>
                   <div>
                     <Switch
                       checked={showEventExplorer}
