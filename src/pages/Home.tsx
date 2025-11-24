@@ -29,7 +29,7 @@ function Home() {
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                     gap: '16px',
-                    marginBottom: '40px'
+                    marginBottom: '80px'
                 }}>
                     {analyticsPages.filter(page => page.id !== 'grafbygger').map(page => (
                         <LinkCard key={page.id}>
@@ -41,14 +41,16 @@ function Home() {
                     ))}
                 </div>
 
-                <div className="my-16">
-                    <Heading spacing={true} as="h3" size="medium">Lag egne grafer og tabeller med Grafbyggeren</Heading>
-                    <p className="text-lg max-w-prose">
-                        <Link href="/grafbygger">Grafbyggeren</Link>  hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
+                <div style={{ marginBottom: '80px' }}>
+                    <Heading spacing={true} as="h3" size="medium" style={{ marginBottom: '16px' }}>Lag grafer og tabeller for Metabase</Heading>
+                    <p style={{ fontSize: '18px', lineHeight: '1.6', maxWidth: '65ch' }}>
+                        <Link href="/grafbygger">Grafbyggeren</Link> hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
                     </p>
                 </div>
 
-                <Kontaktboks />
+                <div style={{ marginTop: '80px' }}>
+                    <Kontaktboks />
+                </div>
             </Page.Block>
         </>
     )
