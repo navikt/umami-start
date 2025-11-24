@@ -1,21 +1,23 @@
 import { useState, useMemo } from 'react';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Chips } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
-import UmamiTrafficView from '../components/UmamiTrafficView';
 import { Website } from '../types/chart';
 
 const TrafficAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [urlPath, setUrlPath] = useState<string>('');
     const [period, setPeriod] = useState<string>('current_month');
+
+    // Tab states
     const [activeTab, setActiveTab] = useState<string>('visits');
 
     // View options
+    const [metricType, setMetricType] = useState<string>('visitors'); // 'visitors', 'sessions', 'pageviews'
+    const [submittedMetricType, setSubmittedMetricType] = useState<string>('visitors'); // Track what was actually submitted
     const [showAverage, setShowAverage] = useState<boolean>(false);
-    const [flowFilter, setFlowFilter] = useState<string>('all'); // 'all', 'external', 'internal'
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
@@ -27,14 +29,15 @@ const TrafficAnalysis = () => {
     const [error, setError] = useState<string | null>(null);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
 
-    const fetchData = async () => {
+    const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
 
         setLoading(true);
         setError(null);
         setSeriesData([]);
-        setFlowData([]);
+        setFlowData([]); // Clear flow data when fetching new series data
         setHasAttemptedFetch(true);
+        setSubmittedMetricType(metricType); // Store the submitted metric type
 
         // Calculate date range based on period
         const now = new Date();
@@ -51,7 +54,7 @@ const TrafficAnalysis = () => {
 
         try {
             // Fetch Series Data
-            const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&urlPath=${encodeURIComponent(urlPath)}`);
+            const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&urlPath=${encodeURIComponent(urlPath)}&metricType=${metricType}`);
             if (!seriesResponse.ok) throw new Error('Kunne ikke hente trafikkdata');
             const seriesResult = await seriesResponse.json();
 
@@ -62,9 +65,42 @@ const TrafficAnalysis = () => {
                 setSeriesQueryStats(seriesResult.queryStats);
             }
 
+            // Always fetch flow data as it's needed for the tabs
+            await fetchFlowData(startDate, endDate);
+
+        } catch (err: any) {
+            console.error('Error fetching traffic data:', err);
+            setError(err.message || 'Det oppstod en feil ved henting av data.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchFlowData = async (providedStartDate?: Date, providedEndDate?: Date) => {
+        if (!selectedWebsite) return;
+
+        // Use provided dates or calculate them
+        let startDate: Date;
+        let endDate: Date;
+
+        if (providedStartDate && providedEndDate) {
+            startDate = providedStartDate;
+            endDate = providedEndDate;
+        } else {
+            const now = new Date();
+            if (period === 'current_month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = now;
+            } else {
+                startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+            }
+        }
+
+        try {
             // Fetch Flow Data
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}`;
+            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${submittedMetricType}`;
             const flowResponse = await fetch(flowUrl);
             if (!flowResponse.ok) throw new Error('Kunne ikke hente trafikkflyt');
             const flowResult = await flowResponse.json();
@@ -75,12 +111,9 @@ const TrafficAnalysis = () => {
             if (flowResult.queryStats) {
                 setFlowQueryStats(flowResult.queryStats);
             }
-
         } catch (err: any) {
-            console.error('Error fetching traffic data:', err);
-            setError(err.message || 'Det oppstod en feil ved henting av data.');
-        } finally {
-            setLoading(false);
+            console.error('Error fetching traffic flow data:', err);
+            // Don't set main error here to avoid blocking the chart if flow fails
         }
     };
 
@@ -88,17 +121,20 @@ const TrafficAnalysis = () => {
     const chartData: ILineChartProps | null = useMemo(() => {
         if (!seriesData.length) return null;
 
+        const metricLabel = submittedMetricType === 'pageviews' ? 'sidevisninger' : 'besøkende';
+        const metricLabelCapitalized = submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende';
+
         const points: ILineChartDataPoint[] = seriesData.map((item: any) => ({
             x: new Date(item.time),
             y: item.count,
             legend: new Date(item.time).toLocaleDateString('nb-NO'),
             xAxisCalloutData: new Date(item.time).toLocaleDateString('nb-NO'),
-            yAxisCalloutData: `${item.count} besøk`
+            yAxisCalloutData: `${item.count} ${metricLabel}`
         }));
 
         const lines = [
             {
-                legend: 'Besøk',
+                legend: metricLabelCapitalized,
                 data: points,
                 color: '#0067c5',
             }
@@ -125,58 +161,13 @@ const TrafficAnalysis = () => {
                 lineChartData: lines
             },
         };
-    }, [seriesData, showAverage]);
-
-    // Transform flow data for UmamiJourneyView
-    const { nodes, links } = useMemo(() => {
-        if (!flowData.length) return { nodes: [], links: [] };
-
-        // Filter data
-        const filteredData = flowData.filter(row => {
-            const isInternal = row.source.startsWith('/') || row.source.includes('nav.no') || row.source === 'Direkte / Annet';
-
-            if (flowFilter === 'external') {
-                return !isInternal;
-            }
-            if (flowFilter === 'internal') {
-                return isInternal;
-            }
-            return true;
-        });
-
-        const nodesMap = new Map<string, number>();
-        const nodesList: { nodeId: string; name: string; color?: string }[] = [];
-        const linksList: { source: number; target: number; value: number }[] = [];
-
-        const getNodeIndex = (step: number, name: string) => {
-            const id = `${step}:${name}`;
-            if (!nodesMap.has(id)) {
-                nodesMap.set(id, nodesList.length);
-                nodesList.push({ nodeId: id, name });
-            }
-            return nodesMap.get(id)!;
-        };
-
-        filteredData.forEach(row => {
-            // Use 0-based steps so they display as 1, 2, 3
-            const sourceIdx = getNodeIndex(0, row.source);
-            const landingIdx = getNodeIndex(1, row.landingPage);
-            const nextIdx = getNodeIndex(2, row.nextPage);
-
-            // Link 1: Source -> Landing
-            linksList.push({ source: sourceIdx, target: landingIdx, value: row.count });
-
-            // Link 2: Landing -> Next
-            linksList.push({ source: landingIdx, target: nextIdx, value: row.count });
-        });
-
-        return { nodes: nodesList, links: linksList };
-    }, [flowData, flowFilter]);
+    }, [seriesData, showAverage, submittedMetricType]);
 
     const downloadCSV = () => {
         if (!seriesData.length) return;
 
-        const headers = ['Dato', 'Antall besøk'];
+        const metricLabel = submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende';
+        const headers = ['Dato', metricLabel];
         const csvRows = [
             headers.join(','),
             ...seriesData.map((item) => {
@@ -200,10 +191,81 @@ const TrafficAnalysis = () => {
         URL.revokeObjectURL(url);
     };
 
+    // Process Flow Data for Tables
+    const { internalPaths, entrances, exits, referrers, channels } = useMemo(() => {
+        if (!flowData.length) {
+            return { internalPaths: [], entrances: [], exits: [], referrers: [], channels: [] };
+        }
+
+        const groupAndSum = (data: any[], keySelector: (item: any) => string, filter?: (item: any) => boolean) => {
+            const map = new Map<string, number>();
+            data.forEach(item => {
+                if (filter && !filter(item)) return;
+                const key = keySelector(item);
+                map.set(key, (map.get(key) || 0) + item.count);
+            });
+            return Array.from(map.entries())
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count);
+        };
+
+        // Internal: Path (Landing Page)
+        const internalPaths = groupAndSum(flowData, item => item.landingPage);
+
+        // Internal: Entrances (Source starts with /)
+        const entrances = groupAndSum(flowData, item => item.source, item => item.source.startsWith('/'));
+
+        // Internal: Exits (Next Page starts with / or is Exit)
+        const exits = groupAndSum(flowData, item => item.nextPage, item => item.nextPage.startsWith('/') || item.nextPage === 'Exit');
+
+        // Sources: Referrers (Source does not start with / and not Direct)
+        const referrers = groupAndSum(flowData, item => item.source, item => !item.source.startsWith('/') && item.source !== 'Direkte / Annet');
+
+        // Sources: Channels (Simple mapping)
+        const channels = groupAndSum(flowData, item => {
+            const source = item.source;
+            if (source.startsWith('/')) return 'Intern';
+            if (source === 'Direkte / Annet') return 'Direkte';
+            if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo')) return 'Søk';
+            if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) return 'Sosiale medier';
+            return 'Andre nettsider';
+        }, item => !item.source.startsWith('/')); // Exclude internal from channels list? Or include? User asked for "Sources (trafikkilder) - channels". Usually excludes internal.
+
+        return { internalPaths, entrances, exits, referrers, channels };
+    }, [flowData]);
+
+    const renderTable = (title: string, data: { name: string; count: number }[]) => (
+        <div className="flex flex-col gap-2 w-full">
+            <Heading level="3" size="small">{title}</Heading>
+            <div className="border rounded-lg overflow-hidden w-full">
+                <Table size="small" className="w-full">
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.HeaderCell>Navn</Table.HeaderCell>
+                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                        </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                        {data.slice(0, 10).map((row, i) => (
+                            <Table.Row key={i}>
+                                <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
+                                <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                            </Table.Row>
+                        ))}
+                        {data.length === 0 && (
+                            <Table.Row>
+                                <Table.DataCell colSpan={2} align="center">Ingen data</Table.DataCell>
+                            </Table.Row>
+                        )}
+                    </Table.Body>
+                </Table>
+            </div>
+        </div>
+    );
+
     return (
         <ChartLayout
             title="Trafikkanalyse"
-
             description="Se besøk over tid og hvor trafikken kommer fra."
             currentPage="trafikkanalyse"
             filters={
@@ -223,6 +285,15 @@ const TrafficAnalysis = () => {
                         <Radio value="last_month">Forrige måned</Radio>
                     </RadioGroup>
 
+                    <RadioGroup
+                        legend="Visning"
+                        value={metricType}
+                        onChange={(val: string) => setMetricType(val)}
+                    >
+                        <Radio value="visitors">Besøkende</Radio>
+                        <Radio value="pageviews">Sidevisninger</Radio>
+                    </RadioGroup>
+
                     <TextField
                         label="URL-sti (valgfritt)"
                         description="F.eks. / for forsiden"
@@ -231,7 +302,7 @@ const TrafficAnalysis = () => {
                     />
 
                     <Button
-                        onClick={fetchData}
+                        onClick={fetchSeriesData}
                         disabled={!selectedWebsite || loading}
                         loading={loading}
                         className="w-full"
@@ -257,7 +328,8 @@ const TrafficAnalysis = () => {
                 <Tabs value={activeTab} onChange={setActiveTab}>
                     <Tabs.List>
                         <Tabs.Tab value="visits" label="Besøk over tid" />
-                        <Tabs.Tab value="flow" label="Trafikkflyt" />
+                        <Tabs.Tab value="internal" label="Intern trafikk" />
+                        <Tabs.Tab value="external" label="Eksterne trafikkilder" />
                     </Tabs.List>
 
                     <Tabs.Panel value="visits" className="pt-4">
@@ -301,7 +373,9 @@ const TrafficAnalysis = () => {
                                         <thead className="bg-gray-100">
                                             <tr>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dato</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall besøk</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                                                    {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende'}
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -339,49 +413,18 @@ const TrafficAnalysis = () => {
                         </div>
                     </Tabs.Panel>
 
-                    <Tabs.Panel value="flow" className="pt-4">
-                        <div className="flex flex-col gap-4">
-                            <Alert variant="info" size="small">
-                                Viser topp 100 trafikkflyter sortert etter volum. Kilder med lavere trafikk vises ikke.
-                            </Alert>
-                            <div className="flex gap-2">
-                                <Chips>
-                                    <Chips.Toggle
-                                        selected={flowFilter === 'all'}
-                                        onClick={() => setFlowFilter('all')}
-                                    >
-                                        Alle kilder
-                                    </Chips.Toggle>
-                                    <Chips.Toggle
-                                        selected={flowFilter === 'external'}
-                                        onClick={() => setFlowFilter('external')}
-                                    >
-                                        Eksterne kilder
-                                    </Chips.Toggle>
-                                    <Chips.Toggle
-                                        selected={flowFilter === 'internal'}
-                                        onClick={() => setFlowFilter('internal')}
-                                    >
-                                        Interne / Direkte
-                                    </Chips.Toggle>
-                                </Chips>
-                            </div>
+                    <Tabs.Panel value="internal" className="pt-4">
+                        <div className="flex flex-col gap-8">
+                            {renderTable('Sti', internalPaths)}
+                            {renderTable('Innganger', entrances)}
+                            {renderTable('Utganger', exits)}
+                        </div>
+                    </Tabs.Panel>
 
-                            <div className="min-h-[500px]">
-                                {nodes.length > 0 ? (
-                                    <UmamiTrafficView nodes={nodes} links={links} />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-gray-500">
-                                        Ingen flytdata tilgjengelig for valgt filter
-                                    </div>
-                                )}
-                            </div>
-
-                            {flowQueryStats && (
-                                <div className="text-sm text-gray-600 text-right">
-                                    Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
+                    <Tabs.Panel value="external" className="pt-4">
+                        <div className="flex flex-col gap-8">
+                            {renderTable('Trafikkilder', referrers)}
+                            {renderTable('Kanaler', channels)}
                         </div>
                     </Tabs.Panel>
                 </Tabs>

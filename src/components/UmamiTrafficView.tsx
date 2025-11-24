@@ -16,6 +16,7 @@ interface UmamiJourneyViewProps {
     nodes: Node[];
     links: Link[];
     isFullscreen?: boolean;
+    metricLabel?: string;
 }
 
 interface StepData {
@@ -34,7 +35,7 @@ interface ConnectionPath {
     opacity: number;
 }
 
-const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false }) => {
+const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, metricLabel = 'besøkende' }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
 
@@ -257,7 +258,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                     {stepData.step === 3 && <span className="text-sm font-medium uppercase tracking-wider">Neste</span>}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900">
-                                    {stepData.totalValue.toLocaleString('nb-NO')} besøkende
+                                    {stepData.totalValue.toLocaleString('nb-NO')} {metricLabel}
                                 </div>
                             </div>
 

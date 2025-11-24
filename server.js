@@ -709,7 +709,7 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, urlPath, interval = 'day' } = req.query;
+        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits' } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -743,12 +743,16 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         if (interval === 'hour') timeTrunc = 'HOUR';
         if (interval === 'week') timeTrunc = 'WEEK';
         if (interval === 'month') timeTrunc = 'MONTH';
+        // Choose aggregation based on metric type
+        const countExpression = metricType === 'pageviews'
+            ? 'COUNT(*)'
+            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
 
         const query = `
             SELECT
                 TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
-                COUNT(*) as count
-            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                ${countExpression} as count
+            FROM \`team-researchops-prod-01d6.umami_views.event\`
             WHERE website_id = @websiteId
             AND created_at BETWEEN @startDate AND @endDate
             AND event_type = 1 -- Pageview
@@ -807,7 +811,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, limit = '50' } = req.query;
+        const { startAt, endAt, limit = '50', metricType = 'visits' } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -826,6 +830,11 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             limit: parseInt(limit)
         };
 
+        // Choose aggregation based on metric type
+        const countExpression = metricType === 'pageviews'
+            ? 'COUNT(*)'
+            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+
         if (req.query.urlPath) {
             // Page-centric flow: Source -> Specific Page -> Next
             params.urlPath = req.query.urlPath;
@@ -840,7 +849,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                             ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
                         END as url_path,
                         created_at
-                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    FROM \`team-researchops-prod-01d6.umami_views.event\`
                     WHERE website_id = @websiteId
                       AND created_at BETWEEN @startDate AND @endDate
                       AND event_type = 1 -- Pageview
@@ -861,7 +870,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     END as source,
                     url_path as landing_page, -- Using 'landing_page' alias to match frontend expectation (it's the center node)
                     COALESCE(next_page, 'Exit') as next_page,
-                    COUNT(*) as count
+                    ${metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(session_id)'} as count
                 FROM events_with_context
                 WHERE url_path = @urlPath
                 GROUP BY 1, 2, 3
@@ -882,7 +891,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                         END as url_path,
                         created_at,
                         ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) as rn
-                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    FROM \`team-researchops-prod-01d6.umami_views.event\`
                     WHERE website_id = @websiteId
                       AND created_at BETWEEN @startDate AND @endDate
                       AND event_type = 1 -- Pageview
@@ -907,7 +916,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     COALESCE(s.referrer_domain, 'Direkte / Annet') as source,
                     s.landing_page,
                     COALESCE(sp.second_page, 'Exit') as next_page,
-                    COUNT(*) as count
+                    ${metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(s.session_id)'} as count
                 FROM session_starts s
                 LEFT JOIN second_pages sp ON s.session_id = sp.session_id
                 GROUP BY 1, 2, 3
