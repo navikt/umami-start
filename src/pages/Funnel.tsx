@@ -6,6 +6,7 @@ import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import FunnelChart from '../components/FunnelChart';
 import HorizontalFunnelChart from '../components/HorizontalFunnelChart';
+import FunnelStats from '../components/FunnelStats';
 import { Website } from '../types/chart';
 
 
@@ -294,116 +295,87 @@ const Funnel = () => {
             )}
 
             {!loading && funnelData.length > 0 && (
-                <Tabs value={activeTab} onChange={setActiveTab}>
-                    <Tabs.List>
-                        <Tabs.Tab value="vertical" label="Vertikal trakt" />
-                        <Tabs.Tab value="horizontal" label="Horisontal trakt" />
-                        <Tabs.Tab value="table" label="Tabell" />
-                    </Tabs.List>
+                <>
+                    <FunnelStats data={funnelData} />
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                        <Tabs.List>
+                            <Tabs.Tab value="vertical" label="Vertikal trakt" />
+                            <Tabs.Tab value="horizontal" label="Horisontal trakt" />
+                            <Tabs.Tab value="table" label="Tabell" />
+                        </Tabs.List>
 
-                    <Tabs.Panel value="vertical" className="pt-4">
-                        <FunnelChart data={funnelData} loading={loading} />
-                    </Tabs.Panel>
+                        <Tabs.Panel value="vertical" className="pt-4">
+                            <FunnelChart data={funnelData} loading={loading} />
+                        </Tabs.Panel>
 
-                    <Tabs.Panel value="horizontal" className="pt-4">
-                        <HorizontalFunnelChart data={funnelData} loading={loading} />
-                    </Tabs.Panel>
+                        <Tabs.Panel value="horizontal" className="pt-4">
+                            <HorizontalFunnelChart data={funnelData} loading={loading} />
+                        </Tabs.Panel>
 
-                    <Tabs.Panel value="table" className="pt-4">
-                        {funnelData.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                    <div className="text-sm text-gray-500 font-medium mb-1">Totalt startet</div>
-                                    <div className="text-2xl font-bold text-gray-900">
-                                        {funnelData[0].count.toLocaleString('nb-NO')}
-                                    </div>
+                        <Tabs.Panel value="table" className="pt-4">
+                            <div className="border rounded-lg overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-100">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Steg</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">URL</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gikk videre</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Falt fra</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {funnelData.map((item, index) => {
+                                                const prevItem = index > 0 ? funnelData[index - 1] : null;
+                                                const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
+                                                const dropoffCount = prevItem ? prevItem.count - item.count : 0;
+                                                const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
+
+                                                return (
+                                                    <tr key={index} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                            Steg {item.step + 1}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-gray-500 break-all">
+                                                            {item.url}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                                                            {item.count.toLocaleString('nb-NO')}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {index > 0 ? (
+                                                                <span className="text-green-600 font-medium">{percentageOfPrev}%</span>
+                                                            ) : '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {index > 0 && dropoffCount > 0 ? (
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-red-600 font-medium">-{dropoffCount.toLocaleString('nb-NO')}</span>
+                                                                    <span className="text-xs text-red-500">({dropoffPercentage}%)</span>
+                                                                </div>
+                                                            ) : '-'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                    <div className="text-sm text-gray-500 font-medium mb-1">Fullførte</div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold text-green-600">
-                                            {funnelData[funnelData.length - 1].count.toLocaleString('nb-NO')}
-                                        </span>
-                                        <span className="text-sm font-medium text-green-600">
-                                            ({funnelData[0].count > 0 ? Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100) : 0}%)
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                    <div className="text-sm text-gray-500 font-medium mb-1">Falt fra</div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold text-red-600">
-                                            {(funnelData[0].count - funnelData[funnelData.length - 1].count).toLocaleString('nb-NO')}
-                                        </span>
-                                        <span className="text-sm font-medium text-red-600">
-                                            ({funnelData[0].count > 0 ? 100 - Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100) : 0}%)
-                                        </span>
-                                    </div>
+                                <div className="flex gap-2 p-3 bg-gray-50 border-t">
+                                    <Button
+                                        size="small"
+                                        variant="secondary"
+                                        onClick={downloadCSV}
+                                        icon={<Download size={16} />}
+                                    >
+                                        Last ned CSV
+                                    </Button>
                                 </div>
                             </div>
-                        )}
-                        <div className="border rounded-lg overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Steg</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">URL</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gikk videre</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Falt fra</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {funnelData.map((item, index) => {
-                                            const prevItem = index > 0 ? funnelData[index - 1] : null;
-                                            const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
-                                            const dropoffCount = prevItem ? prevItem.count - item.count : 0;
-                                            const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
-
-                                            return (
-                                                <tr key={index} className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                        Steg {item.step + 1}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 break-all">
-                                                        {item.url}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                                                        {item.count.toLocaleString('nb-NO')}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {index > 0 ? (
-                                                            <span className="text-green-600 font-medium">{percentageOfPrev}%</span>
-                                                        ) : '-'}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {index > 0 && dropoffCount > 0 ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="text-red-600 font-medium">-{dropoffCount.toLocaleString('nb-NO')}</span>
-                                                                <span className="text-xs text-red-500">({dropoffPercentage}%)</span>
-                                                            </div>
-                                                        ) : '-'}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="flex gap-2 p-3 bg-gray-50 border-t">
-                                <Button
-                                    size="small"
-                                    variant="secondary"
-                                    onClick={downloadCSV}
-                                    icon={<Download size={16} />}
-                                >
-                                    Last ned CSV
-                                </Button>
-                            </div>
-                        </div>
-                    </Tabs.Panel>
-                </Tabs>
+                        </Tabs.Panel>
+                    </Tabs>
+                </>
             )}
 
             {!loading && !error && funnelData.length === 0 && hasAttemptedFetch && (
