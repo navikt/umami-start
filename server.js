@@ -599,7 +599,30 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             count: parseInt(row.count)
         }));
 
-        res.json({ values });
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Event Parameter Values] Dry run failed:', dryRunError.message);
+        }
+
+        res.json({ values, queryStats });
     } catch (error) {
         console.error('BigQuery event parameter values error:', error);
         res.status(500).json({
@@ -695,8 +718,31 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
             };
         });
 
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Latest Events] Dry run failed:', dryRunError.message);
+        }
+
         console.log(`[Latest Events] Returning ${events.length} events`);
-        res.json({ events });
+        res.json({ events, queryStats });
     } catch (error) {
         console.error('BigQuery latest events error:', error);
         res.status(500).json({

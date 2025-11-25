@@ -12,7 +12,7 @@ const UserJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [startUrl, setStartUrl] = useState<string>('');
     const [period, setPeriod] = useState<string>('current_month');
-    const [steps, setSteps] = useState<number>(2);
+    const [steps, setSteps] = useState<number>(5);
     const [limit, setLimit] = useState<number>(15);
     const [limitInput, setLimitInput] = useState<string>('15');
     const [data, setData] = useState<IChartProps | null>(null);
@@ -22,6 +22,7 @@ const UserJourney = () => {
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const [journeyDirection, setJourneyDirection] = useState<string>('forward');
+    const [queryStats, setQueryStats] = useState<any>(null);
 
     // Helper function to normalize URL input - extracts path from full URLs
     const normalizeUrlToPath = (input: string): string => {
@@ -201,6 +202,7 @@ const UserJourney = () => {
             // Log query stats if available
             if (result.queryStats) {
                 console.log(`[User Journeys] Query processed ${result.queryStats.totalBytesProcessedGB} GB, estimated cost: $${result.queryStats.estimatedCostUSD}`);
+                setQueryStats(result.queryStats);
             }
 
             if (result.nodes && result.links) {
@@ -258,7 +260,7 @@ const UserJourney = () => {
 
                     <RadioGroup
                         legend="Reiseretning"
-                        description="Velg om du vil se hva som skjer etter eller før denne siden"
+                        description="Hvilken vei vil du se?"
                         value={journeyDirection}
                         onChange={(val: string) => setJourneyDirection(val)}
                     >
@@ -277,6 +279,8 @@ const UserJourney = () => {
                         <option value={3}>3 steg</option>
                         <option value={4}>4 steg</option>
                         <option value={5}>5 steg</option>
+                        <option value={6}>6 steg</option>
+                        <option value={7}>7 steg</option>
                     </Select>
 
                     <TextField
@@ -355,11 +359,18 @@ const UserJourney = () => {
                             )}
                                  */}
 
-                            <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', width: '100%' }}>
-                                <ResponsiveContainer>
-                                    <SankeyChart data={data} />
-                                </ResponsiveContainer>
+                            <div className="overflow-x-auto w-full">
+                                <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', minWidth: `${Math.max(1000, steps * 350)}px` }}>
+                                    <ResponsiveContainer>
+                                        <SankeyChart data={data} />
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
+                            {queryStats && (
+                                <div className="text-sm text-gray-600 text-right mt-4">
+                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </div>
                     </Tabs.Panel>
 
@@ -396,6 +407,11 @@ const UserJourney = () => {
                                 links={rawData?.links || []}
                                 isFullscreen={isFullscreen}
                             />
+                            {queryStats && (
+                                <div className="text-sm text-gray-600 text-right mt-4">
+                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </div>
                     </Tabs.Panel>
 
@@ -431,8 +447,11 @@ const UserJourney = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t">
-                                {rawData && `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}
+                            <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t flex justify-between items-center">
+                                <span>{rawData && `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}</span>
+                                {queryStats && (
+                                    <span>Data prosessert: {queryStats.totalBytesProcessedGB} GB</span>
+                                )}
                             </div>
                             <div className="flex gap-2 p-3 bg-gray-50 border-b">
                                 <Button

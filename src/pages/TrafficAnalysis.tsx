@@ -23,7 +23,7 @@ const TrafficAnalysis = () => {
     const [seriesData, setSeriesData] = useState<any[]>([]);
     const [flowData, setFlowData] = useState<any[]>([]);
     const [seriesQueryStats, setSeriesQueryStats] = useState<any>(null);
-    const [setFlowQueryStats] = useState<any>(null);
+    const [flowQueryStats, setFlowQueryStats] = useState<any>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -63,6 +63,7 @@ const TrafficAnalysis = () => {
                 setSeriesData(seriesResult.data);
             }
             if (seriesResult.queryStats) {
+                console.log('[TrafficAnalysis] Series queryStats:', seriesResult.queryStats);
                 setSeriesQueryStats(seriesResult.queryStats);
             }
 
@@ -113,6 +114,7 @@ const TrafficAnalysis = () => {
                 setFlowData(flowResult.data);
             }
             if (flowResult.queryStats) {
+                console.log('[TrafficAnalysis] Flow queryStats:', flowResult.queryStats);
                 setFlowQueryStats(flowResult.queryStats);
             }
         } catch (err: any) {
@@ -447,6 +449,11 @@ const TrafficAnalysis = () => {
                             {renderTable('Sti', internalPaths)}
                             {renderTable('Innganger', entrances)}
                             {renderTable('Utganger', exits)}
+                            {flowQueryStats && (
+                                <div className="text-sm text-gray-600 text-right">
+                                    Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </div>
                     </Tabs.Panel>
 
@@ -454,6 +461,11 @@ const TrafficAnalysis = () => {
                         <div className="flex flex-col gap-8">
                             {renderTable('Trafikkilder', referrers)}
                             {renderTable('Kanaler', channels)}
+                            {flowQueryStats && (
+                                <div className="text-sm text-gray-600 text-right">
+                                    Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </div>
                     </Tabs.Panel>
                 </Tabs>

@@ -18,6 +18,7 @@ const Retention = () => {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('chart');
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
+    const [queryStats, setQueryStats] = useState<any>(null);
 
     // Helper function to normalize URL input - extracts path from full URLs
     const normalizeUrlToPath = (input: string): string => {
@@ -130,6 +131,11 @@ const Retention = () => {
                     },
                 };
                 setChartData(chartData);
+
+                // Store query stats if available
+                if (result.queryStats) {
+                    setQueryStats(result.queryStats);
+                }
             }
         } catch (err) {
             console.error('Error fetching retention data:', err);
@@ -245,6 +251,11 @@ const Retention = () => {
                                 </ResponsiveContainer>
                             )}
                         </div>
+                        {queryStats && (
+                            <div className="text-sm text-gray-600 text-right mt-4">
+                                Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                            </div>
+                        )}
                     </Tabs.Panel>
 
                     <Tabs.Panel value="table" className="pt-4">
@@ -275,7 +286,7 @@ const Retention = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex gap-2 p-3 bg-gray-50 border-t">
+                            <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
                                 <Button
                                     size="small"
                                     variant="secondary"
@@ -284,6 +295,11 @@ const Retention = () => {
                                 >
                                     Last ned CSV
                                 </Button>
+                                {queryStats && (
+                                    <span className="text-sm text-gray-600">
+                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </Tabs.Panel>

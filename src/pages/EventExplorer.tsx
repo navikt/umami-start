@@ -33,6 +33,7 @@ const EventExplorer = () => {
     const [parameterValuesTab, setParameterValuesTab] = useState<string>('latest');
     const [latestEvents, setLatestEvents] = useState<any[]>([]);
     const [selectedParameterForDrilldown, setSelectedParameterForDrilldown] = useState<string | null>(null);
+    const [parameterValuesQueryStats, setParameterValuesQueryStats] = useState<any>(null);
 
     // Calculate dates based on selection
     const getDates = () => {
@@ -173,7 +174,8 @@ const EventExplorer = () => {
                 const result = await response.json();
                 return {
                     parameterName: prop.propertyName,
-                    values: result.values || []
+                    values: result.values || [],
+                    queryStats: result.queryStats
                 };
             });
 
@@ -181,11 +183,17 @@ const EventExplorer = () => {
 
             // Convert array to object for easier lookup
             const valuesMap: Record<string, { value: string; count: number }[]> = {};
+            let combinedQueryStats: any = null;
             results.forEach(result => {
                 valuesMap[result.parameterName] = result.values;
+                // Store the first queryStats we find (they should all be similar)
+                if (!combinedQueryStats && result.queryStats) {
+                    combinedQueryStats = result.queryStats;
+                }
             });
 
             setAllParameterValues(valuesMap);
+            setParameterValuesQueryStats(combinedQueryStats);
 
             // Also fetch latest 20 events
             const latestParams = new URLSearchParams({
@@ -648,6 +656,11 @@ const EventExplorer = () => {
                                                             </div>
                                                         </Tabs.Panel>
                                                     </Tabs>
+                                                    {parameterValuesQueryStats && (
+                                                        <div className="text-sm text-gray-600 text-right mt-4">
+                                                            Data prosessert: {parameterValuesQueryStats.totalBytesProcessedGB} GB
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </>

@@ -38,7 +38,8 @@ const Funnel = () => {
     const [timingLoading, setTimingLoading] = useState<boolean>(false);
     const [timingError, setTimingError] = useState<string | null>(null);
     const [showTiming, setShowTiming] = useState<boolean>(false);
-    const [setTimingQueryStats] = useState<any>(null);
+    const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
+    const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
 
 
     const downloadCSV = () => {
@@ -179,6 +180,9 @@ const Funnel = () => {
 
             } else {
                 setFunnelData(data.data);
+                if (data.queryStats) {
+                    setFunnelQueryStats(data.queryStats);
+                }
 
                 // Update URL with funnel configuration for sharing
                 const newParams = new URLSearchParams(searchParams);
@@ -379,10 +383,20 @@ const Funnel = () => {
 
                         <Tabs.Panel value="vertical" className="pt-4">
                             <FunnelChart data={funnelData} loading={loading} />
+                            {funnelQueryStats && (
+                                <div className="text-sm text-gray-600 text-right mt-4">
+                                    Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </Tabs.Panel>
 
                         <Tabs.Panel value="horizontal" className="pt-4">
                             <HorizontalFunnelChart data={funnelData} loading={loading} />
+                            {funnelQueryStats && (
+                                <div className="text-sm text-gray-600 text-right mt-4">
+                                    Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
                         </Tabs.Panel>
 
                         <Tabs.Panel value="table" className="pt-4">
@@ -435,7 +449,7 @@ const Funnel = () => {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="flex gap-2 p-3 bg-gray-50 border-t">
+                                <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
                                     <Button
                                         size="small"
                                         variant="secondary"
@@ -444,6 +458,11 @@ const Funnel = () => {
                                     >
                                         Last ned CSV
                                     </Button>
+                                    {funnelQueryStats && (
+                                        <span className="text-sm text-gray-600">
+                                            Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -510,6 +529,11 @@ const Funnel = () => {
                                                 </table>
                                             </div>
                                         </div>
+                                        {timingQueryStats && (
+                                            <div className="text-sm text-gray-600 text-right">
+                                                Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
