@@ -56,25 +56,25 @@ const SQLPreview = ({
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
     if (!result || !result.data || result.data.length === 0) return null;
-    
+
     const data = result.data;
     const keys = Object.keys(data[0]);
-    
+
     // Need at least 2 columns (x-axis and y-axis)
     if (keys.length < 2) return null;
-    
+
     console.log('Preparing LineChart with keys:', keys);
     console.log('Sample row:', data[0]);
-    
+
     // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
     if (keys.length === 3) {
       const xKey = keys[0];
       const seriesKey = keys[1]; // e.g., 'browser'
       const yKey = keys[2]; // e.g., 'Unike_besokende'
-      
+
       // Group data by series
       const seriesMap = new Map<string, any[]>();
-      
+
       data.forEach((row: any) => {
         const rawSeriesValue = row[seriesKey];
         const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
@@ -82,10 +82,10 @@ const SQLPreview = ({
         if (!seriesMap.has(seriesValue)) {
           seriesMap.set(seriesValue, []);
         }
-        
+
         const xValue = row[xKey];
         const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-        
+
         let x: number | Date;
         if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
           x = new Date(xValue);
@@ -94,7 +94,7 @@ const SQLPreview = ({
         } else {
           x = new Date(xValue).getTime() || 0;
         }
-        
+
         seriesMap.get(seriesValue)!.push({
           x,
           y: yValue,
@@ -102,7 +102,7 @@ const SQLPreview = ({
           yAxisCalloutData: String(yValue),
         });
       });
-      
+
       // Convert to line chart format with colors
       // Using colorblind-friendly palette with good contrast
       const colors = [
@@ -123,7 +123,7 @@ const SQLPreview = ({
           lineBorderWidth: '2',
         },
       }));
-      
+
       // Calculate average line across all data points (only if requested)
       if (includeAverage) {
         // Collect all unique x values
@@ -134,7 +134,7 @@ const SQLPreview = ({
             allXValues.add(xVal);
           });
         });
-        
+
         // For each x value, calculate the average y value across all series
         const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
           const yValues: number[] = [];
@@ -147,17 +147,17 @@ const SQLPreview = ({
               yValues.push(point.y);
             }
           });
-          
-          const avgY = yValues.length > 0 
-            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length 
+
+          const avgY = yValues.length > 0
+            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
             : 0;
-          
+
           // Find original xAxisCalloutData from any series
           const originalPoint = lineChartData[0].data.find((p: any) => {
             const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
             return pxVal === xVal;
           });
-          
+
           return {
             x: new Date(xVal),
             y: avgY,
@@ -165,7 +165,7 @@ const SQLPreview = ({
             yAxisCalloutData: avgY.toFixed(2),
           };
         });
-        
+
         // Add average line to the chart
         lineChartData.push({
           legend: 'Gjennomsnitt',
@@ -177,9 +177,9 @@ const SQLPreview = ({
           } as any,
         });
       }
-      
+
       console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
-      
+
       return {
         data: {
           lineChartData,
@@ -187,15 +187,15 @@ const SQLPreview = ({
         enabledLegendsWrapLines: true,
       };
     }
-    
+
     // Single line: assume first column is x-axis and second is y-axis
     const xKey = keys[0];
     const yKey = keys[1];
-    
+
     const chartPoints = data.map((row: any, index: number) => {
       const xValue = row[xKey];
       const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-      
+
       let x: number | Date;
       if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
         x = new Date(xValue);
@@ -204,7 +204,7 @@ const SQLPreview = ({
       } else {
         x = index;
       }
-      
+
       return {
         x,
         y: yValue,
@@ -212,9 +212,9 @@ const SQLPreview = ({
         yAxisCalloutData: String(yValue),
       };
     });
-    
+
     console.log('Single-line chart points:', chartPoints.slice(0, 3));
-    
+
     // Build the line chart data array
     const lineChartData: any[] = [{
       legend: yKey,
@@ -224,12 +224,12 @@ const SQLPreview = ({
         lineBorderWidth: '2',
       },
     }];
-    
+
     // Add average line (only if requested)
     if (includeAverage) {
       // Calculate average y value for horizontal average line
       const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
-      
+
       // Create average line points (horizontal line across all x values)
       const averageLinePoints = chartPoints.map((point: any) => ({
         x: point.x,
@@ -237,7 +237,7 @@ const SQLPreview = ({
         xAxisCalloutData: point.xAxisCalloutData,
         yAxisCalloutData: avgY.toFixed(2),
       }));
-      
+
       lineChartData.push({
         legend: 'Gjennomsnitt',
         data: averageLinePoints,
@@ -248,7 +248,7 @@ const SQLPreview = ({
         } as any,
       });
     }
-    
+
     return {
       data: {
         lineChartData,
@@ -261,41 +261,41 @@ const SQLPreview = ({
   // Helper function to prepare data for VerticalBarChart
   const prepareBarChartData = (): IVerticalBarChartProps | null => {
     if (!result || !result.data || result.data.length === 0) return null;
-    
+
     const data = result.data;
-    
+
     // Only show bar chart if 10 or fewer items
     if (data.length > 12) return null;
-    
+
     const keys = Object.keys(data[0]);
-    
+
     // Need at least 2 columns (label and value)
     if (keys.length < 2) return null;
-    
+
     // Assume first column is label and second is value
     const labelKey = keys[0];
     const valueKey = keys[1];
-    
+
     console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
     console.log('Sample row:', data[0]);
-    
+
     // Calculate total for percentages
     const total = data.reduce((sum: number, row: any) => {
       const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
       return sum + value;
     }, 0);
-    
+
     console.log('Total value for bar chart:', total);
-    
+
     const barChartData = data.map((row: any) => {
       const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
       const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-      
+
       // Use label for x-axis, with translation
       const rawLabel = row[labelKey];
       const translatedLabel = translateValue(labelKey, rawLabel);
       const label = String(translatedLabel || 'Ukjent');
-      
+
       return {
         x: label,
         y: value,
@@ -305,9 +305,9 @@ const SQLPreview = ({
         legend: label,
       };
     });
-    
+
     console.log('VerticalBarChart data points:', barChartData.slice(0, 3)); // Log first 3 points
-    
+
     return {
       data: barChartData,
       barWidth: 'auto',
@@ -335,46 +335,46 @@ const SQLPreview = ({
   // Helper function to prepare data for PieChart
   const preparePieChartData = (): { data: Array<{ y: number; x: string }>; total: number } | null => {
     if (!result || !result.data || result.data.length === 0) return null;
-    
+
     const data = result.data;
-    
+
     // Only show pie chart if 10 or fewer items
     if (data.length > 12) return null;
-    
+
     const keys = Object.keys(data[0]);
-    
+
     // Need at least 2 columns (label and value)
     if (keys.length < 2) return null;
-    
+
     // Assume first column is label and second is value
     const labelKey = keys[0];
     const valueKey = keys[1];
-    
+
     console.log('Preparing PieChart with keys:', { labelKey, valueKey });
     console.log('Sample row:', data[0]);
-    
+
     // Calculate total for percentages
     const total = data.reduce((sum: number, row: any) => {
       const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
       return sum + value;
     }, 0);
-    
+
     console.log('Total value for pie chart:', total);
-    
+
     const pieChartData = data.map((row: any) => {
       const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
       const rawLabel = row[labelKey];
       const translatedLabel = translateValue(labelKey, rawLabel);
       const label = String(translatedLabel || 'Ukjent');
-      
+
       return {
         y: value,
         x: label,
       };
     });
-    
+
     console.log('PieChart data points:', pieChartData.slice(0, 3)); // Log first 3 points
-    
+
     return {
       data: pieChartData,
       total,
@@ -384,11 +384,11 @@ const SQLPreview = ({
   const handleCopy = async () => {
     navigator.clipboard.writeText(sql);
     setCopied(true);
-    
+
     // Also run cost estimation
     setEstimating(true);
     setLastAction('copy');
-    
+
     try {
       const response = await Promise.race([
         fetch('/api/bigquery/estimate', {
@@ -414,7 +414,7 @@ const SQLPreview = ({
     } finally {
       setEstimating(false);
     }
-    
+
     setTimeout(() => setCopied(false), 3000);
   };
 
@@ -423,7 +423,7 @@ const SQLPreview = ({
     setLoading(true);
     setError(null);
     setLastAction('execute');
-    
+
     try {
       const estimateResponse = await Promise.race([
         fetch('/api/bigquery/estimate', {
@@ -443,14 +443,14 @@ const SQLPreview = ({
       }
 
       const gb = parseFloat(estimateData.totalBytesProcessedGB);
-      
+
       // Check if we should warn the user
       let shouldWarn = false;
-      
+
       if (gb >= 15) {
         shouldWarn = true;
       }
-      
+
       // If warning threshold is met, show modal for confirmation
       if (shouldWarn) {
         setPendingQueryEstimate(estimateData);
@@ -458,7 +458,7 @@ const SQLPreview = ({
         setLoading(false);
         return;
       }
-      
+
       // Proceed with the actual query for small queries
       await runQuery();
     } catch (err: any) {
@@ -493,7 +493,7 @@ const SQLPreview = ({
       }
 
       setResult(data);
-      
+
       // Also get the query stats by running estimate (it's fast and gives us the GB info)
       try {
         const estimateResponse = await Promise.race([
@@ -599,7 +599,7 @@ const SQLPreview = ({
   // Check if SQL is just a basic template without metrics or groupings
   const isBasicTemplate = () => {
     if (!sql) return true;
-    
+
     // Check if it's the "please select website" message
     if (sql.includes('Please select a website')) return true;
 
@@ -679,10 +679,10 @@ const SQLPreview = ({
         onOpenChange(openFormprogress);
       }
     }
-    
+
     // Update previous step
     setPrevStep(activeStep);
-    
+
     // Reset manual opening flag when changing steps (except when at step 3)
     if (prevStep !== activeStep && activeStep !== FINAL_STEP) {
       setWasManuallyOpened(false);
@@ -705,7 +705,7 @@ const SQLPreview = ({
           // Show getting started guidance
           <div className="space-y-4">
             <Heading level="2" size="small">Klargjør spørsmålet ditt</Heading>
-            
+
             {/* Only show SQL code button if the SQL is meaningful */}
             {isSQLMeaningful() && (
               <SqlCodeDisplay sql={sql} showEditButton={true} />
@@ -772,34 +772,34 @@ const SQLPreview = ({
                           Spørsmålet er kopiert!
                         </Alert>
                       )}
-                      
+
                       {/* Cost Estimate Display */}
                       {estimating && (
                         <div className="mt-2 text-sm text-gray-600">
                           Estimerer kostnad...
                         </div>
                       )}
-                      
+
                       {estimate && !estimating && (() => {
                         const gb = parseFloat(estimate.totalBytesProcessedGB);
-                       // const mb = parseFloat(estimate.totalBytesProcessedMB);
-                        
+                        // const mb = parseFloat(estimate.totalBytesProcessedMB);
+
                         // Determine variant and message based on data size
                         let variant: 'info' | 'warning' | 'error' = 'info';
                         let showAsAlert = false;
-                        
-                        if (gb >= 100) { // Crazy much - 100+ GB
+
+                        if (gb >= 300) {
                           variant = 'error';
                           showAsAlert = true;
-                        } else if (gb >= 20) { // Many GB - 10-100 GB
+                        } else if (gb >= 100) {
                           variant = 'warning';
                           showAsAlert = true;
-                        } else if (gb >= 15) { // More than 1 GB
+                        } else if (gb >= 50) {
                           variant = 'info';
                           showAsAlert = true;
                         }
                         // Less than 1 GB - just show as simple text line
-                        
+
                         if (!showAsAlert) {
                           // Simple line for small queries (< 1 GB)
                           return (
@@ -809,7 +809,7 @@ const SQLPreview = ({
                             </div>
                           );
                         }
-                        
+
                         // Alert for larger queries
                         return (
                           <Alert variant={variant} className="mt-2">
@@ -822,12 +822,12 @@ const SQLPreview = ({
                                   <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
                                 </p>
                               )}
-                              {gb >= 100 && (
+                              {gb >= 300 && (
                                 <p className="font-medium mt-2">
                                   ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
                                 </p>
                               )}
-                              {gb >= 10 && gb < 100 && (
+                              {gb >= 100 && gb < 300 && (
                                 <p className="font-medium mt-2">
                                   Dette er en stor spørring. Sjekk at du trenger all denne dataen.
                                 </p>
@@ -950,7 +950,7 @@ const SQLPreview = ({
             const gb = parseFloat(pendingQueryEstimate.totalBytesProcessedGB);
             let variant: 'info' | 'warning' | 'error' = 'info';
             let message = '';
-            
+
             if (gb >= 100) {
               variant = 'error';
               message = 'Dette er en veldig stor spørring!';
@@ -961,7 +961,7 @@ const SQLPreview = ({
               variant = 'info';
               message = 'Denne spørringen vil prosessere en del data.';
             }
-            
+
             return (
               <div className="space-y-4">
                 <Alert variant={variant}>

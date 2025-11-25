@@ -241,8 +241,8 @@ const TrafficAnalysis = () => {
     const renderTable = (title: string, data: { name: string; count: number }[]) => (
         <div className="flex flex-col gap-2 w-full">
             <Heading level="3" size="small">{title}</Heading>
-            <div className="border rounded-lg overflow-hidden w-full">
-                <Table size="small" className="w-full">
+            <div className="border rounded-lg overflow-x-auto">
+                <Table size="small">
                     <Table.Header>
                         <Table.Row>
                             <Table.HeaderCell>Navn</Table.HeaderCell>
@@ -373,31 +373,29 @@ const TrafficAnalysis = () => {
                             </div>
 
                             {/* Table */}
-                            <div className="border rounded-lg overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-100">
-                                            <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dato</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                                                    {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende'}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {seriesData.map((item, index) => (
-                                                <tr key={index} className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                        {new Date(item.time).toLocaleDateString('nb-NO')}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {item.count.toLocaleString('nb-NO')}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div className="border rounded-lg overflow-x-auto">
+                                <Table size="small">
+                                    <Table.Header>
+                                        <Table.Row>
+                                            <Table.HeaderCell>Dato</Table.HeaderCell>
+                                            <Table.HeaderCell align="right">
+                                                {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende'}
+                                            </Table.HeaderCell>
+                                        </Table.Row>
+                                    </Table.Header>
+                                    <Table.Body>
+                                        {seriesData.map((item, index) => (
+                                            <Table.Row key={index}>
+                                                <Table.DataCell>
+                                                    {new Date(item.time).toLocaleDateString('nb-NO')}
+                                                </Table.DataCell>
+                                                <Table.DataCell align="right">
+                                                    {item.count.toLocaleString('nb-NO')}
+                                                </Table.DataCell>
+                                            </Table.Row>
+                                        ))}
+                                    </Table.Body>
+                                </Table>
                                 <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
                                     <div className="flex gap-2">
                                         <Button
