@@ -167,6 +167,30 @@ const TrafficAnalysis = () => {
         };
     }, [seriesData, showAverage, submittedMetricType]);
 
+    const normalizeUrlToPath = (input: string): string => {
+        if (!input.trim()) return '/';
+        let trimmed = input.trim();
+        try {
+            if (trimmed.includes('://')) {
+                const url = new URL(trimmed);
+                return url.pathname;
+            }
+            if (trimmed.startsWith('/') && trimmed.includes('.')) {
+                const withoutLeadingSlash = trimmed.substring(1);
+                if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
+                    trimmed = withoutLeadingSlash;
+                }
+            }
+            if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
+                const url = new URL('https://' + trimmed);
+                return url.pathname;
+            }
+        } catch (e) {
+            // Ignore
+        }
+        return trimmed;
+    };
+
     const downloadCSV = () => {
         if (!seriesData.length) return;
 
@@ -305,6 +329,7 @@ const TrafficAnalysis = () => {
                         description="F.eks. / for forsiden"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
+                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
                     />
 
                     <Button
