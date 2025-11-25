@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup } from '@navikt/ds-react';
 import { Plus, Trash2, Download } from 'lucide-react';
@@ -12,7 +12,7 @@ import { Website } from '../types/chart';
 
 const Funnel = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
     const [urls, setUrls] = useState<string[]>(() => {
@@ -33,28 +33,12 @@ const Funnel = () => {
     const [activeTab, setActiveTab] = useState<string>('vertical');
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
 
-    // Sync state to URL params
-    useEffect(() => {
-        setSearchParams(prev => {
-            const newParams = new URLSearchParams(prev);
-
-            // Sync period
-            newParams.set('period', period);
-
-            // Sync strict mode
-            newParams.set('strict', String(onlyDirectEntry));
-
-            // Sync steps
-            newParams.delete('step');
-            urls.forEach(url => {
-                if (url.trim()) {
-                    newParams.append('step', url.trim());
-                }
-            });
-
-            return newParams;
-        }, { replace: true });
-    }, [period, onlyDirectEntry, urls, setSearchParams]);
+    // Timing data state
+    const [timingData, setTimingData] = useState<any[]>([]);
+    const [timingLoading, setTimingLoading] = useState<boolean>(false);
+    const [timingError, setTimingError] = useState<string | null>(null);
+    const [showTiming, setShowTiming] = useState<boolean>(false);
+    const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
 
 
     const downloadCSV = () => {
@@ -196,6 +180,19 @@ const Funnel = () => {
             } else {
                 setFunnelData(data.data);
 
+                // Update URL with funnel configuration for sharing
+                const newParams = new URLSearchParams(searchParams);
+                newParams.set('period', period);
+                newParams.set('strict', String(onlyDirectEntry));
+
+                // Add steps
+                newParams.delete('step');
+                normalizedUrls.forEach(url => {
+                    newParams.append('step', url);
+                });
+
+                // Update URL without navigation
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             }
         } catch (err) {
             console.error('Error fetching funnel data:', err);
@@ -204,6 +201,82 @@ const Funnel = () => {
 
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchTimingData = async () => {
+        if (!selectedWebsite || funnelData.length === 0) return;
+
+        setTimingLoading(true);
+        setTimingError(null);
+
+        // Calculate date range based on period (same as main funnel query)
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date;
+
+        if (period === 'current_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+
+        const normalizedUrls = urls.map(normalizeUrlToPath).filter(u => u.trim() !== '');
+
+        try {
+            const response = await fetch('/api/bigquery/funnel-timing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    websiteId: selectedWebsite.id,
+                    urls: normalizedUrls,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    onlyDirectEntry
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Kunne ikke hente tidsdata');
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                setTimingError(data.error);
+                setTimingData([]);
+                setTimingQueryStats(null);
+            } else {
+                setTimingData(data.data);
+                setTimingQueryStats(data.queryStats);
+                setShowTiming(true);
+            }
+        } catch (err) {
+            console.error('Error fetching timing data:', err);
+            setTimingError('Det oppstod en feil ved henting av tidsdata.');
+            setTimingData([]);
+        } finally {
+            setTimingLoading(false);
+        }
+    };
+
+    const formatDuration = (seconds: number | null): string => {
+        if (seconds === null || isNaN(seconds)) return '-';
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+
+        if (hours > 0) {
+            return `${hours}t ${minutes}m ${secs}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${secs}s`;
+        } else {
+            return `${secs}s`;
         }
     };
 
@@ -372,6 +445,89 @@ const Funnel = () => {
                                         Last ned CSV
                                     </Button>
                                 </div>
+                            </div>
+
+                            {/* Timing Data Section */}
+                            <div className="mt-6">
+                                <Heading level="3" size="small" className="mb-3">
+                                    Gjennomsnittlig tid per steg
+                                </Heading>
+
+                                {!showTiming && (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={fetchTimingData}
+                                        loading={timingLoading}
+                                        disabled={timingLoading}
+                                    >
+                                        Beregn tid per steg
+                                    </Button>
+                                )}
+
+                                {timingError && (
+                                    <Alert variant="error" className="mb-4">
+                                        {timingError}
+                                    </Alert>
+                                )}
+
+                                {showTiming && !timingError && timingData.length > 0 && (
+                                    <>
+                                        <div className="border rounded-lg overflow-hidden mb-3">
+                                            <div className="overflow-x-auto">
+                                                <table className="min-w-full divide-y divide-gray-200">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnittlig tid</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white divide-y divide-gray-200">
+                                                        {timingData.map((timing, index) => (
+                                                            <tr key={index} className="hover:bg-gray-50">
+                                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">Steg {timing.fromStep + 1}</span>
+                                                                        <span className="text-xs text-gray-500 break-all">{timing.fromUrl}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">Steg {timing.toStep + 1}</span>
+                                                                        <span className="text-xs text-gray-500 break-all">{timing.toUrl}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm font-bold text-blue-600">
+                                                                    {formatDuration(timing.avgSeconds)}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        {timingQueryStats && (
+                                            <div className="text-sm text-gray-600">
+                                                Spørringen prosesserte <strong>{timingQueryStats.totalBytesProcessedGB} GB</strong> data
+                                                {timingQueryStats.estimatedCostUSD && (
+                                                    <> (estimert kostnad: ${timingQueryStats.estimatedCostUSD})</>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <Button
+                                            size="small"
+                                            variant="tertiary"
+                                            onClick={fetchTimingData}
+                                            loading={timingLoading}
+                                            disabled={timingLoading}
+                                            className="mt-3"
+                                        >
+                                            Oppdater
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </Tabs.Panel>
                     </Tabs>

@@ -1476,6 +1476,199 @@ app.post('/api/bigquery/funnel', async (req, res) => {
     }
 });
 
+// Get funnel timing data from BigQuery (average time per step)
+app.post('/api/bigquery/funnel-timing', async (req, res) => {
+    try {
+        const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        if (!urls || !Array.isArray(urls) || urls.length < 2) {
+            return res.status(400).json({
+                error: 'At least 2 URLs are required for a funnel'
+            });
+        }
+
+        // Helper to generate the URL normalization SQL
+        const normalizeUrlSql = `
+            CASE 
+                WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                THEN '/'
+                ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+            END
+        `;
+
+        // 1. Base events CTE with LAG for strict mode
+        let query = `
+            WITH events_raw AS (
+                SELECT 
+                    session_id,
+                    ${normalizeUrlSql} as url_path,
+                    created_at
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = @websiteId
+                  AND created_at BETWEEN @startDate AND @endDate
+                  AND event_type = 1 -- Pageview
+            ),
+            events AS (
+                SELECT 
+                    *,
+                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
+                FROM events_raw
+            ),
+        `;
+
+        // 2. Generate CTEs for each step with timing
+        const stepCtes = urls.map((url, index) => {
+            const stepName = `step${index + 1}`;
+            const prevStepName = `step${index}`;
+
+            if (index === 0) {
+                // Step 1: Always any visit to the first URL
+                return `
+            ${stepName} AS (
+                SELECT session_id, MIN(created_at) as time${index + 1}
+                FROM events
+                WHERE url_path = @url${index}
+                GROUP BY session_id
+            )`;
+            } else {
+                if (onlyDirectEntry) {
+                    // Strict mode: Current URL must be visited immediately after Previous URL
+                    return `
+            ${stepName} AS (
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                FROM events e
+                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+                WHERE e.url_path = @url${index} 
+                  AND e.created_at > prev.time${index}
+                  AND e.prev_url_path = @url${index - 1} -- Strict check: Immediate predecessor
+                GROUP BY e.session_id
+            )`;
+                } else {
+                    // Loose mode: Eventual visit (standard funnel)
+                    return `
+            ${stepName} AS (
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                FROM events e
+                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+                WHERE e.url_path = @url${index} 
+                  AND e.created_at > prev.time${index}
+                GROUP BY e.session_id
+            )`;
+                }
+            }
+        });
+
+        // 3. Build the timing query - join all steps and calculate time differences
+        const joinClauses = urls.map((_, i) => {
+            if (i === 0) return 'step1';
+            return `LEFT JOIN step${i + 1} ON step1.session_id = step${i + 1}.session_id`;
+        }).join('\n            ');
+
+        // Create column aliases for the timing_data CTE
+        const timeColumns = urls.map((_, i) => `step${i + 1}.time${i + 1} as time${i + 1}`).join(',\n                    ');
+
+        // Calculate time differences using the aliased columns
+        const timeDiffSelects = urls.map((_, i) => {
+            if (i === 0) return null; // No time diff for first step
+            return `AVG(TIMESTAMP_DIFF(time${i + 1}, time${i}, SECOND)) as avg_seconds_${i}_to_${i + 1}`;
+        }).filter(Boolean);
+
+        query += stepCtes.join(',') + `,
+            timing_data AS (
+                SELECT
+                    ${timeColumns}
+                FROM ${joinClauses}
+            )
+            SELECT 
+                ${timeDiffSelects.join(',\n                ')}
+            FROM timing_data
+        `;
+
+        console.log('[Funnel Timing] Generated SQL query:', query);
+
+
+        // Create params object
+        const params = {
+            websiteId,
+            startDate,
+            endDate
+        };
+
+        urls.forEach((url, index) => {
+            params[`url${index}`] = url;
+        });
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(1);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+
+            console.log(`[Funnel Timing] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+        } catch (dryRunError) {
+            console.log('[Funnel Timing] Dry run failed:', dryRunError.message);
+        }
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        if (rows.length === 0) {
+            return res.json({ data: [], queryStats });
+        }
+
+        const row = rows[0];
+
+        // Format timing data for frontend
+        const timingData = [];
+        for (let i = 0; i < urls.length - 1; i++) {
+            const avgSeconds = row[`avg_seconds_${i}_to_${i + 1}`];
+            timingData.push({
+                fromStep: i,
+                toStep: i + 1,
+                fromUrl: urls[i],
+                toUrl: urls[i + 1],
+                avgSeconds: avgSeconds ? Math.round(parseFloat(avgSeconds)) : null
+            });
+        }
+
+        res.json({
+            data: timingData,
+            queryStats
+        });
+
+    } catch (error) {
+        console.error('BigQuery funnel timing error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch funnel timing data'
+        });
+    }
+});
+
 
 // Get retention data from BigQuery
 app.post('/api/bigquery/retention', async (req, res) => {
