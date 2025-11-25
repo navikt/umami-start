@@ -1041,6 +1041,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
         // Choose LAG (backward) or LEAD (forward) based on direction
         const windowFunction = direction === 'backward' ? 'LAG' : 'LEAD';
         const nextUrlColumn = direction === 'backward' ? 'prev_url' : 'next_url';
+        const timeOperator = direction === 'backward' ? '<=' : '>=';
 
         const query = `
             WITH session_events AS (
@@ -1074,16 +1075,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     ${windowFunction}(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS ${nextUrlColumn}
                 FROM session_events
                 WHERE start_time IS NOT NULL
-                    AND created_at >= start_time
-            ),
-            start_positions AS (
-                SELECT
-                    session_id,
-                    MIN(created_at) as first_pageview_time,
-                    MIN(CASE WHEN url_path = @startUrl THEN created_at END) as first_start_url_time
-                FROM journey_steps
-                GROUP BY session_id
-                HAVING MIN(created_at) = MIN(CASE WHEN url_path = @startUrl THEN created_at END)
+                    AND created_at ${timeOperator} start_time
             ),
             renumbered_steps AS (
                 SELECT
@@ -1092,9 +1084,6 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     j.${nextUrlColumn},
                     ROW_NUMBER() OVER (PARTITION BY j.session_id ORDER BY j.created_at ${direction === 'backward' ? 'DESC' : 'ASC'}) - 1 AS step
                 FROM journey_steps j
-                INNER JOIN start_positions sp 
-                    ON j.session_id = sp.session_id 
-                    AND j.created_at >= sp.first_pageview_time
             ),
             raw_flows AS (
                 SELECT

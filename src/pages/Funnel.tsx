@@ -38,7 +38,7 @@ const Funnel = () => {
     const [timingLoading, setTimingLoading] = useState<boolean>(false);
     const [timingError, setTimingError] = useState<string | null>(null);
     const [showTiming, setShowTiming] = useState<boolean>(false);
-    const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
+    const [setTimingQueryStats] = useState<any>(null);
 
 
     const downloadCSV = () => {
