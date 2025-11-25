@@ -1573,10 +1573,18 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         // Create column aliases for the timing_data CTE
         const timeColumns = urls.map((_, i) => `step${i + 1}.time${i + 1} as time${i + 1}`).join(',\n                    ');
 
-        // Calculate time differences using the aliased columns
-        const timeDiffSelects = urls.map((_, i) => {
-            if (i === 0) return null; // No time diff for first step
-            return `AVG(TIMESTAMP_DIFF(time${i + 1}, time${i}, SECOND)) as avg_seconds_${i}_to_${i + 1}`;
+        // First, create a CTE with individual time differences per session
+        const timeDiffColumns = urls.map((_, i) => {
+            if (i === 0) return null;
+            return `TIMESTAMP_DIFF(time${i + 1}, time${i}, SECOND) as diff_${i}_to_${i + 1}`;
+        }).filter(Boolean).join(',\n                    ');
+
+        // Then calculate both average and median for each time difference
+        const aggregateSelects = urls.map((_, i) => {
+            if (i === 0) return null;
+            return `
+                AVG(diff_${i}_to_${i + 1}) as avg_seconds_${i}_to_${i + 1},
+                APPROX_QUANTILES(diff_${i}_to_${i + 1}, 2)[OFFSET(1)] as median_seconds_${i}_to_${i + 1}`;
         }).filter(Boolean);
 
         query += stepCtes.join(',') + `,
@@ -1584,10 +1592,19 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 SELECT
                     ${timeColumns}
                 FROM ${joinClauses}
+            ),
+            time_diffs AS (
+                SELECT
+                    ${timeDiffColumns}
+                FROM timing_data
+                WHERE ${urls.map((_, i) => {
+            if (i === 0) return null;
+            return `time${i} IS NOT NULL AND time${i + 1} IS NOT NULL`;
+        }).filter(Boolean).join(' AND ')}
             )
             SELECT 
-                ${timeDiffSelects.join(',\n                ')}
-            FROM timing_data
+                ${aggregateSelects.join(',\n                ')}
+            FROM time_diffs
         `;
 
         console.log('[Funnel Timing] Generated SQL query:', query);
@@ -1647,12 +1664,14 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         const timingData = [];
         for (let i = 0; i < urls.length - 1; i++) {
             const avgSeconds = row[`avg_seconds_${i}_to_${i + 1}`];
+            const medianSeconds = row[`median_seconds_${i}_to_${i + 1}`];
             timingData.push({
                 fromStep: i,
                 toStep: i + 1,
                 fromUrl: urls[i],
                 toUrl: urls[i + 1],
-                avgSeconds: avgSeconds ? Math.round(parseFloat(avgSeconds)) : null
+                avgSeconds: avgSeconds ? Math.round(parseFloat(avgSeconds)) : null,
+                medianSeconds: medianSeconds ? Math.round(parseFloat(medianSeconds)) : null
             });
         }
 

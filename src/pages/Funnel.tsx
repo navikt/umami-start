@@ -479,7 +479,8 @@ const Funnel = () => {
                                                         <tr>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnittlig tid</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnitt</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Median</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -500,32 +501,15 @@ const Funnel = () => {
                                                                 <td className="px-6 py-4 text-sm font-bold text-blue-600">
                                                                     {formatDuration(timing.avgSeconds)}
                                                                 </td>
+                                                                <td className="px-6 py-4 text-sm font-bold text-green-600">
+                                                                    {formatDuration(timing.medianSeconds)}
+                                                                </td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
-
-                                        {timingQueryStats && (
-                                            <div className="text-sm text-gray-600">
-                                                Spørringen prosesserte <strong>{timingQueryStats.totalBytesProcessedGB} GB</strong> data
-                                                {timingQueryStats.estimatedCostUSD && (
-                                                    <> (estimert kostnad: ${timingQueryStats.estimatedCostUSD})</>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        <Button
-                                            size="small"
-                                            variant="tertiary"
-                                            onClick={fetchTimingData}
-                                            loading={timingLoading}
-                                            disabled={timingLoading}
-                                            className="mt-3"
-                                        >
-                                            Oppdater
-                                        </Button>
                                     </>
                                 )}
                             </div>
