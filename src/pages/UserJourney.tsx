@@ -21,6 +21,7 @@ const UserJourney = () => {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+    const [journeyDirection, setJourneyDirection] = useState<string>('forward');
 
     // Helper function to normalize URL input - extracts path from full URLs
     const normalizeUrlToPath = (input: string): string => {
@@ -62,7 +63,7 @@ const UserJourney = () => {
     const downloadCSV = () => {
         if (!rawData || !rawData.links || rawData.links.length === 0) return;
 
-        const headers = ['Steg', 'Fra side', 'Til side', 'Antall brukere'];
+        const headers = ['Steg', 'Til side', 'Fra side', 'Antall brukere'];
         const csvRows = [
             headers.join(','),
             ...rawData.links.map((link: any) => {
@@ -81,8 +82,8 @@ const UserJourney = () => {
 
                 return [
                     step,
-                    escapeCSV(sourceNode?.name || '-'),
                     escapeCSV(targetNode?.name || '-'),
+                    escapeCSV(sourceNode?.name || '-'),
                     link.value
                 ].join(',');
             })
@@ -105,7 +106,7 @@ const UserJourney = () => {
         if (!rawData || !rawData.links || rawData.links.length === 0) return;
 
         const worksheetData = [
-            ['Steg', 'Fra side', 'Til side', 'Antall brukere'],
+            ['Steg', 'Til side', 'Fra side', 'Antall brukere'],
             ...rawData.links.map((link: any) => {
                 const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
                 const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
@@ -114,8 +115,8 @@ const UserJourney = () => {
 
                 return [
                     step,
-                    sourceNode?.name || '-',
                     targetNode?.name || '-',
+                    sourceNode?.name || '-',
                     link.value
                 ];
             })
@@ -179,6 +180,7 @@ const UserJourney = () => {
                     endDate: endDate.toISOString(),
                     steps,
                     limit,
+                    direction: journeyDirection,
                 }),
             });
 
@@ -253,6 +255,16 @@ const UserJourney = () => {
                         value={startUrl}
                         onChange={(e) => setStartUrl(e.target.value)}
                     />
+
+                    <RadioGroup
+                        legend="Reiseretning"
+                        description="Velg om du vil se hva som skjer etter eller før denne siden"
+                        value={journeyDirection}
+                        onChange={(val: string) => setJourneyDirection(val)}
+                    >
+                        <Radio value="forward">Fremover (hva skjer etter)</Radio>
+                        <Radio value="backward">Bakover (hvordan kom de hit)</Radio>
+                    </RadioGroup>
 
                     <Select
                         label="Antall steg"
@@ -394,8 +406,8 @@ const UserJourney = () => {
                                     <thead className="bg-gray-100 sticky top-0">
                                         <tr>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Steg</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Fra side</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Til side</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Fra side</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Antall brukere</th>
                                         </tr>
                                     </thead>
@@ -410,8 +422,8 @@ const UserJourney = () => {
                                             return (
                                                 <tr key={idx} className="hover:bg-gray-50">
                                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{step}</td>
-                                                    <td className="px-4 py-2 text-sm text-gray-900">{sourceNode?.name || '-'}</td>
                                                     <td className="px-4 py-2 text-sm text-gray-900">{targetNode?.name || '-'}</td>
+                                                    <td className="px-4 py-2 text-sm text-gray-900">{sourceNode?.name || '-'}</td>
                                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{link.value.toLocaleString('nb-NO')}</td>
                                                 </tr>
                                             );

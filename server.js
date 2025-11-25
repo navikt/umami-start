@@ -1030,13 +1030,17 @@ app.get('/api/bigquery/websites', async (req, res) => {
 // Get user journeys from BigQuery
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
-        const { websiteId, startUrl, startDate, endDate, steps = 3, limit = 30 } = req.body;
+        const { websiteId, startUrl, startDate, endDate, steps = 3, limit = 30, direction = 'forward' } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
             })
         }
+
+        // Choose LAG (backward) or LEAD (forward) based on direction
+        const windowFunction = direction === 'backward' ? 'LAG' : 'LEAD';
+        const nextUrlColumn = direction === 'backward' ? 'prev_url' : 'next_url';
 
         const query = `
             WITH session_events AS (
@@ -1067,7 +1071,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     session_id,
                     url_path,
                     created_at,
-                    LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS next_url
+                    ${windowFunction}(url_path) OVER (PARTITION BY session_id ORDER BY created_at) AS ${nextUrlColumn}
                 FROM session_events
                 WHERE start_time IS NOT NULL
                     AND created_at >= start_time
@@ -1085,8 +1089,8 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 SELECT
                     j.session_id,
                     j.url_path,
-                    j.next_url,
-                    ROW_NUMBER() OVER (PARTITION BY j.session_id ORDER BY j.created_at) - 1 AS step
+                    j.${nextUrlColumn},
+                    ROW_NUMBER() OVER (PARTITION BY j.session_id ORDER BY j.created_at ${direction === 'backward' ? 'DESC' : 'ASC'}) - 1 AS step
                 FROM journey_steps j
                 INNER JOIN start_positions sp 
                     ON j.session_id = sp.session_id 
@@ -1096,19 +1100,19 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 SELECT
                     step,
                     url_path AS source,
-                    next_url AS target,
+                    ${nextUrlColumn} AS target,
                     COUNT(*) AS value
                 FROM renumbered_steps
                 WHERE step < @steps
-                    AND next_url IS NOT NULL
+                    AND ${nextUrlColumn} IS NOT NULL
                     -- Filter out self-loops (same page to same page)
-                    AND url_path != next_url
+                    AND url_path != ${nextUrlColumn}
                     -- Ensure step 0 ONLY has the start URL as source
                     AND (step > 0 OR url_path = @startUrl)
                     -- Prevent start URL from appearing as source at steps > 0
                     AND NOT (step > 0 AND url_path = @startUrl)
                     -- Prevent start URL from appearing as target at steps > 0 (no back-navigation to start)
-                    AND NOT (step > 0 AND next_url = @startUrl)
+                    AND NOT (step > 0 AND ${nextUrlColumn} = @startUrl)
                 GROUP BY 1, 2, 3
             ),
             ranked AS (
