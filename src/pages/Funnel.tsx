@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup } from '@navikt/ds-react';
 import { Plus, Trash2, Download } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
@@ -10,14 +11,49 @@ import { Website } from '../types/chart';
 
 const Funnel = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [urls, setUrls] = useState<string[]>(['', '']); // Start with 2 empty steps
-    const [period, setPeriod] = useState<string>('current_month');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Initialize state from URL params
+    const [urls, setUrls] = useState<string[]>(() => {
+        const steps = searchParams.getAll('step');
+        return steps.length >= 2 ? steps : ['', ''];
+    });
+
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+
+    const [onlyDirectEntry, setOnlyDirectEntry] = useState<boolean>(() => {
+        const param = searchParams.get('strict');
+        return param === null ? true : param === 'true';
+    });
+
     const [funnelData, setFunnelData] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('vertical');
-    const [onlyDirectEntry, setOnlyDirectEntry] = useState<boolean>(true);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
+
+    // Sync state to URL params
+    useEffect(() => {
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+
+            // Sync period
+            newParams.set('period', period);
+
+            // Sync strict mode
+            newParams.set('strict', String(onlyDirectEntry));
+
+            // Sync steps
+            newParams.delete('step');
+            urls.forEach(url => {
+                if (url.trim()) {
+                    newParams.append('step', url.trim());
+                }
+            });
+
+            return newParams;
+        }, { replace: true });
+    }, [period, onlyDirectEntry, urls, setSearchParams]);
 
 
     const downloadCSV = () => {
@@ -200,6 +236,7 @@ const Funnel = () => {
                                     label={`Steg ${index + 1}`}
                                     value={url}
                                     onChange={(e) => updateUrl(index, e.target.value)}
+                                    onBlur={(e) => updateUrl(index, normalizeUrlToPath(e.target.value))}
                                     className="flex-grow"
                                 />
                                 {urls.length > 2 && (
@@ -273,6 +310,38 @@ const Funnel = () => {
                     </Tabs.Panel>
 
                     <Tabs.Panel value="table" className="pt-4">
+                        {funnelData.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                    <div className="text-sm text-gray-500 font-medium mb-1">Totalt startet</div>
+                                    <div className="text-2xl font-bold text-gray-900">
+                                        {funnelData[0].count.toLocaleString('nb-NO')}
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                    <div className="text-sm text-gray-500 font-medium mb-1">Fullførte</div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-2xl font-bold text-green-600">
+                                            {funnelData[funnelData.length - 1].count.toLocaleString('nb-NO')}
+                                        </span>
+                                        <span className="text-sm font-medium text-green-600">
+                                            ({funnelData[0].count > 0 ? Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100) : 0}%)
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                    <div className="text-sm text-gray-500 font-medium mb-1">Falt fra</div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-2xl font-bold text-red-600">
+                                            {(funnelData[0].count - funnelData[funnelData.length - 1].count).toLocaleString('nb-NO')}
+                                        </span>
+                                        <span className="text-sm font-medium text-red-600">
+                                            ({funnelData[0].count > 0 ? 100 - Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100) : 0}%)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <div className="border rounded-lg overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
