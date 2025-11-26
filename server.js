@@ -1747,73 +1747,83 @@ app.post('/api/bigquery/retention', async (req, res) => {
         const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         const maxDays = Math.max(daysDiff, 31); // Allow up to 31 days for full month retention
 
-        // Helper to generate the URL normalization SQL (same as in journeys/funnel)
-        const normalizeUrlSql = `
-            CASE 
-                WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                THEN '/'
-                ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-            END
-        `;
-
-        // If urlPath is provided, we filter the cohort
-        // The cohort is defined as users who visited the specific URL on their first seen date
+        // Optimized query that normalizes URLs once and avoids expensive EXISTS clauses
         const query = `
-            WITH user_first_seen AS (
+            WITH base AS (
+                -- Pre-normalize URL once (no regex in joins later)
                 SELECT
                     session_id,
-                    MIN(DATE(created_at)) as first_seen_date
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                    DATE(created_at) AS event_date,
+                    created_at,
+                    -- lightweight URL normalization
+                    IFNULL(
+                        NULLIF(
+                            RTRIM(
+                                REGEXP_REPLACE(
+                                    REGEXP_REPLACE(url_path, r'[?#].*', ''), -- strip query/fragments
+                                    r'//+', '/'),                             -- collapse slashes
+                                '/'),
+                            ''),
+                        '/') AS url_path_clean
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
-                  AND created_at BETWEEN @startDate AND @endDate
-                  ${urlPath ? `
-                  AND EXISTS (
-                    SELECT 1 
-                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e2 
-                    WHERE e2.session_id = e.session_id 
-                      AND DATE(e2.created_at) = DATE(e.created_at)
-                      AND ${normalizeUrlSql.replace(/url_path/g, 'e2.url_path')} = @urlPath
-                  )` : ''}
+                    AND created_at BETWEEN @startDate AND @endDate
+            ),
+            ${urlPath ? `
+            filtered_sessions AS (
+                -- Only keep session-days where the specified URL occurred
+                SELECT DISTINCT
+                    session_id,
+                    event_date AS first_seen_date
+                FROM base
+                WHERE url_path_clean = @urlPath
+            ),
+            ` : `
+            filtered_sessions AS (
+                -- Get first seen date for each session
+                SELECT
+                    session_id,
+                    MIN(event_date) AS first_seen_date
+                FROM base
                 GROUP BY session_id
             ),
+            `}
             user_activity AS (
                 SELECT DISTINCT
                     session_id,
-                    DATE(created_at) as activity_date
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = @websiteId
-                  AND created_at BETWEEN @startDate AND @endDate
-                  ${businessDaysOnly ? `AND EXTRACT(DAYOFWEEK FROM DATE(created_at)) NOT IN (1, 7)` : ''}
+                    event_date AS activity_date
+                FROM base
+                ${businessDaysOnly ? `WHERE EXTRACT(DAYOFWEEK FROM event_date) NOT IN (1, 7)` : ''}
             ),
             retention_base AS (
                 SELECT
-                    u.session_id,
-                    u.first_seen_date,
-                    DATE_DIFF(a.activity_date, u.first_seen_date, DAY) as day_diff
-                FROM user_first_seen u
-                JOIN user_activity a ON u.session_id = a.session_id
-                WHERE DATE_DIFF(a.activity_date, u.first_seen_date, DAY) >= 0
-            ),
-            cohort_sizes AS (
-                SELECT
-                    first_seen_date,
-                    COUNT(DISTINCT session_id) as cohort_size
-                FROM user_first_seen
-                GROUP BY first_seen_date
+                    f.session_id,
+                    f.first_seen_date,
+                    a.activity_date,
+                    DATE_DIFF(a.activity_date, f.first_seen_date, DAY) AS day_diff
+                FROM filtered_sessions f
+                JOIN user_activity a
+                    USING (session_id)
+                WHERE DATE_DIFF(a.activity_date, f.first_seen_date, DAY) >= 0
             ),
             retention_counts AS (
                 SELECT
-                    r.day_diff,
-                    COUNT(DISTINCT r.session_id) as returning_users
-                FROM retention_base r
-                WHERE r.day_diff <= @maxDays
-                GROUP BY r.day_diff
+                    day_diff,
+                    COUNT(DISTINCT session_id) AS returning_users
+                FROM retention_base
+                WHERE day_diff <= @maxDays
+                GROUP BY day_diff
+            ),
+            user_counts AS (
+                SELECT COUNT(DISTINCT session_id) AS total_users
+                FROM filtered_sessions
             )
             SELECT
-                rc.day_diff as day,
+                rc.day_diff AS day,
                 rc.returning_users,
-                (SELECT COUNT(DISTINCT session_id) FROM user_first_seen) as total_users
+                u.total_users
             FROM retention_counts rc
+            CROSS JOIN user_counts u
             ORDER BY rc.day_diff
         `;
 
