@@ -38,6 +38,8 @@ const UserJourney = () => {
     const [queryStats, setQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+    const [reverseVisualOrder, setReverseVisualOrder] = useState<boolean>(false); // Default off
+
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -248,6 +250,9 @@ const UserJourney = () => {
                         links: result.links,
                     }
                 } as unknown as IChartProps);
+
+                // Update current data direction and set default visual order
+                setReverseVisualOrder(journeyDirection === 'backward');
             } else {
                 setRawData({ nodes: [], links: [] });
                 setData({
@@ -312,11 +317,15 @@ const UserJourney = () => {
                         legend="Reiseretning"
                         description="Hvilken vei vil du se?"
                         value={journeyDirection}
-                        onChange={(val: string) => setJourneyDirection(val)}
+                        onChange={(val: string) => {
+                            setJourneyDirection(val);
+                        }}
                     >
                         <Radio value="forward">Fremover (hva skjer etter)</Radio>
                         <Radio value="backward">Bakover (hvordan kom de hit)</Radio>
                     </RadioGroup>
+
+
 
                     <Select
                         label="Antall steg"
@@ -464,10 +473,12 @@ const UserJourney = () => {
                                 </div>
                             )}
                             */}
+
                                 <UmamiJourneyView
                                     nodes={rawData?.nodes || []}
                                     links={rawData?.links || []}
                                     isFullscreen={isFullscreen}
+                                    reverseVisualOrder={reverseVisualOrder}
                                 />
                                 {queryStats && (
                                     <div className="text-sm text-gray-600 text-right mt-4">

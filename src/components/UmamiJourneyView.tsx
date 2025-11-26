@@ -16,6 +16,7 @@ interface UmamiJourneyViewProps {
     nodes: Node[];
     links: Link[];
     isFullscreen?: boolean;
+    reverseVisualOrder?: boolean;
 }
 
 interface StepData {
@@ -34,11 +35,12 @@ interface ConnectionPath {
     opacity: number;
 }
 
-const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false }) => {
+const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
 
     const contentRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
     // Process data
@@ -185,15 +187,25 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
             const sourceRect = sourceEl.getBoundingClientRect();
             const targetRect = targetEl.getBoundingClientRect();
 
-            const x1 = sourceRect.right - contentRect.left;
+            let x1, x2;
+
+            if (reverseVisualOrder) {
+                // Source is on the right, Target is on the left
+                x1 = sourceRect.left - contentRect.left;
+                x2 = targetRect.right - contentRect.left;
+            } else {
+                // Source is on the left, Target is on the right
+                x1 = sourceRect.right - contentRect.left;
+                x2 = targetRect.left - contentRect.left;
+            }
+
             const y1 = sourceRect.top + sourceRect.height / 2 - contentRect.top;
-            const x2 = targetRect.left - contentRect.left;
             const y2 = targetRect.top + targetRect.height / 2 - contentRect.top;
 
             const dist = Math.abs(x2 - x1);
-            const cp1x = x1 + dist * 0.5;
+            const cp1x = reverseVisualOrder ? x1 - dist * 0.5 : x1 + dist * 0.5;
             const cp1y = y1;
-            const cp2x = x2 - dist * 0.5;
+            const cp2x = reverseVisualOrder ? x2 + dist * 0.5 : x2 - dist * 0.5;
             const cp2y = y2;
 
             return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
@@ -214,7 +226,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
 
         setPaths(newPaths);
 
-    }, [selectedNodeId, nodes, links, stepsData, connectedNodeIds, isFullscreen]); // Added isFullscreen dependency
+    }, [selectedNodeId, nodes, links, stepsData, connectedNodeIds, isFullscreen, reverseVisualOrder]); // Added reverseVisualOrder dependency
 
     // Handle resize
     useLayoutEffect(() => {
@@ -223,12 +235,24 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Auto-scroll to right if reversed
+    useLayoutEffect(() => {
+        if (reverseVisualOrder && containerRef.current) {
+            containerRef.current.scrollLeft = containerRef.current.scrollWidth;
+        } else if (!reverseVisualOrder && containerRef.current) {
+            containerRef.current.scrollLeft = 0;
+        }
+    }, [reverseVisualOrder, stepsData]);
+
     if (!stepsData.length) {
         return <div className="p-4 text-gray-500">Ingen data å vise.</div>;
     }
 
     return (
-        <div className={`bg-white w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}>
+        <div
+            ref={containerRef}
+            className={`bg-white w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}
+        >
             {/* Inner container */}
             <div className={`relative min-w-max ${isFullscreen ? '' : ''}`} ref={contentRef}>
 
@@ -246,7 +270,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                     ))}
                 </svg>
 
-                <div className="flex gap-8 relative z-20"> {/* Reduced gap from 12 to 8 */}
+                <div className={`flex gap-8 relative z-20 ${reverseVisualOrder ? 'flex-row-reverse' : ''}`}> {/* Reduced gap from 12 to 8 */}
                     {stepsData.map((stepData) => (
                         <div key={stepData.step} className="flex-shrink-0 w-60 flex flex-col gap-4"> {/* Reduced width from 72 (18rem) to 60 (15rem) */}
                             {/* Step Header */}
