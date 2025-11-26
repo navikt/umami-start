@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Radio, RadioGroup, Tabs } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Radio, RadioGroup, Tabs, Heading } from '@navikt/ds-react';
+import { Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
@@ -18,6 +19,17 @@ const UserComposition = () => {
     const [error, setError] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<string>('browser');
     const [queryStats, setQueryStats] = useState<any>(null);
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
@@ -201,6 +213,17 @@ const UserComposition = () => {
 
             {!loading && data && (
                 <>
+                    <div className="flex justify-between items-center mb-4">
+                        <Heading level="2" size="medium">Resultater</Heading>
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
                     <Tabs value={activeCategory} onChange={setActiveCategory}>
                         <Tabs.List>
                             <Tabs.Tab value="browser" label="Nettleser" />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup } from '@navikt/ds-react';
-import { Plus, Trash2, Download } from 'lucide-react';
+import { Plus, Trash2, Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import FunnelChart from '../components/FunnelChart';
@@ -40,6 +40,17 @@ const Funnel = () => {
     const [showTiming, setShowTiming] = useState<boolean>(false);
     const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
     const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
 
 
     const downloadCSV = () => {
@@ -374,6 +385,17 @@ const Funnel = () => {
             {!loading && funnelData.length > 0 && (
                 <>
                     <FunnelStats data={funnelData} />
+                    <div className="flex justify-between items-center mb-4">
+                        <Heading level="2" size="medium">Resultater</Heading>
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
                     <Tabs value={activeTab} onChange={setActiveTab}>
                         <Tabs.List>
                             <Tabs.Tab value="vertical" label="Vertikal trakt" />

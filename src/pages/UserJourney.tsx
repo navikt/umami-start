@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Heading } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download, Minimize2 } from 'lucide-react';
+import { Download, Minimize2, Share2, Check } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -36,8 +36,19 @@ const UserJourney = () => {
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const [journeyDirection, setJourneyDirection] = useState<string>(() => searchParams.get('direction') || 'forward');
     const [queryStats, setQueryStats] = useState<any>(null);
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
     // Helper function to normalize URL input - extracts path from full URLs
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
+
     const normalizeUrlToPath = (input: string): string => {
         if (!input.trim()) return '/';
 
@@ -351,29 +362,41 @@ const UserJourney = () => {
             )}
 
             {!loading && data && (data as any).SankeyChartData?.nodes?.length > 0 && (
-                <Tabs value={activeTab} onChange={setActiveTab}>
-                    <Tabs.List>
-                        <Tabs.Tab value="steps" label="Stegvisning" />
-                        <Tabs.Tab value="sankey" label="Flytdiagram" />
-                        <Tabs.Tab value="table" label="Tabell" />
-                    </Tabs.List>
+                <>
+                    <div className="flex justify-between items-center mb-4">
+                        <Heading level="2" size="medium">Resultater</Heading>
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                        <Tabs.List>
+                            <Tabs.Tab value="steps" label="Stegvisning" />
+                            <Tabs.Tab value="sankey" label="Flytdiagram" />
+                            <Tabs.Tab value="table" label="Tabell" />
+                        </Tabs.List>
 
-                    <Tabs.Panel value="sankey" className="pt-2">
+                        <Tabs.Panel value="sankey" className="pt-2">
 
-                        <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
-                            {isFullscreen && (
-                                <div className="mb-4 flex justify-end">
-                                    <Button
-                                        size="small"
-                                        variant="tertiary"
-                                        onClick={() => setIsFullscreen(false)}
-                                        icon={<Minimize2 size={20} />}
-                                    >
-                                        Lukk fullskjerm
-                                    </Button>
-                                </div>
-                            )}
-                            {/*
+                            <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+                                {isFullscreen && (
+                                    <div className="mb-4 flex justify-end">
+                                        <Button
+                                            size="small"
+                                            variant="tertiary"
+                                            onClick={() => setIsFullscreen(false)}
+                                            icon={<Minimize2 size={20} />}
+                                        >
+                                            Lukk fullskjerm
+                                        </Button>
+                                    </div>
+                                )}
+                                {/*
                             {!isFullscreen && (
                                 <div className="mb-2 flex justify-end">
                                     <Button
@@ -388,36 +411,36 @@ const UserJourney = () => {
                             )}
                                  */}
 
-                            <div className="overflow-x-auto w-full">
-                                <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', minWidth: `${Math.max(1000, steps * 350)}px` }}>
-                                    <ResponsiveContainer>
-                                        <SankeyChart data={data} />
-                                    </ResponsiveContainer>
+                                <div className="overflow-x-auto w-full">
+                                    <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', minWidth: `${Math.max(1000, steps * 350)}px` }}>
+                                        <ResponsiveContainer>
+                                            <SankeyChart data={data} />
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
+                                {queryStats && (
+                                    <div className="text-sm text-gray-600 text-right mt-4">
+                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                    </div>
+                                )}
                             </div>
-                            {queryStats && (
-                                <div className="text-sm text-gray-600 text-right mt-4">
-                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
-                        </div>
-                    </Tabs.Panel>
+                        </Tabs.Panel>
 
-                    <Tabs.Panel value="steps" className="pt-4">
-                        <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
-                            {isFullscreen && (
-                                <div className="mb-4 flex justify-end">
-                                    <Button
-                                        size="small"
-                                        variant="tertiary"
-                                        onClick={() => setIsFullscreen(false)}
-                                        icon={<Minimize2 size={20} />}
-                                    >
-                                        Lukk fullskjerm
-                                    </Button>
-                                </div>
-                            )}
-                            {/*
+                        <Tabs.Panel value="steps" className="pt-4">
+                            <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+                                {isFullscreen && (
+                                    <div className="mb-4 flex justify-end">
+                                        <Button
+                                            size="small"
+                                            variant="tertiary"
+                                            onClick={() => setIsFullscreen(false)}
+                                            icon={<Minimize2 size={20} />}
+                                        >
+                                            Lukk fullskjerm
+                                        </Button>
+                                    </div>
+                                )}
+                                {/*
                             {!isFullscreen && (
                                 <div className="mb-2 flex justify-end">
                                     <Button
@@ -431,78 +454,79 @@ const UserJourney = () => {
                                 </div>
                             )}
                             */}
-                            <UmamiJourneyView
-                                nodes={rawData?.nodes || []}
-                                links={rawData?.links || []}
-                                isFullscreen={isFullscreen}
-                            />
-                            {queryStats && (
-                                <div className="text-sm text-gray-600 text-right mt-4">
-                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
-                        </div>
-                    </Tabs.Panel>
-
-                    <Tabs.Panel value="table" className="pt-4">
-                        <div className="border rounded-lg overflow-hidden">
-                            <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-100 sticky top-0">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Steg</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Til side</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Fra side</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Antall brukere</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {rawData && rawData.links.map((link: any, idx: number) => {
-                                            const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
-                                            const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
-
-                                            const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
-                                            const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
-
-                                            return (
-                                                <tr key={idx} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{step}</td>
-                                                    <td className="px-4 py-2 text-sm text-gray-900">{targetNode?.name || '-'}</td>
-                                                    <td className="px-4 py-2 text-sm text-gray-900">{sourceNode?.name || '-'}</td>
-                                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{link.value.toLocaleString('nb-NO')}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t flex justify-between items-center">
-                                <span>{rawData && `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}</span>
+                                <UmamiJourneyView
+                                    nodes={rawData?.nodes || []}
+                                    links={rawData?.links || []}
+                                    isFullscreen={isFullscreen}
+                                />
                                 {queryStats && (
-                                    <span>Data prosessert: {queryStats.totalBytesProcessedGB} GB</span>
+                                    <div className="text-sm text-gray-600 text-right mt-4">
+                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                    </div>
                                 )}
                             </div>
-                            <div className="flex gap-2 p-3 bg-gray-50 border-b">
-                                <Button
-                                    size="small"
-                                    variant="secondary"
-                                    onClick={downloadCSV}
-                                    icon={<Download size={16} />}
-                                >
-                                    Last ned CSV
-                                </Button>
-                                <Button
-                                    size="small"
-                                    variant="secondary"
-                                    onClick={downloadExcel}
-                                    icon={<Download size={16} />}
-                                >
-                                    Last ned Excel
-                                </Button>
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="table" className="pt-4">
+                            <div className="border rounded-lg overflow-hidden">
+                                <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-100 sticky top-0">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Steg</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Til side</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Fra side</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Antall brukere</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {rawData && rawData.links.map((link: any, idx: number) => {
+                                                const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
+                                                const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
+
+                                                const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
+                                                const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
+
+                                                return (
+                                                    <tr key={idx} className="hover:bg-gray-50">
+                                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{step}</td>
+                                                        <td className="px-4 py-2 text-sm text-gray-900">{targetNode?.name || '-'}</td>
+                                                        <td className="px-4 py-2 text-sm text-gray-900">{sourceNode?.name || '-'}</td>
+                                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{link.value.toLocaleString('nb-NO')}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t flex justify-between items-center">
+                                    <span>{rawData && `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}</span>
+                                    {queryStats && (
+                                        <span>Data prosessert: {queryStats.totalBytesProcessedGB} GB</span>
+                                    )}
+                                </div>
+                                <div className="flex gap-2 p-3 bg-gray-50 border-b">
+                                    <Button
+                                        size="small"
+                                        variant="secondary"
+                                        onClick={downloadCSV}
+                                        icon={<Download size={16} />}
+                                    >
+                                        Last ned CSV
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant="secondary"
+                                        onClick={downloadExcel}
+                                        icon={<Download size={16} />}
+                                    >
+                                        Last ned Excel
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    </Tabs.Panel>
-                </Tabs>
+                        </Tabs.Panel>
+                    </Tabs>
+                </>
             )}
 
             {!loading && data && (data as any).SankeyChartData?.nodes?.length === 0 && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, BodyShort, RadioGroup, Radio, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download, ArrowLeft } from 'lucide-react';
+import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
@@ -41,6 +41,17 @@ const EventExplorer = () => {
     const [latestEvents, setLatestEvents] = useState<any[]>([]);
     const [selectedParameterForDrilldown, setSelectedParameterForDrilldown] = useState<string | null>(null);
     const [parameterValuesQueryStats, setParameterValuesQueryStats] = useState<any>(null);
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
 
     // Calculate dates based on selection
     const getDates = () => {
@@ -366,10 +377,24 @@ const EventExplorer = () => {
                 </div>
             )}
 
+            {/* Share button at top level when data is available */}
+            {!loadingEvents && hasSearched && (events.length > 0 || selectedEvent) && (
+                <div className="flex justify-between items-center mb-4">
+                    <Heading level="2" size="medium">Resultater</Heading>
+                    <Button
+                        size="small"
+                        variant="secondary"
+                        icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                        onClick={copyShareLink}
+                    >
+                        {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                    </Button>
+                </div>
+            )}
+
             {/* Event List View */}
             {!selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (
                 <div>
-                    <Heading level="2" size="medium" className="mb-2">Hendelser</Heading>
                     {pagePath && (
                         <BodyShort className="text-gray-600 mb-4">
                             Viser hendelser for URL-sti: {pagePath}
@@ -379,7 +404,7 @@ const EventExplorer = () => {
                         <Table size="small">
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.HeaderCell>Navn</Table.HeaderCell>
+                                    <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
                                     <Table.HeaderCell align="right">Antall</Table.HeaderCell>
                                     <Table.HeaderCell></Table.HeaderCell>
                                 </Table.Row>
@@ -421,11 +446,11 @@ const EventExplorer = () => {
                             icon={<ArrowLeft aria-hidden />}
                             onClick={handleBackToEvents}
                         >
-                            Tilbake til oversikt
+                            Alle hendelser
                         </Button>
                     </div>
 
-                    <Heading level="2" size="medium">{selectedEvent}</Heading>
+                    <Heading level="2" size="medium">Hendelse: {selectedEvent}</Heading>
 
                     {loadingData && (
                         <div className="flex justify-center items-center h-64">
@@ -706,7 +731,7 @@ const EventExplorer = () => {
                                                     icon={<ArrowLeft aria-hidden />}
                                                     onClick={() => setSelectedParameterForDrilldown(null)}
                                                 >
-                                                    Tilbake til oversikt
+                                                    Alle hendelsesdetaljer
                                                 </Button>
                                             </div>
 

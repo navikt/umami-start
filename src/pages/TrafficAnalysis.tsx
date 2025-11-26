@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download } from 'lucide-react';
+import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
@@ -32,6 +32,7 @@ const TrafficAnalysis = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
@@ -186,6 +187,16 @@ const TrafficAnalysis = () => {
             },
         };
     }, [seriesData, showAverage, submittedMetricType]);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
 
     const normalizeUrlToPath = (input: string): string => {
         if (!input.trim()) return '/';
@@ -376,117 +387,130 @@ const TrafficAnalysis = () => {
             )}
 
             {!loading && hasAttemptedFetch && !error && (
-                <Tabs value={activeTab} onChange={setActiveTab}>
-                    <Tabs.List>
-                        <Tabs.Tab value="visits" label="Besøk over tid" />
-                        <Tabs.Tab value="internal" label="Intern trafikk" />
-                        <Tabs.Tab value="external" label="Eksterne trafikkilder" />
-                    </Tabs.List>
+                <>
+                    <div className="flex justify-between items-center mb-4">
+                        <Heading level="2" size="medium">Resultater</Heading>
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                        <Tabs.List>
+                            <Tabs.Tab value="visits" label="Besøk over tid" />
+                            <Tabs.Tab value="internal" label="Intern trafikk" />
+                            <Tabs.Tab value="external" label="Eksterne trafikkilder" />
+                        </Tabs.List>
 
-                    <Tabs.Panel value="visits" className="pt-4">
-                        <div className="flex flex-col gap-8">
-                            {/* Chart */}
-                            <div className="flex flex-col gap-4">
-                                <div className="flex justify-end -mb-5">
-                                    <Switch
-                                        checked={showAverage}
-                                        onChange={(e) => setShowAverage(e.target.checked)}
-                                        size="small"
-                                    >
-                                        Vis gjennomsnitt
-                                    </Switch>
-                                </div>
-                                <div style={{ width: '100%', height: '400px' }}>
-                                    {chartData ? (
-                                        <ResponsiveContainer>
-                                            <LineChart
-                                                data={chartData.data}
-                                                legendsOverflowText={'Overflow Items'}
-                                                yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
-                                                yAxisTickCount={10}
-                                                allowMultipleShapesForPoints={false}
-                                                enablePerfOptimization={true}
-                                                margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                                            />
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-gray-500">
-                                            Ingen data tilgjengelig for diagram
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Table */}
-                            <div className="border rounded-lg overflow-x-auto">
-                                <Table size="small">
-                                    <Table.Header>
-                                        <Table.Row>
-                                            <Table.HeaderCell>Dato</Table.HeaderCell>
-                                            <Table.HeaderCell align="right">
-                                                {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende'}
-                                            </Table.HeaderCell>
-                                        </Table.Row>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {seriesData.map((item, index) => (
-                                            <Table.Row key={index}>
-                                                <Table.DataCell>
-                                                    {new Date(item.time).toLocaleDateString('nb-NO')}
-                                                </Table.DataCell>
-                                                <Table.DataCell align="right">
-                                                    {item.count.toLocaleString('nb-NO')}
-                                                </Table.DataCell>
-                                            </Table.Row>
-                                        ))}
-                                    </Table.Body>
-                                </Table>
-                                <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
-                                    <div className="flex gap-2">
-                                        <Button
+                        <Tabs.Panel value="visits" className="pt-4">
+                            <div className="flex flex-col gap-8">
+                                {/* Chart */}
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex justify-end -mb-5">
+                                        <Switch
+                                            checked={showAverage}
+                                            onChange={(e) => setShowAverage(e.target.checked)}
                                             size="small"
-                                            variant="secondary"
-                                            onClick={downloadCSV}
-                                            icon={<Download size={16} />}
                                         >
-                                            Last ned CSV
-                                        </Button>
+                                            Vis gjennomsnitt
+                                        </Switch>
                                     </div>
-                                    {seriesQueryStats && (
-                                        <span className="text-sm text-gray-600">
-                                            Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
-                                        </span>
-                                    )}
+                                    <div style={{ width: '100%', height: '400px' }}>
+                                        {chartData ? (
+                                            <ResponsiveContainer>
+                                                <LineChart
+                                                    data={chartData.data}
+                                                    legendsOverflowText={'Overflow Items'}
+                                                    yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                    yAxisTickCount={10}
+                                                    allowMultipleShapesForPoints={false}
+                                                    enablePerfOptimization={true}
+                                                    margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                />
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full text-gray-500">
+                                                Ingen data tilgjengelig for diagram
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="border rounded-lg overflow-x-auto">
+                                    <Table size="small">
+                                        <Table.Header>
+                                            <Table.Row>
+                                                <Table.HeaderCell>Dato</Table.HeaderCell>
+                                                <Table.HeaderCell align="right">
+                                                    {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende'}
+                                                </Table.HeaderCell>
+                                            </Table.Row>
+                                        </Table.Header>
+                                        <Table.Body>
+                                            {seriesData.map((item, index) => (
+                                                <Table.Row key={index}>
+                                                    <Table.DataCell>
+                                                        {new Date(item.time).toLocaleDateString('nb-NO')}
+                                                    </Table.DataCell>
+                                                    <Table.DataCell align="right">
+                                                        {item.count.toLocaleString('nb-NO')}
+                                                    </Table.DataCell>
+                                                </Table.Row>
+                                            ))}
+                                        </Table.Body>
+                                    </Table>
+                                    <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="small"
+                                                variant="secondary"
+                                                onClick={downloadCSV}
+                                                icon={<Download size={16} />}
+                                            >
+                                                Last ned CSV
+                                            </Button>
+                                        </div>
+                                        {seriesQueryStats && (
+                                            <span className="text-sm text-gray-600">
+                                                Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Tabs.Panel>
+                        </Tabs.Panel>
 
-                    <Tabs.Panel value="internal" className="pt-4">
-                        <div className="flex flex-col gap-8">
-                            {renderTable('Sti', internalPaths)}
-                            {renderTable('Innganger', entrances)}
-                            {renderTable('Utganger', exits)}
-                            {flowQueryStats && (
-                                <div className="text-sm text-gray-600 text-right">
-                                    Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
-                        </div>
-                    </Tabs.Panel>
+                        <Tabs.Panel value="internal" className="pt-4">
+                            <div className="flex flex-col gap-8">
+                                {renderTable('Sti', internalPaths)}
+                                {renderTable('Innganger', entrances)}
+                                {renderTable('Utganger', exits)}
+                                {flowQueryStats && (
+                                    <div className="text-sm text-gray-600 text-right">
+                                        Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
+                                    </div>
+                                )}
+                            </div>
+                        </Tabs.Panel>
 
-                    <Tabs.Panel value="external" className="pt-4">
-                        <div className="flex flex-col gap-8">
-                            {renderTable('Trafikkilder', referrers)}
-                            {renderTable('Kanaler', channels)}
-                            {flowQueryStats && (
-                                <div className="text-sm text-gray-600 text-right">
-                                    Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
-                        </div>
-                    </Tabs.Panel>
-                </Tabs>
+                        <Tabs.Panel value="external" className="pt-4">
+                            <div className="flex flex-col gap-8">
+                                {renderTable('Trafikkilder', referrers)}
+                                {renderTable('Kanaler', channels)}
+                                {flowQueryStats && (
+                                    <div className="text-sm text-gray-600 text-right">
+                                        Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
+                                    </div>
+                                )}
+                            </div>
+                        </Tabs.Panel>
+                    </Tabs>
+                </>
             )}
         </ChartLayout>
     );

@@ -1,9 +1,9 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download } from 'lucide-react';
+import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
@@ -26,6 +26,17 @@ const Retention = () => {
     const [activeTab, setActiveTab] = useState<string>('chart');
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [queryStats, setQueryStats] = useState<any>(null);
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
 
     // Helper function to normalize URL input - extracts path from full URLs
     const normalizeUrlToPath = (input: string): string => {
@@ -253,77 +264,90 @@ const Retention = () => {
             )}
 
             {!loading && retentionData.length > 0 && (
-                <Tabs value={activeTab} onChange={setActiveTab}>
-                    <Tabs.List>
-                        <Tabs.Tab value="chart" label="Linjediagram" />
-                        <Tabs.Tab value="table" label="Tabell" />
-                    </Tabs.List>
+                <>
+                    <div className="flex justify-between items-center mb-4">
+                        <Heading level="2" size="medium">Resultater</Heading>
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                        <Tabs.List>
+                            <Tabs.Tab value="chart" label="Linjediagram" />
+                            <Tabs.Tab value="table" label="Tabell" />
+                        </Tabs.List>
 
-                    <Tabs.Panel value="chart" className="pt-4">
-                        <div style={{ width: '100%', height: '500px' }}>
-                            {chartData && (
-                                <ResponsiveContainer>
-                                    <LineChart
-                                        data={chartData.data}
-                                        legendsOverflowText={'Overflow Items'}
-                                        yAxisTickFormat={(d: any) => `${d}% `}
-                                    />
-                                </ResponsiveContainer>
-                            )}
-                        </div>
-                        {queryStats && (
-                            <div className="text-sm text-gray-600 text-right mt-4">
-                                Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                            </div>
-                        )}
-                    </Tabs.Panel>
-
-                    <Tabs.Panel value="table" className="pt-4">
-                        <div className="border rounded-lg overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dag</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall brukere</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Prosent</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {retentionData.map((item, index) => (
-                                            <tr key={index} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    Dag {item.day}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {item.returning_users.toLocaleString('nb-NO')}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {item.percentage}%
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
-                                <Button
-                                    size="small"
-                                    variant="secondary"
-                                    onClick={downloadCSV}
-                                    icon={<Download size={16} />}
-                                >
-                                    Last ned CSV
-                                </Button>
-                                {queryStats && (
-                                    <span className="text-sm text-gray-600">
-                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                    </span>
+                        <Tabs.Panel value="chart" className="pt-4">
+                            <div style={{ width: '100%', height: '500px' }}>
+                                {chartData && (
+                                    <ResponsiveContainer>
+                                        <LineChart
+                                            data={chartData.data}
+                                            legendsOverflowText={'Overflow Items'}
+                                            yAxisTickFormat={(d: any) => `${d}% `}
+                                        />
+                                    </ResponsiveContainer>
                                 )}
                             </div>
-                        </div>
-                    </Tabs.Panel>
-                </Tabs>
+                            {queryStats && (
+                                <div className="text-sm text-gray-600 text-right mt-4">
+                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="table" className="pt-4">
+                            <div className="border rounded-lg overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-100">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dag</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall brukere</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Prosent</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {retentionData.map((item, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        Dag {item.day}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {item.returning_users.toLocaleString('nb-NO')}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {item.percentage}%
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                    <Button
+                                        size="small"
+                                        variant="secondary"
+                                        onClick={downloadCSV}
+                                        icon={<Download size={16} />}
+                                    >
+                                        Last ned CSV
+                                    </Button>
+                                    {queryStats && (
+                                        <span className="text-sm text-gray-600">
+                                            Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </Tabs.Panel>
+                    </Tabs>
+                </>
             )}
 
             {!loading && !error && retentionData.length === 0 && hasAttemptedFetch && (
