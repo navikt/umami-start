@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
@@ -33,6 +33,15 @@ const TrafficAnalysis = () => {
     const [error, setError] = useState<string | null>(null);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+    // Auto-submit when URL parameters are present (for shared links)
+    useEffect(() => {
+        // Only auto-submit if there are config params beyond just websiteId
+        const hasConfigParams = searchParams.has('period') || searchParams.has('metricType') || searchParams.has('urlPath');
+        if (selectedWebsite && hasConfigParams && !hasAttemptedFetch) {
+            fetchSeriesData();
+        }
+    }, [selectedWebsite]); // Only run when selectedWebsite changes
 
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
@@ -76,7 +85,7 @@ const TrafficAnalysis = () => {
             await fetchFlowData(startDate, endDate, metricType);
 
             // Update URL with configuration for sharing
-            const newParams = new URLSearchParams(searchParams);
+            const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('metricType', metricType);
             if (urlPath) {

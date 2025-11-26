@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check } from 'lucide-react';
@@ -41,6 +41,17 @@ const Funnel = () => {
     const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
     const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+
+    // Auto-submit when URL parameters are present (for shared links)
+    useEffect(() => {
+        // Only auto-submit if there are config params beyond just websiteId
+        const hasConfigParams = searchParams.has('period') || searchParams.has('strict') || searchParams.has('step');
+        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+            setHasAutoSubmitted(true);
+            fetchData();
+        }
+    }, [selectedWebsite]);
 
     const copyShareLink = async () => {
         try {
@@ -196,7 +207,7 @@ const Funnel = () => {
                 }
 
                 // Update URL with funnel configuration for sharing
-                const newParams = new URLSearchParams(searchParams);
+                const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
                 newParams.set('strict', String(onlyDirectEntry));
 

@@ -42,6 +42,17 @@ const EventExplorer = () => {
     const [selectedParameterForDrilldown, setSelectedParameterForDrilldown] = useState<string | null>(null);
     const [parameterValuesQueryStats, setParameterValuesQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+
+    // Auto-submit when URL parameters are present (for shared links)
+    useEffect(() => {
+        // Only auto-submit if there are config params beyond just websiteId
+        const hasConfigParams = searchParams.has('dateRange') || searchParams.has('pagePath') || searchParams.has('event');
+        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loadingEvents) {
+            setHasAutoSubmitted(true);
+            fetchEvents();
+        }
+    }, [selectedWebsite]);
 
     const copyShareLink = async () => {
         try {
@@ -98,7 +109,7 @@ const EventExplorer = () => {
             }
 
             // Update URL with configuration for sharing
-            const newParams = new URLSearchParams(searchParams);
+            const newParams = new URLSearchParams(window.location.search);
             newParams.set('dateRange', dateRange);
             if (pagePath) {
                 newParams.set('pagePath', pagePath);
@@ -168,7 +179,7 @@ const EventExplorer = () => {
                 }
 
                 // Update URL with selected event for sharing
-                const newParams = new URLSearchParams(searchParams);
+                const newParams = new URLSearchParams(window.location.search);
                 newParams.set('dateRange', dateRange);
                 newParams.set('event', selectedEvent);
                 if (pagePath) {

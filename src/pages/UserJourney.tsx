@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Heading } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
@@ -37,8 +37,18 @@ const UserJourney = () => {
     const [journeyDirection, setJourneyDirection] = useState<string>(() => searchParams.get('direction') || 'forward');
     const [queryStats, setQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
 
-    // Helper function to normalize URL input - extracts path from full URLs
+    // Auto-submit when URL parameters are present (for shared links)
+    useEffect(() => {
+        // Only auto-submit if there are config params beyond just websiteId
+        const hasConfigParams = searchParams.has('period') || searchParams.has('startUrl') || searchParams.has('steps') || searchParams.has('limit') || searchParams.has('direction');
+        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+            setHasAutoSubmitted(true);
+            fetchData();
+        }
+    }, [selectedWebsite]);
+
     const copyShareLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
@@ -246,7 +256,7 @@ const UserJourney = () => {
             }
 
             // Update URL with configuration for sharing
-            const newParams = new URLSearchParams(searchParams);
+            const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('steps', steps.toString());
             newParams.set('limit', limit.toString());

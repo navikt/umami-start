@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Radio, RadioGroup, Tabs, Heading } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
@@ -20,6 +20,17 @@ const UserComposition = () => {
     const [activeCategory, setActiveCategory] = useState<string>('browser');
     const [queryStats, setQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+
+    // Auto-submit when URL parameters are present (for shared links)
+    useEffect(() => {
+        // Only auto-submit if there are config params beyond just websiteId
+        const hasConfigParams = searchParams.has('period') || searchParams.has('pagePath');
+        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+            setHasAutoSubmitted(true);
+            fetchData();
+        }
+    }, [selectedWebsite]);
 
     const copyShareLink = async () => {
         try {
@@ -83,7 +94,7 @@ const UserComposition = () => {
                 setQueryStats(result.queryStats);
 
                 // Update URL with configuration for sharing
-                const newParams = new URLSearchParams(searchParams);
+                const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
                 if (pagePath.trim()) {
                     newParams.set('pagePath', pagePath.trim());

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
@@ -27,6 +27,17 @@ const Retention = () => {
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [queryStats, setQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+
+    // Auto-submit when URL parameters are present (for shared links)
+    useEffect(() => {
+        // Only auto-submit if there are config params beyond just websiteId
+        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath') || searchParams.has('businessDaysOnly');
+        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+            setHasAutoSubmitted(true);
+            fetchData();
+        }
+    }, [selectedWebsite]);
 
     const copyShareLink = async () => {
         try {
@@ -156,7 +167,7 @@ const Retention = () => {
                 }
 
                 // Update URL with configuration for sharing
-                const newParams = new URLSearchParams(searchParams);
+                const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
                 newParams.set('businessDaysOnly', String(businessDaysOnly));
                 if (normalizedUrl) {
