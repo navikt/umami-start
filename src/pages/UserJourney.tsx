@@ -107,7 +107,11 @@ const UserJourney = () => {
                 const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
                 const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
                 const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
-                const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
+                let step: number | string = '-';
+                if (stepMatch) {
+                    const rawStep = parseInt(stepMatch[1]);
+                    step = journeyDirection === 'backward' ? rawStep * -1 : rawStep;
+                }
 
                 const escapeCSV = (val: any) => {
                     const str = val !== null && val !== undefined ? String(val) : '';
@@ -148,7 +152,11 @@ const UserJourney = () => {
                 const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
                 const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
                 const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
-                const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
+                let step: number | string = '-';
+                if (stepMatch) {
+                    const rawStep = parseInt(stepMatch[1]);
+                    step = journeyDirection === 'backward' ? rawStep * -1 : rawStep;
+                }
 
                 return [
                     step,
@@ -479,6 +487,7 @@ const UserJourney = () => {
                                     links={rawData?.links || []}
                                     isFullscreen={isFullscreen}
                                     reverseVisualOrder={reverseVisualOrder}
+                                    journeyDirection={journeyDirection}
                                 />
                                 {queryStats && (
                                     <div className="text-sm text-gray-600 text-right mt-4">
@@ -506,7 +515,11 @@ const UserJourney = () => {
                                                 const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
 
                                                 const stepMatch = sourceNode?.nodeId?.match(/^(\d+):/);
-                                                const step = stepMatch ? parseInt(stepMatch[1]) + 1 : '-';
+                                                let step: number | string = '-';
+                                                if (stepMatch) {
+                                                    const rawStep = parseInt(stepMatch[1]);
+                                                    step = journeyDirection === 'backward' ? rawStep * -1 : rawStep;
+                                                }
 
                                                 return (
                                                     <tr key={idx} className="hover:bg-gray-50">

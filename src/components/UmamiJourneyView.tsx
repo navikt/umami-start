@@ -17,10 +17,12 @@ interface UmamiJourneyViewProps {
     links: Link[];
     isFullscreen?: boolean;
     reverseVisualOrder?: boolean;
+    journeyDirection?: string;
 }
 
 interface StepData {
     step: number;
+    displayStep: number;
     items: {
         name: string;
         value: number;
@@ -35,7 +37,7 @@ interface ConnectionPath {
     opacity: number;
 }
 
-const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false }) => {
+const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward' }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
 
@@ -98,8 +100,15 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                 };
             }).sort((a, b) => b.value - a.value);
 
+            // Calculate display step based on direction
+            let displayStep = step;
+            if (journeyDirection === 'backward') {
+                displayStep = step * -1;
+            }
+
             return {
-                step: step + 1,
+                step: step,
+                displayStep,
                 items,
                 totalValue: stepTotal
             };
@@ -276,7 +285,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                             {/* Step Header */}
                             <div className="flex flex-col items-center mb-2">
                                 <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm">
-                                    {stepData.step}
+                                    {stepData.displayStep}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900">
                                     {stepData.totalValue.toLocaleString('nb-NO')} besøkende
