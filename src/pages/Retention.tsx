@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
@@ -9,9 +10,15 @@ import { Website } from '../types/chart';
 
 const Retention = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [urlPath, setUrlPath] = useState<string>('');
-    const [period, setPeriod] = useState<string>('current_month');
-    const [businessDaysOnly, setBusinessDaysOnly] = useState<boolean>(false);
+    const [searchParams] = useSearchParams();
+
+    // Initialize state from URL params
+    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [businessDaysOnly, setBusinessDaysOnly] = useState<boolean>(() => {
+        const param = searchParams.get('businessDaysOnly');
+        return param === 'true';
+    });
     const [retentionData, setRetentionData] = useState<any[]>([]);
     const [chartData, setChartData] = useState<ILineChartProps | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -136,6 +143,19 @@ const Retention = () => {
                 if (result.queryStats) {
                     setQueryStats(result.queryStats);
                 }
+
+                // Update URL with configuration for sharing
+                const newParams = new URLSearchParams(searchParams);
+                newParams.set('period', period);
+                newParams.set('businessDaysOnly', String(businessDaysOnly));
+                if (normalizedUrl) {
+                    newParams.set('urlPath', normalizedUrl);
+                } else {
+                    newParams.delete('urlPath');
+                }
+
+                // Update URL without navigation
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             }
         } catch (err) {
             console.error('Error fetching retention data:', err);

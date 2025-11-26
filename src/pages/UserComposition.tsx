@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Radio, RadioGroup, Tabs } from '@navikt/ds-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -7,8 +8,11 @@ import { Website } from '../types/chart';
 
 const UserComposition = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [pagePath, setPagePath] = useState<string>('');
-    const [period, setPeriod] = useState<string>('current_month');
+    const [searchParams] = useSearchParams();
+
+    // Initialize state from URL params
+    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('pagePath') || '');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -65,6 +69,18 @@ const UserComposition = () => {
                     setActiveCategory('browser');
                 }
                 setQueryStats(result.queryStats);
+
+                // Update URL with configuration for sharing
+                const newParams = new URLSearchParams(searchParams);
+                newParams.set('period', period);
+                if (pagePath.trim()) {
+                    newParams.set('pagePath', pagePath.trim());
+                } else {
+                    newParams.delete('pagePath');
+                }
+
+                // Update URL without navigation
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             }
         } catch (err) {
             console.error('Error fetching composition data:', err);

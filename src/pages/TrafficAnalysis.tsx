@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download } from 'lucide-react';
@@ -8,14 +9,17 @@ import { Website } from '../types/chart';
 
 const TrafficAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [urlPath, setUrlPath] = useState<string>('');
-    const [period, setPeriod] = useState<string>('current_month');
+    const [searchParams] = useSearchParams();
+
+    // Initialize state from URL params
+    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('visits');
 
     // View options
-    const [metricType, setMetricType] = useState<string>('visitors'); // 'visitors', 'sessions', 'pageviews'
+    const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || 'visitors'); // 'visitors', 'sessions', 'pageviews'
     const [submittedMetricType, setSubmittedMetricType] = useState<string>('visitors'); // Track what was actually submitted
     const [showAverage, setShowAverage] = useState<boolean>(false);
 
@@ -69,6 +73,20 @@ const TrafficAnalysis = () => {
 
             // Always fetch flow data as it's needed for the tabs
             await fetchFlowData(startDate, endDate, metricType);
+
+            // Update URL with configuration for sharing
+            const newParams = new URLSearchParams(searchParams);
+            newParams.set('period', period);
+            newParams.set('metricType', metricType);
+            if (urlPath) {
+                newParams.set('urlPath', urlPath);
+            } else {
+                newParams.delete('urlPath');
+            }
+
+            // Update URL without navigation
+            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+
 
         } catch (err: any) {
             console.error('Error fetching traffic data:', err);

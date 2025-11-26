@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, BodyShort, RadioGroup, Radio, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft } from 'lucide-react';
@@ -9,11 +10,17 @@ import { ILineChartProps } from '@fluentui/react-charting';
 
 const EventExplorer = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [pagePath, setPagePath] = useState<string>('');
-    const [selectedEvent, setSelectedEvent] = useState<string>('');
+    const [searchParams] = useSearchParams();
+
+    // Initialize state from URL params
+    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('pagePath') || '');
+    const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
-    const [dateRange, setDateRange] = useState<'thisMonth' | 'lastMonth'>('thisMonth');
+    const [dateRange, setDateRange] = useState<'thisMonth' | 'lastMonth'>(() => {
+        const range = searchParams.get('dateRange');
+        return (range === 'lastMonth' ? 'lastMonth' : 'thisMonth') as 'thisMonth' | 'lastMonth';
+    });
     const [hasSearched, setHasSearched] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('usage');
     const [showAverage, setShowAverage] = useState<boolean>(false);
@@ -78,6 +85,18 @@ const EventExplorer = () => {
             if (result.queryStats) {
                 setEventsQueryStats(result.queryStats);
             }
+
+            // Update URL with configuration for sharing
+            const newParams = new URLSearchParams(searchParams);
+            newParams.set('dateRange', dateRange);
+            if (pagePath) {
+                newParams.set('pagePath', pagePath);
+            } else {
+                newParams.delete('pagePath');
+            }
+
+            // Update URL without navigation
+            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
         } catch (err) {
             console.error('Error fetching events:', err);
             setError('Kunne ikke hente hendelser.');
@@ -136,6 +155,20 @@ const EventExplorer = () => {
                         estimatedCostUSD: ((parseFloat(propsResult.gbProcessed) / 1024) * 6.25).toFixed(3)
                     });
                 }
+
+                // Update URL with selected event for sharing
+                const newParams = new URLSearchParams(searchParams);
+                newParams.set('dateRange', dateRange);
+                newParams.set('event', selectedEvent);
+                if (pagePath) {
+                    newParams.set('pagePath', pagePath);
+                } else {
+                    newParams.delete('pagePath');
+                }
+
+                // Update URL without navigation
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+
 
             } catch (err) {
                 console.error('Error fetching data:', err);

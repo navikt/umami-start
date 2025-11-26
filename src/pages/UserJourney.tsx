@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2 } from 'lucide-react';
@@ -10,18 +11,30 @@ import { Website } from '../types/chart';
 
 const UserJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [startUrl, setStartUrl] = useState<string>('');
-    const [period, setPeriod] = useState<string>('current_month');
-    const [steps, setSteps] = useState<number>(5);
-    const [limit, setLimit] = useState<number>(15);
-    const [limitInput, setLimitInput] = useState<string>('15');
+    const [searchParams] = useSearchParams();
+
+    // Initialize state from URL params
+    const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('startUrl') || '');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [steps, setSteps] = useState<number>(() => {
+        const stepsParam = searchParams.get('steps');
+        return stepsParam ? parseInt(stepsParam) : 5;
+    });
+    const [limit, setLimit] = useState<number>(() => {
+        const limitParam = searchParams.get('limit');
+        return limitParam ? parseInt(limitParam) : 15;
+    });
+    const [limitInput, setLimitInput] = useState<string>(() => {
+        const limitParam = searchParams.get('limit');
+        return limitParam || '15';
+    });
     const [data, setData] = useState<IChartProps | null>(null);
     const [rawData, setRawData] = useState<{ nodes: any[], links: any[] } | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-    const [journeyDirection, setJourneyDirection] = useState<string>('forward');
+    const [journeyDirection, setJourneyDirection] = useState<string>(() => searchParams.get('direction') || 'forward');
     const [queryStats, setQueryStats] = useState<any>(null);
 
     // Helper function to normalize URL input - extracts path from full URLs
@@ -220,6 +233,22 @@ const UserJourney = () => {
                     SankeyChartData: { nodes: [], links: [] }
                 } as unknown as IChartProps);
             }
+
+            // Update URL with configuration for sharing
+            const newParams = new URLSearchParams(searchParams);
+            newParams.set('period', period);
+            newParams.set('steps', steps.toString());
+            newParams.set('limit', limit.toString());
+            newParams.set('direction', journeyDirection);
+            if (normalizedStartUrl) {
+                newParams.set('startUrl', normalizedStartUrl);
+            } else {
+                newParams.delete('startUrl');
+            }
+
+            // Update URL without navigation
+            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+
 
         } catch (err) {
             console.error(err);
