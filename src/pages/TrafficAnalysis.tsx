@@ -5,6 +5,7 @@ import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } 
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import TrafficStats from '../components/TrafficStats';
 import { Website } from '../types/chart';
 
 const TrafficAnalysis = () => {
@@ -416,6 +417,7 @@ const TrafficAnalysis = () => {
                         </Tabs.List>
 
                         <Tabs.Panel value="visits" className="pt-4">
+                            <TrafficStats data={seriesData} metricType={submittedMetricType} />
                             <div className="flex flex-col gap-8">
                                 {/* Chart */}
                                 <div className="flex flex-col gap-4">
