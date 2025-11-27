@@ -9,6 +9,7 @@ export default function Grafdeling() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [description, setDescription] = useState<string>('');
+    const [queryStats, setQueryStats] = useState<any>(null);
 
     // Check for SQL in URL params on mount and auto-execute
     useEffect(() => {
@@ -32,6 +33,7 @@ export default function Grafdeling() {
         setLoading(true);
         setError(null);
         setResult(null);
+        setQueryStats(null);
 
         try {
             const response = await fetch('/api/bigquery', {
@@ -49,6 +51,7 @@ export default function Grafdeling() {
             }
 
             setResult(data);
+            setQueryStats(data.queryStats);
         } catch (err: any) {
             setError(err.message || 'An error occurred');
         } finally {
@@ -330,9 +333,11 @@ export default function Grafdeling() {
                         rowGap: '8px',
                         columnGap: '16px',
                         maxWidth: '100%',
+                        fontSize: '16px',
                     },
                     legend: {
                         marginRight: 0,
+                        fontSize: '16px',
                     },
                 },
             },
@@ -432,7 +437,7 @@ export default function Grafdeling() {
                         result={result}
                         loading={loading}
                         error={error}
-                        queryStats={null}
+                        queryStats={queryStats}
                         lastAction={null}
                         showLoadingMessage={loading}
                         executeQuery={handleRetry}

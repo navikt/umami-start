@@ -136,10 +136,36 @@ app.post('/api/bigquery', async (req, res) => {
 
         console.log('[BigQuery API] Query successful, returned', rows.length, 'rows');
 
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessed: bytesProcessed,
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+
+            console.log('[BigQuery API] Dry run stats - Processing', gbProcessed, 'GB, estimated cost: $' + estimatedCostUSD);
+        } catch (dryRunError) {
+            console.log('[BigQuery API] Dry run failed:', dryRunError.message);
+        }
+
         res.json({
             success: true,
             data: rows,
-            rowCount: rows.length
+            rowCount: rows.length,
+            queryStats
         })
     } catch (error) {
         console.error('==========================================');

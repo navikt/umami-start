@@ -644,7 +644,7 @@ const ResultsDisplay = ({
                             </ResponsiveContainer>
                           </div>
                         </div>
-                        <div className="mt-2 text-xs text-gray-500 text-center">
+                        <div className="mt-2 text-sm text-gray-700">
                           Viser {displayData.length} kategorier (hover over stolpene for detaljer)
                         </div>
                       </div>
@@ -741,9 +741,9 @@ const ResultsDisplay = ({
                               />
                             </ResponsiveContainer>
                           </div>
-                          <div className="mt-4 text-md text-gray-800 text-center">
-                            <p>Viser {displayData.length} kategorier med prosentandeler:</p>
-                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
+                          <div className="mt-4 text-lg text-gray-800">
+                            <p className="font-medium mb-3">Viser {displayData.length} kategorier med prosentandeler:</p>
+                            <div className="mt-2 flex flex-col gap-2">
                               {displayData.map((item, idx) => {
                                 // Ensure chartData is not null before accessing total
                                 const total = chartData ? chartData.total : 0;
@@ -751,9 +751,10 @@ const ResultsDisplay = ({
                                 // Skip displaying if percentage is NaN
                                 if (isNaN(parseFloat(percentage))) return null;
                                 return (
-                                  <span key={idx}>
-                                    {item.x}: <strong>{percentage}%</strong>
-                                  </span>
+                                  <div key={idx} className="flex justify-between items-center py-1 px-2 hover:bg-gray-50 rounded">
+                                    <span>{item.x}</span>
+                                    <strong className="ml-4">{percentage}%</strong>
+                                  </div>
                                 );
                               })}
                             </div>
