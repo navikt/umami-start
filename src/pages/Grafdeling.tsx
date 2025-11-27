@@ -393,28 +393,16 @@ export default function Grafdeling() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
-            <div className="mt-4 mb-10">
-                <Heading level="1" size="large" spacing>
+        <div className="py-8 max-w-[1600px] mx-auto">
+            <div className="mb-8">
+                <Heading level="1" size="large" className="mb-2 pt-3 max-w-3xl">
                     {description ? description : 'Umami grafdeling'}
                 </Heading>
-
-                {/*{description && (
-                    <div className="mt-6 -mb-1 bg-green-50 border border-green-100 rounded-lg shadow-sm p-6">
-                        <div className="flex items-start gap-4">
-                            <div className="flex-1">
-                                <p className="text-gray-900 text-lg font-medium leading-relaxed" style={{wordBreak: 'break-word'}}>
-                                    {description}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}*/}
             </div>
 
             {/* Initial Loading State */}
             {loading && !result && (
-                <div className="flex flex-col items-center justify-center py-16">
+                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg shadow-sm border border-gray-200">
                     <Loader size="3xlarge" title="Laster data..." />
                     <BodyLong className="mt-4 text-gray-600">Henter data...</BodyLong>
                 </div>
@@ -432,26 +420,25 @@ export default function Grafdeling() {
 
             {/* Results Display - Full Width */}
             {!loading && !error && result && (
-                <div className="w-full">
-                    <ResultsDisplay
-                        result={result}
-                        loading={loading}
-                        error={error}
-                        queryStats={queryStats}
-                        lastAction={null}
-                        showLoadingMessage={loading}
-                        executeQuery={handleRetry}
-                        handleRetry={handleRetry}
-                        prepareLineChartData={prepareLineChartData}
-                        prepareBarChartData={prepareBarChartData}
-                        preparePieChartData={preparePieChartData}
-                        hideHeading={true}
-                        sql={query}
-                        showSqlCode={true}
-                        showEditButton={true}
-                        hiddenTabs={result && result.data && result.data.length > 12 ? ['barchart', 'piechart'] : []}
-                    />
-                </div>
+                <ResultsDisplay
+                    result={result}
+                    loading={loading}
+                    error={error}
+                    queryStats={queryStats}
+                    lastAction={null}
+                    showLoadingMessage={loading}
+                    executeQuery={handleRetry}
+                    handleRetry={handleRetry}
+                    prepareLineChartData={prepareLineChartData}
+                    prepareBarChartData={prepareBarChartData}
+                    preparePieChartData={preparePieChartData}
+                    hideHeading={true}
+                    sql={query}
+                    showSqlCode={true}
+                    showEditButton={true}
+                    hiddenTabs={result && result.data && result.data.length > 12 ? ['barchart', 'piechart'] : []}
+                    containerStyle="white"
+                />
             )}
         </div>
     );

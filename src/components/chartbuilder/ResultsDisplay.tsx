@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore } from '@navikt/ds-react';
+import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
@@ -25,6 +25,7 @@ interface ResultsDisplayProps {
   showSqlCode?: boolean;
   showEditButton?: boolean;
   hiddenTabs?: string[];
+  containerStyle?: 'green' | 'white' | 'none';
 }
 
 const ResultsDisplay = ({
@@ -44,6 +45,7 @@ const ResultsDisplay = ({
   prepareBarChartData,
   preparePieChartData,
   hiddenTabs: propHiddenTabs = [],
+  containerStyle = 'green',
 }: ResultsDisplayProps) => {
   // Read initial tab from URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -94,19 +96,17 @@ const ResultsDisplay = ({
     }
   };
 
-  // Function to convert results to CSV
-  const downloadCSV = () => {
-    if (!result || !result.data || result.data.length === 0) return;
-
+  // Helper functions to generate content
+  const getCSVContent = () => {
+    if (!result || !result.data || result.data.length === 0) return '';
     const headers = Object.keys(result.data[0]);
     const csvRows = [
-      headers.join(','), // Header row
+      headers.join(','),
       ...result.data.map((row: any) =>
         headers
           .map((header) => {
             const value = row[header];
             const translatedValue = translateValue(header, value);
-            // Escape quotes and wrap in quotes if contains comma or quote
             const stringValue = translatedValue !== null && translatedValue !== undefined ? String(translatedValue) : '';
             if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
               return `"${stringValue.replace(/"/g, '""')}"`;
@@ -116,8 +116,38 @@ const ResultsDisplay = ({
           .join(',')
       ),
     ];
+    return csvRows.join('\n');
+  };
 
-    const csvContent = csvRows.join('\n');
+  const getJSONContent = () => {
+    if (!result || !result.data || result.data.length === 0) return '';
+    const translatedData = result.data.map((row: any) => {
+      const translatedRow: any = {};
+      Object.keys(row).forEach((key) => {
+        translatedRow[key] = translateValue(key, row[key]);
+      });
+      return translatedRow;
+    });
+    return JSON.stringify(translatedData, null, 2);
+  };
+
+  const getTOONContent = () => {
+    if (!result || !result.data || result.data.length === 0) return '';
+    const translatedData = result.data.map((row: any) => {
+      const translatedRow: any = {};
+      Object.keys(row).forEach((key) => {
+        translatedRow[key] = translateValue(key, row[key]);
+      });
+      return translatedRow;
+    });
+    return encode(translatedData);
+  };
+
+  // Function to convert results to CSV
+  const downloadCSV = () => {
+    const csvContent = getCSVContent();
+    if (!csvContent) return;
+
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel compatibility
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -167,18 +197,9 @@ const ResultsDisplay = ({
 
   // Function to convert results to JSON
   const downloadJSON = () => {
-    if (!result || !result.data || result.data.length === 0) return;
+    const jsonContent = getJSONContent();
+    if (!jsonContent) return;
 
-    // Create translated data for JSON export
-    const translatedData = result.data.map((row: any) => {
-      const translatedRow: any = {};
-      Object.keys(row).forEach((key) => {
-        translatedRow[key] = translateValue(key, row[key]);
-      });
-      return translatedRow;
-    });
-
-    const jsonContent = JSON.stringify(translatedData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -193,18 +214,9 @@ const ResultsDisplay = ({
 
   // Function to convert results to TOON (Token-Oriented Object Notation)
   const downloadTOON = () => {
-    if (!result || !result.data || result.data.length === 0) return;
+    const toonContent = getTOONContent();
+    if (!toonContent) return;
 
-    // Create translated data for TOON export
-    const translatedData = result.data.map((row: any) => {
-      const translatedRow: any = {};
-      Object.keys(row).forEach((key) => {
-        translatedRow[key] = translateValue(key, row[key]);
-      });
-      return translatedRow;
-    });
-
-    const toonContent = encode(translatedData);
     const blob = new Blob([toonContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -217,11 +229,25 @@ const ResultsDisplay = ({
     URL.revokeObjectURL(url);
   };
 
+  const getContainerClass = () => {
+    switch (containerStyle) {
+      case 'white':
+        return "bg-[#fafafa] p-6 rounded-lg border border-gray-200 shadow-sm";
+      case 'none':
+        return "";
+      case 'green':
+      default:
+        return "bg-green-50 p-4 rounded-md border border-green-100";
+    }
+  };
+
+  const containerClass = getContainerClass();
+
   return (
     <div className="space-y-2 mb-6">
       {!hideHeading && <Heading level="2" size="small">Vis resultater</Heading>}
 
-      <div className="bg-green-50 p-4 rounded-md border border-green-100">
+      <div className={containerClass}>
         {/* Only show button if no results yet */}
         {!result && !error && (
           <div className="space-y-2">
@@ -768,62 +794,102 @@ const ResultsDisplay = ({
             </Tabs>
 
             {/* Download Options */}
-            <ReadMore header="Last ned resultater">
-              <div className="flex gap-2 mt-2 flex-wrap">
-                <Button
-                  onClick={downloadCSV}
-                  variant="secondary"
-                  size="small"
-                  icon={<Download size={16} />}
-                >
-                  Last ned CSV
-                </Button>
-                <Button
-                  onClick={downloadExcel}
-                  variant="secondary"
-                  size="small"
-                  icon={<Download size={16} />}
-                >
-                  Last ned Excel (XLSX)
-                </Button>
-                <Button
-                  onClick={downloadJSON}
-                  variant="secondary"
-                  size="small"
-                  icon={<Download size={16} />}
-                >
-                  Last ned JSON
-                </Button>
-                <Button
-                  onClick={downloadTOON}
-                  variant="secondary"
-                  size="small"
-                  icon={<Download size={16} />}
-                >
-                  Last ned TOON
-                </Button>
-              </div>
-            </ReadMore>
+            <div className="pt-2">
+              <ReadMore header="Last ned resultater">
+                <div className="space-y-4 mt-2">
+                  {/* Download Section */}
+                  <div>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <Button
+                        onClick={downloadCSV}
+                        variant="secondary"
+                        size="small"
+                        icon={<Download size={16} />}
+                      >
+                        CSV
+                      </Button>
+
+                      <Button
+                        onClick={downloadExcel}
+                        variant="secondary"
+                        size="small"
+                        icon={<Download size={16} />}
+                      >
+                        Excel
+                      </Button>
+
+                      <Button
+                        onClick={downloadJSON}
+                        variant="secondary"
+                        size="small"
+                        icon={<Download size={16} />}
+                      >
+                        JSON
+                      </Button>
+
+                      <Button
+                        onClick={downloadTOON}
+                        variant="secondary"
+                        size="small"
+                        icon={<Download size={16} />}
+                      >
+                        TOON
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Copy Section */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Eller kopier dem:</p>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <CopyButton
+                        copyText={getCSVContent()}
+                        text="CSV"
+                        activeText="CSV kopiert!"
+                        size="small"
+                        variant="secondary"
+                      />
+
+                      <CopyButton
+                        copyText={getJSONContent()}
+                        text="JSON"
+                        activeText="JSON kopiert!"
+                        size="small"
+                        variant="secondary"
+                      />
+
+                      <CopyButton
+                        copyText={getTOONContent()}
+                        text="TOON"
+                        activeText="TOON kopiert!"
+                        size="small"
+                        variant="secondary"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </ReadMore>
+            </div>
 
             {/* SQL Code Display */}
             {showSqlCode && sql && (
               <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
             )}
 
-          </div>
-        )}
+            {/* Share Button */}
+            {sql && result && result.data && result.data.length > 0 && (
+              <div className="mt-3 flex justify-end">
+                <Button
+                  onClick={() => setShowShareModal(true)}
+                  variant="secondary"
+                  size="small"
+                  icon={<Share2 size={18} />}
+                >
+                  Del tabell & graf
+                </Button>
+              </div>
+            )}
 
-        {/* Share Button */}
-        {sql && (
-          <div className="mt-3 flex justify-end">
-            <Button
-              onClick={() => setShowShareModal(true)}
-              variant="secondary"
-              size="small"
-              icon={<Share2 size={18} />}
-            >
-              Del tabell & graf
-            </Button>
           </div>
         )}
 
@@ -836,14 +902,16 @@ const ResultsDisplay = ({
       </div>
 
       {/* Share Modal */}
-      {sql && (
-        <ShareModal
-          sql={sql}
-          open={showShareModal}
-          onClose={() => setShowShareModal(false)}
-        />
-      )}
-    </div>
+      {
+        sql && (
+          <ShareModal
+            sql={sql}
+            open={showShareModal}
+            onClose={() => setShowShareModal(false)}
+          />
+        )
+      }
+    </div >
   );
 };
 
