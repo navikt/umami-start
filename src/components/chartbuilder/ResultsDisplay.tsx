@@ -847,7 +847,7 @@ const ResultsDisplay = ({
                         text="CSV"
                         activeText="CSV kopiert!"
                         size="small"
-                        variant="secondary"
+                        variant="action"
                       />
 
                       <CopyButton
@@ -855,7 +855,7 @@ const ResultsDisplay = ({
                         text="JSON"
                         activeText="JSON kopiert!"
                         size="small"
-                        variant="secondary"
+                        variant="action"
                       />
 
                       <CopyButton
@@ -863,7 +863,7 @@ const ResultsDisplay = ({
                         text="TOON"
                         activeText="TOON kopiert!"
                         size="small"
-                        variant="secondary"
+                        variant="action"
                       />
                     </div>
                   </div>
