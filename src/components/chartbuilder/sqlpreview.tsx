@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, FormProgress, Modal, DatePicker } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, FormProgress, Modal, DatePicker, TextField } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
-import { subDays, format } from 'date-fns';
+import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from './AlertWithCloseButton';
 import ResultsDisplay from './ResultsDisplay';
 import SqlCodeDisplay from './SqlCodeDisplay';
@@ -56,34 +56,121 @@ const SQLPreview = ({
 
   // Metabase Date Filter State
   const [hasMetabaseDateFilter, setHasMetabaseDateFilter] = useState(false);
+  const [hasUrlPathFilter, setHasUrlPathFilter] = useState(false);
+  const [hasEventNameFilter, setHasEventNameFilter] = useState(false);
+
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to?: Date | undefined }>({
     from: subDays(new Date(), 7),
     to: new Date(),
   });
+  const [urlPath, setUrlPath] = useState<string>('');
+  const [eventName, setEventName] = useState<string>('');
+
+  // Track executed parameters to show/hide Update button
+  const [executedParams, setExecutedParams] = useState<{
+    dateRange: { from: Date | undefined; to?: Date | undefined };
+    urlPath: string;
+    eventName: string;
+  }>({
+    dateRange: { from: subDays(new Date(), 7), to: new Date() },
+    urlPath: '',
+    eventName: ''
+  });
+
+  // Check if parameters have changed
+  const hasChanges = () => {
+    const dateChanged = !isEqual(dateRange.from || 0, executedParams.dateRange.from || 0) ||
+      !isEqual(dateRange.to || 0, executedParams.dateRange.to || 0);
+    const urlPathChanged = urlPath !== executedParams.urlPath;
+    const eventNameChanged = eventName !== executedParams.eventName;
+
+    return dateChanged || urlPathChanged || eventNameChanged;
+  };
 
   // Detect Metabase date filter pattern
   useEffect(() => {
     if (!sql) {
       setHasMetabaseDateFilter(false);
+      setHasUrlPathFilter(false);
+      setHasEventNameFilter(false);
       return;
     }
     // Pattern: [[AND {{created_at}} ]] or variations with spaces
-    const pattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
-    setHasMetabaseDateFilter(pattern.test(sql));
+    const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
+    setHasMetabaseDateFilter(datePattern.test(sql));
+
+    // Pattern: [[ {{url_sti}} --]] '/'
+    // Matches [[ {{url_sti}} --]] followed by optional whitespace and '/'
+    const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
+    setHasUrlPathFilter(urlPathPattern.test(sql));
+
+    // Pattern: {{event_name}}
+    const eventNamePattern = /\{\{event_name\}\}/i;
+    setHasEventNameFilter(eventNamePattern.test(sql));
   }, [sql]);
 
   // Generate processed SQL with date substitution
   const getProcessedSql = () => {
-    if (!hasMetabaseDateFilter || !dateRange.from || !dateRange.to) {
-      return sql;
+    let processedSql = sql;
+
+    // Date Filter Substitution
+    if (hasMetabaseDateFilter && dateRange.from && dateRange.to) {
+      const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
+      const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
+      const replacement = `AND created_at BETWEEN ${fromSql} AND ${toSql}`;
+      processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, replacement);
     }
 
-    const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
-    const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
-    const replacement = `AND created_at BETWEEN ${fromSql} AND ${toSql}`;
+    // URL Path Substitution
+    if (hasUrlPathFilter) {
+      // Pattern: [[ {{url_sti}} --]] '/'
+      // If urlPath is set, replace the whole block with the value
+      // If urlPath is empty, keep the default '/' (which is what the pattern effectively does in Metabase if param is missing? 
+      // Actually, in Metabase [[ {{param}} --]] means "if param is present, use it, else ignore block".
+      // But here the pattern is `[[ {{url_sti}} --]] '/'`. 
+      // This looks like: if `url_sti` is present, it comments out the rest? No, `--` is comment in SQL.
+      // `[[ {{url_sti}} --]] '/'`
+      // If `url_sti` is "foo", it becomes `foo -- '/'` -> `foo` (rest commented out).
+      // If `url_sti` is missing, the block is removed? 
+      // Wait, `[[ ... ]]` in Metabase is optional.
+      // If `url_sti` is missing, `[[ ... ]]` is removed. Result: `'/'`.
+      // If `url_sti` is present (e.g. 'foo'), result: `'foo' -- '/'` -> `'foo'`.
 
-    // Replace the pattern with the actual SQL
-    return sql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, replacement);
+      const pattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/gi;
+      if (urlPath && urlPath.trim() !== '') {
+        // User provided a path. We want the result to be that path (quoted).
+        // The query expects a string literal.
+        // e.g. `AND e.url_path = 'foo'`
+        // The original query has `AND e.url_path = [[ {{url_sti}} --]] '/'`
+        // So we should replace the whole match with `'${urlPath}'`.
+        processedSql = processedSql.replace(pattern, `'${urlPath}'`);
+      } else {
+        // User did not provide a path. Use default `'/'`.
+        // The pattern `[[ {{url_sti}} --]] '/'`
+        // If we remove the `[[...]]` part, we get `'/'`.
+        // So we replace the whole match with `'/'`.
+        processedSql = processedSql.replace(pattern, `'/'`);
+      }
+    }
+
+    // Event Name Substitution
+    if (hasEventNameFilter) {
+      const pattern = /\{\{event_name\}\}/gi;
+      if (eventName && eventName.trim() !== '') {
+        processedSql = processedSql.replace(pattern, `'${eventName}'`);
+      } else {
+        // If no event name, what to do? 
+        // Usually required if not in `[[ ]]`.
+        // Let's assume it's required or replace with empty string/null if that makes sense, 
+        // but for now let's just not replace it if empty? Or replace with ''?
+        // If the user hasn't typed anything, the query might fail if we leave `{{event_name}}`.
+        // Let's replace with `''` (empty string) to be safe, or maybe keep it to show error?
+        // Let's replace with `''` so it's valid SQL at least.
+        processedSql = processedSql.replace(pattern, `''`);
+      }
+    }
+
+    return processedSql;
   };
 
   // Helper function to prepare data for LineChart
@@ -509,6 +596,13 @@ const SQLPreview = ({
     setQueryStats(null);
     setLastAction('run');
 
+    // Update executed params
+    setExecutedParams({
+      dateRange,
+      urlPath,
+      eventName
+    });
+
     try {
       const processedSql = getProcessedSql();
       const response = await Promise.race([
@@ -754,37 +848,81 @@ const SQLPreview = ({
             <div>
               <Heading level="2" size="small" className="mb-4">Vis resultater</Heading>
 
-              {/* Metabase Date Filter */}
-              {hasMetabaseDateFilter && (
+              {/* Metabase Parameters Filter */}
+              {(hasMetabaseDateFilter || hasUrlPathFilter || hasEventNameFilter) && (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                  {/* <Heading level="3" size="xsmall" className="mb-3">
-                    Velg dato
+                  {/*<Heading level="3" size="xsmall" className="mb-3">
+                    Velg parametere
                   </Heading>*/}
-                  <DatePicker
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })}
-                    showWeekNumber
-                  >
-                    <div className="flex flex-wrap items-end gap-4">
-                      <div>
-                        <DatePicker.Input
-                          label="Fra dato"
-                          id="preview-date-from"
-                          value={dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''}
+
+                  <div className="flex flex-wrap gap-4 items-end">
+                    {/* Date Filter */}
+                    {hasMetabaseDateFilter && (
+                      <DatePicker
+                        mode="range"
+                        selected={dateRange}
+                        onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })}
+                        showWeekNumber
+                      >
+                        <div className="flex flex-wrap items-end gap-4">
+                          <div>
+                            <DatePicker.Input
+                              label="Fra dato"
+                              id="preview-date-from"
+                              value={dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''}
+                              size="small"
+                            />
+                          </div>
+                          <div>
+                            <DatePicker.Input
+                              label="Til dato"
+                              id="preview-date-to"
+                              value={dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : ''}
+                              size="small"
+                            />
+                          </div>
+                        </div>
+                      </DatePicker>
+                    )}
+
+                    {/* URL Path Filter */}
+                    {hasUrlPathFilter && (
+                      <div className="w-64">
+                        <TextField
+                          label="URL-sti"
                           size="small"
+                          value={urlPath}
+                          onChange={(e) => setUrlPath(e.target.value)}
+                          description="F.eks. / for forsiden"
                         />
                       </div>
-                      <div>
-                        <DatePicker.Input
-                          label="Til dato"
-                          id="preview-date-to"
-                          value={dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : ''}
+                    )}
+
+                    {/* Event Name Filter */}
+                    {hasEventNameFilter && (
+                      <div className="w-64">
+                        <TextField
+                          label="Hendelsesnavn"
                           size="small"
+                          value={eventName}
+                          onChange={(e) => setEventName(e.target.value)}
                         />
                       </div>
+                    )}
+                  </div>
+                  {/* Update Button */}
+                  {hasChanges() && (
+                    <div className="mt-5">
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={() => executeQuery()}
+                        loading={loading}
+                      >
+                        Oppdater
+                      </Button>
                     </div>
-                  </DatePicker>
+                  )}
                 </div>
               )}
 
