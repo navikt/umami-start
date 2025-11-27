@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, FormProgress, Modal } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, FormProgress, Modal, DatePicker } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
+import { subDays, format } from 'date-fns';
 import AlertWithCloseButton from './AlertWithCloseButton';
 import ResultsDisplay from './ResultsDisplay';
 import SqlCodeDisplay from './SqlCodeDisplay';
@@ -52,6 +53,38 @@ const SQLPreview = ({
   const [pendingQueryEstimate, setPendingQueryEstimate] = useState<any>(null);
   const [queryStats, setQueryStats] = useState<any>(null);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
+
+  // Metabase Date Filter State
+  const [hasMetabaseDateFilter, setHasMetabaseDateFilter] = useState(false);
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to?: Date | undefined }>({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  });
+
+  // Detect Metabase date filter pattern
+  useEffect(() => {
+    if (!sql) {
+      setHasMetabaseDateFilter(false);
+      return;
+    }
+    // Pattern: [[AND {{created_at}} ]] or variations with spaces
+    const pattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
+    setHasMetabaseDateFilter(pattern.test(sql));
+  }, [sql]);
+
+  // Generate processed SQL with date substitution
+  const getProcessedSql = () => {
+    if (!hasMetabaseDateFilter || !dateRange.from || !dateRange.to) {
+      return sql;
+    }
+
+    const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
+    const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
+    const replacement = `AND created_at BETWEEN ${fromSql} AND ${toSql}`;
+
+    // Replace the pattern with the actual SQL
+    return sql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, replacement);
+  };
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
@@ -382,7 +415,8 @@ const SQLPreview = ({
   };
 
   const handleCopy = async () => {
-    navigator.clipboard.writeText(sql);
+    const processedSql = getProcessedSql();
+    navigator.clipboard.writeText(processedSql);
     setCopied(true);
 
     // Also run cost estimation
@@ -396,7 +430,7 @@ const SQLPreview = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: sql }),
+          body: JSON.stringify({ query: processedSql }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
@@ -425,13 +459,14 @@ const SQLPreview = ({
     setLastAction('execute');
 
     try {
+      const processedSql = getProcessedSql();
       const estimateResponse = await Promise.race([
         fetch('/api/bigquery/estimate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: sql }),
+          body: JSON.stringify({ query: processedSql }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
@@ -475,13 +510,14 @@ const SQLPreview = ({
     setLastAction('run');
 
     try {
+      const processedSql = getProcessedSql();
       const response = await Promise.race([
         fetch('/api/bigquery', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: sql }),
+          body: JSON.stringify({ query: processedSql }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
@@ -502,7 +538,7 @@ const SQLPreview = ({
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query: sql }),
+            body: JSON.stringify({ query: processedSql }),
           }),
           timeoutPromise(API_TIMEOUT_MS)
         ]) as Response;
@@ -534,7 +570,7 @@ const SQLPreview = ({
           fetch('/api/bigquery/estimate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: sql }),
+            body: JSON.stringify({ query: getProcessedSql() }),
           }),
           timeoutPromise(API_TIMEOUT_MS),
         ]) as Response;
@@ -557,7 +593,7 @@ const SQLPreview = ({
           fetch('/api/bigquery/estimate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: sql }),
+            body: JSON.stringify({ query: getProcessedSql() }),
           }),
           timeoutPromise(API_TIMEOUT_MS),
         ]) as Response;
@@ -714,21 +750,60 @@ const SQLPreview = ({
         ) : (
           // Show the original SQL preview instructions
           <div>
-            {/* Direct Query Execution Section */}
-            <ResultsDisplay
-              result={result}
-              loading={loading}
-              error={error}
-              queryStats={queryStats}
-              lastAction={lastAction}
-              showLoadingMessage={showLoadingMessage}
-              executeQuery={executeQuery}
-              handleRetry={handleRetry}
-              prepareLineChartData={prepareLineChartData}
-              prepareBarChartData={prepareBarChartData}
-              preparePieChartData={preparePieChartData}
-              sql={sql}
-            />
+            {/* Results Section with Integrated Date Filter */}
+            <div>
+              <Heading level="2" size="small" className="mb-4">Vis resultater</Heading>
+
+              {/* Metabase Date Filter */}
+              {hasMetabaseDateFilter && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                  {/* <Heading level="3" size="xsmall" className="mb-3">
+                    Velg dato
+                  </Heading>*/}
+                  <DatePicker
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })}
+                    showWeekNumber
+                  >
+                    <div className="flex flex-wrap items-end gap-4">
+                      <div>
+                        <DatePicker.Input
+                          label="Fra dato"
+                          id="preview-date-from"
+                          value={dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''}
+                          size="small"
+                        />
+                      </div>
+                      <div>
+                        <DatePicker.Input
+                          label="Til dato"
+                          id="preview-date-to"
+                          value={dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : ''}
+                          size="small"
+                        />
+                      </div>
+                    </div>
+                  </DatePicker>
+                </div>
+              )}
+
+              <ResultsDisplay
+                result={result}
+                loading={loading}
+                error={error}
+                queryStats={queryStats}
+                lastAction={lastAction}
+                showLoadingMessage={showLoadingMessage}
+                executeQuery={executeQuery}
+                handleRetry={handleRetry}
+                prepareLineChartData={prepareLineChartData}
+                prepareBarChartData={prepareBarChartData}
+                preparePieChartData={preparePieChartData}
+                sql={getProcessedSql()}
+                hideHeading={true}
+              />
+            </div>
 
             {/* Metabase Section */}
             <div className="space-y-2 mb-4">
