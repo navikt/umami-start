@@ -12,7 +12,7 @@ const SqlCodeDisplay = ({ sql, showEditButton = false }: SqlCodeDisplayProps) =>
     <div className="mt-6">
       <ReadMore header="Vis SQL-kode" size="medium">
         <div className="relative">
-          <pre className="bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
+          <pre className="bg-gray-50 p-4 pt-12 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto border text-sm">
             {sql}
           </pre>
           <div className="absolute top-2 right-2 flex gap-2">

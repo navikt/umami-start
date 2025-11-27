@@ -294,7 +294,7 @@ export default function Grafdeling() {
 
         console.log('Total value for bar chart:', total);
 
-        const barChartData = data.map((row: any) => {
+        const barChartData = data.map((row: any, index: number) => {
             const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
 
@@ -308,7 +308,7 @@ export default function Grafdeling() {
                 y: value,
                 xAxisCalloutData: label,
                 yAxisCalloutData: `${value} (${percentage}%)`,
-                color: '#0067C5', // NAV blue color
+                color: ['#0067C5', '#FF9100', '#06893A', '#C30000', '#634689', '#A8874C', '#005B82', '#E18AAA'][index % 8],
                 legend: label,
             };
         });
