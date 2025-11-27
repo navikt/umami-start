@@ -911,7 +911,7 @@ const SQLPreview = ({
                     )}
                   </div>
                   {/* Update Button */}
-                  {hasChanges() && (
+                  {hasChanges() && (result || error) && (
                     <div className="mt-5">
                       <Button
                         variant="primary"
