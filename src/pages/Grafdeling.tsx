@@ -14,7 +14,7 @@ export default function Grafdeling() {
     // Check for SQL in URL params on mount and auto-execute
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        const sqlParam = urlParams.get('sql');
+        let sqlParam = urlParams.get('sql');
         const descParam = urlParams.get('beskrivelse') || urlParams.get('desc');
 
         if (descParam) {
@@ -22,6 +22,17 @@ export default function Grafdeling() {
         }
 
         if (sqlParam) {
+            // Fix for double-encoded URLs (common issue with Slack on iOS)
+            // If the string contains encoded characters that are common in SQL (newline, space, =, ', ,),
+            // it likely means the URL was double-encoded.
+            if (/%(0A|20|3D|27|2C|28|29)/i.test(sqlParam)) {
+                try {
+                    sqlParam = decodeURIComponent(sqlParam);
+                } catch (e) {
+                    console.warn('Failed to decode potentially double-encoded SQL:', e);
+                }
+            }
+
             setQuery(sqlParam);
             executeQuery(sqlParam);
         } else {
