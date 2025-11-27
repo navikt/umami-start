@@ -671,7 +671,7 @@ const ResultsDisplay = ({
                           </div>
                         </div>
                         <div className="mt-2 text-sm text-gray-700">
-                          Viser {displayData.length} kategorier (hover over stolpene for detaljer)
+                          Viser {displayData.length} kategorier (hold markøren over stolpene for detaljer)
                         </div>
                       </div>
                     );
