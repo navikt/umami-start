@@ -850,7 +850,7 @@ const SQLPreview = ({
 
               {/* Metabase Parameters Filter */}
               {(hasMetabaseDateFilter || hasUrlPathFilter || hasEventNameFilter) && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <div className="mb-3 p-4 bg-green-50 border border-green-100 rounded-lg">
                   {/*<Heading level="3" size="xsmall" className="mb-3">
                     Velg parametere
                   </Heading>*/}
