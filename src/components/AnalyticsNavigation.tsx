@@ -1,7 +1,7 @@
 import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from './kontaktboks';
 
-export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse';
+export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'personvern';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
@@ -51,6 +51,12 @@ export const analyticsPages = [
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
+    },
+    {
+        id: 'personvern',
+        href: '/personvernssjekk',
+        label: 'Personvernssjekk',
+        description: 'Søk etter personopplysninger'
     }
 ];
 

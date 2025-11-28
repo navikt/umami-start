@@ -2052,6 +2052,122 @@ app.post('/api/bigquery/composition', async (req, res) => {
     }
 });
 
+// Privacy Check Endpoint
+app.post('/api/bigquery/privacy-check', async (req, res) => {
+    try {
+        const { websiteId, startDate, endDate } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate
+        };
+
+        // Regex patterns
+        // Regex patterns
+        const patterns = {
+            'Fødselsnummer': '\\b\\d{11}\\b',
+            'UUID': '\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b',
+            'Navident': '\\b[a-zA-Z]\\d{6}\\b'
+        };
+
+        // Tables and columns to check
+        // We exclude ID columns from UUID check as requested
+        const checks = [
+            // public_website_event
+            { table: 'public_website_event', column: 'url_path' },
+            { table: 'public_website_event', column: 'url_query' },
+            { table: 'public_website_event', column: 'referrer_path' },
+            { table: 'public_website_event', column: 'referrer_query' },
+            { table: 'public_website_event', column: 'referrer_domain' },
+            { table: 'public_website_event', column: 'page_title' },
+            { table: 'public_website_event', column: 'event_name' },
+            // public_session
+            { table: 'public_session', column: 'hostname' },
+            { table: 'public_session', column: 'browser' },
+            { table: 'public_session', column: 'os' },
+            { table: 'public_session', column: 'device' },
+            { table: 'public_session', column: 'city' },
+            // public_event_data
+            { table: 'public_event_data', column: 'string_value' }
+        ];
+
+        let unionQueries = [];
+
+        for (const check of checks) {
+            for (const [type, pattern] of Object.entries(patterns)) {
+                // Skip UUID check for ID-like columns if we were checking them, 
+                // but we selected specific text columns so we should be good.
+                // However, let's be safe and explicit if we add more columns later.
+
+                unionQueries.push(`
+                    SELECT 
+                        '${check.table}' as table_name,
+                        '${check.column}' as column_name,
+                        '${type}' as match_type,
+                        COUNT(*) as count,
+                        ANY_VALUE(${check.column}) as example
+                    FROM \`team-researchops-prod-01d6.umami.${check.table}\`
+                    WHERE website_id = @websiteId
+                    AND created_at BETWEEN @startDate AND @endDate
+                    AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                `);
+            }
+        }
+
+        const query = unionQueries.join(' UNION ALL ');
+
+        // Wrap in outer query to order results
+        const finalQuery = `
+            SELECT * FROM (
+                ${query}
+            )
+            ORDER BY count DESC
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: finalQuery,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: finalQuery,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Privacy Check] Dry run failed:', dryRunError.message);
+        }
+
+        res.json({ data: rows, queryStats });
+
+    } catch (error) {
+        console.error('Privacy check error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {

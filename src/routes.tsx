@@ -20,6 +20,8 @@ import UserComposition from "./pages/UserComposition.tsx";
 import EventExplorer from "./pages/EventExplorer.tsx";
 import TrafficAnalysis from "./pages/TrafficAnalysis.tsx";
 
+import PrivacyCheck from "./pages/PrivacyCheck.tsx";
+
 const routes = [
     { path: "/", component: <Home /> },
     { path: "/komigang", component: <Komigang /> },
@@ -41,7 +43,8 @@ const routes = [
     { path: "/brukersammensetning", component: <UserComposition /> },
     { path: "/utforsk-hendelser", component: <EventExplorer /> },
     { path: "/datastruktur", component: <EventExplorer /> },
-    { path: "/trafikkanalyse", component: <TrafficAnalysis /> }
+    { path: "/trafikkanalyse", component: <TrafficAnalysis /> },
+    { path: "/personvernssjekk", component: <PrivacyCheck /> }
 ];
 
 export default routes;
