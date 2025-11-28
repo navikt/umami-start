@@ -160,7 +160,19 @@ const PrivacyCheck = () => {
             if (result.error) {
                 setError(result.error);
             } else {
-                setData(result.data);
+                // Filter out false positive names that start with Nav or Viser
+                const filteredData = result.data.filter((row: any) => {
+                    if (row.match_type === 'Mulig navn') {
+                        // Check if any example starts with Nav or Viser
+                        const hasInvalidName = row.examples?.some((ex: string) =>
+                            /^(Nav|Viser)\s/i.test(ex)
+                        );
+                        return !hasInvalidName;
+                    }
+                    return true;
+                });
+
+                setData(filteredData);
                 setQueryStats(result.queryStats);
             }
         } catch (err) {
@@ -225,8 +237,12 @@ const PrivacyCheck = () => {
             )}
 
             {loading && (
-                <div className="flex justify-center items-center h-full">
+                <div className="flex flex-col justify-center items-center h-full gap-4">
                     <Loader size="xlarge" title="Søker etter personopplysninger..." />
+                    <div className="text-center text-gray-600">
+                        <p className="font-medium">Dette kan ta noen sekunder</p>
+                        <p className="text-sm">Vi analyserer alle data i valgt periode</p>
+                    </div>
                 </div>
             )}
 
@@ -343,12 +359,9 @@ const PrivacyCheck = () => {
                     )}
 
                     {queryStats && (
-                        <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-500 flex justify-between">
+                        <div className="mt-5 pt-4text-sm text-gray-500 flex justify-between">
                             <div>
-                                Data prosessert (Dry Run): {queryStats.totalBytesProcessedGB} GB
-                            </div>
-                            <div>
-                                Estimert kostnad: ${queryStats.estimatedCostUSD}
+                                Data prosessert: {queryStats.totalBytesProcessedGB} GB
                             </div>
                         </div>
                     )}
