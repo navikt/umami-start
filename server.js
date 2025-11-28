@@ -2072,7 +2072,17 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         const patterns = {
             'Fødselsnummer': '\\b\\d{11}\\b',
             'UUID': '\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b',
-            'Navident': '\\b[a-zA-Z]\\d{6}\\b'
+            'Navident': '\\b[a-zA-Z]\\d{6}\\b',
+            'E-post': '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b',
+            'IP-adresse': '\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b',
+            'Telefonnummer': '(?:^|[^-0-9a-fA-F])[2-9]\\d{7}(?:$|[^-0-9a-fA-F])',
+            'Bankkort': '\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b',
+            'Mulig navn': '\\b[A-ZÆØÅ][a-zæøå]{1,20}\\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\\s[A-ZÆØÅ][a-zæøå]{1,20})?\\b',
+            'Mulig adresse': '\\b[A-ZÆØÅ][a-zæøå]+(?:\\s[A-ZÆØÅa-zæøå]+)*\\s\\d+[A-Za-z]?\\b',
+            'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.?\\d{5}\\b',
+            'Organisasjonsnummer': '\\b\\d{9}\\b',
+            'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
+            'Mulig søk': '[?&](?:q|query|s|search|k)=([^&\\s]+)'
         };
 
         // Tables and columns to check
@@ -2110,7 +2120,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                         '${check.column}' as column_name,
                         '${type}' as match_type,
                         COUNT(*) as count,
-                        ANY_VALUE(${check.column}) as example
+                        ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
                     FROM \`team-researchops-prod-01d6.umami.${check.table}\`
                     WHERE website_id = @websiteId
                     AND created_at BETWEEN @startDate AND @endDate

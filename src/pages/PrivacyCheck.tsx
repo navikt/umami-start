@@ -4,6 +4,107 @@ import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
 
+
+const PATTERNS: Record<string, RegExp> = {
+    'Fødselsnummer': /\b\d{11}\b/g,
+    'UUID': /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g,
+    'Navident': /\b[a-zA-Z]\d{6}\b/g,
+    'E-post': /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+    'IP-adresse': /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
+    'Telefonnummer': /(?<![-0-9a-fA-F])[2-9]\d{7}(?![-0-9a-fA-F])/g,
+    'Bankkort': /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g,
+    'Mulig navn': /\b[A-ZÆØÅ][a-zæøå]{1,20}\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\s[A-ZÆØÅ][a-zæøå]{1,20})?\b/g,
+    'Mulig adresse': /\b[A-ZÆØÅ][a-zæøå]+(?:\s[A-ZÆØÅa-zæøå]+)*\s\d+[A-Za-z]?\b/g,
+    'Kontonummer': /\b\d{4}\.?\d{2}\.?\d{5}\b/g,
+    'Organisasjonsnummer': /\b\d{9}\b/g,
+    'Bilnummer': /\b[A-Z]{2}\s?\d{5}\b/g,
+    'Mulig søk': /[?&](?:q|query|s|search|k)=[^&\s]+/g
+};
+
+const HighlightedText = ({ text, type }: { text: string, type: string }) => {
+    const pattern = PATTERNS[type];
+    if (!pattern) return <span>{text}</span>;
+
+    // Reset regex lastIndex
+    pattern.lastIndex = 0;
+
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+
+    while ((match = pattern.exec(text)) !== null) {
+        // Add text before match
+        if (match.index > lastIndex) {
+            parts.push(<span key={`text-${key++}`}>{text.substring(lastIndex, match.index)}</span>);
+        }
+
+        // Add highlighted match
+        parts.push(
+            <mark key={`mark-${key++}`} className="bg-yellow-400 px-1 rounded">
+                {match[0]}
+            </mark>
+        );
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+        parts.push(<span key={`text-${key++}`}>{text.substring(lastIndex)}</span>);
+    }
+
+    return <>{parts}</>;
+};
+
+const ExampleList = ({ examples, type }: { examples: string[], type: string }) => {
+    const [showAll, setShowAll] = useState(false);
+
+    if (!examples || examples.length === 0) return null;
+
+    const renderItem = (ex: string) => (
+        <div className="py-1.5 px-2 bg-white border border-gray-200 rounded mb-2 overflow-x-auto">
+            <HighlightedText text={ex} type={type} />
+        </div>
+    );
+
+    if (examples.length === 1) return renderItem(examples[0]);
+
+    return (
+        <div className="flex flex-col gap-1">
+            {renderItem(examples[0])}
+            {examples.length > 1 && (
+                <div className="flex flex-col gap-1">
+                    {showAll ? (
+                        <>
+                            {examples.slice(1).map((ex, i) => (
+                                <div key={i}>{renderItem(ex)}</div>
+                            ))}
+                            <Button
+                                size="xsmall"
+                                variant="tertiary"
+                                onClick={() => setShowAll(false)}
+                                className="self-start mt-1"
+                            >
+                                Vis færre
+                            </Button>
+                        </>
+                    ) : (
+                        <Button
+                            size="xsmall"
+                            variant="tertiary"
+                            onClick={() => setShowAll(true)}
+                            className="self-start"
+                        >
+                            + {examples.length - 1} til
+                        </Button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PrivacyCheck = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [period, setPeriod] = useState<string>('current_month');
@@ -217,19 +318,21 @@ const PrivacyCheck = () => {
                                             <Table.Row>
                                                 <Table.HeaderCell>Tabell</Table.HeaderCell>
                                                 <Table.HeaderCell>Kolonne</Table.HeaderCell>
-                                                <Table.HeaderCell>Type</Table.HeaderCell>
+                                                {!selectedType && <Table.HeaderCell>Type</Table.HeaderCell>}
                                                 <Table.HeaderCell>Antall</Table.HeaderCell>
-                                                <Table.HeaderCell>Eksempel</Table.HeaderCell>
+                                                <Table.HeaderCell>Eksempler</Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
                                             {visibleData.map((row, index) => (
                                                 <Table.Row key={index}>
-                                                    <Table.DataCell>{row.table_name}</Table.DataCell>
-                                                    <Table.DataCell>{row.column_name}</Table.DataCell>
-                                                    <Table.DataCell>{row.match_type}</Table.DataCell>
-                                                    <Table.DataCell>{row.count.toLocaleString('no-NO')}</Table.DataCell>
-                                                    <Table.DataCell className="font-mono text-sm whitespace-nowrap">{row.example}</Table.DataCell>
+                                                    <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
+                                                    <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
+                                                    {!selectedType && <Table.DataCell className="whitespace-nowrap">{row.match_type}</Table.DataCell>}
+                                                    <Table.DataCell className="whitespace-nowrap">{row.count.toLocaleString('no-NO')}</Table.DataCell>
+                                                    <Table.DataCell className="font-mono text-sm">
+                                                        <ExampleList examples={row.examples} type={row.match_type} />
+                                                    </Table.DataCell>
                                                 </Table.Row>
                                             ))}
                                         </Table.Body>
