@@ -2068,21 +2068,21 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         };
 
         // Regex patterns
-        // Regex patterns
+        // Note: BigQuery uses RE2 regex - using simple patterns and relying on post-processing for filtering
         const patterns = {
             'Fødselsnummer': '\\b\\d{11}\\b',
             'UUID': '\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b',
             'Navident': '\\b[a-zA-Z]\\d{6}\\b',
             'E-post': '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b',
             'IP-adresse': '\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b',
-            'Telefonnummer': '(?:^|[^-0-9a-fA-F])[2-9]\\d{7}(?:$|[^-0-9a-fA-F])',
-            'Bankkort': '\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b',
+            'Telefonnummer': '\\b[2-9]\\d{7}\\b',
+            'Bankkort': '\\b\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}\\b',
             'Mulig navn': '\\b[A-ZÆØÅ][a-zæøå]{1,20}\\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\\s[A-ZÆØÅ][a-zæøå]{1,20})?\\b',
             'Mulig adresse': '\\b[A-ZÆØÅ][a-zæøå]+(?:\\s[A-ZÆØÅa-zæøå]+)*\\s\\d+[A-Za-z]?\\b',
-            'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.?\\d{5}\\b',
+            'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.\\d{5}\\b',
             'Organisasjonsnummer': '\\b\\d{9}\\b',
             'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
-            'Mulig søk': '[?&](?:q|query|s|search|k)=([^&\\s]+)'
+            'Mulig søk': '[?&](?:q|query|s|search|k)=[^&\\s]+'
         };
 
         // Tables and columns to check
@@ -2147,6 +2147,18 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 
         const [rows] = await job.getQueryResults();
 
+        // Filter out false positives
+        // For bank cards and phone numbers: exclude matches that are part of UUIDs
+        const uuidPattern = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
+        const filteredRows = rows.filter(row => {
+            if (row.match_type === 'Bankkort' || row.match_type === 'Telefonnummer') {
+                // Check if any example contains a UUID pattern
+                const hasUuid = row.examples?.some(ex => uuidPattern.test(ex));
+                return !hasUuid;
+            }
+            return true;
+        });
+
         // Get dry run stats
         let queryStats = null;
         try {
@@ -2170,7 +2182,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             console.log('[Privacy Check] Dry run failed:', dryRunError.message);
         }
 
-        res.json({ data: rows, queryStats });
+        res.json({ data: filteredRows, queryStats });
 
     } catch (error) {
         console.error('Privacy check error:', error);

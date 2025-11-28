@@ -12,7 +12,7 @@ const PATTERNS: Record<string, RegExp> = {
     'E-post': /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
     'IP-adresse': /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
     'Telefonnummer': /(?<![-0-9a-fA-F])[2-9]\d{7}(?![-0-9a-fA-F])/g,
-    'Bankkort': /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g,
+    'Bankkort': /(?<![0-9a-fA-F]-)\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b(?!-[0-9a-fA-F])/g,
     'Mulig navn': /\b[A-ZÆØÅ][a-zæøå]{1,20}\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\s[A-ZÆØÅ][a-zæøå]{1,20})?\b/g,
     'Mulig adresse': /\b[A-ZÆØÅ][a-zæøå]+(?:\s[A-ZÆØÅa-zæøå]+)*\s\d+[A-Za-z]?\b/g,
     'Kontonummer': /\b\d{4}\.?\d{2}\.?\d{5}\b/g,
@@ -160,14 +160,20 @@ const PrivacyCheck = () => {
             if (result.error) {
                 setError(result.error);
             } else {
-                // Filter out false positive names that start with Nav or Viser
+                // Filter out false positives
+                const uuidPattern = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
                 const filteredData = result.data.filter((row: any) => {
+                    // Filter out names that start with Nav or Viser
                     if (row.match_type === 'Mulig navn') {
-                        // Check if any example starts with Nav or Viser
                         const hasInvalidName = row.examples?.some((ex: string) =>
                             /^(Nav|Viser)\s/i.test(ex)
                         );
                         return !hasInvalidName;
+                    }
+                    // Filter out bank cards and phone numbers that are part of UUIDs
+                    if (row.match_type === 'Bankkort' || row.match_type === 'Telefonnummer') {
+                        const hasUuid = row.examples?.some((ex: string) => uuidPattern.test(ex));
+                        return !hasUuid;
                     }
                     return true;
                 });
