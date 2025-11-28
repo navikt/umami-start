@@ -14,7 +14,7 @@ const PATTERNS: Record<string, RegExp> = {
     'Telefonnummer': /(?<![-0-9a-fA-F])[2-9]\d{7}(?![-0-9a-fA-F])/g,
     'Bankkort': /(?<![0-9a-fA-F]-)\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b(?!-[0-9a-fA-F])/g,
     'Mulig navn': /\b[A-ZÆØÅ][a-zæøå]{1,20}\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\s[A-ZÆØÅ][a-zæøå]{1,20})?\b/g,
-    'Mulig adresse': /\b[A-ZÆØÅ][a-zæøå]+(?:\s[A-ZÆØÅa-zæøå]+)*\s\d+[A-Za-z]?\b/g,
+    'Mulig adresse': /\b\d{4}\s[A-ZÆØÅ][A-ZÆØÅa-zæøå]+(?:\s[A-ZÆØÅa-zæøå]+)*\b/g,
     'Kontonummer': /\b\d{4}\.?\d{2}\.?\d{5}\b/g,
     'Organisasjonsnummer': /\b\d{9}\b/g,
     'Bilnummer': /\b[A-Z]{2}\s?\d{5}\b/g,
@@ -117,8 +117,6 @@ const PrivacyCheck = () => {
     const [showEmpty, setShowEmpty] = useState<boolean>(false);
 
     const fetchData = async () => {
-        if (!selectedWebsite) return;
-
         setLoading(true);
         setError(null);
         setData(null);
@@ -145,7 +143,7 @@ const PrivacyCheck = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    websiteId: selectedWebsite.id,
+                    websiteId: selectedWebsite?.id,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                 }),
@@ -227,11 +225,11 @@ const PrivacyCheck = () => {
 
                     <Button
                         onClick={fetchData}
-                        disabled={!selectedWebsite || loading}
+                        disabled={loading}
                         loading={loading}
                         className="w-full"
                     >
-                        Kjør personvernssjekk
+                        {selectedWebsite ? 'Kjør personvernssjekk' : 'Søk i alle nettsteder'}
                     </Button>
                 </>
             }
@@ -338,6 +336,7 @@ const PrivacyCheck = () => {
                                     <Table>
                                         <Table.Header>
                                             <Table.Row>
+                                                {!selectedWebsite && <Table.HeaderCell>Nettside</Table.HeaderCell>}
                                                 <Table.HeaderCell>Tabell</Table.HeaderCell>
                                                 <Table.HeaderCell>Kolonne</Table.HeaderCell>
                                                 {!selectedType && <Table.HeaderCell>Type</Table.HeaderCell>}
@@ -348,6 +347,7 @@ const PrivacyCheck = () => {
                                         <Table.Body>
                                             {visibleData.map((row, index) => (
                                                 <Table.Row key={index}>
+                                                    {!selectedWebsite && <Table.DataCell className="whitespace-nowrap">{row.website_name}</Table.DataCell>}
                                                     <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
                                                     <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
                                                     {!selectedType && <Table.DataCell className="whitespace-nowrap">{row.match_type}</Table.DataCell>}

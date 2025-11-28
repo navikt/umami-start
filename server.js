@@ -2062,10 +2062,13 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         }
 
         const params = {
-            websiteId,
             startDate,
             endDate
         };
+
+        if (websiteId) {
+            params.websiteId = websiteId;
+        }
 
         // Regex patterns
         // Note: BigQuery uses RE2 regex - using simple patterns and relying on post-processing for filtering
@@ -2078,7 +2081,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             'Telefonnummer': '\\b[2-9]\\d{7}\\b',
             'Bankkort': '\\b\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}\\b',
             'Mulig navn': '\\b[A-ZÆØÅ][a-zæøå]{1,20}\\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\\s[A-ZÆØÅ][a-zæøå]{1,20})?\\b',
-            'Mulig adresse': '\\b[A-ZÆØÅ][a-zæøå]+(?:\\s[A-ZÆØÅa-zæøå]+)*\\s\\d+[A-Za-z]?\\b',
+            'Mulig adresse': '\\b\\d{4}\\s[A-ZÆØÅ][A-ZÆØÅa-zæøå]+(?:\\s[A-ZÆØÅa-zæøå]+)*\\b',
             'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.\\d{5}\\b',
             'Organisasjonsnummer': '\\b\\d{9}\\b',
             'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
@@ -2086,7 +2089,6 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         };
 
         // Tables and columns to check
-        // We exclude ID columns from UUID check as requested
         const checks = [
             // public_website_event
             { table: 'public_website_event', column: 'url_path' },
@@ -2106,32 +2108,57 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             { table: 'public_event_data', column: 'string_value' }
         ];
 
+        // If global search, fetch website names first
+        let websiteMap = new Map();
+        if (!websiteId) {
+            try {
+                const [siteRows] = await bigquery.query(`SELECT website_id, name FROM \`team-researchops-prod-01d6.umami.public_website\``);
+                siteRows.forEach(r => websiteMap.set(r.website_id, r.name));
+            } catch (e) {
+                console.error('Error fetching websites for global search:', e);
+            }
+        }
+
         let unionQueries = [];
 
         for (const check of checks) {
             for (const [type, pattern] of Object.entries(patterns)) {
-                // Skip UUID check for ID-like columns if we were checking them, 
-                // but we selected specific text columns so we should be good.
-                // However, let's be safe and explicit if we add more columns later.
-
-                unionQueries.push(`
-                    SELECT 
-                        '${check.table}' as table_name,
-                        '${check.column}' as column_name,
-                        '${type}' as match_type,
-                        COUNT(*) as count,
-                        ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
-                    FROM \`team-researchops-prod-01d6.umami.${check.table}\`
-                    WHERE website_id = @websiteId
-                    AND created_at BETWEEN @startDate AND @endDate
-                    AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
-                `);
+                if (websiteId) {
+                    unionQueries.push(`
+                        SELECT 
+                            '${check.table}' as table_name,
+                            '${check.column}' as column_name,
+                            '${type}' as match_type,
+                            COUNT(*) as count,
+                            ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
+                        FROM \`team-researchops-prod-01d6.umami.${check.table}\`
+                        WHERE website_id = @websiteId
+                        AND created_at BETWEEN @startDate AND @endDate
+                        AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                    `);
+                } else {
+                    // Global search: group by website_id
+                    unionQueries.push(`
+                        SELECT 
+                            website_id,
+                            '${check.table}' as table_name,
+                            '${check.column}' as column_name,
+                            '${type}' as match_type,
+                            COUNT(*) as count,
+                            ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
+                        FROM \`team-researchops-prod-01d6.umami.${check.table}\`
+                        WHERE created_at BETWEEN @startDate AND @endDate
+                        AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                        GROUP BY website_id
+                    `);
+                }
             }
         }
 
         const query = unionQueries.join(' UNION ALL ');
 
         // Wrap in outer query to order results
+        // For global search, we just return the raw union results (ordered by count)
         const finalQuery = `
             SELECT * FROM (
                 ${query}
@@ -2150,7 +2177,8 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         // Filter out false positives
         // For bank cards and phone numbers: exclude matches that are part of UUIDs
         const uuidPattern = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
-        const filteredRows = rows.filter(row => {
+
+        let processedRows = rows.filter(row => {
             if (row.match_type === 'Bankkort' || row.match_type === 'Telefonnummer') {
                 // Check if any example contains a UUID pattern
                 const hasUuid = row.examples?.some(ex => uuidPattern.test(ex));
@@ -2158,6 +2186,14 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             }
             return true;
         });
+
+        // Map website names if global search
+        if (!websiteId) {
+            processedRows = processedRows.map(row => ({
+                ...row,
+                website_name: websiteMap.get(row.website_id) || row.website_id
+            }));
+        }
 
         // Get dry run stats
         let queryStats = null;
@@ -2182,7 +2218,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             console.log('[Privacy Check] Dry run failed:', dryRunError.message);
         }
 
-        res.json({ data: filteredRows, queryStats });
+        res.json({ data: processedRows, queryStats });
 
     } catch (error) {
         console.error('Privacy check error:', error);
