@@ -51,12 +51,6 @@ export const analyticsPages = [
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
-    },
-    {
-        id: 'personvern',
-        href: '/personvernssjekk',
-        label: 'Personvernssjekk',
-        description: 'Søk etter personopplysninger'
     }
 ];
 
