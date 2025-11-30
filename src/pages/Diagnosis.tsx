@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from '@navikt/ds-react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
+import WebsitePicker from '../components/WebsitePicker';
+import AnalyticsNavigation from '../components/AnalyticsNavigation';
+import { Website } from '../types/chart';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
@@ -29,6 +32,7 @@ const Diagnosis = () => {
     const [queryStats, setQueryStats] = useState<any>(null);
     const [environment, setEnvironment] = useState<string>('all');
     const [activeTab, setActiveTab] = useState<string>('all');
+    const [selectedWebsiteFilter, setSelectedWebsiteFilter] = useState<Website | null>(null);
 
     // Deep Diagnosis State
     const [selectedWebsite, setSelectedWebsite] = useState<DiagnosisData | null>(null);
@@ -159,6 +163,11 @@ const Diagnosis = () => {
     const activeWebsites = environmentData.filter(d => d.last_event_at).length;
     const inactiveWebsites = environmentData.filter(d => !d.last_event_at).length;
 
+    // Find selected website in data for highlighting
+    const highlightedWebsite = selectedWebsiteFilter && environmentData
+        ? environmentData.find(row => row.website_id === selectedWebsiteFilter.id)
+        : null;
+
     const getEnvironmentTitle = () => {
         switch (environment) {
             case 'prod': return 'Prod-miljø';
@@ -240,6 +249,12 @@ const Diagnosis = () => {
             currentPage="diagnose"
             filters={
                 <>
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsiteFilter}
+                        onWebsiteChange={setSelectedWebsiteFilter}
+                        variant="minimal"
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -279,6 +294,59 @@ const Diagnosis = () => {
 
             {!loading && data && (
                 <div className="flex flex-col gap-6">
+                    {/* Highlighted Website Section */}
+                    {highlightedWebsite && (
+                        <div className="flex flex-col gap-4 mb-3">
+                            <Heading level="2" size="medium">Valgt nettsted eller app</Heading>
+                            <div className="bg-white border border-gray-300 rounded-lg p-5 shadow-sm">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Heading level="3" size="medium">{highlightedWebsite.website_name || highlightedWebsite.website_id}</Heading>
+                                    {highlightedWebsite.last_event_at ? (
+                                        <Tooltip content="Aktiv i perioden">
+                                            <CheckCircle size={20} className="text-green-500" />
+                                        </Tooltip>
+                                    ) : (
+                                        <Tooltip content="Ingen aktivitet registrert i perioden">
+                                            <><AlertTriangle size={20} className="text-yellow-500" /> (trenger tilsyn)</>
+                                        </Tooltip>
+                                    )}
+                                </div>
+                                {highlightedWebsite.domain && (
+                                    <div className="text-sm text-gray-500 -mt-2 mb-4">{highlightedWebsite.domain}</div>
+                                )}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                    <div className="p-4 rounded-lg border border-gray-200">
+                                        <div className="text-sm text-gray-500 mb-1 font-medium">Sidevisninger</div>
+                                        <div className="text-2xl font-bold">{highlightedWebsite.pageviews.toLocaleString('no-NO')}</div>
+                                    </div>
+                                    <div className="p-4 rounded-lg border border-gray-200">
+                                        <div className="text-sm text-gray-500 mb-1 font-medium">Egendefinerte</div>
+                                        <div className="text-2xl font-bold">{highlightedWebsite.custom_events.toLocaleString('no-NO')}</div>
+                                    </div>
+                                    <div className="p-4 rounded-lg border border-gray-200">
+                                        <div className="text-sm text-gray-500 mb-1 font-medium">Siste aktivitet</div>
+                                        <div className="text-xl font-semibold">
+                                            {highlightedWebsite.last_event_at
+                                                ? format(new Date(highlightedWebsite.last_event_at), 'd. MMM yyyy', { locale: nb })
+                                                : <span className="text-red-600">Ingen</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                {!highlightedWebsite.last_event_at ? (
+                                    <button
+                                        onClick={() => handleExplore(highlightedWebsite)}
+                                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-md font-medium transition-colors shadow-sm"
+                                    >
+                                        Kjør diagnose
+                                    </button>
+                                ) : (
+                                    <></>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex flex-col gap-2">
                         <Heading level="2" size="medium">Resultater for {getEnvironmentTitle()}</Heading>
                     </div>
@@ -290,7 +358,7 @@ const Diagnosis = () => {
                             <div className="text-2xl font-bold mt-1">{totalWebsites}</div>
                         </div>
                         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                            <div className="text-sm text-gray-500 font-medium">Aktive i perioden</div>
+                            <div className="text-sm text-gray-500 font-medium">Active i perioden</div>
                             <div className="text-2xl font-bold mt-1 text-green-600">{activeWebsites}</div>
                         </div>
                         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -301,9 +369,6 @@ const Diagnosis = () => {
 
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                         <div className="p-4 border-b border-gray-200">
-                            <div className="flex justify-between items-center mb-4">
-                                <Heading level="3" size="small">Detaljert oversikt</Heading>
-                            </div>
                             <Tabs value={activeTab} onChange={setActiveTab}>
                                 <Tabs.List>
                                     <Tabs.Tab value="all" label="Alle" />
@@ -470,6 +535,8 @@ const Diagnosis = () => {
                     </div>
                 </div>
             )}
+
+            <AnalyticsNavigation currentPage="diagnose" />
         </ChartLayout>
     );
 };

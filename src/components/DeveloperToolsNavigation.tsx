@@ -3,15 +3,15 @@ import { Link, List, Heading } from '@navikt/ds-react';
 export const developerTools = [
     {
         id: 'personvern',
-        href: '/personvern',
+        href: '/personvernssjekk',
         label: 'Personvernssjekk',
-        description: 'Finn potensielle personopplysninger'
+        description: 'Oppdager personopplysninger'
     },
     {
         id: 'diagnose',
         href: '/diagnose',
         label: 'Diagnoseverktøy',
-        description: 'Oversikt over alle aktiviteteer'
+        description: 'Sjekker om hendelser mottas'
     },
     {
         id: 'sql',
