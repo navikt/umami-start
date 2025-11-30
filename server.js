@@ -2226,6 +2226,196 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
     }
 });
 
+
+// Get user sessions (User Profiles)
+app.post('/api/bigquery/users', async (req, res) => {
+    try {
+        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0 } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        };
+
+        let searchFilter = '';
+        if (searchQuery) {
+            searchFilter = `AND session_id LIKE @searchQuery`;
+            params.searchQuery = `%${searchQuery}%`;
+        }
+
+        const query = `
+            SELECT
+                session_id,
+                MAX(created_at) as last_seen,
+                MIN(created_at) as first_seen,
+                ANY_VALUE(country) as country,
+                ANY_VALUE(device) as device,
+                ANY_VALUE(os) as os,
+                ANY_VALUE(browser) as browser,
+                COUNT(*) as event_count
+            FROM \`team-researchops-prod-01d6.umami_views.session\`
+            WHERE website_id = @websiteId
+            AND created_at BETWEEN @startDate AND @endDate
+            ${searchFilter}
+            GROUP BY session_id
+            ORDER BY last_seen DESC
+            LIMIT @limit OFFSET @offset
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        // Get total count for pagination
+        const countQuery = `
+            SELECT COUNT(DISTINCT session_id) as total
+            FROM \`team-researchops-prod-01d6.umami_views.session\`
+            WHERE website_id = @websiteId
+            AND created_at BETWEEN @startDate AND @endDate
+            ${searchFilter}
+        `;
+
+        const [countJob] = await bigquery.createQueryJob({
+            query: countQuery,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [countRows] = await countJob.getQueryResults();
+        const total = countRows[0]?.total || 0;
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[User Profiles] Dry run failed:', dryRunError.message);
+        }
+
+        const users = rows.map(row => ({
+            sessionId: row.session_id,
+            lastSeen: row.last_seen.value,
+            firstSeen: row.first_seen.value,
+            country: row.country,
+            device: row.device,
+            os: row.os,
+            browser: row.browser,
+            eventCount: parseInt(row.event_count)
+        }));
+
+        res.json({ users, total, queryStats });
+
+    } catch (error) {
+        console.error('BigQuery users error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get user activity (User Profile Details)
+app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { websiteId, startDate, endDate } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const params = {
+            websiteId,
+            sessionId,
+            startDate,
+            endDate
+        };
+
+        const query = `
+            SELECT
+                created_at,
+                event_type,
+                event_name,
+                url_path,
+                page_title
+            FROM \`team-researchops-prod-01d6.umami_views.event\`
+            WHERE website_id = @websiteId
+            AND session_id = @sessionId
+            AND created_at BETWEEN @startDate AND @endDate
+            ORDER BY created_at DESC
+            LIMIT 1000
+        `;
+
+        const [job] = await bigquery.createQueryJob({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        });
+
+        const [rows] = await job.getQueryResults();
+
+        // Get dry run stats
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[User Activity] Dry run failed:', dryRunError.message);
+        }
+
+        const activity = rows.map(row => ({
+            createdAt: row.created_at.value,
+            type: row.event_type === 1 ? 'pageview' : 'event',
+            name: row.event_name,
+            url: row.url_path,
+            title: row.page_title
+        }));
+
+        res.json({ activity, queryStats });
+
+    } catch (error) {
+        console.error('BigQuery user activity error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {
