@@ -58,12 +58,6 @@ export const analyticsPages = [
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
     },
-    {
-        id: 'grafbygger',
-        href: '/grafbygger',
-        label: 'Grafbyggeren',
-        description: 'Lag egne grafer eller tabeller'
-    },
 ];
 
 const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigationProps) => {

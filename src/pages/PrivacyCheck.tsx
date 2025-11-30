@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Button, Alert, Loader, Radio, RadioGroup, Table, Heading, Tabs, Switch } from '@navikt/ds-react';
+import { useState, useEffect } from 'react';
+import { Button, Alert, Loader, Radio, RadioGroup, Table, Heading, Tabs, Switch, DatePicker, ReadMore } from '@navikt/ds-react';
+import { format, parse, isValid } from 'date-fns';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
@@ -115,13 +116,42 @@ const PrivacyCheck = () => {
     const [activeTab, setActiveTab] = useState<string>('summary');
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [showEmpty, setShowEmpty] = useState<boolean>(false);
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [fromInputValue, setFromInputValue] = useState<string>('');
+    const [toInputValue, setToInputValue] = useState<string>('');
+    const [dryRunStats, setDryRunStats] = useState<any>(null);
+    const [showDryRunWarning, setShowDryRunWarning] = useState<boolean>(false);
 
-    const fetchData = async () => {
+    // Sync input strings when dates change (e.g. from calendar selection)
+    useEffect(() => {
+        if (customStartDate) {
+            setFromInputValue(format(customStartDate, 'dd.MM.yyyy'));
+        } else {
+            setFromInputValue('');
+        }
+    }, [customStartDate]);
+
+    useEffect(() => {
+        if (customEndDate) {
+            setToInputValue(format(customEndDate, 'dd.MM.yyyy'));
+        } else {
+            setToInputValue('');
+        }
+    }, [customEndDate]);
+
+    const fetchData = async (force: boolean = false) => {
         setLoading(true);
         setError(null);
-        setData(null);
-        setQueryStats(null);
-        setSelectedType(null); // Reset filter on new search
+        if (force) {
+            setShowDryRunWarning(false); // Hide warning immediately when forced
+        } else {
+            setData(null);
+            setQueryStats(null);
+            setSelectedType(null); // Reset filter on new search
+            setDryRunStats(null);
+            setShowDryRunWarning(false);
+        }
 
         // Calculate date range based on period
         const now = new Date();
@@ -131,9 +161,21 @@ const PrivacyCheck = () => {
         if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
-        } else {
+        } else if (period === 'last_month') {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                setError('Vennligst velg en gyldig periode.');
+                setLoading(false);
+                return;
+            }
+            startDate = customStartDate;
+            endDate = customEndDate;
+        } else {
+            // Fallback
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
         }
 
         try {
@@ -146,6 +188,7 @@ const PrivacyCheck = () => {
                     websiteId: selectedWebsite?.id,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
+                    dryRun: !force && period === 'custom', // Only dry run for custom period initially
                 }),
             });
 
@@ -157,6 +200,19 @@ const PrivacyCheck = () => {
 
             if (result.error) {
                 setError(result.error);
+            } else if (result.dryRun) {
+                // Handle dry run result
+                const gbProcessed = parseFloat(result.queryStats.totalBytesProcessedGB);
+                if (gbProcessed > 1) { // Warn if > 1 GB
+                    setDryRunStats(result.queryStats);
+                    setShowDryRunWarning(true);
+                    setLoading(false);
+                    return;
+                } else {
+                    // If small enough, run immediately
+                    fetchData(true);
+                    return;
+                }
             } else {
                 // Filter out false positives
                 const uuidPattern = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
@@ -221,10 +277,53 @@ const PrivacyCheck = () => {
                     >
                         <Radio value="current_month">Denne måneden</Radio>
                         <Radio value="last_month">Forrige måned</Radio>
+                        <Radio value="custom">Egendefinert</Radio>
                     </RadioGroup>
 
+                    {period === 'custom' && (
+                        <div className="mb-4">
+                            <DatePicker
+                                mode="range"
+                                onSelect={(range) => {
+                                    if (range) {
+                                        setCustomStartDate(range.from);
+                                        setCustomEndDate(range.to);
+                                    }
+                                }}
+                                selected={{ from: customStartDate, to: customEndDate }}
+                            >
+                                <div className="flex gap-4">
+                                    <DatePicker.Input
+                                        id="custom-date-from"
+                                        label="Fra dato"
+                                        value={fromInputValue}
+                                        onChange={(e) => {
+                                            setFromInputValue(e.target.value);
+                                            const date = parse(e.target.value, 'dd.MM.yyyy', new Date());
+                                            if (isValid(date) && e.target.value.length === 10) {
+                                                setCustomStartDate(date);
+                                            }
+                                        }}
+                                    />
+                                    <DatePicker.Input
+                                        id="custom-date-to"
+                                        label="Til dato"
+                                        value={toInputValue}
+                                        onChange={(e) => {
+                                            setToInputValue(e.target.value);
+                                            const date = parse(e.target.value, 'dd.MM.yyyy', new Date());
+                                            if (isValid(date) && e.target.value.length === 10) {
+                                                setCustomEndDate(date);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </DatePicker>
+                        </div>
+                    )}
+
                     <Button
-                        onClick={fetchData}
+                        onClick={() => fetchData(false)}
                         disabled={loading}
                         loading={loading}
                         className="w-full"
@@ -237,6 +336,24 @@ const PrivacyCheck = () => {
             {error && (
                 <Alert variant="error" className="mb-4">
                     {error}
+                </Alert>
+            )}
+
+            {showDryRunWarning && dryRunStats && (
+                <Alert variant="warning" className="mb-4">
+                    <Heading level="3" size="small">Stor datamengde</Heading>
+                    <p className="mt-2">
+                        Denne spørringen vil prosessere ca. <strong>{dryRunStats.totalBytesProcessedGB} GB</strong> data.
+                        Dette kan ta litt tid. Vil du fortsette?
+                    </p>
+                    <div className="mt-4 flex gap-4">
+                        <Button variant="primary" size="small" onClick={() => fetchData(true)}>
+                            Ja, kjør på!
+                        </Button>
+                        <Button variant="secondary" size="small" onClick={() => setShowDryRunWarning(false)}>
+                            Avbryt
+                        </Button>
+                    </div>
                 </Alert>
             )}
 
@@ -304,9 +421,148 @@ const PrivacyCheck = () => {
                                         </Table.Row>
                                     </Table.Body>
                                 </Table>
+
+                                <ReadMore header="Metadata oversikt" className="mt-6">
+                                    <div className="space-y-4">
+                                        {!selectedWebsite && (
+                                            <div>
+                                                <Heading level="4" size="xsmall" className="mb-2">Unike nettsteder ({new Set(data.map(row => row.website_id)).size})</Heading>
+                                                <ul className="list-disc list-inside space-y-1">
+                                                    {Array.from(new Set(data.map(row => row.website_name || row.website_id))).sort().map((websiteName, idx) => (
+                                                        <li key={idx} className="text-sm">{websiteName}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <Heading level="4" size="xsmall" className="mb-2">Involverte tabeller og kolonner</Heading>
+                                            {(() => {
+                                                // Group by table
+                                                const tableColumns: Record<string, Set<string>> = {};
+                                                data.forEach(row => {
+                                                    if (!tableColumns[row.table_name]) {
+                                                        tableColumns[row.table_name] = new Set();
+                                                    }
+                                                    tableColumns[row.table_name].add(row.column_name);
+                                                });
+
+                                                return (
+                                                    <ul className="list-disc list-inside space-y-2">
+                                                        {Object.entries(tableColumns).sort().map(([table, columns]) => (
+                                                            <li key={table} className="text-sm">
+                                                                <strong>{table}</strong>
+                                                                <ul className="list-circle list-inside ml-6 mt-1">
+                                                                    {Array.from(columns).sort().map((column, idx) => (
+                                                                        <li key={idx} className="text-sm text-gray-700">{column}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </ReadMore>
                             </Tabs.Panel>
 
                             <Tabs.Panel value="details" className="mt-4">
+                                {selectedType === 'E-post' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Totalt antall e-poster</div>
+                                            <div className="text-2xl font-bold text-gray-900">
+                                                {visibleData.reduce((sum, row) => sum + row.count, 0).toLocaleString('no-NO')}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                Unike: {visibleData.reduce((sum, row) => sum + (row.unique_count || 0), 0).toLocaleString('no-NO')}
+                                            </div>
+                                        </div>
+                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Nav e-poster (contains @nav)</div>
+                                            <div className="text-2xl font-bold text-gray-900">
+                                                {visibleData.reduce((sum, row) => sum + (row.nav_count || 0), 0).toLocaleString('no-NO')}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                Unike: {visibleData.reduce((sum, row) => sum + (row.unique_nav_count || 0), 0).toLocaleString('no-NO')}
+                                            </div>
+                                        </div>
+                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Andre e-poster (not nav)</div>
+                                            <div className="text-2xl font-bold text-gray-900">
+                                                {(visibleData.reduce((sum, row) => sum + row.count, 0) - visibleData.reduce((sum, row) => sum + (row.nav_count || 0), 0)).toLocaleString('no-NO')}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                Unike: {visibleData.reduce((sum, row) => sum + (row.unique_other_count || 0), 0).toLocaleString('no-NO')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!selectedWebsite && selectedType && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Antall unike nettsteder</div>
+                                            <div className="text-2xl font-bold text-gray-900">
+                                                {new Set(visibleData.map(row => row.website_id)).size.toLocaleString('no-NO')}
+                                            </div>
+                                        </div>
+                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Antall variasjoner</div>
+                                            <div className="text-2xl font-bold text-gray-900">
+                                                {visibleData.length.toLocaleString('no-NO')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedType && (
+                                    <ReadMore header="Metadata oversikt" className="mb-6">
+                                        <div className="space-y-4">
+                                            {!selectedWebsite && (
+                                                <div>
+                                                    <Heading level="4" size="xsmall" className="mb-2">Unike nettsteder ({new Set(visibleData.map(row => row.website_id)).size})</Heading>
+                                                    <ul className="list-disc list-inside space-y-1">
+                                                        {Array.from(new Set(visibleData.map(row => row.website_name || row.website_id))).sort().map((websiteName, idx) => (
+                                                            <li key={idx} className="text-sm">{websiteName}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <Heading level="4" size="xsmall" className="mb-2">Involverte tabeller og kolonner</Heading>
+                                                {(() => {
+                                                    // Group by table
+                                                    const tableColumns: Record<string, Set<string>> = {};
+                                                    visibleData.forEach(row => {
+                                                        if (!tableColumns[row.table_name]) {
+                                                            tableColumns[row.table_name] = new Set();
+                                                        }
+                                                        tableColumns[row.table_name].add(row.column_name);
+                                                    });
+
+                                                    return (
+                                                        <ul className="list-disc list-inside space-y-2">
+                                                            {Object.entries(tableColumns).sort().map(([table, columns]) => (
+                                                                <li key={table} className="text-sm">
+                                                                    <strong>{table}</strong>
+                                                                    <ul className="list-circle list-inside ml-6 mt-1">
+                                                                        {Array.from(columns).sort().map((column, idx) => (
+                                                                            <li key={idx} className="text-sm text-gray-700">{column}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </ReadMore>
+                                )}
+
                                 <div className="flex justify-between items-end mb-4">
                                     {selectedType ? (
                                         <div className="flex items-center gap-4 bg-blue-50 p-2 px-4 rounded-md border border-blue-100">

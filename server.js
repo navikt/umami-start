@@ -2136,7 +2136,7 @@ app.post('/api/bigquery/composition', async (req, res) => {
 // Privacy Check Endpoint
 app.post('/api/bigquery/privacy-check', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate } = req.body;
+        const { websiteId, startDate, endDate, dryRun } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
@@ -2211,6 +2211,10 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                             '${check.column}' as column_name,
                             '${type}' as match_type,
                             COUNT(*) as count,
+                            ${type === 'E-post' ? `COUNTIF(REGEXP_CONTAINS(${check.column}, r'@nav'))` : '0'} as nav_count,
+                            ${type === 'E-post' ? `COUNT(DISTINCT ${check.column})` : '0'} as unique_count,
+                            ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_nav_count,
+                            ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_other_count,
                             ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
                         FROM \`team-researchops-prod-01d6.umami.${check.table}\`
                         WHERE website_id = @websiteId
@@ -2226,6 +2230,10 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                             '${check.column}' as column_name,
                             '${type}' as match_type,
                             COUNT(*) as count,
+                            ${type === 'E-post' ? `COUNTIF(REGEXP_CONTAINS(${check.column}, r'@nav'))` : '0'} as nav_count,
+                            ${type === 'E-post' ? `COUNT(DISTINCT ${check.column})` : '0'} as unique_count,
+                            ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_nav_count,
+                            ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(${check.column}, r'@nav') THEN ${check.column} END)` : '0'} as unique_other_count,
                             ARRAY_AGG(DISTINCT ${check.column} LIMIT 5) as examples
                         FROM \`team-researchops-prod-01d6.umami.${check.table}\`
                         WHERE created_at BETWEEN @startDate AND @endDate
@@ -2246,6 +2254,36 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             )
             ORDER BY count DESC
         `;
+
+        // Dry run check
+        if (dryRun) {
+            try {
+                const [dryRunJob] = await bigquery.createQueryJob({
+                    query: finalQuery,
+                    location: 'europe-north1',
+                    params: params,
+                    dryRun: true
+                });
+
+                const stats = dryRunJob.metadata.statistics;
+                const bytesProcessed = parseInt(stats.totalBytesProcessed);
+                const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+                const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+                return res.json({
+                    dryRun: true,
+                    queryStats: {
+                        totalBytesProcessedGB: gbProcessed,
+                        estimatedCostUSD: estimatedCostUSD
+                    }
+                });
+            } catch (dryRunError) {
+                console.log('[Privacy Check] Dry run failed:', dryRunError.message);
+                // Fall through to execution if dry run fails? Or return error?
+                // For now, let's return error to be safe
+                return res.status(500).json({ error: 'Dry run failed: ' + dryRunError.message });
+            }
+        }
 
         const [job] = await bigquery.createQueryJob({
             query: finalQuery,

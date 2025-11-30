@@ -15,8 +15,22 @@ FROM
 LIMIT 
   100;`;
 
-// Alternative query to list datasets if the above doesn't work:
-// SELECT schema_name FROM \`team-researchops-prod-01d6.INFORMATION_SCHEMA.SCHEMATA\`
+// Helper function to truncate JSON to prevent browser crashes
+const truncateJSON = (obj: any, maxChars: number = 50000): string => {
+    const fullJSON = JSON.stringify(obj, null, 2);
+
+    if (fullJSON.length <= maxChars) {
+        return fullJSON;
+    }
+
+    // Truncate and add notice
+    const truncated = fullJSON.substring(0, maxChars - 500);
+    const omittedChars = fullJSON.length - truncated.length;
+    const omittedKB = (omittedChars / 1024).toFixed(1);
+
+    return truncated + `\n\n... (${omittedKB} KB omitted - total size: ${(fullJSON.length / 1024).toFixed(1)} KB)\n\nJSON-utdata er begrenset til ${(maxChars / 1000).toFixed(0)}k tegn for å unngå at nettleseren krasjer.\nBruk tabellvisningen for å se alle resultater.`;
+};
+
 export default function BigQuery() {
     // State for editor height (for resizable editor)
     const [editorHeight, setEditorHeight] = useState(400);
@@ -780,7 +794,7 @@ export default function BigQuery() {
 
                     {result && (
                         <ReadMore header="JSON" size="small" className="mb-4" defaultOpen>
-                            <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>
+                            <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
                         </ReadMore>
                     )}
                 </div>

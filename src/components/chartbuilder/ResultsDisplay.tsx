@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -56,11 +56,14 @@ const ResultsDisplay = ({
   });
 
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState<string>(''); // The actual search query being used for filtering
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showAverage, setShowAverage] = useState<boolean>(false);
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [rowLimit, setRowLimit] = useState<number>(5000); // Limit rows for performance
+  const [showAllRows, setShowAllRows] = useState<boolean>(false);
 
   // Get hidden tabs from URL or props
   const hiddenTabs = (() => {
@@ -79,22 +82,184 @@ const ResultsDisplay = ({
     window.history.replaceState({}, '', newUrl);
   };
 
-  // Reset isPercentageStacked when result or searchQuery changes
+  // Handler for executing search
+  const handleSearch = () => {
+    setActiveSearchQuery(searchQuery);
+  };
+
+  // Handler for clearing search
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setActiveSearchQuery('');
+  };
+
+  // Reset isPercentageStacked when result changes
   useEffect(() => {
     setIsPercentageStacked(false);
-  }, [result, searchQuery]);
+  }, [result]);
 
-  // Handler for sorting
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      // Toggle direction if same column
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New column, default to ascending
-      setSortColumn(column);
-      setSortDirection('asc');
+  // For small datasets, auto-submit search as you type
+  useEffect(() => {
+    if (!result || !result.data) return;
+
+    const isLargeDataset = result.data.length > rowLimit;
+    if (!isLargeDataset) {
+      // For small datasets, automatically sync searchQuery to activeSearchQuery
+      setActiveSearchQuery(searchQuery);
     }
-  };
+  }, [searchQuery, result, rowLimit]);
+
+  // Memoize the expensive table data processing
+  const processedTableData = useMemo(() => {
+    if (!result || !result.data || result.data.length === 0) {
+      return null;
+    }
+
+    const totalRows = result.data.length;
+    const isLargeDataset = totalRows > rowLimit;
+    const shouldLimitRows = isLargeDataset && !showAllRows && !activeSearchQuery;
+
+    // Filter the data based on active search query
+    const filteredData = result.data.filter((row: any) => {
+      if (!activeSearchQuery) return true;
+      const query = activeSearchQuery.toLowerCase();
+      return Object.keys(row).some((key) => {
+        const value = row[key];
+        if (value === null || value === undefined) return false;
+        // Use translated value for search
+        const translatedValue = translateValue(key, value);
+        return String(translatedValue).toLowerCase().includes(query);
+      });
+    });
+
+    // Apply row limit if needed (only when not searching)
+    const limitedData = shouldLimitRows ? filteredData.slice(0, rowLimit) : filteredData;
+
+    // Sort the filtered/limited data
+    const sortedData = sortColumn
+      ? [...limitedData].sort((a: any, b: any) => {
+        const aVal = a[sortColumn];
+        const bVal = b[sortColumn];
+
+        // Handle null/undefined values
+        if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1;
+        if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1;
+
+        // Numeric comparison
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+
+        // String comparison
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+
+        if (sortDirection === 'asc') {
+          return aStr.localeCompare(bStr, 'nb-NO');
+        } else {
+          return bStr.localeCompare(aStr, 'nb-NO');
+        }
+      })
+      : limitedData;
+
+    return sortedData;
+  }, [result, activeSearchQuery, showAllRows, rowLimit, sortColumn, sortDirection]);
+
+  // Handler for sorting (memoized to prevent recreating on every render)
+  const handleSort = useCallback((column: string) => {
+    setSortColumn(prevColumn => {
+      if (prevColumn === column) {
+        // Toggle direction if same column
+        setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        return column;
+      } else {
+        // New column, default to ascending
+        setSortDirection('asc');
+        return column;
+      }
+    });
+  }, []);
+
+  // Memoize the table rendering to prevent re-renders when only searchQuery changes
+  const tableContent = useMemo(() => {
+    const sortedData = processedTableData;
+
+    if (!sortedData || sortedData.length === 0) {
+      return (
+        <div className="p-8 text-center text-gray-500">
+          <p>Ingen resultater funnet for "{activeSearchQuery}"</p>
+        </div>
+      );
+    }
+
+    if (!result || !result.data || result.data.length === 0) {
+      return null;
+    }
+
+    return (
+      <>
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-100 sticky top-0">
+            <tr>
+              {Object.keys(result.data[0]).map((key) => (
+                <th
+                  key={key}
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                  onClick={() => handleSort(key)}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>{key}</span>
+                    {sortColumn === key ? (
+                      sortDirection === 'asc' ? (
+                        <ArrowUp size={14} className="text-blue-600" />
+                      ) : (
+                        <ArrowDown size={14} className="text-blue-600" />
+                      )
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-400" />
+                    )}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {sortedData.map((row: any, idx: number) => {
+              const keys = Object.keys(row);
+              return (
+                <tr key={idx} className="hover:bg-gray-50">
+                  {keys.map((key, cellIdx: number) => {
+                    const value = row[key];
+                    const translatedValue = translateValue(key, value);
+                    return (
+                      <td
+                        key={cellIdx}
+                        className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                      >
+                        {typeof translatedValue === 'number'
+                          ? translatedValue.toLocaleString('nb-NO')
+                          : translatedValue !== null && translatedValue !== undefined
+                            ? (typeof translatedValue === 'object'
+                              ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
+                                ? translatedValue.toISOString()
+                                : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
+                                  ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
+                                    ? new Date(translatedValue.value).toISOString()
+                                    : String(translatedValue.value))
+                                  : JSON.stringify(translatedValue)))
+                              : String(translatedValue))
+                            : '-'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </>
+    );
+  }, [processedTableData, activeSearchQuery, result, sortColumn, sortDirection, handleSort]);
 
   // Helper functions to generate content
   const getCSVContent = () => {
@@ -306,147 +471,98 @@ const ResultsDisplay = ({
                 <div className="space-y-3">
                   <div className="border rounded-lg overflow-hidden bg-white">
                     {/* Search Input */}
-                    <div className="p-3 bg-gray-50 border-b">
+                    <div className="p-3 bg-gray-50 border-b space-y-2">
                       <Search
                         label="Søk i tabellen"
                         hideLabel={false}
                         size="small"
                         value={searchQuery}
                         onChange={(value) => setSearchQuery(value)}
-                        onClear={() => setSearchQuery('')}
-                        variant="simple"
+                        onClear={handleClearSearch}
+                        variant={result.data.length > rowLimit ? "primary" : "simple"}
+                        onSearchClick={result.data.length > rowLimit ? handleSearch : undefined}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSearch();
+                          }
+                        }}
+                        htmlSize={result.data.length > rowLimit ? 40 : undefined}
                       />
+                      {/* Large dataset warning and controls */}
+                      {result.data.length > rowLimit && (
+                        <div className="space-y-2">
+                          {!showAllRows && !activeSearchQuery && (
+                            <Alert variant="warning" size="small">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <span className="text-sm">
+                                  Viser bare {rowLimit.toLocaleString('nb-NO')} av {result.data.length.toLocaleString('nb-NO')} rader for ytelse
+                                </span>
+                                <Button
+                                  size="xsmall"
+                                  variant="secondary"
+                                  onClick={() => setShowAllRows(true)}
+                                >
+                                  Vis alle rader
+                                </Button>
+                              </div>
+                            </Alert>
+                          )}
+                          {showAllRows && !activeSearchQuery && (
+                            <Alert variant="info" size="small">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <span className="text-sm">
+                                  Viser alle {result.data.length.toLocaleString('nb-NO')} rader (kan være tregt)
+                                </span>
+                                <Button
+                                  size="xsmall"
+                                  variant="secondary"
+                                  onClick={() => setShowAllRows(false)}
+                                >
+                                  Begrens til {rowLimit.toLocaleString('nb-NO')} rader
+                                </Button>
+                              </div>
+                            </Alert>
+                          )}
+                          {activeSearchQuery && processedTableData && (
+                            <Alert variant="info" size="small">
+                              <span className="text-sm">
+                                Fant {processedTableData.length.toLocaleString('nb-NO')} av {result.data.length.toLocaleString('nb-NO')} rader
+                              </span>
+                            </Alert>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                      {(() => {
-                        // Filter the data based on search query
-                        const filteredData = result.data.filter((row: any) => {
-                          if (!searchQuery) return true;
-                          const query = searchQuery.toLowerCase();
-                          return Object.keys(row).some((key) => {
-                            const value = row[key];
-                            if (value === null || value === undefined) return false;
-                            // Use translated value for search
-                            const translatedValue = translateValue(key, value);
-                            return String(translatedValue).toLowerCase().includes(query);
-                          });
-                        });
-
-                        // Sort the filtered data
-                        const sortedData = sortColumn
-                          ? [...filteredData].sort((a: any, b: any) => {
-                            const aVal = a[sortColumn];
-                            const bVal = b[sortColumn];
-
-                            // Handle null/undefined values
-                            if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1;
-                            if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1;
-
-                            // Numeric comparison
-                            if (typeof aVal === 'number' && typeof bVal === 'number') {
-                              return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-                            }
-
-                            // String comparison
-                            const aStr = String(aVal).toLowerCase();
-                            const bStr = String(bVal).toLowerCase();
-
-                            if (sortDirection === 'asc') {
-                              return aStr.localeCompare(bStr, 'nb-NO');
-                            } else {
-                              return bStr.localeCompare(aStr, 'nb-NO');
-                            }
-                          })
-                          : filteredData;
-
-                        if (sortedData.length === 0) {
-                          return (
-                            <div className="p-8 text-center text-gray-500">
-                              <p>Ingen resultater funnet for "{searchQuery}"</p>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <>
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-100 sticky top-0">
-                                <tr>
-                                  {Object.keys(result.data[0]).map((key) => (
-                                    <th
-                                      key={key}
-                                      className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
-                                      onClick={() => handleSort(key)}
-                                    >
-                                      <div className="flex items-center gap-1">
-                                        <span>{key}</span>
-                                        {sortColumn === key ? (
-                                          sortDirection === 'asc' ? (
-                                            <ArrowUp size={14} className="text-blue-600" />
-                                          ) : (
-                                            <ArrowDown size={14} className="text-blue-600" />
-                                          )
-                                        ) : (
-                                          <ArrowUpDown size={14} className="text-gray-400" />
-                                        )}
-                                      </div>
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {sortedData.map((row: any, idx: number) => {
-                                  const keys = Object.keys(row);
-                                  return (
-                                    <tr key={idx} className="hover:bg-gray-50">
-                                      {keys.map((key, cellIdx: number) => {
-                                        const value = row[key];
-                                        const translatedValue = translateValue(key, value);
-                                        return (
-                                          <td
-                                            key={cellIdx}
-                                            className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
-                                          >
-                                            {typeof translatedValue === 'number'
-                                              ? translatedValue.toLocaleString('nb-NO')
-                                              : translatedValue !== null && translatedValue !== undefined
-                                                ? (typeof translatedValue === 'object'
-                                                  ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
-                                                    ? translatedValue.toISOString()
-                                                    : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
-                                                      ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
-                                                        ? new Date(translatedValue.value).toISOString()
-                                                        : String(translatedValue.value))
-                                                      : JSON.stringify(translatedValue)))
-                                                  : String(translatedValue))
-                                                : '-'}
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </>
-                        );
-                      })()}
+                      {tableContent}
                     </div>
                     {/* Table Footer */}
                     <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t">
                       <div className="flex justify-between items-center">
                         <span>
-                          {searchQuery ? (
-                            <>Viser {result.data.filter((row: any) => {
-                              const query = searchQuery.toLowerCase();
-                              return Object.values(row).some((value: any) => {
-                                if (value === null || value === undefined) return false;
-                                return String(value).toLowerCase().includes(query);
-                              });
-                            }).length} av {result.data.length} rader</>
-                          ) : (
-                            <>{result.data.length} {result.data.length === 1 ? 'rad' : 'rader'}</>
-                          )}
+                          {(() => {
+                            const totalRows = result.data.length;
+                            const isLargeDataset = totalRows > rowLimit;
+                            const shouldLimitRows = isLargeDataset && !showAllRows && !activeSearchQuery;
+
+                            if (activeSearchQuery) {
+                              // Showing search results
+                              const filteredCount = result.data.filter((row: any) => {
+                                const query = activeSearchQuery.toLowerCase();
+                                return Object.values(row).some((value: any) => {
+                                  if (value === null || value === undefined) return false;
+                                  return String(value).toLowerCase().includes(query);
+                                });
+                              }).length;
+                              return <>Viser {filteredCount.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
+                            } else if (shouldLimitRows) {
+                              // Showing limited rows
+                              return <>Viser {rowLimit.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
+                            } else {
+                              // Showing all rows
+                              return <>{totalRows.toLocaleString('nb-NO')} {totalRows === 1 ? 'rad' : 'rader'}</>;
+                            }
+                          })()}
                         </span>
                         {queryStats && (
                           <span>
