@@ -23,6 +23,7 @@ import TrafficAnalysis from "./pages/TrafficAnalysis.tsx";
 import UserProfiles from "./pages/UserProfiles.tsx";
 
 import PrivacyCheck from "./pages/PrivacyCheck.tsx";
+import Diagnosis from "./pages/Diagnosis.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -47,7 +48,8 @@ const routes = [
     { path: "/utforsk-hendelser", component: <EventExplorer /> },
     { path: "/datastruktur", component: <EventExplorer /> },
     { path: "/trafikkanalyse", component: <TrafficAnalysis /> },
-    { path: "/personvernssjekk", component: <PrivacyCheck /> }
+    { path: "/personvernssjekk", component: <PrivacyCheck /> },
+    { path: "/diagnose", component: <Diagnosis /> }
 ];
 
 export default routes;
