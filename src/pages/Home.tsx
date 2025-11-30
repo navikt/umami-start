@@ -42,7 +42,7 @@ function Home() {
                 </div>
 
                 <div className="mb-20">
-                    <Heading spacing={true} as="h3" size="medium" className="pb-1">Lag grafer og tabeller for Metabase</Heading>
+                    <Heading spacing={true} as="h3" size="medium" className="pb-1">Lag egne grafer og tabeller</Heading>
                     <p className="text-xl leading-relaxed max-w-prose">
                         <Link href="/grafbygger">Grafbyggeren</Link> hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
                     </p>

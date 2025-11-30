@@ -245,7 +245,7 @@ const Diagnosis = () => {
     return (
         <ChartLayout
             title="Diagnoseverktøy"
-            description="Oversikt over aktivitet på alle nettsteder."
+            description="Oversikt over aktivitet på alle nettsteder og apper."
             currentPage="diagnose"
             filters={
                 <>
