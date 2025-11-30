@@ -47,11 +47,23 @@ export const analyticsPages = [
         description: 'Se hvor mange som kommer tilbake'
     },
     {
+        id: 'brukerprofiler',
+        href: '/brukerprofiler',
+        label: 'Brukerprofiler',
+        description: 'Se info om individuelle besøkende'
+    },
+    {
         id: 'event-explorer',
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
-    }
+    },
+    {
+        id: 'grafbygger',
+        href: '/grafbygger',
+        label: 'Grafbyggeren',
+        description: 'Lag egne grafer eller tabeller'
+    },
 ];
 
 const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigationProps) => {

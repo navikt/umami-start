@@ -163,7 +163,7 @@ const UserProfiles = () => {
     return (
         <ChartLayout
             title="Brukerprofiler"
-            description="Oversikt over besøkende og deres aktivitet."
+            description="Se individuelle brukere og deres aktivitetslogg."
             currentPage="brukerprofiler"
             filters={
                 <>
