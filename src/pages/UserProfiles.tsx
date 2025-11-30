@@ -215,6 +215,19 @@ const UserProfiles = () => {
                 </div>
             )}
 
+            {!loading && selectedWebsite && users.length === 0 && (
+                <Alert variant="info" className="mb-4">
+                    {searchQuery
+                        ? `Ingen brukere funnet som matcher "${searchQuery}"`
+                        : (
+                            <>
+                                Ingen brukere funnet.{' '}
+                                <Link href="/diagnose">Sjekk diagnostikk</Link> for å se om data blir samlet inn.
+                            </>
+                        )}
+                </Alert>
+            )}
+
             {!loading && users.length > 0 && (
                 <>
                     <div className="mb-4">

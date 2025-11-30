@@ -26,6 +26,12 @@ export const developerTools = [
         description: 'Se besøkende og deres aktivitet'
     },
     {
+        id: 'event-explorer',
+        href: '/utforsk-hendelser',
+        label: 'Egendefinerte hendelser',
+        description: 'Utforsk egendefinerte hendelser'
+    },
+    {
         id: 'sql',
         href: '/sql',
         label: 'SQL-spørringer',
