@@ -1,6 +1,7 @@
-import { BodyShort, Heading, Link, InfoCard } from "@navikt/ds-react";
+import { BodyShort, Heading, Link, InfoCard, LinkCard } from "@navikt/ds-react";
 import TeamWebsites from "../components/teamwebsites.tsx";
 import Kontaktboks from "../components/kontaktboks.tsx";
+import { developerTools } from "../components/DeveloperToolsNavigation.tsx";
 
 function Oppsett() {
     return (
@@ -26,6 +27,26 @@ function Oppsett() {
                     </BodyShort>
                 </InfoCard.Content>
             </InfoCard>
+
+            <Heading spacing as="h2" size="medium" className="mt-12 mb-3">
+                Utviklerverktøy
+            </Heading>
+
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '16px',
+                marginBottom: '60px'
+            }}>
+                {developerTools.map(tool => (
+                    <LinkCard key={tool.id}>
+                        <LinkCard.Title>
+                            <LinkCard.Anchor href={tool.href}>{tool.label}</LinkCard.Anchor>
+                        </LinkCard.Title>
+                        <LinkCard.Description>{tool.description}</LinkCard.Description>
+                    </LinkCard>
+                ))}
+            </div>
 
             <Heading spacing as="h2" size="medium" className="mt-12 mb-6">
                 Alle nettsider og apper med Umami
