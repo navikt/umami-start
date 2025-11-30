@@ -2,6 +2,12 @@ import { Link, List, Heading } from '@navikt/ds-react';
 
 export const developerTools = [
     {
+        id: 'grafbygger',
+        href: '/grafbygger',
+        label: 'Grafbyggeren',
+        description: 'Lag grafer eller tabeller for Metabase'
+    },
+    {
         id: 'personvern',
         href: '/personvernssjekk',
         label: 'Personvernssjekk',
@@ -12,6 +18,12 @@ export const developerTools = [
         href: '/diagnose',
         label: 'Diagnoseverktøy',
         description: 'Sjekker om hendelser mottas'
+    },
+    {
+        id: 'brukerprofiler',
+        href: '/brukerprofiler',
+        label: 'Brukerprofiler',
+        description: 'Se besøkende og deres aktivitet'
     },
     {
         id: 'sql',
