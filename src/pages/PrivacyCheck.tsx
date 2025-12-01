@@ -16,10 +16,11 @@ const PATTERNS: Record<string, RegExp> = {
     'Bankkort': /(?<![0-9a-fA-F]-)\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b(?!-[0-9a-fA-F])/g,
     'Mulig navn': /\b[A-ZÆØÅ][a-zæøå]{1,20}\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\s[A-ZÆØÅ][a-zæøå]{1,20})?\b/g,
     'Mulig adresse': /\b\d{4}\s[A-ZÆØÅ][A-ZÆØÅa-zæøå]+(?:\s[A-ZÆØÅa-zæøå]+)*\b/g,
+    'Hemmelig adresse': /hemmelig(?:%20|\s+)(?:20\s*%(?:%20|\s+))?adresse/gi,
     'Kontonummer': /\b\d{4}\.?\d{2}\.?\d{5}\b/g,
     'Organisasjonsnummer': /\b\d{9}\b/g,
     'Bilnummer': /\b[A-Z]{2}\s?\d{5}\b/g,
-    'Mulig søk': /[?&](?:q|query|s|search|k)=[^&\s]+/g
+    'Mulig søk': /[?&](?:q|query|search|k|ord)=[^&]+/g
 };
 
 const HighlightedText = ({ text, type }: { text: string, type: string }) => {

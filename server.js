@@ -2163,10 +2163,11 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             'Bankkort': '\\b\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}[-\\s]\\d{4}\\b',
             'Mulig navn': '\\b[A-ZÆØÅ][a-zæøå]{1,20}\\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\\s[A-ZÆØÅ][a-zæøå]{1,20})?\\b',
             'Mulig adresse': '\\b\\d{4}\\s[A-ZÆØÅ][A-ZÆØÅa-zæøå]+(?:\\s[A-ZÆØÅa-zæøå]+)*\\b',
+            'Hemmelig adresse': '(?i)hemmelig(?:%20|\\s+)(?:20\\s*%(?:%20|\\s+))?adresse',
             'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.\\d{5}\\b',
             'Organisasjonsnummer': '\\b\\d{9}\\b',
             'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
-            'Mulig søk': '[?&](?:q|query|s|search|k)=[^&\\s]+'
+            'Mulig søk': '[?&](?:q|query|search|k|ord)=[^&]+'
         };
 
         // Tables and columns to check

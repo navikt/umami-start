@@ -62,7 +62,7 @@ const ResultsDisplay = ({
   const [showAverage, setShowAverage] = useState<boolean>(false);
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
-  const [rowLimit, setRowLimit] = useState<number>(5000); // Limit rows for performance
+  const [rowLimit] = useState<number>(5000); // Limit rows for performance
   const [showAllRows, setShowAllRows] = useState<boolean>(false);
 
   // Get hidden tabs from URL or props
