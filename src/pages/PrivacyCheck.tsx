@@ -481,7 +481,7 @@ const PrivacyCheck = () => {
                                             </div>
                                         </div>
                                         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Nav e-poster (contains @nav)</div>
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Nav e-poster</div>
                                             <div className="text-2xl font-bold text-gray-900">
                                                 {visibleData.reduce((sum, row) => sum + (row.nav_count || 0), 0).toLocaleString('no-NO')}
                                             </div>
@@ -490,7 +490,7 @@ const PrivacyCheck = () => {
                                             </div>
                                         </div>
                                         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Andre e-poster (not nav)</div>
+                                            <div className="text-sm text-gray-900 font-medium mb-1">Andre e-poster</div>
                                             <div className="text-2xl font-bold text-gray-900">
                                                 {(visibleData.reduce((sum, row) => sum + row.count, 0) - visibleData.reduce((sum, row) => sum + (row.nav_count || 0), 0)).toLocaleString('no-NO')}
                                             </div>
