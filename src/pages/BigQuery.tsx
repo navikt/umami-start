@@ -806,7 +806,7 @@ export default function BigQuery() {
                         result={result}
                         loading={loading}
                         error={error}
-                        queryStats={estimate}
+                        queryStats={result?.queryStats || estimate}
                         lastAction={null}
                         showLoadingMessage={estimating || loading}
                         executeQuery={executeQuery}
