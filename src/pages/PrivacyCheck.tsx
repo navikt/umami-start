@@ -218,10 +218,10 @@ const PrivacyCheck = () => {
                 // Filter out false positives
                 const uuidPattern = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
                 const filteredData = result.data.filter((row: any) => {
-                    // Filter out names that start with Nav or Viser
+                    // Filter out names that start with Nav or Viser, or contain Modia Personoversikt
                     if (row.match_type === 'Mulig navn') {
                         const hasInvalidName = row.examples?.some((ex: string) =>
-                            /^(Nav|Viser)\s/i.test(ex)
+                            /^(Nav|Viser)\s/i.test(ex) || /Modia\s+Personoversikt/i.test(ex)
                         );
                         return !hasInvalidName;
                     }
@@ -229,6 +229,13 @@ const PrivacyCheck = () => {
                     if (row.match_type === 'Bankkort' || row.match_type === 'Telefonnummer') {
                         const hasUuid = row.examples?.some((ex: string) => uuidPattern.test(ex));
                         return !hasUuid;
+                    }
+                    // Filter out organization numbers that are preceded by id= or similar patterns
+                    if (row.match_type === 'Organisasjonsnummer') {
+                        const hasIdPattern = row.examples?.some((ex: string) =>
+                            /(?:id|oppgaveid|enhetid|aktoerid)=/i.test(ex)
+                        );
+                        return !hasIdPattern;
                     }
                     return true;
                 });
