@@ -19,6 +19,7 @@ import Retention from "./pages/Retention.tsx";
 import UserComposition from "./pages/UserComposition.tsx";
 import EventExplorer from "./pages/EventExplorer.tsx";
 import TrafficAnalysis from "./pages/TrafficAnalysis.tsx";
+import MarketingAnalysis from "./pages/MarketingAnalysis.tsx";
 
 import UserProfiles from "./pages/UserProfiles.tsx";
 
@@ -48,6 +49,7 @@ const routes = [
     { path: "/utforsk-hendelser", component: <EventExplorer /> },
     { path: "/datastruktur", component: <EventExplorer /> },
     { path: "/trafikkanalyse", component: <TrafficAnalysis /> },
+    { path: "/markedsanalyse", component: <MarketingAnalysis /> },
     { path: "/personvernssjekk", component: <PrivacyCheck /> },
     { path: "/diagnose", component: <Diagnosis /> }
 ];

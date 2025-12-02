@@ -1,7 +1,7 @@
 import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from './kontaktboks';
 
-export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern';
+export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
@@ -51,6 +51,12 @@ export const analyticsPages = [
         href: '/brukerprofiler',
         label: 'Brukerprofiler',
         description: 'Se info om individuelle besøkende'
+    },
+    {
+        id: 'markedsanalyse',
+        href: '/markedsanalyse',
+        label: 'Markedsanalyse',
+        description: 'Analyser trafikk basert på UTM-parametere'
     },
     {
         id: 'event-explorer',

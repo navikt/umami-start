@@ -1600,20 +1600,16 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             return res.json({ data: [] });
         }
 
-        const row = rows[0];
-
-        // Format for frontend
-        const funnelData = urls.map((url, index) => ({
-            step: index,
-            url: url,
-            count: parseInt(row[`step${index + 1}_count`] || 0)
-        }));
-
-        res.json({
-            data: funnelData,
-            queryStats
+        const data = rows.map(row => {
+            const result = {};
+            urls.forEach((_, index) => {
+                const countKey = `step${index + 1}_count`;
+                result[`step${index + 1}`] = parseInt(row[countKey] || 0);
+            });
+            return result;
         });
 
+        res.json({ data: data[0], queryStats }); // Return the first (and only) row
     } catch (error) {
         console.error('BigQuery funnel error:', error);
         res.status(500).json({
@@ -1621,6 +1617,146 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         });
     }
 });
+
+// Get marketing stats (UTM parameters)
+app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const { startAt, endAt, urlPath, limit = '100', metricType = 'visits' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate,
+            limit: parseInt(limit)
+        };
+
+        let urlFilter = '';
+        if (urlPath) {
+            urlFilter = `AND (
+                url_path = @urlPath 
+                OR url_path = @urlPathSlash 
+                OR url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        // Choose aggregation based on metric type
+        const countExpression = metricType === 'pageviews'
+            ? 'COUNT(*)'
+            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+
+        const dimensions = [
+            { key: 'utm_source', label: 'source' },
+            { key: 'utm_medium', label: 'medium' },
+            { key: 'utm_campaign', label: 'campaign' },
+            { key: 'utm_content', label: 'content' },
+            { key: 'utm_term', label: 'term' },
+            { key: 'referrer_domain', label: 'referrer' },
+            { key: 'url_query', label: 'query' }
+        ];
+
+        // Function to build query for a specific dimension
+        const buildQuery = (dimension) => `
+            SELECT
+                COALESCE(${dimension}, '(none)') as name,
+                ${countExpression} as count
+            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+            WHERE website_id = @websiteId
+            AND created_at BETWEEN @startDate AND @endDate
+            AND event_type = 1 -- Pageview
+            ${urlFilter}
+            GROUP BY 1
+            ORDER BY 2 DESC
+            LIMIT @limit
+        `;
+
+        // Run all queries in parallel
+        console.log(`[Marketing] Fetching stats for website ${websiteId} with limit ${limit}`);
+        const promises = dimensions.map(async (dim) => {
+            const query = buildQuery(dim.key);
+
+            try {
+                // Execute query
+                const [job] = await bigquery.createQueryJob({
+                    query: query,
+                    location: 'europe-north1',
+                    params: params
+                });
+                const [rows] = await job.getQueryResults();
+                console.log(`[Marketing] ${dim.key} returned ${rows.length} rows`);
+
+                // Get dry run stats
+                let stats = null;
+                try {
+                    const [dryRunJob] = await bigquery.createQueryJob({
+                        query: query,
+                        location: 'europe-north1',
+                        params: params,
+                        dryRun: true
+                    });
+                    const meta = dryRunJob.metadata.statistics;
+                    stats = {
+                        bytes: parseInt(meta.totalBytesProcessed),
+                        gb: (parseInt(meta.totalBytesProcessed) / (1024 ** 3)).toFixed(2),
+                        cost: ((parseInt(meta.totalBytesProcessed) / (1024 ** 4)) * 6.25).toFixed(4)
+                    };
+                } catch (e) {
+                    console.log(`[Marketing] Dry run failed for ${dim.key}: `, e.message);
+                }
+
+                return {
+                    label: dim.label,
+                    data: rows.map(row => ({ name: row.name, count: parseInt(row.count) })),
+                    stats
+                };
+            } catch (err) {
+                console.error(`[Marketing] Error fetching ${dim.key}: `, err);
+                throw err;
+            }
+        });
+
+        const results = await Promise.all(promises);
+        console.log('[Marketing] All queries completed');
+
+        // Aggregate results
+        const responseData = {};
+        let totalBytes = 0;
+        let totalCost = 0;
+
+        results.forEach(res => {
+            responseData[res.label] = res.data;
+            if (res.stats) {
+                totalBytes += res.stats.bytes;
+                totalCost += parseFloat(res.stats.cost);
+            }
+        });
+
+        const queryStats = {
+            totalBytesProcessedGB: (totalBytes / (1024 ** 3)).toFixed(2),
+            estimatedCostUSD: totalCost.toFixed(3)
+        };
+
+        res.json({ data: responseData, queryStats });
+    } catch (error) {
+        console.error('BigQuery marketing stats error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch marketing stats'
+        });
+    }
+});
+
 
 // Get funnel timing data from BigQuery (average time per step)
 app.post('/api/bigquery/funnel-timing', async (req, res) => {
@@ -1641,20 +1777,20 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
 
         // Helper to generate the URL normalization SQL
         const normalizeUrlSql = `
-            CASE 
+        CASE 
                 WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
                 THEN '/'
                 ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-            END
-        `;
+        END
+            `;
 
         // 1. Base events CTE with LAG for strict mode
         let query = `
-            WITH events_raw AS (
+            WITH events_raw AS(
                 SELECT 
                     session_id,
-                    ${normalizeUrlSql} as url_path,
-                    created_at
+                ${normalizeUrlSql} as url_path,
+                created_at
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
