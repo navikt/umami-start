@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Table, Heading } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -134,10 +134,20 @@ const MarketingAnalysis = () => {
 
     const AnalysisTable = ({ title, data, metricLabel, queryStats }: { title: string, data: any[], metricLabel: string, queryStats: any }) => {
         const [search, setSearch] = useState('');
+        const [page, setPage] = useState(1);
+        const rowsPerPage = 20;
 
         const filteredData = data.filter(row =>
             row.name.toLowerCase().includes(search.toLowerCase())
         );
+
+        // Reset to page 1 when search changes
+        useEffect(() => {
+            setPage(1);
+        }, [search]);
+
+        const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+        const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
         const downloadCSV = () => {
             if (!data.length) return;
@@ -167,7 +177,7 @@ const MarketingAnalysis = () => {
         };
 
         return (
-            <div className="flex flex-col gap-2 w-full">
+            <VStack gap="4">
                 <div className="flex justify-between items-end">
                     <Heading level="3" size="small">{title}</Heading>
                     <div className="w-64">
@@ -190,7 +200,7 @@ const MarketingAnalysis = () => {
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
-                            {filteredData.map((row: any, i: number) => (
+                            {paginatedData.map((row: any, i: number) => (
                                 <Table.Row key={i}>
                                     <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
                                     <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
@@ -224,7 +234,15 @@ const MarketingAnalysis = () => {
                         )}
                     </div>
                 </div>
-            </div>
+                {totalPages > 1 && (
+                    <Pagination
+                        page={page}
+                        onPageChange={setPage}
+                        count={totalPages}
+                        size="small"
+                    />
+                )}
+            </VStack>
         );
     };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Alert, Loader, Radio, RadioGroup, Table, Heading, Tabs, Switch, DatePicker, ReadMore } from '@navikt/ds-react';
+import { Button, Alert, Loader, Radio, RadioGroup, Table, Heading, Tabs, Switch, DatePicker, ReadMore, Pagination, VStack } from '@navikt/ds-react';
 import { format, parse, isValid } from 'date-fns';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -124,6 +124,9 @@ const PrivacyCheck = () => {
     const [toInputValue, setToInputValue] = useState<string>('');
     const [dryRunStats, setDryRunStats] = useState<any>(null);
     const [showDryRunWarning, setShowDryRunWarning] = useState<boolean>(false);
+    const [detailsPage, setDetailsPage] = useState<number>(1);
+    const [redactedPage, setRedactedPage] = useState<number>(1);
+    const rowsPerPage = 20;
 
     // Get unique match types for tabs
     const matchTypes = data ? Array.from(new Set(data.map(row => row.match_type))).filter(t => t !== 'Redacted') : [];
@@ -292,6 +295,24 @@ const PrivacyCheck = () => {
         : [];
 
     const visibleData = filteredData.filter(row => showEmpty || row.count > 0);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setDetailsPage(1);
+    }, [selectedType, showEmpty]);
+
+    useEffect(() => {
+        setRedactedPage(1);
+    }, [data]);
+
+    // Paginate details data
+    const paginatedDetailsData = visibleData.slice((detailsPage - 1) * rowsPerPage, detailsPage * rowsPerPage);
+    const detailsTotalPages = Math.ceil(visibleData.length / rowsPerPage);
+
+    // Paginate redacted data
+    const redactedData = data ? data.filter(row => row.match_type === 'Redacted' && row.count > 0) : [];
+    const paginatedRedactedData = redactedData.slice((redactedPage - 1) * rowsPerPage, redactedPage * rowsPerPage);
+    const redactedTotalPages = Math.ceil(redactedData.length / rowsPerPage);
 
     return (
         <ChartLayout
@@ -630,66 +651,86 @@ const PrivacyCheck = () => {
                                     </Switch>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <Table.Header>
-                                            <Table.Row>
-                                                {!selectedWebsite && <Table.HeaderCell>Nettside</Table.HeaderCell>}
-                                                <Table.HeaderCell>Tabell</Table.HeaderCell>
-                                                <Table.HeaderCell>Kolonne</Table.HeaderCell>
-                                                {!selectedType && <Table.HeaderCell>Type</Table.HeaderCell>}
-                                                <Table.HeaderCell>Antall</Table.HeaderCell>
-                                                <Table.HeaderCell>Eksempler</Table.HeaderCell>
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {visibleData.map((row, index) => (
-                                                <Table.Row key={index}>
-                                                    {!selectedWebsite && <Table.DataCell className="whitespace-nowrap">{row.website_name}</Table.DataCell>}
-                                                    <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
-                                                    <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
-                                                    {!selectedType && <Table.DataCell className="whitespace-nowrap">{row.match_type}</Table.DataCell>}
-                                                    <Table.DataCell className="whitespace-nowrap">{row.count.toLocaleString('no-NO')}</Table.DataCell>
-                                                    <Table.DataCell className="font-mono text-sm">
-                                                        <ExampleList examples={row.examples} type={row.match_type} />
-                                                    </Table.DataCell>
+                                <VStack gap="4">
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    {!selectedWebsite && <Table.HeaderCell>Nettside</Table.HeaderCell>}
+                                                    <Table.HeaderCell>Tabell</Table.HeaderCell>
+                                                    <Table.HeaderCell>Kolonne</Table.HeaderCell>
+                                                    {!selectedType && <Table.HeaderCell>Type</Table.HeaderCell>}
+                                                    <Table.HeaderCell>Antall</Table.HeaderCell>
+                                                    <Table.HeaderCell>Eksempler</Table.HeaderCell>
                                                 </Table.Row>
-                                            ))}
-                                        </Table.Body>
-                                    </Table>
-                                </div>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {paginatedDetailsData.map((row, index) => (
+                                                    <Table.Row key={index}>
+                                                        {!selectedWebsite && <Table.DataCell className="whitespace-nowrap">{row.website_name}</Table.DataCell>}
+                                                        <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
+                                                        <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
+                                                        {!selectedType && <Table.DataCell className="whitespace-nowrap">{row.match_type}</Table.DataCell>}
+                                                        <Table.DataCell className="whitespace-nowrap">{row.count.toLocaleString('no-NO')}</Table.DataCell>
+                                                        <Table.DataCell className="font-mono text-sm">
+                                                            <ExampleList examples={row.examples} type={row.match_type} />
+                                                        </Table.DataCell>
+                                                    </Table.Row>
+                                                ))}
+                                            </Table.Body>
+                                        </Table>
+                                    </div>
+                                    {detailsTotalPages > 1 && (
+                                        <Pagination
+                                            page={detailsPage}
+                                            onPageChange={setDetailsPage}
+                                            count={detailsTotalPages}
+                                            size="small"
+                                        />
+                                    )}
+                                </VStack>
                             </Tabs.Panel>
 
                             <Tabs.Panel value="redacted" className="mt-4">
                                 <Alert variant="info" className="mb-4">
                                     Her vises forekomster som er fanget opp av PII-filtrering (f.eks. [redacted]).
                                 </Alert>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <Table.Header>
-                                            <Table.Row>
-                                                {!selectedWebsite && <Table.HeaderCell>Nettside</Table.HeaderCell>}
-                                                <Table.HeaderCell>Tabell</Table.HeaderCell>
-                                                <Table.HeaderCell>Kolonne</Table.HeaderCell>
-                                                <Table.HeaderCell>Antall</Table.HeaderCell>
-                                                <Table.HeaderCell>Eksempler</Table.HeaderCell>
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {data.filter(row => row.match_type === 'Redacted' && row.count > 0).map((row, index) => (
-                                                <Table.Row key={index}>
-                                                    {!selectedWebsite && <Table.DataCell className="whitespace-nowrap">{row.website_name}</Table.DataCell>}
-                                                    <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
-                                                    <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
-                                                    <Table.DataCell className="whitespace-nowrap">{row.count.toLocaleString('no-NO')}</Table.DataCell>
-                                                    <Table.DataCell className="font-mono text-sm">
-                                                        <ExampleList examples={row.examples} type={row.match_type} />
-                                                    </Table.DataCell>
+                                <VStack gap="4">
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    {!selectedWebsite && <Table.HeaderCell>Nettside</Table.HeaderCell>}
+                                                    <Table.HeaderCell>Tabell</Table.HeaderCell>
+                                                    <Table.HeaderCell>Kolonne</Table.HeaderCell>
+                                                    <Table.HeaderCell>Antall</Table.HeaderCell>
+                                                    <Table.HeaderCell>Eksempler</Table.HeaderCell>
                                                 </Table.Row>
-                                            ))}
-                                        </Table.Body>
-                                    </Table>
-                                </div>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {paginatedRedactedData.map((row, index) => (
+                                                    <Table.Row key={index}>
+                                                        {!selectedWebsite && <Table.DataCell className="whitespace-nowrap">{row.website_name}</Table.DataCell>}
+                                                        <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
+                                                        <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
+                                                        <Table.DataCell className="whitespace-nowrap">{row.count.toLocaleString('no-NO')}</Table.DataCell>
+                                                        <Table.DataCell className="font-mono text-sm">
+                                                            <ExampleList examples={row.examples} type={row.match_type} />
+                                                        </Table.DataCell>
+                                                    </Table.Row>
+                                                ))}
+                                            </Table.Body>
+                                        </Table>
+                                    </div>
+                                    {redactedTotalPages > 1 && (
+                                        <Pagination
+                                            page={redactedPage}
+                                            onPageChange={setRedactedPage}
+                                            count={redactedTotalPages}
+                                            size="small"
+                                        />
+                                    )}
+                                </VStack>
                             </Tabs.Panel>
                         </Tabs>
                     )}
