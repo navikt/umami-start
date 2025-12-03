@@ -20,7 +20,8 @@ const PATTERNS: Record<string, RegExp> = {
     'Kontonummer': /\b\d{4}\.?\d{2}\.?\d{5}\b/g,
     'Organisasjonsnummer': /\b\d{9}\b/g,
     'Bilnummer': /\b[A-Z]{2}\s?\d{5}\b/g,
-    'Mulig søk': /[?&](?:q|query|search|k|ord)=[^&]+/g
+    'Mulig søk': /[?&](?:q|query|search|k|ord)=[^&]+/g,
+    'Redacted': /\[redacted.*?\]/gi
 };
 
 const HighlightedText = ({ text, type }: { text: string, type: string }) => {
@@ -252,7 +253,8 @@ const PrivacyCheck = () => {
     };
 
     // Get unique match types for tabs
-    const matchTypes = data ? Array.from(new Set(data.map(row => row.match_type))) : [];
+    const matchTypes = data ? Array.from(new Set(data.map(row => row.match_type))).filter(t => t !== 'Redacted') : [];
+    const hasRedactions = data ? data.some(row => row.match_type === 'Redacted') : false;
 
     const handleExplore = (type: string) => {
         setSelectedType(type);
@@ -388,6 +390,7 @@ const PrivacyCheck = () => {
                             <Tabs.List>
                                 <Tabs.Tab value="summary" label="Oppsummering" />
                                 <Tabs.Tab value="details" label="Detaljer" />
+                                {hasRedactions && <Tabs.Tab value="redacted" label="PII-filtrering" />}
                             </Tabs.List>
 
                             <Tabs.Panel value="summary" className="mt-4">
@@ -625,6 +628,38 @@ const PrivacyCheck = () => {
                                     </Table>
                                 </div>
                             </Tabs.Panel>
+
+                            <Tabs.Panel value="redacted" className="mt-4">
+                                <Alert variant="info" className="mb-4">
+                                    Her vises forekomster som er fanget opp av PII-filtrering (f.eks. [redacted]).
+                                </Alert>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <Table.Header>
+                                            <Table.Row>
+                                                {!selectedWebsite && <Table.HeaderCell>Nettside</Table.HeaderCell>}
+                                                <Table.HeaderCell>Tabell</Table.HeaderCell>
+                                                <Table.HeaderCell>Kolonne</Table.HeaderCell>
+                                                <Table.HeaderCell>Antall</Table.HeaderCell>
+                                                <Table.HeaderCell>Eksempler</Table.HeaderCell>
+                                            </Table.Row>
+                                        </Table.Header>
+                                        <Table.Body>
+                                            {data.filter(row => row.match_type === 'Redacted' && row.count > 0).map((row, index) => (
+                                                <Table.Row key={index}>
+                                                    {!selectedWebsite && <Table.DataCell className="whitespace-nowrap">{row.website_name}</Table.DataCell>}
+                                                    <Table.DataCell className="whitespace-nowrap">{row.table_name}</Table.DataCell>
+                                                    <Table.DataCell className="whitespace-nowrap">{row.column_name}</Table.DataCell>
+                                                    <Table.DataCell className="whitespace-nowrap">{row.count.toLocaleString('no-NO')}</Table.DataCell>
+                                                    <Table.DataCell className="font-mono text-sm">
+                                                        <ExampleList examples={row.examples} type={row.match_type} />
+                                                    </Table.DataCell>
+                                                </Table.Row>
+                                            ))}
+                                        </Table.Body>
+                                    </Table>
+                                </div>
+                            </Tabs.Panel>
                         </Tabs>
                     )}
 
@@ -636,8 +671,9 @@ const PrivacyCheck = () => {
                         </div>
                     )}
                 </>
-            )}
-        </ChartLayout>
+            )
+            }
+        </ChartLayout >
     );
 };
 
