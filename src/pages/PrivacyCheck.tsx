@@ -185,7 +185,20 @@ const PrivacyCheck = () => {
                 return;
             }
             startDate = customStartDate;
-            endDate = customEndDate;
+
+            // If end date is today, use current time; otherwise use end of selected day
+            const today = new Date();
+            const isToday = customEndDate.getDate() === today.getDate() &&
+                customEndDate.getMonth() === today.getMonth() &&
+                customEndDate.getFullYear() === today.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                // Set to end of the selected day (23:59:59.999)
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
         } else {
             // Fallback
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
