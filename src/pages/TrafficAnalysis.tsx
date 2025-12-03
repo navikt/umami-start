@@ -134,7 +134,7 @@ const TrafficAnalysis = () => {
         try {
             // Fetch Flow Data
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${metricToUse}`;
+            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=10000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${metricToUse}`;
             const flowResponse = await fetch(flowUrl);
             if (!flowResponse.ok) throw new Error('Kunne ikke hente trafikkflyt');
             const flowResult = await flowResponse.json();
@@ -303,36 +303,58 @@ const TrafficAnalysis = () => {
         return { internalPaths, entrances, exits, referrers, channels };
     }, [flowData]);
 
-    const renderTable = (title: string, data: { name: string; count: number }[]) => (
-        <div className="flex flex-col gap-2 w-full">
-            <Heading level="3" size="small">{title}</Heading>
-            <div className="border rounded-lg overflow-x-auto">
-                <Table size="small">
-                    <Table.Header>
-                        <Table.Row>
-                            <Table.HeaderCell>Navn</Table.HeaderCell>
-                            <Table.HeaderCell align="right">
-                                {submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
-                            </Table.HeaderCell>
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {data.slice(0, 10).map((row, i) => (
-                            <Table.Row key={i}>
-                                <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
-                                <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
-                            </Table.Row>
-                        ))}
-                        {data.length === 0 && (
+    const TrafficTable = ({ title, data }: { title: string; data: { name: string; count: number }[] }) => {
+        const [search, setSearch] = useState('');
+
+        const filteredData = data.filter(row =>
+            row.name.toLowerCase().includes(search.toLowerCase())
+        );
+
+        return (
+            <div className="flex flex-col gap-2 w-full">
+                <div className="flex justify-between items-end">
+                    <Heading level="3" size="small">{title}</Heading>
+                    <div className="w-64">
+                        <TextField
+                            label="Søk"
+                            hideLabel
+                            placeholder="Søk..."
+                            size="small"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="border rounded-lg overflow-x-auto">
+                    <Table size="small">
+                        <Table.Header>
                             <Table.Row>
-                                <Table.DataCell colSpan={2} align="center">Ingen data</Table.DataCell>
+                                <Table.HeaderCell>Navn</Table.HeaderCell>
+                                <Table.HeaderCell align="right">
+                                    {submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                </Table.HeaderCell>
                             </Table.Row>
-                        )}
-                    </Table.Body>
-                </Table>
+                        </Table.Header>
+                        <Table.Body>
+                            {filteredData.map((row, i) => (
+                                <Table.Row key={i}>
+                                    <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
+                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                </Table.Row>
+                            ))}
+                            {filteredData.length === 0 && (
+                                <Table.Row>
+                                    <Table.DataCell colSpan={2} align="center">
+                                        {data.length > 0 ? 'Ingen treff' : 'Ingen data'}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            )}
+                        </Table.Body>
+                    </Table>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <ChartLayout
@@ -498,9 +520,9 @@ const TrafficAnalysis = () => {
 
                         <Tabs.Panel value="internal" className="pt-4">
                             <div className="flex flex-col gap-8">
-                                {renderTable('Sti', internalPaths)}
-                                {renderTable('Innganger', entrances)}
-                                {renderTable('Utganger', exits)}
+                                <TrafficTable title="Sti" data={internalPaths} />
+                                <TrafficTable title="Innganger" data={entrances} />
+                                <TrafficTable title="Utganger" data={exits} />
                                 {flowQueryStats && (
                                     <div className="text-sm text-gray-600 text-right">
                                         Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
@@ -511,8 +533,8 @@ const TrafficAnalysis = () => {
 
                         <Tabs.Panel value="external" className="pt-4">
                             <div className="flex flex-col gap-8">
-                                {renderTable('Trafikkilder', referrers)}
-                                {renderTable('Kanaler', channels)}
+                                <TrafficTable title="Kanaler" data={channels} />
+                                <TrafficTable title="Trafikkilder" data={referrers} />
                                 {flowQueryStats && (
                                     <div className="text-sm text-gray-600 text-right">
                                         Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
