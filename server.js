@@ -2304,7 +2304,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             'Organisasjonsnummer': '\\b\\d{9}\\b',
             'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
             'Mulig søk': '[?&](?:q|query|search|k|ord)=[^&]+',
-            'Redacted': '(?i)\\[redacted.*?\\]'
+            'Redacted': '\\[.*?\\]'
         };
 
         // Tables and columns to check

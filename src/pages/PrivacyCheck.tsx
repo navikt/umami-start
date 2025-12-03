@@ -21,7 +21,7 @@ const PATTERNS: Record<string, RegExp> = {
     'Organisasjonsnummer': /\b\d{9}\b/g,
     'Bilnummer': /\b[A-Z]{2}\s?\d{5}\b/g,
     'Mulig søk': /[?&](?:q|query|search|k|ord)=[^&]+/g,
-    'Redacted': /\[redacted.*?\]/gi
+    'Redacted': /\[.*?\]/g
 };
 
 const HighlightedText = ({ text, type }: { text: string, type: string }) => {
@@ -125,6 +125,18 @@ const PrivacyCheck = () => {
     const [dryRunStats, setDryRunStats] = useState<any>(null);
     const [showDryRunWarning, setShowDryRunWarning] = useState<boolean>(false);
 
+    // Get unique match types for tabs
+    const matchTypes = data ? Array.from(new Set(data.map(row => row.match_type))).filter(t => t !== 'Redacted') : [];
+    const hasRedactions = data ? data.some(row => row.match_type === 'Redacted') : false;
+
+    // Auto-switch to redacted tab if it's the only one available
+    useEffect(() => {
+        if (data && matchTypes.length === 0 && hasRedactions && activeTab === 'summary') {
+            setActiveTab('redacted');
+        }
+    }, [data, matchTypes.length, hasRedactions, activeTab]);
+
+
     // Sync input strings when dates change (e.g. from calendar selection)
     useEffect(() => {
         if (customStartDate) {
@@ -205,15 +217,16 @@ const PrivacyCheck = () => {
             } else if (result.dryRun) {
                 // Handle dry run result
                 const gbProcessed = parseFloat(result.queryStats.totalBytesProcessedGB);
-                if (gbProcessed > 1) { // Warn if > 1 GB
+                if (gbProcessed > 50) { // Warn if > 50 GB
                     setDryRunStats(result.queryStats);
                     setShowDryRunWarning(true);
                     setLoading(false);
                     return;
                 } else {
-                    // If small enough, run immediately
-                    fetchData(true);
-                    return;
+                    // If small enough, run immediately - store stats and keep loading
+                    setDryRunStats(result.queryStats);
+                    await fetchData(true);
+                    return; // Return early, loading state handled by recursive call
                 }
             } else {
                 // Filter out false positives
@@ -241,20 +254,20 @@ const PrivacyCheck = () => {
                     return true;
                 });
 
+                console.log('[Privacy Check] Raw data from API:', result.data.length, 'rows');
+                console.log('[Privacy Check] Filtered data:', filteredData.length, 'rows');
+                console.log('[Privacy Check] Redacted items:', result.data.filter((r: any) => r.match_type === 'Redacted'));
+
                 setData(filteredData);
                 setQueryStats(result.queryStats);
+                setLoading(false);
             }
         } catch (err) {
             console.error('Error fetching privacy check data:', err);
             setError('Det oppstod en feil ved henting av data.');
-        } finally {
             setLoading(false);
         }
     };
-
-    // Get unique match types for tabs
-    const matchTypes = data ? Array.from(new Set(data.map(row => row.match_type))).filter(t => t !== 'Redacted') : [];
-    const hasRedactions = data ? data.some(row => row.match_type === 'Redacted') : false;
 
     const handleExplore = (type: string) => {
         setSelectedType(type);
@@ -372,7 +385,12 @@ const PrivacyCheck = () => {
                     <Loader size="xlarge" title="Søker etter personopplysninger..." />
                     <div className="text-center text-gray-600">
                         <p className="font-medium">Dette kan ta noen sekunder</p>
-                        <p className="text-sm">Vi analyserer alle data i valgt periode</p>
+                        <p className="text-sm">
+                            {dryRunStats
+                                ? `Vi analyserer ${dryRunStats.totalBytesProcessedGB} GB data i valgt periode`
+                                : 'Vi analyserer alle data i valgt periode'
+                            }
+                        </p>
                     </div>
                 </div>
             )}
@@ -383,13 +401,13 @@ const PrivacyCheck = () => {
                         <Heading level="2" size="medium">Resultater</Heading>
                     </div>
 
-                    {data.length === 0 ? (
+                    {data.length === 0 || (matchTypes.length === 0 && !hasRedactions) ? (
                         <Alert variant="success">Ingen treff funnet i valgt periode.</Alert>
                     ) : (
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
-                                <Tabs.Tab value="summary" label="Oppsummering" />
-                                <Tabs.Tab value="details" label="Detaljer" />
+                                {matchTypes.length > 0 && <Tabs.Tab value="summary" label="Oppsummering" />}
+                                {matchTypes.length > 0 && <Tabs.Tab value="details" label="Detaljer" />}
                                 {hasRedactions && <Tabs.Tab value="redacted" label="PII-filtrering" />}
                             </Tabs.List>
 
