@@ -193,7 +193,9 @@ const PrivacyCheck = () => {
                 setLoading(false);
                 return;
             }
-            startDate = customStartDate;
+            // Ensure start date is at midnight
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
 
             // If end date is today, use current time; otherwise use end of selected day
             const today = new Date();
