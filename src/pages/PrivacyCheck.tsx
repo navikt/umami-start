@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Radio, RadioGroup, Table, Heading, Tabs, Switch, DatePicker, ReadMore, Pagination, VStack } from '@navikt/ds-react';
 import { format, parse, isValid } from 'date-fns';
 import ChartLayout from '../components/ChartLayout';
@@ -109,8 +110,9 @@ const ExampleList = ({ examples, type }: { examples: string[], type: string }) =
 };
 
 const PrivacyCheck = () => {
+    const [searchParams] = useSearchParams();
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [period, setPeriod] = useState<string>('current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [data, setData] = useState<any[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -175,7 +177,11 @@ const PrivacyCheck = () => {
         let startDate: Date;
         let endDate: Date;
 
-        if (period === 'current_month') {
+        if (period === 'today') {
+            // Today: midnight until current time
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            endDate = now;
+        } else if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
         } else if (period === 'last_month') {
@@ -277,6 +283,11 @@ const PrivacyCheck = () => {
                 setData(filteredData);
                 setQueryStats(result.queryStats);
                 setLoading(false);
+
+                // Update URL with selected period for sharing
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.set('period', period);
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             }
         } catch (err) {
             console.error('Error fetching privacy check data:', err);
@@ -331,7 +342,9 @@ const PrivacyCheck = () => {
                         legend="Periode"
                         value={period}
                         onChange={(val: string) => setPeriod(val)}
+                        size="small"
                     >
+                        <Radio value="today">I dag</Radio>
                         <Radio value="current_month">Denne måneden</Radio>
                         <Radio value="last_month">Forrige måned</Radio>
                         <Radio value="custom">Egendefinert</Radio>
