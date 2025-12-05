@@ -493,7 +493,7 @@ const PrivacyCheck = () => {
                                         <Table.Row className="font-bold">
                                             <Table.DataCell>Totalt</Table.DataCell>
                                             <Table.DataCell>
-                                                {data.reduce((sum, r) => sum + r.count, 0).toLocaleString('no-NO')}
+                                                {data.filter(r => r.match_type !== 'Redacted').reduce((sum, r) => sum + r.count, 0).toLocaleString('no-NO')}
                                             </Table.DataCell>
                                             <Table.DataCell></Table.DataCell>
                                         </Table.Row>
