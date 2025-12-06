@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -15,9 +15,16 @@ const Funnel = () => {
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
-    const [urls, setUrls] = useState<string[]>(() => {
-        const steps = searchParams.getAll('step');
-        return steps.length >= 2 ? steps : ['', ''];
+    const [steps, setSteps] = useState<{ type: 'url' | 'event', value: string }[]>(() => {
+        const stepParams = searchParams.getAll('step');
+        if (stepParams.length === 0) return [{ type: 'url', value: '' }, { type: 'url', value: '' }];
+
+        return stepParams.map(param => {
+            if (param.startsWith('event:')) {
+                return { type: 'event', value: param.substring(6) };
+            }
+            return { type: 'url', value: param };
+        });
     });
 
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
@@ -42,6 +49,35 @@ const Funnel = () => {
     const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+
+    // Custom events state
+    const [availableEvents, setAvailableEvents] = useState<string[]>([]);
+    const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
+
+    // Fetch available events when website changes
+    useEffect(() => {
+        const fetchEvents = async () => {
+            if (!selectedWebsite) return;
+            setLoadingEvents(true);
+            try {
+                // Fetch events from the last 30 days to populate the list
+                const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/events?startAt=${Date.now() - 30 * 24 * 60 * 60 * 1000}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.events) {
+                        const eventNames = data.events.map((e: any) => e.name).sort((a: string, b: string) => a.localeCompare(b));
+                        setAvailableEvents(eventNames);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch events', err);
+            } finally {
+                setLoadingEvents(false);
+            }
+        };
+
+        fetchEvents();
+    }, [selectedWebsite]);
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -107,19 +143,27 @@ const Funnel = () => {
     };
 
     const addStep = () => {
-        setUrls([...urls, '']);
+        setSteps([...steps, { type: 'url', value: '' }]);
     };
 
     const removeStep = (index: number) => {
-        if (urls.length <= 2) return; // Keep at least 2 steps
-        const newUrls = urls.filter((_, i) => i !== index);
-        setUrls(newUrls);
+        if (steps.length <= 2) return; // Keep at least 2 steps
+        const newSteps = steps.filter((_, i) => i !== index);
+        setSteps(newSteps);
     };
 
-    const updateUrl = (index: number, value: string) => {
-        const newUrls = [...urls];
-        newUrls[index] = value;
-        setUrls(newUrls);
+    const updateStepValue = (index: number, value: string) => {
+        const newSteps = [...steps];
+        newSteps[index].value = value;
+        setSteps(newSteps);
+    };
+
+    const updateStepType = (index: number, type: 'url' | 'event') => {
+        const newSteps = [...steps];
+        newSteps[index].type = type;
+        // Clear value when switching types to avoid confusion
+        newSteps[index].value = '';
+        setSteps(newSteps);
     };
 
     const normalizeUrlToPath = (input: string): string => {
@@ -151,9 +195,16 @@ const Funnel = () => {
 
         setHasAttemptedFetch(true);
 
-        // Validate URLs
-        const normalizedUrls = urls.map(normalizeUrlToPath).filter(u => u.trim() !== '');
-        if (normalizedUrls.length < 2) {
+        // Validate Steps
+        // For URLs, normalize them. For Events, keep as is.
+        const normalizedSteps = steps.map(s => {
+            if (s.type === 'url') {
+                return { ...s, value: normalizeUrlToPath(s.value) };
+            }
+            return s;
+        }).filter(s => s.value.trim() !== '');
+
+        if (normalizedSteps.length < 2) {
             setError('Du må legge inn minst to gyldige steg.');
             return;
         }
@@ -183,7 +234,7 @@ const Funnel = () => {
                 },
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
-                    urls: normalizedUrls,
+                    steps: normalizedSteps,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                     onlyDirectEntry
@@ -213,8 +264,9 @@ const Funnel = () => {
 
                 // Add steps
                 newParams.delete('step');
-                normalizedUrls.forEach(url => {
-                    newParams.append('step', url);
+                normalizedSteps.forEach(step => {
+                    const paramValue = step.type === 'event' ? `event:${step.value}` : step.value;
+                    newParams.append('step', paramValue);
                 });
 
                 // Update URL without navigation
@@ -249,7 +301,12 @@ const Funnel = () => {
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
         }
 
-        const normalizedUrls = urls.map(normalizeUrlToPath).filter(u => u.trim() !== '');
+        const normalizedSteps = steps.map(s => {
+            if (s.type === 'url') {
+                return { ...s, value: normalizeUrlToPath(s.value) };
+            }
+            return s;
+        }).filter(s => s.value.trim() !== '');
 
         try {
             const response = await fetch('/api/bigquery/funnel-timing', {
@@ -259,7 +316,7 @@ const Funnel = () => {
                 },
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
-                    urls: normalizedUrls,
+                    steps: normalizedSteps,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                     onlyDirectEntry
@@ -329,17 +386,51 @@ const Funnel = () => {
                     </RadioGroup>
 
                     <div className="pt-2 space-y-3">
-                        <Heading level="3" size="xsmall">Legg til URL-stier for hvert steg</Heading>
-                        {urls.map((url, index) => (
+                        <Heading level="3" size="xsmall">Definer steg i trakten</Heading>
+                        {steps.map((step, index) => (
                             <div key={index} className="flex items-end gap-2">
-                                <TextField
-                                    label={`Steg ${index + 1}`}
-                                    value={url}
-                                    onChange={(e) => updateUrl(index, e.target.value)}
-                                    onBlur={(e) => updateUrl(index, normalizeUrlToPath(e.target.value))}
-                                    className="flex-grow"
-                                />
-                                {urls.length > 2 && (
+                                <Select
+                                    label={`Type steg ${index + 1}`}
+                                    hideLabel
+                                    value={step.type}
+                                    onChange={(e) => updateStepType(index, e.target.value as 'url' | 'event')}
+                                    className="w-24"
+                                >
+                                    <option value="url">URL-sti</option>
+                                    <option value="event">Hendelse</option>
+                                </Select>
+
+                                {step.type === 'url' ? (
+                                    <TextField
+                                        label={`Steg ${index + 1}`}
+                                        hideLabel
+                                        value={step.value}
+                                        onChange={(e) => updateStepValue(index, e.target.value)}
+                                        onBlur={(e) => updateStepValue(index, normalizeUrlToPath(e.target.value))}
+                                        className="flex-grow"
+                                    />
+                                ) : (
+                                    <div className="flex-grow relative">
+                                        <Combobox
+                                            label={`Velg hendelse steg ${index + 1}`}
+                                            hideLabel
+                                            options={availableEvents.map(e => ({ label: e, value: e }))}
+                                            selectedOptions={step.value ? [step.value] : []}
+                                            onToggleSelected={(option, isSelected) => {
+                                                if (isSelected) {
+                                                    updateStepValue(index, option);
+                                                } else {
+                                                    updateStepValue(index, '');
+                                                }
+                                            }}
+                                            isLoading={loadingEvents}
+                                            shouldAutocomplete
+                                            clearButton
+                                        />
+                                    </div>
+                                )}
+
+                                {steps.length > 2 && (
                                     <Button
                                         variant="tertiary"
                                         icon={<Trash2 size={20} />}
@@ -499,77 +590,80 @@ const Funnel = () => {
                                 </div>
                             </div>
 
-                            {/* Timing Data Section */}
-                            <div className="mt-6">
-                                <Heading level="3" size="small" className="mb-3">
-                                    Gjennomsnittlig tid per steg
-                                </Heading>
+                            {/* Timing Data Section - Only show for URL-only funnels */}
+                            {!steps.some(s => s.type === 'event') && (
+                                <div className="mt-6">
+                                    <Heading level="3" size="small" className="mb-3">
+                                        Gjennomsnittlig tid per steg
+                                    </Heading>
 
-                                {!showTiming && (
-                                    <Button
-                                        variant="secondary"
-                                        onClick={fetchTimingData}
-                                        loading={timingLoading}
-                                        disabled={timingLoading}
-                                    >
-                                        Beregn tid per steg
-                                    </Button>
-                                )}
+                                    {!showTiming && (
+                                        <Button
+                                            variant="secondary"
+                                            onClick={fetchTimingData}
+                                            loading={timingLoading}
+                                            disabled={timingLoading}
+                                        >
+                                            Beregn tid per steg
+                                        </Button>
+                                    )}
 
-                                {timingError && (
-                                    <Alert variant="error" className="mb-4">
-                                        {timingError}
-                                    </Alert>
-                                )}
+                                    {timingError && (
+                                        <Alert variant="error" className="mb-4">
+                                            {timingError}
+                                        </Alert>
+                                    )}
 
-                                {showTiming && !timingError && timingData.length > 0 && (
-                                    <>
-                                        <div className="border rounded-lg overflow-hidden mb-3">
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full divide-y divide-gray-200">
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnitt</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Median</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="bg-white divide-y divide-gray-200">
-                                                        {timingData.map((timing, index) => (
-                                                            <tr key={index} className="hover:bg-gray-50">
-                                                                <td className="px-6 py-4 text-sm text-gray-900">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">Steg {timing.fromStep + 1}</span>
-                                                                        <span className="text-xs text-gray-500 break-all">{timing.fromUrl}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm text-gray-900">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">Steg {timing.toStep + 1}</span>
-                                                                        <span className="text-xs text-gray-500 break-all">{timing.toUrl}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm font-bold text-blue-600">
-                                                                    {formatDuration(timing.avgSeconds)}
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm font-bold text-green-600">
-                                                                    {formatDuration(timing.medianSeconds)}
-                                                                </td>
+                                    {showTiming && !timingError && timingData.length > 0 && (
+                                        <>
+                                            <div className="border rounded-lg overflow-hidden mb-3">
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-gray-200">
+                                                        <thead className="bg-gray-100">
+                                                            <tr>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnitt</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Median</th>
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-200">
+                                                            {timingData.map((timing, index) => (
+                                                                <tr key={index} className="hover:bg-gray-50">
+                                                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">Steg {timing.fromStep + 1}</span>
+                                                                            <span className="text-xs text-gray-500 break-all">{timing.fromUrl}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">Steg {timing.toStep + 1}</span>
+                                                                            <span className="text-xs text-gray-500 break-all">{timing.toUrl}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">
+                                                                        {formatDuration(timing.avgSeconds)}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-bold text-green-600">
+                                                                        {formatDuration(timing.medianSeconds)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
-                                        </div>
-                                        {timingQueryStats && (
-                                            <div className="text-sm text-gray-600 text-right">
-                                                Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
+                                            {timingQueryStats && (
+                                                <div className="text-sm text-gray-600 text-right">
+                                                    Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
                         </Tabs.Panel>
                     </Tabs>
                 </>

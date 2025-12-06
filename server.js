@@ -1461,7 +1461,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
 // Get funnel data from BigQuery
 app.post('/api/bigquery/funnel', async (req, res) => {
     try {
-        const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
+        const { websiteId, urls, steps: inputSteps, startDate, endDate, onlyDirectEntry = true } = req.body;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1469,11 +1469,27 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             })
         }
 
-        if (!urls || !Array.isArray(urls) || urls.length < 2) {
+        // Backward compatibility: Convert legacy `urls` to `steps` if `steps` is missing
+        let steps = inputSteps;
+        if (!steps && urls) {
+            steps = urls.map(url => ({ type: 'url', value: url }));
+        }
+
+        if (!steps || !Array.isArray(steps) || steps.length < 2) {
             return res.status(400).json({
-                error: 'At least 2 URLs are required for a funnel'
+                error: 'At least 2 steps are required for a funnel'
             });
         }
+
+        // Determine which event types we need to query
+        // 1 = Pageview (for type: 'url')
+        // 2 = Custom Event (for type: 'event')
+        const neededEventTypes = new Set();
+        steps.forEach(step => {
+            if (step.type === 'url') neededEventTypes.add(1);
+            if (step.type === 'event') neededEventTypes.add(2);
+        });
+        const eventTypesList = Array.from(neededEventTypes).join(', ');
 
         // Helper to generate the URL normalization SQL
         const normalizeUrlSql = `
@@ -1484,62 +1500,81 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             END
         `;
 
-        // 1. Base events CTE with LAG for strict mode
+        // 1. Base events CTE with step_value calculation
+        // We calculate a unified 'step_value' to compare against:
+        // - For Pageviews (type 1): The normalized URL path
+        // - For Custom Events (type 2): The event name
         let query = `
             WITH events_raw AS (
                 SELECT 
                     session_id,
-                    ${normalizeUrlSql} as url_path,
+                    event_type,
+                    CASE 
+                        WHEN event_type = 1 THEN ${normalizeUrlSql}
+                        WHEN event_type = 2 THEN event_name
+                        ELSE NULL 
+                    END as step_value,
                     created_at
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
-                  AND event_type = 1 -- Pageview
+                  AND event_type IN (${eventTypesList})
             ),
             events AS (
                 SELECT 
                     *,
-                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
+                    LAG(step_value) OVER (PARTITION BY session_id ORDER BY created_at) as prev_step_value
                 FROM events_raw
             ),
         `;
 
         // 2. Generate CTEs for each step
-        const stepCtes = urls.map((url, index) => {
+        const stepCtes = steps.map((step, index) => {
             const stepName = `step${index + 1}`;
             const prevStepName = `step${index}`;
+            const paramName = `stepValue${index}`;
+
+            // Check if we need to enforce type match as well (e.g. if a URL and Event have same name?)
+            // For now, assuming step_value uniqueness is enough or tolerable.
+            // But strictness:
+            // If checking for URL, we should ensure event_type=1
+            // If checking for Event, we should ensure event_type=2
+            const typeCheck = step.type === 'url' ? 'AND event_type = 1' : 'AND event_type = 2';
 
             if (index === 0) {
-                // Step 1: Always any visit to the first URL
+                // Step 1: Always any visit/event matching the first step
                 return `
             ${stepName} AS (
                 SELECT session_id, MIN(created_at) as time${index + 1}
                 FROM events
-                WHERE url_path = @url${index}
+                WHERE step_value = @${paramName}
+                  ${typeCheck}
                 GROUP BY session_id
             )`;
             } else {
+                const prevParamName = `stepValue${index - 1}`;
                 if (onlyDirectEntry) {
-                    // Strict mode: Current URL must be visited immediately after Previous URL
-                    // We join on session_id and ensure the current event's prev_url_path matches the previous step's URL
+                    // Strict mode: Current step must be immediately after Previous step
                     return `
             ${stepName} AS (
                 SELECT e.session_id, MIN(e.created_at) as time${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
+                WHERE e.step_value = @${paramName}
+                  ${typeCheck} 
                   AND e.created_at > prev.time${index}
-                  AND e.prev_url_path = @url${index - 1} -- Strict check: Immediate predecessor
+                  AND e.prev_step_value = @${prevParamName} -- Strict check: Immediate predecessor
                 GROUP BY e.session_id
             )`;
                 } else {
-                    // Loose mode: Eventual visit (standard funnel)
+                    // Loose mode: Eventual follow-up
                     return `
             ${stepName} AS (
                 SELECT e.session_id, MIN(e.created_at) as time${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
+                WHERE e.step_value = @${paramName}
+                  ${typeCheck} 
                   AND e.created_at > prev.time${index}
                 GROUP BY e.session_id
             )`;
@@ -1549,7 +1584,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
 
         query += stepCtes.join(',') + `
             SELECT 
-                ${urls.map((_, i) => `(SELECT COUNT(*) FROM step${i + 1}) as step${i + 1}_count`).join(',\n                ')}
+                ${steps.map((_, i) => `(SELECT COUNT(*) FROM step${i + 1}) as step${i + 1}_count`).join(',\n                ')}
         `;
 
         // Create params object
@@ -1559,8 +1594,8 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             endDate
         };
 
-        urls.forEach((url, index) => {
-            params[`url${index}`] = url;
+        steps.forEach((step, index) => {
+            params[`stepValue${index}`] = step.value;
         });
 
         // Get dry run stats
@@ -1583,7 +1618,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 estimatedCostUSD: estimatedCostUSD
             };
 
-            console.log(`[Funnel] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+            console.log(`[Funnel] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD} (Types: ${eventTypesList})`);
         } catch (dryRunError) {
             console.log('[Funnel] Dry run failed:', dryRunError.message);
         }
@@ -1600,16 +1635,15 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             return res.json({ data: [] });
         }
 
-        const data = rows.map(row => {
-            const result = {};
-            urls.forEach((_, index) => {
-                const countKey = `step${index + 1}_count`;
-                result[`step${index + 1}`] = parseInt(row[countKey] || 0);
-            });
-            return result;
-        });
+        const row = rows[0];
+        const data = steps.map((step, index) => ({
+            step: index,
+            url: step.value,
+            type: step.type,
+            count: parseInt(row[`step${index + 1}_count`] || 0)
+        }));
 
-        res.json({ data: data[0], queryStats }); // Return the first (and only) row
+        res.json({ data, queryStats });
     } catch (error) {
         console.error('BigQuery funnel error:', error);
         res.status(500).json({
