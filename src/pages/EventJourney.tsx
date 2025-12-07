@@ -291,7 +291,8 @@ const EventJourney = () => {
                                                 });
 
                                                 // Priority for subtitle
-                                                if (detailMap['lenketekst']) cardSubtitle = detailMap['lenketekst'];
+                                                if (detailMap['destinasjon']) cardSubtitle = detailMap['destinasjon'];
+                                                else if (detailMap['lenketekst']) cardSubtitle = detailMap['lenketekst'];
                                                 else if (detailMap['tittel']) cardSubtitle = detailMap['tittel'];
                                                 else if (detailMap['label']) cardSubtitle = detailMap['label'];
                                                 else if (detailMap['url']) cardSubtitle = detailMap['url'];
