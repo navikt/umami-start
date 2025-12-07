@@ -188,7 +188,7 @@ const EventJourney = () => {
                                 <Label size="small" className="text-gray-600">Unike besøkende</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-4xl font-bold mb-1">{formatNumber(queryStats?.total_sessions || 0)}</div>
+                                <div className="text-xl lg:text-2xl font-bold mb-1">{formatNumber(queryStats?.total_sessions || 0)}</div>
                                 <div className="text-sm font-medium invisible">placeholder</div>
                             </div>
                         </div>
@@ -199,7 +199,7 @@ const EventJourney = () => {
                                 <Label size="small" className="text-blue-900">Utførte handlinger</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-4xl font-bold text-blue-900 mb-1">
+                                <div className="text-xl lg:text-2xl font-bold text-blue-900 mb-1">
                                     {getPercentage(queryStats?.sessions_with_events || 0, queryStats?.total_sessions || 0)}
                                 </div>
                                 <div className="text-sm font-medium text-blue-800">
@@ -214,7 +214,7 @@ const EventJourney = () => {
                                 <Label size="small" className="text-green-900">Navigering uten handling</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-4xl font-bold text-green-900 mb-1">
+                                <div className="text-xl lg:text-2xl font-bold text-green-900 mb-1">
                                     {getPercentage(queryStats?.sessions_no_events_navigated || 0, queryStats?.total_sessions || 0)}
                                 </div>
                                 <div className="text-sm font-medium text-green-800">
@@ -229,7 +229,7 @@ const EventJourney = () => {
                                 <Label size="small" className="text-red-900">Forlot nettstedet</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-4xl font-bold text-red-900 mb-1">
+                                <div className="text-xl lg:text-2xl font-bold text-red-900 mb-1">
                                     {getPercentage(queryStats?.sessions_no_events_bounced || 0, queryStats?.total_sessions || 0)}
                                 </div>
                                 <div className="text-sm font-medium text-red-800">
