@@ -417,33 +417,40 @@ const Funnel = () => {
                     <div className="pt-2 space-y-3">
                         <Heading level="3" size="xsmall">Steg i trakten</Heading>
                         {steps.map((step, index) => (
-                            <div key={index} className="space-y-2">
-                                <div className="flex items-end gap-2">
-                                    <Select
-                                        label={`Type steg ${index + 1}`}
-                                        hideLabel
-                                        value={step.type}
-                                        onChange={(e) => updateStepType(index, e.target.value as 'url' | 'event')}
-                                        className="w-24"
-                                    >
-                                        <option value="url">URL-sti</option>
-                                        <option value="event">Hendelse</option>
-                                    </Select>
+                            <div key={index} className="border border-gray-300 rounded-lg p-3 bg-white relative">
+                                <div className="flex items-start gap-3">
+                                    {/* Step number badge */}
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                                        {index + 1}
+                                    </div>
 
-                                    {step.type === 'url' ? (
-                                        <TextField
-                                            label={`Steg ${index + 1}`}
-                                            hideLabel
-                                            value={step.value}
-                                            onChange={(e) => updateStepValue(index, e.target.value)}
-                                            onBlur={(e) => updateStepValue(index, normalizeUrlToPath(e.target.value))}
-                                            className="flex-grow"
-                                        />
-                                    ) : (
-                                        <div className="flex-grow relative">
+                                    {/* Step content */}
+                                    <div className="flex-grow space-y-3">
+                                        {/* Type selector with label */}
+                                        <Select
+                                            label={`Stegtype`}
+                                            size="small"
+                                            value={step.type}
+                                            onChange={(e) => updateStepType(index, e.target.value as 'url' | 'event')}
+                                            className="max-w-[140px]"
+                                        >
+                                            <option value="url">URL-sti</option>
+                                            <option value="event">Hendelse</option>
+                                        </Select>
+
+                                        {/* Value input */}
+                                        {step.type === 'url' ? (
+                                            <TextField
+                                                label={`URL-sti`}
+                                                value={step.value}
+                                                onChange={(e) => updateStepValue(index, e.target.value)}
+                                                onBlur={(e) => updateStepValue(index, normalizeUrlToPath(e.target.value))}
+                                                size="small"
+                                            />
+                                        ) : (
                                             <Combobox
-                                                label={`Velg hendelse steg ${index + 1}`}
-                                                hideLabel
+                                                label={`Hendelse`}
+                                                size="small"
                                                 options={availableEvents.map(e => ({ label: e, value: e }))}
                                                 selectedOptions={step.value ? [step.value] : []}
                                                 onToggleSelected={(option, isSelected) => {
@@ -457,32 +464,39 @@ const Funnel = () => {
                                                 shouldAutocomplete
                                                 clearButton
                                             />
-                                        </div>
-                                    )}
+                                        )}
 
+                                        {/* Event scope options */}
+                                        {step.type === 'event' && index > 0 && (
+                                            <RadioGroup
+                                                legend="Hendelsens plassering"
+                                                size="small"
+                                                value={step.eventScope || 'current-path'}
+                                                onChange={(val: string) => updateStepEventScope(index, val as 'current-path' | 'anywhere')}
+                                            >
+                                                <Radio value="current-path">På nåværende sti</Radio>
+                                                <Radio value="anywhere">Hvor som helst</Radio>
+                                            </RadioGroup>
+                                        )}
+                                    </div>
+
+                                    {/* Delete button */}
                                     {steps.length > 2 && (
                                         <Button
-                                            variant="tertiary"
-                                            icon={<Trash2 size={20} />}
+                                            variant="tertiary-neutral"
+                                            size="small"
+                                            icon={<Trash2 size={18} />}
                                             onClick={() => removeStep(index)}
                                             aria-label="Fjern steg"
+                                            className="flex-shrink-0"
                                         />
                                     )}
                                 </div>
 
-                                {step.type === 'event' && index > 0 && (
-                                    <div className="pb-2">
-                                        <RadioGroup
-                                            legend={`Hendelsens plassering for steg ${index + 1}`}
-                                            hideLegend
-                                            size="small"
-                                            value={step.eventScope || 'current-path'}
-                                            onChange={(val: string) => updateStepEventScope(index, val as 'current-path' | 'anywhere')}
-                                        >
-                                            <Radio value="current-path">På nåværende sti</Radio>
-                                            <Radio value="anywhere">Hvor som helst</Radio>
-                                        </RadioGroup>
-                                    </div>
+                                {/* Connector line to next step */}
+                                {index < steps.length - 1 && (
+                                    <div className="absolute left-[19px] top-[36px] w-0.5 h-[calc(100%-28px)] bg-gray-300 -bottom-3 translate-y-full"
+                                        style={{ height: '12px' }} />
                                 )}
                             </div>
                         ))}
