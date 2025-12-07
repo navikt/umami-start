@@ -240,7 +240,7 @@ const EventJourney = () => {
                     </div>
 
                     <div className="flex justify-between items-end mb-4">
-                        <Heading level="2" size="medium">Hendelsesreiser</Heading>
+                        <Heading level="2" size="medium">Hendelsesflyt</Heading>
                         <div className="flex items-center gap-4">
                             <TextField
                                 label="Søk i reiser"
