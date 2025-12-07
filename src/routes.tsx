@@ -26,6 +26,8 @@ import UserProfiles from "./pages/UserProfiles.tsx";
 import PrivacyCheck from "./pages/PrivacyCheck.tsx";
 import Diagnosis from "./pages/Diagnosis.tsx";
 
+import EventJourney from "./pages/EventJourney.tsx";
+
 const routes = [
     { path: "/", component: <Home /> },
     { path: "/komigang", component: <Komigang /> },
@@ -42,6 +44,7 @@ const routes = [
     { path: "/sql", component: <BigQuery /> },
     { path: "/grafdeling", component: <Grafdeling /> },
     { path: "/brukerreiser", component: <UserJourney /> },
+    { path: "/hendelsesreiser", component: <EventJourney /> },
     { path: "/trakt", component: <Funnel /> },
     { path: "/brukerlojalitet", component: <Retention /> },
     { path: "/brukersammensetning", component: <UserComposition /> },

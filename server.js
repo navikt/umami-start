@@ -2821,6 +2821,210 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
     }
 });
 
+// Get event journeys (sequences of events)
+app.post('/api/bigquery/event-journeys', async (req, res) => {
+    try {
+        const { websiteId, startDate, endDate, urlPath, minEvents = 1, eventFilter } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            minEvents: parseInt(minEvents)
+        };
+
+        let urlFilter = '';
+        if (urlPath && urlPath !== '') {
+            urlFilter = `AND (
+                e.url_path = @urlPath 
+                OR e.url_path = @urlPathSlash 
+                OR e.url_path LIKE @urlPathQuery
+            )`;
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+        }
+
+        let eventNameFilter = '';
+        if (eventFilter && Array.isArray(eventFilter) && eventFilter.length > 0) {
+            // We want sessions that include THESE events.
+            // Filter at the session aggregation level or pre-filter?
+            // Let's filter in the HAVING clause of SessionPaths to ensure the path contains the event
+            params.eventFilterList = eventFilter;
+        }
+
+        // 1. Join with event_data to get properties
+        // 2. Aggregate properties into a string per event
+        // 3. Create the path array
+        const query = `
+            WITH EventProps AS (
+                SELECT
+                    e.event_id,
+                    e.session_id,
+                    e.event_name,
+                    e.created_at,
+                    -- Aggregate ONLY functional properties into a string for grouping
+                    -- We exclude variable properties like scrollPos, screen, etc. to ensure meaningful grouping
+                    STRING_AGG(
+                        CASE 
+                            WHEN p.data_key IN ('lenketekst', 'tittel', 'label', 'tekst', 'url', 'href', 'komponent', 'seksjon', 'lenkegruppe', 'destinasjon', 'målgruppe', 'innholdstype') THEN 
+                                CONCAT(p.data_key, ': ', REPLACE(p.string_value, '||', ' '))
+                            ELSE NULL 
+                        END, 
+                        '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key
+                    ) as props_str
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                LEFT JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                    ON e.event_id = d.website_event_id
+                    AND d.created_at BETWEEN @startDate AND @endDate
+                LEFT JOIN UNNEST(d.event_parameters) AS p
+                WHERE e.website_id = @websiteId
+                AND e.created_at BETWEEN @startDate AND @endDate
+                AND e.event_name IS NOT NULL
+                ${urlFilter}
+                GROUP BY 1, 2, 3, 4
+            ),
+            -- Filter out consecutive identical events (same name and same functional properties)
+            DedupedEvents AS (
+                SELECT 
+                    *,
+                    LAG(event_name) OVER (PARTITION BY session_id ORDER BY created_at) as prev_event_name,
+                    LAG(props_str) OVER (PARTITION BY session_id ORDER BY created_at) as prev_props_str
+                FROM EventProps
+            ),
+            CleanedEvents AS (
+                SELECT *
+                FROM DedupedEvents
+                WHERE 
+                    -- Keep if it's the first event (prev is null)
+                    prev_event_name IS NULL 
+                    -- Or if it's different from the previous event
+                    OR event_name != prev_event_name
+                    -- Or if properties are different (handling NULLs safely)
+                    OR IFNULL(props_str, '') != IFNULL(prev_props_str, '')
+            ),
+            SessionPaths AS (
+                SELECT
+                    session_id,
+                    -- Create an array of "EventName (props)" ordered by time
+                    ARRAY_AGG(
+                        IF(props_str IS NOT NULL, CONCAT(event_name, ': ', props_str), event_name)
+                        ORDER BY created_at
+                    ) as path,
+                    -- Also aggregate raw event names for filtering
+                    ARRAY_AGG(event_name) as event_names
+                FROM CleanedEvents
+                GROUP BY session_id
+                HAVING ARRAY_LENGTH(path) >= @minEvents
+                ${eventFilter && Array.isArray(eventFilter) && eventFilter.length > 0 ?
+                `AND EXISTS(SELECT 1 FROM UNNEST(event_names) AS n WHERE n IN UNNEST(@eventFilterList))` : ''}
+            ),
+            PathCounts AS (
+                SELECT
+                    path,
+                    COUNT(*) as count
+                FROM SessionPaths
+                GROUP BY path
+            )
+            SELECT
+                TO_JSON_STRING(path) as path_json,
+                count
+            FROM PathCounts
+            ORDER BY count DESC
+            LIMIT 100
+        `;
+
+        // Secondary query for high-level stats (Bounces, Navigation without events)
+        const statsQuery = `
+            WITH TargetVisits AS (
+                SELECT 
+                    e.session_id, 
+                    MIN(e.created_at) as visit_time
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                WHERE e.website_id = @websiteId
+                AND e.created_at BETWEEN @startDate AND @endDate
+                AND e.event_name IS NULL -- Pageview
+                ${urlFilter}
+                GROUP BY e.session_id
+            ),
+            Interactions AS (
+                SELECT DISTINCT e.session_id
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                WHERE e.website_id = @websiteId
+                AND e.created_at BETWEEN @startDate AND @endDate
+                AND e.event_name IS NOT NULL -- Events
+                ${urlFilter}
+            ),
+            Navigation AS (
+                SELECT DISTINCT t.session_id
+                FROM TargetVisits t
+                JOIN \`team-researchops-prod-01d6.umami.public_website_event\` later
+                    ON t.session_id = later.session_id
+                    AND later.created_at > t.visit_time
+                    AND later.event_name IS NULL
+            )
+            SELECT
+                COUNT(DISTINCT t.session_id) as total_sessions,
+                COUNT(DISTINCT i.session_id) as sessions_with_events,
+                COUNT(DISTINCT CASE WHEN i.session_id IS NULL AND n.session_id IS NOT NULL THEN t.session_id END) as sessions_no_events_navigated,
+                COUNT(DISTINCT CASE WHEN i.session_id IS NULL AND n.session_id IS NULL THEN t.session_id END) as sessions_no_events_bounced
+            FROM TargetVisits t
+            LEFT JOIN Interactions i ON t.session_id = i.session_id
+            LEFT JOIN Navigation n ON t.session_id = n.session_id
+        `;
+
+        // Get dry run stats first
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            });
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Event Journeys] Dry run failed:', dryRunError.message);
+        }
+
+        const [journeyRows] = await bigquery.query({ query, params });
+        const [statsRows] = await bigquery.query({ query: statsQuery, params });
+        const journeyStats = statsRows[0] || {};
+
+        const journeys = journeyRows.map(row => ({
+            path: JSON.parse(row.path_json),
+            count: row.count
+        }));
+
+        res.json({
+            journeys,
+            journeyStats,
+            queryStats
+        });
+
+    } catch (error) {
+        console.error('BigQuery event journeys error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch event journeys'
+        });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {
