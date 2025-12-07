@@ -36,8 +36,8 @@ function Home() {
                 width: "100%",
                 backgroundColor: "rgb(230, 242, 255)",
                 color: "rgb(19, 17, 54)",
-                paddingTop: "80px",
-                paddingBottom: "80px",
+                paddingTop: "70px",
+                paddingBottom: "70px",
             }}>
                 <Page.Block width="xl" gutters>
                     <Heading spacing={true} as="h2" size="large">Mål brukeradferd med Umami</Heading>
@@ -46,7 +46,7 @@ function Home() {
             </div>
 
             <Page.Block width="xl" gutters>
-                <div style={{ marginTop: "48px", marginBottom: "32px" }}>
+                <div style={{ marginTop: "38px", marginBottom: "32px" }}>
                     <Heading as="h3" size="medium">Hva ønsker du å analysere?</Heading>
                 </div>
 
