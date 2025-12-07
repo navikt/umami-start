@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, Tabs, Switch, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -15,13 +15,18 @@ const Funnel = () => {
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
-    const [steps, setSteps] = useState<{ type: 'url' | 'event', value: string }[]>(() => {
+    const [steps, setSteps] = useState<{ type: 'url' | 'event', value: string, eventScope?: 'current-path' | 'anywhere' }[]>(() => {
         const stepParams = searchParams.getAll('step');
         if (stepParams.length === 0) return [{ type: 'url', value: '' }, { type: 'url', value: '' }];
 
         return stepParams.map(param => {
             if (param.startsWith('event:')) {
-                return { type: 'event', value: param.substring(6) };
+                const eventParts = param.substring(6).split('|');
+                return {
+                    type: 'event',
+                    value: eventParts[0],
+                    eventScope: (eventParts[1] as 'current-path' | 'anywhere') || 'current-path'
+                };
             }
             return { type: 'url', value: param };
         });
@@ -143,7 +148,7 @@ const Funnel = () => {
     };
 
     const addStep = () => {
-        setSteps([...steps, { type: 'url', value: '' }]);
+        setSteps([...steps, { type: 'url', value: '', eventScope: 'current-path' }]);
     };
 
     const removeStep = (index: number) => {
@@ -163,6 +168,16 @@ const Funnel = () => {
         newSteps[index].type = type;
         // Clear value when switching types to avoid confusion
         newSteps[index].value = '';
+        // Set default eventScope when switching to event type
+        if (type === 'event') {
+            newSteps[index].eventScope = 'current-path';
+        }
+        setSteps(newSteps);
+    };
+
+    const updateStepEventScope = (index: number, scope: 'current-path' | 'anywhere') => {
+        const newSteps = [...steps];
+        newSteps[index].eventScope = scope;
         setSteps(newSteps);
     };
 
@@ -265,7 +280,12 @@ const Funnel = () => {
                 // Add steps
                 newParams.delete('step');
                 normalizedSteps.forEach(step => {
-                    const paramValue = step.type === 'event' ? `event:${step.value}` : step.value;
+                    let paramValue: string;
+                    if (step.type === 'event') {
+                        paramValue = `event:${step.value}|${step.eventScope || 'current-path'}`;
+                    } else {
+                        paramValue = step.value;
+                    }
                     newParams.append('step', paramValue);
                 });
 
@@ -385,58 +405,84 @@ const Funnel = () => {
                         <Radio value="last_month">Forrige måned</Radio>
                     </RadioGroup>
 
+                    <RadioGroup
+                        legend="Flyt"
+                        value={onlyDirectEntry ? 'strict' : 'loose'}
+                        onChange={(val: string) => setOnlyDirectEntry(val === 'strict')}
+                    >
+                        <Radio value="strict">Direkte fra steg til steg</Radio>
+                        <Radio value="loose">Tillat andre steg imellom</Radio>
+                    </RadioGroup>
+
                     <div className="pt-2 space-y-3">
-                        <Heading level="3" size="xsmall">Definer steg i trakten</Heading>
+                        <Heading level="3" size="xsmall">Steg i trakten</Heading>
                         {steps.map((step, index) => (
-                            <div key={index} className="flex items-end gap-2">
-                                <Select
-                                    label={`Type steg ${index + 1}`}
-                                    hideLabel
-                                    value={step.type}
-                                    onChange={(e) => updateStepType(index, e.target.value as 'url' | 'event')}
-                                    className="w-24"
-                                >
-                                    <option value="url">URL-sti</option>
-                                    <option value="event">Hendelse</option>
-                                </Select>
-
-                                {step.type === 'url' ? (
-                                    <TextField
-                                        label={`Steg ${index + 1}`}
+                            <div key={index} className="space-y-2">
+                                <div className="flex items-end gap-2">
+                                    <Select
+                                        label={`Type steg ${index + 1}`}
                                         hideLabel
-                                        value={step.value}
-                                        onChange={(e) => updateStepValue(index, e.target.value)}
-                                        onBlur={(e) => updateStepValue(index, normalizeUrlToPath(e.target.value))}
-                                        className="flex-grow"
-                                    />
-                                ) : (
-                                    <div className="flex-grow relative">
-                                        <Combobox
-                                            label={`Velg hendelse steg ${index + 1}`}
-                                            hideLabel
-                                            options={availableEvents.map(e => ({ label: e, value: e }))}
-                                            selectedOptions={step.value ? [step.value] : []}
-                                            onToggleSelected={(option, isSelected) => {
-                                                if (isSelected) {
-                                                    updateStepValue(index, option);
-                                                } else {
-                                                    updateStepValue(index, '');
-                                                }
-                                            }}
-                                            isLoading={loadingEvents}
-                                            shouldAutocomplete
-                                            clearButton
-                                        />
-                                    </div>
-                                )}
+                                        value={step.type}
+                                        onChange={(e) => updateStepType(index, e.target.value as 'url' | 'event')}
+                                        className="w-24"
+                                    >
+                                        <option value="url">URL-sti</option>
+                                        <option value="event">Hendelse</option>
+                                    </Select>
 
-                                {steps.length > 2 && (
-                                    <Button
-                                        variant="tertiary"
-                                        icon={<Trash2 size={20} />}
-                                        onClick={() => removeStep(index)}
-                                        aria-label="Fjern steg"
-                                    />
+                                    {step.type === 'url' ? (
+                                        <TextField
+                                            label={`Steg ${index + 1}`}
+                                            hideLabel
+                                            value={step.value}
+                                            onChange={(e) => updateStepValue(index, e.target.value)}
+                                            onBlur={(e) => updateStepValue(index, normalizeUrlToPath(e.target.value))}
+                                            className="flex-grow"
+                                        />
+                                    ) : (
+                                        <div className="flex-grow relative">
+                                            <Combobox
+                                                label={`Velg hendelse steg ${index + 1}`}
+                                                hideLabel
+                                                options={availableEvents.map(e => ({ label: e, value: e }))}
+                                                selectedOptions={step.value ? [step.value] : []}
+                                                onToggleSelected={(option, isSelected) => {
+                                                    if (isSelected) {
+                                                        updateStepValue(index, option);
+                                                    } else {
+                                                        updateStepValue(index, '');
+                                                    }
+                                                }}
+                                                isLoading={loadingEvents}
+                                                shouldAutocomplete
+                                                clearButton
+                                            />
+                                        </div>
+                                    )}
+
+                                    {steps.length > 2 && (
+                                        <Button
+                                            variant="tertiary"
+                                            icon={<Trash2 size={20} />}
+                                            onClick={() => removeStep(index)}
+                                            aria-label="Fjern steg"
+                                        />
+                                    )}
+                                </div>
+
+                                {step.type === 'event' && index > 0 && (
+                                    <div className="pb-2">
+                                        <RadioGroup
+                                            legend={`Hendelsens plassering for steg ${index + 1}`}
+                                            hideLegend
+                                            size="small"
+                                            value={step.eventScope || 'current-path'}
+                                            onChange={(val: string) => updateStepEventScope(index, val as 'current-path' | 'anywhere')}
+                                        >
+                                            <Radio value="current-path">På nåværende sti</Radio>
+                                            <Radio value="anywhere">Hvor som helst</Radio>
+                                        </RadioGroup>
+                                    </div>
                                 )}
                             </div>
                         ))}
@@ -449,16 +495,6 @@ const Funnel = () => {
                         >
                             Legg til steg
                         </Button>
-                    </div>
-
-                    <div className="pb-1 flex items-center gap-4 px-1">
-                        <Switch
-                            checked={onlyDirectEntry}
-                            onChange={(e) => setOnlyDirectEntry(e.target.checked)}
-                            description="Flyt direkte fra steg til steg"
-                        >
-                            Streng rekkefølge
-                        </Switch>
                     </div>
 
                     <Button

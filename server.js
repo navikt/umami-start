@@ -1504,16 +1504,18 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         // We calculate a unified 'step_value' to compare against:
         // - For Pageviews (type 1): The normalized URL path
         // - For Custom Events (type 2): The event name
+        // We also keep the url_path for events with eventScope='current-path'
         let query = `
             WITH events_raw AS (
-                SELECT 
+                SELECT
                     session_id,
                     event_type,
-                    CASE 
+                    CASE
                         WHEN event_type = 1 THEN ${normalizeUrlSql}
                         WHEN event_type = 2 THEN event_name
-                        ELSE NULL 
+                        ELSE NULL
                     END as step_value,
+                    ${normalizeUrlSql} as url_path_normalized,
                     created_at
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
@@ -1521,9 +1523,10 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                   AND event_type IN (${eventTypesList})
             ),
             events AS (
-                SELECT 
+                SELECT
                     *,
-                    LAG(step_value) OVER (PARTITION BY session_id ORDER BY created_at) as prev_step_value
+                    LAG(step_value) OVER (PARTITION BY session_id ORDER BY created_at) as prev_step_value,
+                    LAG(url_path_normalized) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
                 FROM events_raw
             ),
         `;
@@ -1541,11 +1544,18 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             // If checking for Event, we should ensure event_type=2
             const typeCheck = step.type === 'url' ? 'AND event_type = 1' : 'AND event_type = 2';
 
+            // For events with eventScope='current-path', we need to ensure they happen on the same URL as the previous step
+            const eventScopeCheck = (step.type === 'event' && step.eventScope === 'current-path' && index > 0)
+                ? `AND e.url_path_normalized = prev.url_path${index}`
+                : '';
+
             if (index === 0) {
                 // Step 1: Always any visit/event matching the first step
+                // We also store the URL path for potential use in subsequent steps
                 return `
             ${stepName} AS (
-                SELECT session_id, MIN(created_at) as time${index + 1}
+                SELECT session_id, MIN(created_at) as time${index + 1},
+                       MIN(url_path_normalized) as url_path${index + 1}
                 FROM events
                 WHERE step_value = @${paramName}
                   ${typeCheck}
@@ -1557,25 +1567,29 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                     // Strict mode: Current step must be immediately after Previous step
                     return `
             ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1},
+                       MIN(e.url_path_normalized) as url_path${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
                 WHERE e.step_value = @${paramName}
-                  ${typeCheck} 
+                  ${typeCheck}
                   AND e.created_at > prev.time${index}
                   AND e.prev_step_value = @${prevParamName} -- Strict check: Immediate predecessor
+                  ${eventScopeCheck}
                 GROUP BY e.session_id
             )`;
                 } else {
                     // Loose mode: Eventual follow-up
                     return `
             ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1},
+                       MIN(e.url_path_normalized) as url_path${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
                 WHERE e.step_value = @${paramName}
-                  ${typeCheck} 
+                  ${typeCheck}
                   AND e.created_at > prev.time${index}
+                  ${eventScopeCheck}
                 GROUP BY e.session_id
             )`;
                 }
