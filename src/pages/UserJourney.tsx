@@ -294,7 +294,7 @@ const UserJourney = () => {
 
     return (
         <ChartLayout
-            title="Brukerreiser"
+            title="Sideflyt"
             description="Se hvilke veier folk tar på nettsiden."
             currentPage="brukerreiser"
             filters={

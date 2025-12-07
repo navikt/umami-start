@@ -31,8 +31,14 @@ export const analyticsPages = [
     {
         id: 'brukerreiser',
         href: '/brukerreiser',
-        label: 'Brukerreiser',
+        label: 'Sideflyt',
         description: 'Se hvilke veier folk tar på nettsiden'
+    },
+    {
+        id: 'hendelsesreiser',
+        href: '/hendelsesreiser',
+        label: 'Hendelseflyt',
+        description: 'Se rekkefølgen av hendelser på en side'
     },
     {
         id: 'trakt',
@@ -41,16 +47,16 @@ export const analyticsPages = [
         description: 'Se hvor folk faller fra i en prosess'
     },
     {
-        id: 'brukerlojalitet',
-        href: '/brukerlojalitet',
-        label: 'Brukerlojalitet',
-        description: 'Se hvor mange som kommer tilbake'
-    },
-    {
         id: 'brukerprofiler',
         href: '/brukerprofiler',
         label: 'Brukerprofiler',
         description: 'Se info om individuelle besøkende'
+    },
+    {
+        id: 'brukerlojalitet',
+        href: '/brukerlojalitet',
+        label: 'Brukerlojalitet',
+        description: 'Se hvor mange som kommer tilbake'
     },
     {
         id: 'markedsanalyse',
@@ -63,13 +69,7 @@ export const analyticsPages = [
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
-    },
-    {
-        id: 'hendelsesreiser',
-        href: '/hendelsesreiser',
-        label: 'Hendelsesreiser',
-        description: 'Se rekkefølgen av hendelser på en side'
-    },
+    }
 ];
 
 const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigationProps) => {

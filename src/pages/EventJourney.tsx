@@ -129,7 +129,7 @@ const EventJourney = () => {
 
     return (
         <ChartLayout
-            title="Hendelsesreiser"
+            title="Hendelsesflyt"
             description="Se rekkefølgen av hendelser brukere gjør på en spesifikk side."
             currentPage="hendelsesreiser" // Need to update type in AnalyticsNavigation probably
             filters={
