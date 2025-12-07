@@ -31,3 +31,10 @@ spec:
       memory: 128Mi
   ingresses:
     - https://startumami-dev.ansatt.nav.no
+  azure:
+    application:
+      enabled: true
+      allowAllUsers: true
+    sidecar:
+      autoLogin: true
+    enabled: true
