@@ -314,13 +314,6 @@ const UserJourney = () => {
                         <Radio value="last_month">Forrige måned</Radio>
                     </RadioGroup>
 
-                    <TextField
-                        label="Start URL-sti"
-                        description="F.eks. / for forsiden"
-                        value={startUrl}
-                        onChange={(e) => setStartUrl(e.target.value)}
-                    />
-
                     <RadioGroup
                         legend="Reiseretning"
                         description="Hvilken vei vil du se?"
@@ -332,6 +325,13 @@ const UserJourney = () => {
                         <Radio value="forward">Fremover (hva skjer etter)</Radio>
                         <Radio value="backward">Bakover (hvordan kom de hit)</Radio>
                     </RadioGroup>
+
+                    <TextField
+                        label="Start URL-sti"
+                        description="F.eks. / for forsiden"
+                        value={startUrl}
+                        onChange={(e) => setStartUrl(e.target.value)}
+                    />
 
 
 
