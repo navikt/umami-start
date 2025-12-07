@@ -3025,6 +3025,34 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
     }
 });
 
+app.get("/me", (req, res) => res.json());
+
+app.get('/meme', async (req, res) => {
+    try {
+        const response = await fetch('https://graph.microsoft.com/v1.0/me/', {
+            headers: {
+                'Authorization': req.headers.authorization,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not valid JSON');
+        }
+
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Error fetching user info:', error);
+        res.status(500).json({ error: 'Failed to fetch user info' });
+    }
+});
+
 app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {
