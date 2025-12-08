@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Loader, BodyShort, Heading, VStack, HStack, Label } from '@navikt/ds-react';
-import { PersonIcon, EnvelopeClosedIcon } from '@navikt/aksel-icons';
+import { PersonIcon } from '@navikt/aksel-icons';
 
 interface UserInfo {
     navIdent: string;

@@ -3299,7 +3299,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
     }
 });
 
-app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
+app.use(/^(?!.*\/(api|internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {
     console.log('Listening on port 8080')
