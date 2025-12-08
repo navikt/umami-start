@@ -50,7 +50,7 @@ export default function UserProfile() {
                     <Heading size="medium" spacing>Autentisering ikke tilgjengelig</Heading>
                     <BodyShort>{error}</BodyShort>
                     <BodyShort className="mt-4">
-                        Dette endepunktet fungerer kun når applikasjonen er deployet til NAIS med Azure AD aktivert.
+                        Dette endepunktet fungerer kun når applikasjonen er deployet til NAIS med Entra ID aktivert.
                     </BodyShort>
                 </Alert>
             </div>
@@ -99,7 +99,7 @@ export default function UserProfile() {
                 <Alert variant="success">
                     <Heading size="small" spacing>Autentisering vellykket!</Heading>
                     <BodyShort>
-                        Du er logget inn via Azure AD. Dette endepunktet kan brukes til å hente
+                        Du er logget inn via Entra ID. Dette endepunktet kan brukes til å hente
                         brukerinformasjon i andre deler av applikasjonen.
                     </BodyShort>
                 </Alert>
