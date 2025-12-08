@@ -19,7 +19,7 @@ RUN if [ -n "$GITHUB_TOKEN" ]; then \
     fi
 
 # Install dependencies
-RUN npm install --frozen-lockfile
+RUN npm install
 
 # Remove .npmrc for security
 RUN rm -f .npmrc

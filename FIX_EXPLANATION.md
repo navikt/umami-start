@@ -12,9 +12,9 @@ The package `@navikt/oasis` was not being installed in NAIS, causing the error:
 Changed from `optionalDependencies` to `dependencies` in `package.json` so it's required during build.
 
 ### 2. **Updated Dockerfile**
-Added support for GitHub NPM registry authentication:
+Created `.npmrc` dynamically during build (since it's gitignored):
 - Added `ARG GITHUB_TOKEN` to receive the token during build
-- Copy `.npmrc` file to configure the registry
+- **Create** `.npmrc` file dynamically with the token (not copied from repo)
 - Set up authentication before `npm install`
 - Remove `.npmrc` after installation for security
 

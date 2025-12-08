@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
-    "@navikt/oasis": "^7.1.1",
+    "@navikt/oasis": "4.1.1",
     "@toon-format/toon": "^2.0.1",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
