@@ -27,9 +27,9 @@ spec:
   ingresses:
     - https://startumami.ansatt.nav.no
   azure:
-  application:
-    enabled: true
-    allowAllUsers: true
-  sidecar:
-    autoLogin: true
-    enabled: true
+    application:
+      enabled: true
+      allowAllUsers: true
+    sidecar:
+      autoLogin: true
+      enabled: true

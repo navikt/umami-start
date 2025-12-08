@@ -103,6 +103,66 @@ app.get('/isready', (req, res) => {
     res.send('OK')
 })
 
+// User authentication endpoint - returns NAV ident and user info
+app.get('/api/user/me', async (req, res) => {
+    try {
+        // Try to import @navikt/oasis - it's optional locally but required in NAIS
+        let oasis;
+        try {
+            oasis = await import('@navikt/oasis');
+        } catch (importError) {
+            return res.status(503).json({
+                error: 'Authentication not available in local dev',
+                message: 'Deploy to NAIS to test authentication',
+                details: importError.message
+            });
+        }
+
+        const { getToken, validateToken, parseAzureUserToken } = oasis;
+
+        // Extract token from request
+        const token = getToken(req);
+
+        if (!token) {
+            return res.status(401).json({ error: 'No authentication token provided' });
+        }
+
+        // Validate the token
+        const validation = await validateToken(token);
+
+        if (!validation.ok) {
+            return res.status(401).json({
+                error: 'Invalid token',
+                details: validation.error?.message || 'Token validation failed'
+            });
+        }
+
+        // Parse the Azure token to get user information
+        const parsed = parseAzureUserToken(token);
+
+        if (!parsed.ok) {
+            return res.status(500).json({ error: 'Failed to parse token' });
+        }
+
+        // Return user information
+        res.json({
+            navIdent: parsed.NAVident,
+            name: parsed.name,
+            email: parsed.preferred_username,
+            authenticated: true,
+            message: `Successfully authenticated as ${parsed.NAVident}`
+        });
+
+    } catch (error) {
+        console.error('Authentication error:', error);
+        res.status(500).json({
+            error: 'Authentication failed',
+            details: error.message
+        });
+    }
+});
+
+
 // Get diagnosis data (global overview)
 app.post('/api/bigquery/diagnosis', async (req, res) => {
     try {
