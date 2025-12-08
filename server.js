@@ -470,6 +470,10 @@ app.post('/api/bigquery', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const { startAt, endAt, urlPath } = req.query;
 
         if (!bigquery) {
@@ -510,8 +514,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
             ORDER BY count DESC
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -564,6 +567,10 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const { startAt, endAt, includeParams, eventName, urlPath } = req.query;
 
         if (!bigquery) {
@@ -718,6 +725,9 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
 app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+
+
         const { startAt, endAt, eventName, urlPath, interval = 'day' } = req.query;
 
         if (!bigquery) {
@@ -773,8 +783,7 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
             ORDER BY 1
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -802,6 +811,10 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         if (!bigquery) {
             return res.status(500).json({
@@ -852,6 +865,9 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+
+
         const { startAt, endAt, eventName, parameterName, urlPath } = req.query;
 
         if (!bigquery) {
@@ -902,8 +918,7 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             LIMIT 100
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -956,6 +971,9 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
 app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+
+
         const { startAt, endAt, eventName, urlPath, limit = '20' } = req.query;
 
         if (!bigquery) {
@@ -1009,8 +1027,7 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
         console.log('[Latest Events] Query params:', params);
         console.log('[Latest Events] URL filter:', urlFilter);
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -1081,6 +1098,9 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => {
     try {
         const { websiteId } = req.params;
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits' } = req.query;
 
         if (!bigquery) {
@@ -1133,8 +1153,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             ORDER BY 1
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -1188,6 +1207,9 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
     try {
         const { websiteId } = req.params;
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const { startAt, endAt, limit = '50', metricType = 'visits' } = req.query;
 
         if (!bigquery) {
@@ -1302,8 +1324,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             `;
         }
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -1358,6 +1379,9 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
 // Get websites from BigQuery
 app.get('/api/bigquery/websites', async (req, res) => {
     try {
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
@@ -1379,8 +1403,7 @@ app.get('/api/bigquery/websites', async (req, res) => {
             ORDER BY name
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -1416,6 +1439,10 @@ app.get('/api/bigquery/websites', async (req, res) => {
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
         const { websiteId, startUrl, startDate, endDate, steps = 3, limit = 30, direction = 'forward' } = req.body;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1523,8 +1550,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
             ORDER BY step, value DESC
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -1706,6 +1732,9 @@ app.post('/api/bigquery/funnel', async (req, res) => {
     try {
         const { websiteId, urls, steps: inputSteps, startDate, endDate, onlyDirectEntry = true } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
@@ -1859,7 +1888,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -1918,6 +1947,10 @@ app.post('/api/bigquery/funnel', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const { startAt, endAt, urlPath, limit = '100', metricType = 'visits' } = req.query;
 
         if (!bigquery) {
