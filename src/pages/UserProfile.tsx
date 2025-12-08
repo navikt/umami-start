@@ -62,7 +62,6 @@ export default function UserProfile() {
             <VStack gap="6">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 rounded-lg shadow-lg">
                     <Heading size="large" className="mb-4">Din profil</Heading>
-                    <BodyShort className="text-blue-100">{user?.message}</BodyShort>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
@@ -70,7 +69,7 @@ export default function UserProfile() {
                         <HStack gap="3" align="center">
                             <PersonIcon className="text-blue-600" fontSize="2rem" />
                             <div>
-                                <Label>NAV-ident</Label>
+                                <Label>Nav-ident</Label>
                                 <BodyShort className="text-2xl font-bold text-blue-600">
                                     {user?.navIdent}
                                 </BodyShort>
@@ -87,28 +86,12 @@ export default function UserProfile() {
                         <div className="h-px bg-gray-200" />
 
                         <HStack gap="3" align="center">
-                            <EnvelopeClosedIcon className="text-blue-600" fontSize="1.5rem" />
                             <div>
                                 <Label>E-post</Label>
                                 <BodyShort className="text-lg">{user?.email}</BodyShort>
                             </div>
                         </HStack>
                     </VStack>
-                </div>
-
-                <Alert variant="success">
-                    <Heading size="small" spacing>Autentisering vellykket!</Heading>
-                    <BodyShort>
-                        Du er logget inn via Entra ID. Dette endepunktet kan brukes til å hente
-                        brukerinformasjon i andre deler av applikasjonen.
-                    </BodyShort>
-                </Alert>
-
-                <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                    <Label className="mb-2">API-endepunkt:</Label>
-                    <code className="text-sm bg-gray-800 text-green-400 p-2 rounded block">
-                        GET /api/user/me
-                    </code>
                 </div>
             </VStack>
         </div>
