@@ -171,10 +171,19 @@ async function authenticateUser(req, res, next) {
 
         // Add user information to request object for audit logging
         // Format name as "Firstname Lastname" (Norwegian convention)
-        const nameParts = parsed.name?.split(', ') || [];
+        let name = parsed.name || '';
+
+        // Fix potential encoding issues
+        if (name.includes('Ã')) {
+            try {
+                name = Buffer.from(name, 'latin1').toString('utf-8');
+            } catch (e) { console.warn('[Auth] Failed to fix encoding:', name); }
+        }
+
+        const nameParts = name.split(', ');
         const formattedName = nameParts.length === 2
             ? `${nameParts[1]} ${nameParts[0]}`
-            : parsed.name;
+            : name;
 
         req.user = {
             navIdent: parsed.NAVident,
@@ -242,10 +251,23 @@ app.get('/api/user/me', async (req, res) => {
         // Return user information
         // Format name as "Firstname Lastname" (Norwegian convention)
         // Azure returns "Lastname, Firstname" so we need to reverse it
-        const nameParts = parsed.name?.split(', ') || [];
+        let name = parsed.name || '';
+
+        // Fix potential encoding issues (UTF-8 bytes interpreted as Latin-1)
+        // Example: "VebjÃ¸rn" -> "Vebjørn"
+        if (name.includes('Ã')) {
+            try {
+                name = Buffer.from(name, 'latin1').toString('utf-8');
+            } catch (e) {
+                // Keep original if fixing fails
+                console.warn('[Auth] Failed to fix encoding for name:', name);
+            }
+        }
+
+        const nameParts = name.split(', ');
         const formattedName = nameParts.length === 2
             ? `${nameParts[1]} ${nameParts[0]}` // Firstname Lastname
-            : parsed.name; // Fallback to original if format is unexpected
+            : name; // Fallback to original if format is unexpected
 
         res.json({
             navIdent: parsed.NAVident,
