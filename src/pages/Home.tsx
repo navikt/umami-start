@@ -7,7 +7,7 @@ import { analyticsPages } from "../components/AnalyticsNavigation.tsx";
 const sections = [
     {
         title: "Trafikk & hendelser",
-        description: "Se trafikk og hendelser",
+        description: "Forstå hva som påvirker trafikken",
         bgColor: "#fff",
         accentColor: "#0067C5",
         ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
