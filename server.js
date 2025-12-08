@@ -2064,6 +2064,9 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
     try {
         const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
@@ -2208,7 +2211,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -2826,6 +2829,9 @@ app.post('/api/bigquery/users', async (req, res) => {
     try {
         const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0 } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
         }
@@ -2864,7 +2870,7 @@ app.post('/api/bigquery/users', async (req, res) => {
         `;
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -2941,6 +2947,9 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
     try {
         const { websiteId } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!websiteId) {
             return res.status(400).json({ error: 'Missing websiteId' });
         }
@@ -2968,7 +2977,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
         const params = { websiteId };
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [historyJob] = await bigquery.createQueryJob(addAuditLogging({
             query: historyQuery,
@@ -3052,6 +3061,9 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
         const { sessionId } = req.params;
         const { websiteId, startDate, endDate } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
         }
@@ -3079,7 +3091,7 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
         `;
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
