@@ -61,7 +61,7 @@ export default function UserProfile() {
         <div className="container mx-auto p-8 max-w-2xl">
             <VStack gap="6">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 rounded-lg shadow-lg">
-                    <Heading size="large" className="mb-4">Din profil</Heading>
+                    <Heading size="large">Din profil</Heading>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
