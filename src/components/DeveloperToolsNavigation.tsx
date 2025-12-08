@@ -20,16 +20,16 @@ export const developerTools = [
         description: 'Sjekker om hendelser mottas'
     },
     {
-        id: 'brukerprofiler',
-        href: '/brukerprofiler',
-        label: 'Brukerprofiler',
-        description: 'Se besøkende og deres aktivitet'
-    },
-    {
         id: 'event-explorer',
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
+    },
+    {
+        id: 'brukerprofiler',
+        href: '/brukerprofiler',
+        label: 'Brukerprofiler',
+        description: 'Se besøkende og deres aktivitet'
     },
     {
         id: 'sql',

@@ -162,7 +162,7 @@ function Home() {
                             e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 103, 197, 0.2)';
                         }}
                     >
-                        Åpne Grafbyggeren
+                        Gå til Grafbyggeren
                     </Link>
                 </div>
 
