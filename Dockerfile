@@ -9,10 +9,10 @@ ARG GITHUB_TOKEN
 
 WORKDIR /app
 
-# Copy package files and npmrc
-COPY package.json package-lock.json .npmrc ./
+# Copy package files
+COPY package.json package-lock.json ./
 
-# Set GitHub token for npm registry authentication
+# Create .npmrc for GitHub NPM registry authentication
 RUN if [ -n "$GITHUB_TOKEN" ]; then \
     echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc && \
     echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
@@ -40,9 +40,8 @@ WORKDIR /app
 
 # Copy package files and npmrc
 COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY .npmrc ./
 
-# Set GitHub token for npm registry authentication
+# Create .npmrc for GitHub NPM registry authentication
 RUN if [ -n "$GITHUB_TOKEN" ]; then \
     echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc && \
     echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
