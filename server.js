@@ -299,7 +299,6 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -357,11 +356,8 @@ app.post('/api/bigquery', async (req, res) => {
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
-            location: 'europe-north1',
-        })
-            query: query,
-            location: 'europe-north1',
-        })
+            location: 'europe-north1'
+        }, navIdent));
 
         console.log('[BigQuery API] Query job created, waiting for results...');
 
@@ -373,7 +369,6 @@ app.post('/api/bigquery', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -490,7 +485,6 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -633,7 +627,6 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
 
         // Actual query execution
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -781,7 +774,6 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
         `;
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -886,7 +878,6 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -1011,7 +1002,6 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -1119,7 +1109,6 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -1291,7 +1280,6 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -1510,7 +1498,6 @@ app.post('/api/bigquery/journeys', async (req, res) => {
         // Get cost estimate
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -1639,12 +1626,8 @@ app.post('/api/bigquery/estimate', async (req, res) => {
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
-            dryRun: true,
-        })
-            query: query,
-            location: 'europe-north1',
-            dryRun: true,
-        })
+            dryRun: true
+        }, navIdent));
 
         const stats = job.metadata.statistics;
         const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);
@@ -1857,7 +1840,6 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         }
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -1974,7 +1956,6 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
                 let stats = null;
                 try {
                     // Get NAV ident from authenticated user for audit logging
-                    const navIdent = req.user?.navIdent || 'UNKNOWN';
 
                     const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                         query: query,
@@ -2208,7 +2189,6 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         }
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -2392,7 +2372,6 @@ app.post('/api/bigquery/retention', async (req, res) => {
         }
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -2533,7 +2512,6 @@ app.post('/api/bigquery/composition', async (req, res) => {
         }
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
@@ -2721,7 +2699,6 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         }
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: finalQuery,
@@ -2756,7 +2733,6 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: finalQuery,
@@ -2849,8 +2825,6 @@ app.post('/api/bigquery/users', async (req, res) => {
             ${searchFilter}
         `;
 
-        // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [countJob] = await bigquery.createQueryJob(addAuditLogging({
             query: countQuery,
@@ -2865,7 +2839,6 @@ app.post('/api/bigquery/users', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -2946,7 +2919,6 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
         }, navIdent));
 
         // Get NAV ident from authenticated user for audit logging
-        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const [lastEventJob] = await bigquery.createQueryJob(addAuditLogging({
             query: lastEventQuery,
@@ -2971,7 +2943,6 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunHistoryJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: historyQuery,
@@ -2981,7 +2952,6 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
             }, navIdent));
 
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunLastEventJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: lastEventQuery,
@@ -3065,7 +3035,6 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
         let queryStats = null;
         try {
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
