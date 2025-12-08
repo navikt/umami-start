@@ -2588,7 +2588,11 @@ app.post('/api/bigquery/composition', async (req, res) => {
 // Privacy Check Endpoint
 app.post('/api/bigquery/privacy-check', async (req, res) => {
     try {
+
         const { websiteId, startDate, endDate, dryRun } = req.body;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
@@ -2647,7 +2651,9 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         let websiteMap = new Map();
         if (!websiteId) {
             try {
-                const [siteRows] = await bigquery.query(`SELECT website_id, name FROM \`team-researchops-prod-01d6.umami.public_website\``);
+                const [siteRows] = await bigquery.query(addAuditLogging({
+                    query: `SELECT website_id, name FROM \`team-researchops-prod-01d6.umami.public_website\``
+                }, navIdent));
                 siteRows.forEach(r => websiteMap.set(r.website_id, r.name));
             } catch (e) {
                 console.error('Error fetching websites for global search:', e);
@@ -2713,7 +2719,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         if (dryRun) {
             try {
                 // Get NAV ident from authenticated user for audit logging
-                const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
                 const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                     query: finalQuery,
@@ -2743,6 +2749,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         }
 
         // Get NAV ident from authenticated user for audit logging
+
 
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: finalQuery,
@@ -3127,6 +3134,9 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
             })
         }
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const params = {
             websiteId,
             startDate,
@@ -3277,8 +3287,9 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
         // Get dry run stats first
         let queryStats = null;
         try {
+
             // Get NAV ident from authenticated user for audit logging
-            const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
@@ -3300,8 +3311,8 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
             console.log('[Event Journeys] Dry run failed:', dryRunError.message);
         }
 
-        const [journeyRows] = await bigquery.query({ query, params });
-        const [statsRows] = await bigquery.query({ query: statsQuery, params });
+        const [journeyRows] = await bigquery.query(addAuditLogging({ query, params }, navIdent));
+        const [statsRows] = await bigquery.query(addAuditLogging({ query: statsQuery, params }, navIdent));
         const journeyStats = statsRows[0] || {};
 
         const journeys = journeyRows.map(row => ({
