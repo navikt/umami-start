@@ -3025,7 +3025,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
     }
 });
 
-app.get("/me", (req, res) => res.json());
+app.get("/me", (req, res) => res.json(parseAzureUserToken(getToken(req))));
 
 app.get('/meme', async (req, res) => {
     try {
