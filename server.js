@@ -28,11 +28,12 @@ app.use((req, res, next) => {
     next()
 })
 
-// Ensure UTF-8 encoding for all JSON responses (fixes Norwegian characters)
-app.use((req, res, next) => {
+// Ensure UTF-8 encoding for API JSON responses (fixes Norwegian characters)
+app.use('/api', (req, res, next) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
     next()
 })
+
 
 
 // Initialize BigQuery client
