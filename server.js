@@ -726,6 +726,9 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
     try {
         const { websiteId } = req.params;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
 
         const { startAt, endAt, eventName, urlPath, interval = 'day' } = req.query;
@@ -866,6 +869,9 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
     try {
         const { websiteId } = req.params;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
 
         const { startAt, endAt, eventName, parameterName, urlPath } = req.query;
@@ -971,6 +977,9 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
 app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
 
 
@@ -2095,7 +2104,13 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
 // Get funnel timing data from BigQuery (average time per step)
 app.post('/api/bigquery/funnel-timing', async (req, res) => {
     try {
-        const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
+        const { websiteId, steps, startDate, endDate, onlyDirectEntry = true } = req.body;
+        let { urls } = req.body;
+
+        // Support 'steps' input format (array of objects) by extracting values
+        if (!urls && steps && Array.isArray(steps)) {
+            urls = steps.map(s => s.value);
+        }
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
