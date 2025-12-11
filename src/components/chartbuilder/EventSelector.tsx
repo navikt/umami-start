@@ -113,13 +113,13 @@ const EventSelector = ({
   return (
     <div className='mb-4'>
       <Heading level="3" size="xsmall" spacing>
-        Omfang
+        Hva vil du inkludere?
       </Heading>
 
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
         <Tabs defaultValue="sidestier" size="small">
           <Tabs.List>
-            <Tabs.Tab value="sidestier" label="Sider" />
+            <Tabs.Tab value="sidestier" label="Sidevisninger" />
             <Tabs.Tab value="hendelser" label="Hendelser" />
             <Tabs.Tab value="flere_valg" label="Flere filtervalg" />
             <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
@@ -256,8 +256,7 @@ const EventSelector = ({
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Aktivert som filtervalg i Metabase</p>
-                            <p className="text-gray-600">URL-sti kan velges som et filtervalg i Metabase-dashbord</p>
+                            <p className="text-gray-600">URL-sti kan velges som et filtervalg</p>
                           </div>
                         </div>
                       </div>
@@ -404,8 +403,7 @@ const EventSelector = ({
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium mb-1">Aktivert som filtervalg i Metabase</p>
-                        <p className="text-gray-600">Hendelsesnavn kan velges som filtervalg i Metabase-dashbord</p>
+                        <p className="text-gray-600">Hendelsesnavn kan velges som filtervalg</p>
                       </div>
                     </div>
                   </div>

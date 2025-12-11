@@ -982,7 +982,7 @@ const SQLPreview = ({
                     1
                   </div>
                   <div className="flex-grow">
-                    <p className="font-medium">Kopier spørsmålet</p>
+                    <p className="font-medium">Kopier spørringen</p>
                     <div className="mt-2">
                       {!copied ? (
                         <Button
@@ -992,11 +992,11 @@ const SQLPreview = ({
                           className="w-full md:w-auto"
                           loading={estimating}
                         >
-                          Kopier spørsmålet
+                          Kopier spørringen
                         </Button>
                       ) : (
                         <Alert variant="success" className="w-fit p-2 flex items-center">
-                          Spørsmålet er kopiert!
+                          Spørringen er kopiert!
                         </Alert>
                       )}
 
