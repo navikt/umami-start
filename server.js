@@ -137,9 +137,31 @@ async function authenticateUser(req, res, next) {
         try {
             oasis = await import('@navikt/oasis');
         } catch (importError) {
-            // In local dev, oasis might not be available - continue without auth
-            console.log('[Auth] @navikt/oasis not available (local dev)');
+            // In local dev, oasis might not be available
+            // Check for mock ident
+            if (process.env.MOCK_NAV_IDENT) {
+                console.log('[Auth] Using MOCK_NAV_IDENT:', process.env.MOCK_NAV_IDENT);
+                req.user = {
+                    navIdent: process.env.MOCK_NAV_IDENT,
+                    name: 'Mock User',
+                    email: 'mock.user@nav.no'
+                };
+                return next();
+            }
+
+            console.log('[Auth] @navikt/oasis not available and no MOCK_NAV_IDENT set');
             req.user = { navIdent: 'LOCAL_DEV' }; // Fallback for local development
+            return next();
+        }
+
+        // Check for mock ident even if oasis is available (for local testing with installed deps)
+        if (process.env.MOCK_NAV_IDENT) {
+            console.log('[Auth] Using MOCK_NAV_IDENT (override):', process.env.MOCK_NAV_IDENT);
+            req.user = {
+                navIdent: process.env.MOCK_NAV_IDENT,
+                name: 'Mock User',
+                email: 'mock.user@nav.no'
+            };
             return next();
         }
 
@@ -215,10 +237,30 @@ app.get('/api/user/me', async (req, res) => {
         try {
             oasis = await import('@navikt/oasis');
         } catch (importError) {
+            if (process.env.MOCK_NAV_IDENT) {
+                return res.json({
+                    navIdent: process.env.MOCK_NAV_IDENT,
+                    name: 'Mock User',
+                    email: 'mock.user@nav.no',
+                    authenticated: true,
+                    message: `Vellykket autentisert som ${process.env.MOCK_NAV_IDENT} (MOCK)`
+                });
+            }
+
             return res.status(503).json({
                 error: 'Authentication not available in local dev',
                 message: 'Deploy to NAIS to test authentication',
                 details: importError.message
+            });
+        }
+
+        if (process.env.MOCK_NAV_IDENT) {
+            return res.json({
+                navIdent: process.env.MOCK_NAV_IDENT,
+                name: 'Mock User',
+                email: 'mock.user@nav.no',
+                authenticated: true,
+                message: `Vellykket autentisert som ${process.env.MOCK_NAV_IDENT} (MOCK)`
             });
         }
 
