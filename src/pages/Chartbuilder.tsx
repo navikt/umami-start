@@ -319,12 +319,12 @@ const ChartsPage = () => {
   }, []);
 
   // Add state to manage FormProgress open state
-  const [formProgressOpen, setFormProgressOpen] = useState<boolean>(true);
+  // const [formProgressOpen, setFormProgressOpen] = useState<boolean>(true);
 
   // Create a handler for FormProgress open state changes
-  const handleFormProgressOpenChange = (open: boolean) => {
-    setFormProgressOpen(open);
-  };
+  // const handleFormProgressOpenChange = (open: boolean) => {
+  //   setFormProgressOpen(open);
+  // };
 
   // Create refs to expose reset functions from child components
   const chartFiltersRef = useRef<{ resetFilters: (silent?: boolean) => void; enableCustomEvents: () => void }>(null);
@@ -1454,6 +1454,8 @@ const ChartsPage = () => {
                   moveMetric={moveMetric}
                   filters={filters}
                   hideHeader={true}
+                  availableEvents={availableEvents}
+                  isEventsLoading={isEventsLoading}
                 />
               </section>
 
@@ -1531,12 +1533,13 @@ const ChartsPage = () => {
         <SQLPreview
           sql={generatedSQL}
           activeStep={currentStep}
-          openFormprogress={formProgressOpen}
-          onOpenChange={handleFormProgressOpenChange}
+          openFormprogress={false}
           filters={filters}
           metrics={config.metrics}
           groupByFields={config.groupByFields}
           onResetAll={resetAll}
+          availableEvents={availableEvents}
+          isEventsLoading={isEventsLoading}
         />
       </div>
     </ChartLayout >

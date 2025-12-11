@@ -1,4 +1,4 @@
-import { Button, Heading, Select, TextField, HelpText, Tabs, Label } from '@navikt/ds-react';
+import { Button, Heading, Select, TextField, HelpText, Tabs, Label, UNSAFE_Combobox } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock, LogOut } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import {
@@ -23,6 +23,8 @@ interface SummarizeProps {
   moveMetric: (index: number, direction: 'up' | 'down') => void;
   filters: Filter[];
   hideHeader?: boolean;
+  availableEvents?: string[];
+  isEventsLoading?: boolean;
 }
 
 const Summarize = forwardRef(({
@@ -36,7 +38,9 @@ const Summarize = forwardRef(({
   removeMetric,
   addMetric,
   moveMetric,
-  hideHeader = false
+  hideHeader = false,
+  availableEvents = [],
+  isEventsLoading = false
 }: SummarizeProps, ref) => {
   const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
@@ -528,7 +532,84 @@ const Summarize = forwardRef(({
                   <div className="mt-4 border-t pt-4">
                     {metric.function === 'count_where' ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* ...existing code for count_where metric type... */}
+                        <div>
+                          <Select
+                            label="Hva skal telles?"
+                            value={metric.column || ''}
+                            onChange={(e) => updateMetric(index, { column: e.target.value })}
+                            size="small"
+                            className="w-full"
+                          >
+                            <option value="">Velg kolonne...</option>
+                            <option value="session_id">Besøk (sessions)</option>
+                            <option value="event_id">Hendelser (events)</option>
+                            <option value="visit_id">Unike besøkende (visitors)</option>
+                          </Select>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded border">
+                          <Label size="small" className="mb-2 block">Filtrer på (WHERE)</Label>
+                          <div className="flex flex-col gap-2">
+                            <Select
+                              label="Kolonne"
+                              hideLabel
+                              value={metric.whereColumn || ''}
+                              onChange={(e) => updateMetric(index, { whereColumn: e.target.value, whereValue: '' })}
+                              size="small"
+                            >
+                              <option value="">Velg kolonne...</option>
+                              <option value="event_name">Hendelsesnavn</option>
+                              <option value="url_path">URL-sti</option>
+                              <optgroup label="Enhet">
+                                <option value="device">Enhetstype</option>
+                                <option value="browser">Nettleser</option>
+                                <option value="os">Operativsystem</option>
+                              </optgroup>
+                            </Select>
+
+                            <Select
+                              label="Operator"
+                              hideLabel
+                              value={metric.whereOperator || '='}
+                              onChange={(e) => updateMetric(index, { whereOperator: e.target.value })}
+                              size="small"
+                            >
+                              <option value="=">Er lik (=)</option>
+                              <option value="!=">Er ikke lik (!=)</option>
+                              <option value="LIKE">Inneholder (LIKE)</option>
+                              <option value="NOT LIKE">Inneholder ikke (NOT LIKE)</option>
+                              <option value="STARTS_WITH">Starter med</option>
+                            </Select>
+
+                            {metric.whereColumn === 'event_name' ? (
+                              <div>
+                                {isEventsLoading && <div className="text-xs text-gray-500 mb-1">Laster hendelser...</div>}
+                                <div className={isEventsLoading ? 'opacity-50 pointer-events-none' : ''}>
+                                  <UNSAFE_Combobox
+                                    label="Verdi"
+                                    hideLabel
+                                    options={availableEvents.map(e => ({ label: e, value: e }))}
+                                    selectedOptions={metric.whereValue ? [metric.whereValue] : []}
+                                    onToggleSelected={(option, isSelected) => {
+                                      updateMetric(index, { whereValue: isSelected ? option : '' });
+                                    }}
+                                    isMultiSelect={false}
+                                    size="small"
+                                    // @ts-ignore
+                                    disabled={isEventsLoading}
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <TextField
+                                label="Verdi"
+                                hideLabel
+                                value={metric.whereValue || ''}
+                                onChange={(e) => updateMetric(index, { whereValue: e.target.value })}
+                                size="small"
+                              />
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex flex-col md:flex-row gap-4">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, Modal, DatePicker, TextField } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
@@ -17,6 +17,8 @@ interface SQLPreviewProps {
   metrics?: Array<{ column?: string }>;
   groupByFields?: string[];
   onResetAll?: () => void; // Add new prop for reset functionality
+  availableEvents?: string[];
+  isEventsLoading?: boolean;
 }
 
 const API_TIMEOUT_MS = 60000; // timeout
@@ -39,6 +41,8 @@ const SQLPreview = ({
   metrics = [],
   groupByFields = [],
   onResetAll,
+  availableEvents = [],
+  isEventsLoading = false
 }: SQLPreviewProps) => {
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -899,14 +903,24 @@ const SQLPreview = ({
                     )}
 
                     {/* Event Name Filter */}
+                    {/* Event Name Filter */}
                     {hasEventNameFilter && (
                       <div className="w-64">
-                        <TextField
-                          label="Hendelsesnavn"
-                          size="small"
-                          value={eventName}
-                          onChange={(e) => setEventName(e.target.value)}
-                        />
+                        {isEventsLoading && <div className="text-xs text-gray-500 mb-1">Laster hendelser...</div>}
+                        <div className={isEventsLoading ? 'opacity-50 pointer-events-none' : ''}>
+                          <UNSAFE_Combobox
+                            label="Hendelsesnavn"
+                            options={availableEvents.map(e => ({ label: e, value: e }))}
+                            selectedOptions={eventName ? [eventName] : []}
+                            onToggleSelected={(option, isSelected) => {
+                              setEventName(isSelected ? option : '');
+                            }}
+                            isMultiSelect={false}
+                            size="small"
+                            // @ts-ignore
+                            disabled={isEventsLoading}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
