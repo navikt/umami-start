@@ -106,36 +106,37 @@ const EventSelector = ({
     }
   };
 
-  const activeFilterCount = filters.filter(f => !isDateRangeFilter(f)).length + (filters.some(isDateRangeFilter) ? 1 : 0);
+  const activeFilterCount = filters.filter(f => !isDateRangeFilter(f)).length;
 
   return (
     <div className='mb-4'>
       <Heading level="3" size="xsmall" spacing>
-        Filtrer etter...
+        Omfang
       </Heading>
 
       <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
         <Tabs defaultValue="sidestier" size="small">
           <Tabs.List>
-            <Tabs.Tab value="sidestier" label="Sidevisninger" />
+            <Tabs.Tab value="sidestier" label="Sider" />
             <Tabs.Tab value="hendelser" label="Hendelser" />
-            <Tabs.Tab value="flere_valg" label="Flere valg" />
+            <Tabs.Tab value="flere_valg" label="Flere filtre" />
             <Tabs.Tab value="active_filters" label={`Aktive filter (${activeFilterCount})`} />
           </Tabs.List>
 
           <Tabs.Panel value="sidestier" className="pt-6">
             <div className="space-y-4">
-              <Switch
+
+              {/*<Switch
                 checked={selectedEventTypes.includes('pageviews')}
                 onChange={(e) => handleEventTypeChange('pageviews', e.target.checked)}
               >
                 Inkluder sidevisninger i grafen
-              </Switch>
+              </Switch>*/}
 
               {selectedEventTypes.includes('pageviews') && (
                 <div className="pl-0 mt-4">
                   <RadioGroup
-                    legend="Velg hvilke sider du vil se"
+                    legend="Hvilke sider?"
                     value={pageViewsMode}
                     onChange={(val) => {
                       const newMode = val as 'all' | 'specific' | 'interactive';
@@ -151,9 +152,9 @@ const EventSelector = ({
                       }
                     }}
                   >
-                    <Radio value="all">Alle sider</Radio>
-                    <Radio value="specific">Bestemte sider</Radio>
-                    <Radio value="interactive">Filtervalg i Metabase</Radio>
+                    <Radio value="all">Alle (hele nettstedet)</Radio>
+                    <Radio value="specific">Utvalgte sider</Radio>
+                    <Radio value="interactive">Mottaker velger selv</Radio>
                   </RadioGroup>
 
                   <div className="mt-4">
@@ -276,13 +277,13 @@ const EventSelector = ({
                   }
                 }}
               >
-                Inkluder egendefinerte hendelser i grafen
+                Inkluder egendefinerte hendelser
               </Switch>
 
               {selectedEventTypes.includes('custom_events') && (
                 <div className="pl-0 mt-4">
                   <RadioGroup
-                    legend="Velg hvilke hendelser du vil se"
+                    legend="Hvilke hendelser?"
                     value={customEventsMode}
                     onChange={(val) => {
                       const newMode = val as 'all' | 'specific' | 'interactive';
@@ -300,9 +301,9 @@ const EventSelector = ({
                       }
                     }}
                   >
-                    <Radio value="all">Alle hendelser</Radio>
-                    <Radio value="specific">Bestemte hendelser</Radio>
-                    <Radio value="interactive">Filtervalg i Metabase</Radio>
+                    <Radio value="all">Alle (ingen avgrensning)</Radio>
+                    <Radio value="specific">Utvalgte hendelser</Radio>
+                    <Radio value="interactive">Mottaker velger selv</Radio>
                   </RadioGroup>
                   <div className="mt-4">
                     {customEventsMode === 'specific' && (
@@ -607,13 +608,6 @@ const EventSelector = ({
 
             {filters.length > 0 && (
               <div className="space-y-3">
-                {/* Add a single date range message if any date filters exist */}
-                {filters.some(isDateRangeFilter) && (
-                  <div className="p-3 bg-white rounded border border-gray-200">
-                    <strong>Datofilter:</strong> Inkludert i spørringen (se datovelger nederst)
-                  </div>
-                )}
-
                 {/* Only show non-date range filters in the regular filter list */}
                 {filters.map((filter, index) => !isDateRangeFilter(filter) && (
                   <div key={index} className="bg-white p-3 rounded border border-gray-200">
