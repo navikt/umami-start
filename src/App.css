@@ -23,3 +23,38 @@
     width: 1000px !important;
   }
 }
+
+/* Primary button for home page */
+.primary-button {
+  display: inline-block;
+  padding: 14px 32px;
+  background-color: #0067C5;
+  color: white;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 103, 197, 0.2);
+}
+
+.primary-button:hover {
+  background-color: #0056b4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 103, 197, 0.3);
+}
+
+.primary-button:focus {
+  outline: 3px solid #0067C5;
+  outline-offset: 3px;
+}
+
+.primary-button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.primary-button:focus-visible {
+  outline: 3px solid #0067C5;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #0067C5;
+}

@@ -139,28 +139,7 @@ function Home() {
                     </div>
                     <Link
                         href="/grafbygger"
-                        style={{
-                            display: 'inline-block',
-                            padding: '14px 32px',
-                            backgroundColor: '#0067C5', // Primary blue
-                            color: 'white',
-                            borderRadius: '50px',
-                            textDecoration: 'none',
-                            fontWeight: 600,
-                            fontSize: '16px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 2px 4px rgba(0, 103, 197, 0.2)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#0056b4';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 103, 197, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#0067C5';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 103, 197, 0.2)';
-                        }}
+                        className="primary-button"
                     >
                         Gå til Grafbyggeren
                     </Link>
