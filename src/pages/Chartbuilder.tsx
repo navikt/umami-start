@@ -253,7 +253,7 @@ const ChartsPage = () => {
   const [forceReload] = useState<boolean>(false); // Add state to force reload
   // const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
-  /* const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false); */
+  const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false);
 
 
 
@@ -1416,7 +1416,7 @@ const ChartsPage = () => {
               shouldReload={forceReload}
               // onIncludeParamsChange={setIncludeParams} - removed unused state
               resetIncludeParams={resetIncludeParams}
-              requestIncludeParams={false}
+              requestIncludeParams={requestIncludeParams}
               disableAutoEvents={true}
               requestLoadEvents={false}
             />
@@ -1464,7 +1464,7 @@ const ChartsPage = () => {
                   maxDaysAvailable={dateRangeInDays}
                   onEnableCustomEvents={() => {
                     // Force reload logic or handle usage
-                    handleWebsiteChange(config.website);
+                    setRequestIncludeParams(true);
                   }}
                   hideHeader={true}
                 />

@@ -259,7 +259,7 @@ const Summarize = forwardRef(({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Heading level="3" size="xsmall" >
-              Velg målinger
+              Hva vil du måle?
             </Heading>
             <HelpText title="Hva er en måling?">
               Legg til en eller flere målinger, disse vises som kolonner i tabeller og grafer.

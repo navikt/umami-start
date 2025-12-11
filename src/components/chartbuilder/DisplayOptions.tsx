@@ -245,7 +245,7 @@ const DisplayOptions = forwardRef(({
         <div className="space-y-4 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Heading level="3" size="xsmall" >
-              Velg gruppering
+              Grupper etter...
             </Heading>
             <HelpText title="Hva er en gruppering?">
               Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
@@ -561,7 +561,6 @@ const DisplayOptions = forwardRef(({
             )}
 
             <Switch
-              className="mt-1"
               size="small"
               description={limit && limit !== 1000
                 ? `Begrenser til ${limit} rader`

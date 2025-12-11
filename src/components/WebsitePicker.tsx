@@ -620,17 +620,20 @@ const WebsitePicker = ({
           </>
         )}
 
-        {selectedWebsite && includeParams && (
+        {/* {selectedWebsite && includeParams && (
           <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
             <div className="text-sm text-gray-700">
               Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
             </div>
           </div>
-        )}
+          )}  
+        */}
+
       </div>
       {
         showLoading && (
-          <div className="space-y-2">
+          <>
+            {/*<div className="space-y-2">
             <div className="flex items-center gap-2">
               <span>Laster inn hendelser...</span>
               {estimatedGbProcessed && (
@@ -648,7 +651,8 @@ const WebsitePicker = ({
               }}
               aria-label="Laster inn data"
             />
-          </div>
+          </div> */}
+          </>
         )
       }
     </div >
