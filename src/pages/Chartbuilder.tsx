@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Heading, VStack, Switch } from '@navikt/ds-react';
 import WebsitePicker from '../components/WebsitePicker';
-import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import SQLPreview from '../components/chartbuilder/sqlpreview';
 import ChartFilters from '../components/chartbuilder/ChartFilters';
+import ChartLayout from '../components/ChartLayout';
 import Summarize from '../components/chartbuilder/Summarize';
-import EventParameterSelector from '../components/chartbuilder/EventParameterSelector';
+// EventParameterSelector import removed as per user request
 import DisplayOptions from '../components/chartbuilder/DisplayOptions';
 import AlertWithCloseButton from '../components/chartbuilder/AlertWithCloseButton';
 import { FILTER_COLUMNS } from '../lib/constants';
@@ -240,19 +239,23 @@ const ChartsPage = () => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
-  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
+  /* const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0); */
+  // const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
 
   // Add missing state variables for date range settings
   const [dateRangeInDays, setDateRangeInDays] = useState<number>(14);
-  const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(14);
-  const [dateChanged, setDateChanged] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [forceReload, setForceReload] = useState<boolean>(false); // Add state to force reload
-  const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
+  /* const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(14); */
+  // const [tempDateRangeInDays, setTempDateRangeInDays] = useState<number>(14);
+
+  /* const [dateChanged, setDateChanged] = useState<boolean>(false); */
+  /* const [isLoading, setIsLoading] = useState<boolean>(false); */
+  /* const [forceReload, setForceReload] = useState<boolean>(false); */
+  const [forceReload] = useState<boolean>(false); // Add state to force reload
+  // const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
-  const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false); // Add state to request loading params
-  const [eventsRequested, setEventsRequested] = useState<boolean>(false); // State to trigger event fetching
-  const [showEventExplorer, setShowEventExplorer] = useState<boolean>(false); // State to control explorer visibility
+  /* const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false); */
+
+
 
   // Add state to track the current step
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1330,25 +1333,9 @@ const ChartsPage = () => {
     }));
   };
 
-  const handleDateRangeChange = useCallback(() => {
-    if (tempDateRangeInDays < 1) {
-      setTempDateRangeInDays(1);
-      setDateRangeInDays(1);
-    } else if (tempDateRangeInDays > maxDaysAvailable && maxDaysAvailable > 0) {
-      setTempDateRangeInDays(maxDaysAvailable);
-      setDateRangeInDays(maxDaysAvailable);
-    } else {
-      setDateRangeInDays(tempDateRangeInDays);
-    }
-    if (config.website) {
-      setIsLoading(true);
-      setForceReload(prev => !prev);
-      setDateChanged(true);
-      setTimeout(() => {
-        setDateChanged(false);
-      }, 5000);
-    }
-  }, [tempDateRangeInDays, maxDaysAvailable, config.website]);
+  /* const handleDateRangeChange = useCallback(() => {
+    // ... removed ...
+  }, [tempDateRangeInDays, maxDaysAvailable, config.website]); */
 
   const handleWebsiteChange = useCallback((website: Website | null) => {
     setConfig(prev => ({
@@ -1377,21 +1364,21 @@ const ChartsPage = () => {
       const days = Number(dateRange);
       if (days > 0 && days <= 90) {
         setDateRangeInDays(days);
-        setTempDateRangeInDays(days);
+        // setTempDateRangeInDays(days);
       }
     }
   }, []);
 
-  const handleEventsLoad = useCallback((events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
+  const handleEventsLoad = useCallback((events: string[], autoParameters?: { key: string; type: 'string' }[], _maxDays?: number) => {
     setAvailableEvents(events);
     if (autoParameters) {
       setParameters(autoParameters);
     }
-    if (maxDays !== undefined) {
-      setMaxDaysAvailable(maxDays);
-    }
+    // if (maxDays !== undefined) {
+    //   setMaxDaysAvailable(maxDays);
+    // }
     setDateRangeReady(true);
-    setIsLoading(false);
+    // setIsLoading(false);
   }, []);
 
   const setParamAggregation = (strategy: 'representative' | 'unique') => {
@@ -1413,180 +1400,141 @@ const ChartsPage = () => {
   };
 
   return (
-    <div className="w-full max-w-[1600px]">
-      <Heading spacing level="1" size="medium" className="pt-12 pb-4">
-        Grafbyggeren
-      </Heading>
-      <Heading level="3" size="small" spacing className="text-gray-700 mt-2 mb-3">
-        Lurer du på hvordan folk bruker nettsiden eller appen din?
-      </Heading>
-
-      <p className="text-gray-600 mb-10 text-lg max-w-[59vh]">
-        Dette verktøyet hjelper deg med å stille spørsmål og gir deg svarene i form av grafer og tabeller – som kan deles og legges til i Metabase.
-      </p>
-
-
-      {/* Display the alert if it's active */}
-      {alertInfo.show && (
-        <div className="mb-4">
-          <AlertWithCloseButton variant="success">
-            {alertInfo.message}
-          </AlertWithCloseButton>
-        </div>
-      )}
-
-      <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-8">
-        <div className="mb-8 order-1 lg:order-none">
-          <VStack gap="4">
-            <section>
-              <WebsitePicker
-                selectedWebsite={config.website}
-                onWebsiteChange={handleWebsiteChange}
-                onEventsLoad={handleEventsLoad}
-                dateRangeInDays={dateRangeInDays}
-                shouldReload={forceReload}
-                onIncludeParamsChange={setIncludeParams}
-                resetIncludeParams={resetIncludeParams}
-                requestIncludeParams={requestIncludeParams}
-                disableAutoEvents={true}
-                requestLoadEvents={eventsRequested}
-              />
-            </section>
-
-            {config.website && dateRangeReady && (
-              <>
-                {/* Step 1: Explorer - Keep this in original position for learning purposes */}
-                <section className='-mb-3'>
-                  <div>
-                    <Switch
-                      checked={showEventExplorer}
-                      onChange={() => setShowEventExplorer(!showEventExplorer)}
-                    >
-                      Vis hendelsesutforsker
-                    </Switch>
-
-                    {showEventExplorer && (
-                      <div className="mt-4">
-                        <EventParameterSelector
-                          availableEvents={availableEvents}
-                          parameters={parameters}
-                          setParameters={setParameters}
-                          maxDaysAvailable={maxDaysAvailable}
-                          dateRangeInDays={dateRangeInDays}
-                          tempDateRangeInDays={tempDateRangeInDays}
-                          handleDateRangeChange={handleDateRangeChange}
-                          dateChanged={dateChanged}
-                          isLoading={isLoading}
-                          includeParams={includeParams}
-                          onLoadDetailsClick={() => setRequestIncludeParams(true)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                {/* Step 2: What to Calculate (Metrics) - Simplified to just metrics */}
-                <section className="mt-4">
-                  <Summarize
-                    ref={summarizeRef} // Add ref
-                    metrics={config.metrics}
-                    parameters={parameters}
-                    METRICS={METRICS}
-                    COLUMN_GROUPS={FILTER_COLUMNS}
-                    getMetricColumns={getMetricColumns}
-                    sanitizeColumnName={sanitizeColumnName}
-                    updateMetric={(index, updates) => updateMetric(index, updates)}
-                    removeMetric={removeMetric}
-                    addMetric={addMetric}
-                    moveMetric={moveMetric}
-                    filters={filters}
-                  />
-                </section>
-
-                {/* Step 3: Event Filter Selection */}
-                <section className="mt-4">
-                  <ChartFilters
-                    ref={chartFiltersRef} // Add ref
-                    filters={filters}
-                    parameters={parameters}
-                    setFilters={setFilters}
-                    availableEvents={availableEvents}
-                    maxDaysAvailable={maxDaysAvailable}
-                    onEnableCustomEvents={() => {
-                      setEventsRequested(true);
-                    }}
-                  />
-                </section>
-
-                {/* Step 4: New Display Options component for grouping and visualization */}
-                <section className="mt-4">
-                  <DisplayOptions
-                    ref={displayOptionsRef} // Add ref
-                    groupByFields={config.groupByFields}
-                    parameters={parameters}
-                    dateFormat={config.dateFormat}
-                    orderBy={config.orderBy}
-                    paramAggregation={config.paramAggregation}
-                    limit={config.limit}
-                    DATE_FORMATS={DATE_FORMATS}
-                    COLUMN_GROUPS={FILTER_COLUMNS}
-                    sanitizeColumnName={sanitizeColumnName}
-                    addGroupByField={addGroupByField}
-                    removeGroupByField={removeGroupByField}
-                    moveGroupField={moveGroupField}
-                    setOrderBy={setOrderBy}
-                    clearOrderBy={clearOrderBy}
-                    setDateFormat={(format) => setConfig(prev => ({
-                      ...prev,
-                      dateFormat: format as DateFormat['value']
-                    }))}
-                    setParamAggregation={setParamAggregation}
-                    setLimit={setLimit}
-                    metrics={config.metrics}
-                    filters={filters}
-                    onEnableCustomEvents={() => {
-                      if (chartFiltersRef.current) {
-                        chartFiltersRef.current.enableCustomEvents();
-                      }
-                    }}
-                  />
-                </section>
-              </>
-            )}
-          </VStack>
-
-          <div className="mt-8 hidden lg:block mb-[40rem]">
-            <AnalyticsNavigation currentPage="grafbygger" />
-          </div>
-        </div>
-
-        <div className="mb-8 order-2 lg:order-none lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)]">
-          <div className="overflow-y-auto h-full">
-            <SQLPreview
-              sql={generatedSQL}
-              activeStep={currentStep}
-              openFormprogress={formProgressOpen}
-              onOpenChange={handleFormProgressOpenChange}
-              filters={filters}
-              metrics={config.metrics}
-              groupByFields={config.groupByFields}
-              onResetAll={resetAll} // Add reset function
+    <ChartLayout
+      title="Grafbyggeren"
+      description="Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase."
+      currentPage="grafbygger"
+      wideSidebar={true}
+      filters={
+        <>
+          <section>
+            <WebsitePicker
+              selectedWebsite={config.website}
+              onWebsiteChange={handleWebsiteChange}
+              onEventsLoad={handleEventsLoad}
+              dateRangeInDays={dateRangeInDays}
+              shouldReload={forceReload}
+              // onIncludeParamsChange={setIncludeParams} - removed unused state
+              resetIncludeParams={resetIncludeParams}
+              requestIncludeParams={false}
+              disableAutoEvents={true}
+              requestLoadEvents={false}
             />
-          </div>
-        </div>
+          </section>
 
-        <div className="order-3 lg:hidden">
-          <AnalyticsNavigation currentPage="grafbygger" />
-        </div>
+          {config.website && dateRangeReady && (
+            <>
+              {/* Step 1: Explorer */}
+              {/* <section className='-mb-3'>
+                <div>
+                   <div className="flex justify-between items-center bg-gray-50 p-4 rounded-md">
+                    <span>Vis hendelsesutforsker</span>
+                     Switch would go here
+                  </div>
+                </div>
+              </section> */}
+
+              {/* Step 2: Metrics */}
+              <section className="mt-4">
+                <Summarize
+                  ref={summarizeRef}
+                  metrics={config.metrics}
+                  parameters={parameters}
+                  METRICS={METRICS}
+                  COLUMN_GROUPS={FILTER_COLUMNS}
+                  getMetricColumns={getMetricColumns}
+                  sanitizeColumnName={sanitizeColumnName}
+                  updateMetric={(index, updates) => updateMetric(index, updates)}
+                  removeMetric={removeMetric}
+                  addMetric={addMetric}
+                  moveMetric={moveMetric}
+                  filters={filters}
+                  hideHeader={true}
+                />
+              </section>
+
+              {/* Step 3: Event Filter Selection */}
+              <section className="mt-4">
+                <ChartFilters
+                  ref={chartFiltersRef}
+                  filters={filters}
+                  parameters={parameters}
+                  setFilters={setFilters}
+                  availableEvents={availableEvents}
+                  maxDaysAvailable={dateRangeInDays}
+                  onEnableCustomEvents={() => {
+                    // Force reload logic or handle usage
+                    handleWebsiteChange(config.website);
+                  }}
+                  hideHeader={true}
+                />
+              </section>
+
+              {/* Step 4: Display Options */}
+              <section className="mt-4">
+                <DisplayOptions
+                  ref={displayOptionsRef}
+                  groupByFields={config.groupByFields}
+                  parameters={parameters}
+                  dateFormat={config.dateFormat}
+                  orderBy={config.orderBy}
+                  paramAggregation={config.paramAggregation}
+                  limit={config.limit}
+                  DATE_FORMATS={DATE_FORMATS}
+                  COLUMN_GROUPS={FILTER_COLUMNS}
+                  sanitizeColumnName={sanitizeColumnName}
+                  addGroupByField={addGroupByField}
+                  removeGroupByField={removeGroupByField}
+                  moveGroupField={moveGroupField}
+                  setOrderBy={setOrderBy}
+                  clearOrderBy={clearOrderBy}
+                  setDateFormat={(format) => setConfig(prev => ({
+                    ...prev,
+                    dateFormat: format as DateFormat['value']
+                  }))}
+                  setParamAggregation={setParamAggregation}
+                  setLimit={setLimit}
+                  metrics={config.metrics}
+                  filters={filters}
+                  onEnableCustomEvents={() => {
+                    if (chartFiltersRef.current) {
+                      chartFiltersRef.current.enableCustomEvents();
+                    }
+                  }}
+                  hideHeader={true}
+                />
+              </section>
+            </>
+          )}
+
+
+        </>
+      }
+    >
+      {/* Alert Display */}
+      {
+        alertInfo.show && (
+          <div className="mb-4">
+            <AlertWithCloseButton variant="success">
+              {alertInfo.message}
+            </AlertWithCloseButton>
+          </div>
+        )
+      }
+
+      <div className="sticky top-6">
+        <SQLPreview
+          sql={generatedSQL}
+          activeStep={currentStep}
+          openFormprogress={formProgressOpen}
+          onOpenChange={handleFormProgressOpenChange}
+          filters={filters}
+          metrics={config.metrics}
+          groupByFields={config.groupByFields}
+          onResetAll={resetAll}
+        />
       </div>
-      {/*  
-      <CopyButton 
-        textToCopy={generatedSQL} 
-        visible={!!generatedSQL && 
-          generatedSQL !== '-- Please select a website to generate SQL' && 
-          !isBasicTemplate(generatedSQL)}
-      />*/}
-    </div>
+    </ChartLayout >
   );
 };
 

@@ -530,7 +530,7 @@ const WebsitePicker = ({
 
   return (
     <div className={`space-y-4 ${variant === 'minimal' ? 'mb-1' : ''}`}>
-      <div className={`space-y-4 ${variant === 'default' ? 'p-4 bg-gray-50 rounded-lg border shadow-sm' : ''}`}>
+      <div className="space-y-4">
         {error && (
           <Alert variant="error" className="mb-4">
             {error}

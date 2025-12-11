@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, FormProgress, Modal, DatePicker, TextField } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, DatePicker, TextField } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
@@ -739,14 +739,14 @@ const SQLPreview = ({
   };
 
   // Check if SQL is meaningful enough to display
-  const isSQLMeaningful = () => {
+  {/* const isSQLMeaningful = () => {
     if (!sql) return false;
 
     // Basic template SQL should not be shown, it's not useful yet
     if (isBasicTemplate()) return false;
 
     return true;
-  };
+  }; */}
 
   // Check for interactive date filter and visit duration combination
   const hasInteractiveDateFilter = filters.some(
@@ -775,7 +775,7 @@ const SQLPreview = ({
   };
 
   // Custom handler for form progress open state changes
-  const handleFormProgressOpenChange = (open: boolean) => {
+  {/* const handleFormProgressOpenChange = (open: boolean) => {
     if (onOpenChange) {
       onOpenChange(open);
       // If the user manually opens it, track this action
@@ -783,7 +783,7 @@ const SQLPreview = ({
         setWasManuallyOpened(true);
       }
     }
-  };
+  }; */}
 
   useEffect(() => {
     if (onOpenChange) {
@@ -830,17 +830,17 @@ const SQLPreview = ({
 
   return (
     <>
-      <div className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
+      <div>
         {isBasicTemplate() ? (
-          // Show getting started guidance
-          <div className="space-y-4">
-            <Heading level="2" size="small">Klargjør spørsmålet ditt</Heading>
+          <>
 
-            {/* Only show SQL code button if the SQL is meaningful */}
+            {/* <div className="space-y-4">
+            <Heading level="2" size="small">Klargjør spørsmålet ditt</Heading>
             {isSQLMeaningful() && (
               <SqlCodeDisplay sql={sql} showEditButton={true} />
             )}
-          </div>
+          </div> */}
+          </>
         ) : (
           // Show the original SQL preview instructions
           <div>
@@ -1095,6 +1095,7 @@ const SQLPreview = ({
             {sql && <SqlCodeDisplay sql={sql} showEditButton={true} />}
           </div>
         )}
+        {/* 
         <div className="pt-0">
           <FormProgress
             activeStep={Math.min(activeStep, FINAL_STEP)} // Ensure we never show step 4
@@ -1108,6 +1109,7 @@ const SQLPreview = ({
             <FormProgress.Step>Vis resultater</FormProgress.Step>
           </FormProgress>
         </div>
+        */}
       </div>
 
       <div className="mt-4 mr-4">

@@ -9,6 +9,7 @@ interface ChartLayoutProps {
     filters: React.ReactNode;
     children: React.ReactNode;
     currentPage?: AnalyticsPage;
+    wideSidebar?: boolean;
 }
 
 const ChartLayout: React.FC<ChartLayoutProps> = ({
@@ -16,7 +17,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     description,
     filters,
     children,
-    currentPage
+    currentPage,
+    wideSidebar = false
 }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -28,6 +30,11 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
         }, 100);
         return () => clearTimeout(timer);
     }, [isSidebarOpen]);
+
+    // Define width classes based on wideSidebar prop
+    const sidebarWidth = wideSidebar ? 'md:w-1/2' : 'md:w-1/3';
+    const contentWidth = wideSidebar ? 'md:w-1/2' : 'md:w-2/3';
+    const buttonPosition = wideSidebar ? 'left-1/2' : 'left-1/3';
 
     return (
         <div className="py-8 max-w-[1600px] mx-auto">
@@ -44,7 +51,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                 <div className="flex flex-col md:flex-row min-h-[600px] relative">
                     {isSidebarOpen && (
                         <>
-                            <div className="bg-[#fafafa] w-full md:w-1/3 p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]">
+                            <div className={`bg-[#fafafa] w-full ${sidebarWidth} p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]`}>
                                 <div className="space-y-6">
                                     {filters}
                                 </div>
@@ -52,7 +59,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             {/* Collapse button on divider - hidden on mobile */}
                             <button
                                 onClick={() => setIsSidebarOpen(false)}
-                                className="hidden md:flex absolute top-3 left-1/3 -translate-x-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
+                                className={`hidden md:flex absolute top-3 ${buttonPosition} -translate-x-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10`}
                                 title="Minimer filter"
                                 aria-label="Minimer filter"
                             >
@@ -71,13 +78,13 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             <ChevronRight size={16} className="text-blue-700" aria-hidden />
                         </button>
                     )}
-                    <div className={`w-full ${isSidebarOpen ? 'md:w-2/3' : ''} p-6`}>
+                    <div className={`w-full ${isSidebarOpen ? contentWidth : ''} p-6`}>
                         {children}
                     </div>
                 </div>
             </div>
 
-            {currentPage && currentPage !== 'grafbygger' && <AnalyticsNavigation currentPage={currentPage} />}
+            {currentPage && <AnalyticsNavigation currentPage={currentPage} />}
         </div>
     );
 };

@@ -1,9 +1,9 @@
 import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
-import { 
-  Parameter, 
-  DateFormat, 
+import {
+  Parameter,
+  DateFormat,
   ColumnGroup,
   OrderBy,
   Metric,
@@ -32,6 +32,7 @@ interface DisplayOptionsProps {
   metrics: Metric[];
   filters: Filter[];
   onEnableCustomEvents?: () => void;
+  hideHeader?: boolean;
 }
 
 const DisplayOptions = forwardRef(({
@@ -53,13 +54,14 @@ const DisplayOptions = forwardRef(({
   setLimit,
   metrics,
   filters,
-  onEnableCustomEvents
+  onEnableCustomEvents,
+  hideHeader = false
 }: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
   const [showCustomLimit, setShowCustomLimit] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
-  const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
+  const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
     message: ''
   });
@@ -68,13 +70,13 @@ const DisplayOptions = forwardRef(({
 
   // Add a ref to store the timeout ID
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   // Add a ref to store the event name warning timeout
   const eventNameWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
-    
+
     params.forEach(param => {
       const baseName = param.key.split('.').pop()!;
       if (!uniqueParams.has(baseName)) {
@@ -84,18 +86,18 @@ const DisplayOptions = forwardRef(({
         });
       }
     });
-    
+
     return Array.from(uniqueParams.values());
   };
 
   const uniqueParameters = getUniqueParameters(parameters);
-  
+
   // Check if custom events (event_type = 2) are enabled in filters
-  const hasCustomEventsEnabled = filters.some(f => 
+  const hasCustomEventsEnabled = filters.some(f =>
     (f.column === 'event_type' && f.value === '2') ||
     (f.column === 'event_name' && f.value && f.value !== '')
   );
-  
+
   const handleAddGroupField = (field: string) => {
     // Check if user is trying to add event_name or event_type without custom events enabled
     if ((field === 'event_name' || field === 'event_type') && !hasCustomEventsEnabled) {
@@ -103,23 +105,23 @@ const DisplayOptions = forwardRef(({
       if (onEnableCustomEvents) {
         onEnableCustomEvents();
       }
-      
+
       // Show success notification
       setEventNameWarning(true);
-      
+
       // Clear any existing timeout
       if (eventNameWarningTimeoutRef.current) {
         clearTimeout(eventNameWarningTimeoutRef.current);
         eventNameWarningTimeoutRef.current = null;
       }
-      
+
       // Auto-hide notification after 20 seconds
       eventNameWarningTimeoutRef.current = setTimeout(() => {
         setEventNameWarning(false);
         eventNameWarningTimeoutRef.current = null;
       }, 20000);
     }
-    
+
     // Always add the field
     setActiveGroupings([...activeGroupings, field]);
     addGroupByField(field);
@@ -130,29 +132,29 @@ const DisplayOptions = forwardRef(({
     fieldsCopy.forEach(field => {
       removeGroupByField(field);
     });
-    
+
     clearOrderBy();
     setDateFormat('day');
     setLimit(1000);
     setParamAggregation('representative');
-    
+
     setActiveGroupingsTab('basic');
     setShowCustomSort(false);
-    
+
     if (!silent) {
       // Clear any existing timeout
       if (alertTimeoutRef.current) {
         clearTimeout(alertTimeoutRef.current);
         alertTimeoutRef.current = null;
       }
-      
+
       setAlertInfo({
         show: true,
         message: 'Alle visningsvalg ble tilbakestilt'
       });
-      
+
       alertTimeoutRef.current = setTimeout(() => {
-        setAlertInfo(prev => ({...prev, show: false}));
+        setAlertInfo(prev => ({ ...prev, show: false }));
         alertTimeoutRef.current = null;
       }, 4000);
     }
@@ -164,7 +166,7 @@ const DisplayOptions = forwardRef(({
       clearTimeout(alertTimeoutRef.current);
       alertTimeoutRef.current = null;
     }
-    setAlertInfo(prev => ({...prev, show: false}));
+    setAlertInfo(prev => ({ ...prev, show: false }));
   };
 
   // Clear timeout when component unmounts
@@ -196,23 +198,25 @@ const DisplayOptions = forwardRef(({
 
   return (
     <>
-    <div className="flex justify-between items-center mb-4">
-      <Heading level="2" size="small">
-        Hvordan vil du vise resultatene?
-      </Heading>
-      
-      <Button 
-        variant="tertiary" 
-        size="small" 
-        onClick={() => resetOptions(false)} // Explicitly pass false to show alert
-      >
-        Tilbakestill visningsvalg
-      </Button>
-    </div>
-    <div className="bg-gray-50 p-5 rounded-md border">
+      {!hideHeader && (
+        <div className="flex justify-between items-center mb-4">
+          <Heading level="2" size="small">
+            Hvordan vil du vise resultatene?
+          </Heading>
+
+          <Button
+            variant="tertiary"
+            size="small"
+            onClick={() => resetOptions(false)} // Explicitly pass false to show alert
+          >
+            Tilbakestill visningsvalg
+          </Button>
+        </div>
+      )}
+      <div>
         {alertInfo.show && (
           <div className="mb-4">
-            <AlertWithCloseButton 
+            <AlertWithCloseButton
               variant="success"
               onClose={handleAlertClose}
             >
@@ -220,10 +224,10 @@ const DisplayOptions = forwardRef(({
             </AlertWithCloseButton>
           </div>
         )}
-        
+
         {eventNameWarning && (
           <div className="mb-4">
-            <AlertWithCloseButton 
+            <AlertWithCloseButton
               variant="info"
               onClose={() => {
                 if (eventNameWarningTimeoutRef.current) {
@@ -237,7 +241,7 @@ const DisplayOptions = forwardRef(({
             </AlertWithCloseButton>
           </div>
         )}
-        
+
         <div className="space-y-4 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Heading level="3" size="xsmall" >
@@ -247,7 +251,7 @@ const DisplayOptions = forwardRef(({
               Legg til en eller flere grupperinger, disse vises som kolonner i tabeller.
             </HelpText>
           </div>
-          
+
           <div className="bg-white p-4 rounded-md border shadow-inner mb-2">
             <Tabs
               value={activeGroupingsTab}
@@ -261,10 +265,10 @@ const DisplayOptions = forwardRef(({
                 )}
                 <Tabs.Tab value="advanced" label="Flere valg" />
               </Tabs.List>
-            
+
               <Tabs.Panel value="basic" className="pt-4">
                 <div className="flex flex-wrap gap-2">
-                  <Button 
+                  <Button
                     variant={activeGroupings.includes('created_at') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('created_at')}
@@ -273,7 +277,7 @@ const DisplayOptions = forwardRef(({
                   >
                     Dato
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeGroupings.includes('url_path') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('url_path')}
@@ -282,7 +286,7 @@ const DisplayOptions = forwardRef(({
                   >
                     URL-sti
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeGroupings.includes('referrer_domain') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('referrer_domain')}
@@ -291,7 +295,7 @@ const DisplayOptions = forwardRef(({
                   >
                     Henvisningsdomene
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeGroupings.includes('event_name') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('event_name')}
@@ -300,7 +304,7 @@ const DisplayOptions = forwardRef(({
                   >
                     Hendelsesnavn
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeGroupings.includes('device') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('device')}
@@ -308,8 +312,8 @@ const DisplayOptions = forwardRef(({
                     icon={<Smartphone size={16} />}
                   >
                     Enhet
-                  </Button>  
-                  <Button 
+                  </Button>
+                  <Button
                     variant={activeGroupings.includes('browser') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('browser')}
@@ -317,8 +321,8 @@ const DisplayOptions = forwardRef(({
                     icon={<Smartphone size={16} />}
                   >
                     Nettleser
-                  </Button>  
-                  <Button 
+                  </Button>
+                  <Button
                     variant={activeGroupings.includes('os') ? "secondary" : "secondary"}
                     size="small"
                     onClick={() => handleAddGroupField('os')}
@@ -326,15 +330,15 @@ const DisplayOptions = forwardRef(({
                     icon={<Smartphone size={16} />}
                   >
                     OS
-                  </Button>  
+                  </Button>
                 </div>
               </Tabs.Panel>
-              
+
               {hasCustomParameters && (
                 <Tabs.Panel value="custom" className="pt-4">
                   <div className="flex flex-wrap gap-2">
                     {uniqueParameters.map(param => (
-                      <Button 
+                      <Button
                         key={`param_${param.key}`}
                         variant={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`) ? "secondary" : "secondary"}
                         size="small"
@@ -352,7 +356,7 @@ const DisplayOptions = forwardRef(({
                   )}
                 </Tabs.Panel>
               )}
-              
+
               <Tabs.Panel value="advanced" className="pt-4">
                 <div className="flex gap-2 items-center">
                   <Select
@@ -379,7 +383,7 @@ const DisplayOptions = forwardRef(({
                           ))}
                       </optgroup>
                     ))}
-                    
+
                     {uniqueParameters.length > 0 && (
                       <optgroup label="Egendefinerte">
                         {uniqueParameters
@@ -407,11 +411,11 @@ const DisplayOptions = forwardRef(({
                   const column = Object.values(COLUMN_GROUPS)
                     .flatMap(group => group.columns)
                     .find(col => col.value === field);
-                  
+
                   const paramName = field.startsWith('param_') ? uniqueParameters.find(
                     p => `param_${sanitizeColumnName(p.key)}` === field
                   )?.key : undefined;
-         
+
                   return (
                     <div key={field} className="flex items-center justify-between bg-white px-4 py-3 rounded-md border">
                       <div className="flex flex-col">
@@ -440,7 +444,7 @@ const DisplayOptions = forwardRef(({
                             ))}
                           </Select>
                         )}
-                        
+
                         <div className="flex gap-1">
                           {index > 0 && (
                             <Button
@@ -461,7 +465,7 @@ const DisplayOptions = forwardRef(({
                             />
                           )}
                         </div>
-                        
+
                         <Button
                           variant="tertiary-neutral"
                           size="small"
@@ -478,12 +482,12 @@ const DisplayOptions = forwardRef(({
           )}
         </div>
 
-        <div className="border-t pt-4">
+        <div>
           <Heading level="3" size="xsmall" spacing>
             Visningsvalg
           </Heading>
           <div className="flex flex-col gap-4 pb-4">
-            <Switch 
+            <Switch
               className="mt-1"
               size="small"
               description={orderBy
@@ -497,66 +501,66 @@ const DisplayOptions = forwardRef(({
 
             {showCustomSort && (
               <>
-              <div className="flex flex-col gap-2 bg-white p-3 rounded-md border"> 
-                <div className="flex gap-2">
-                  <Select
-                    label="Sorter etter"
-                    value={orderBy?.column || ""}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
-                        setOrderBy(e.target.value, direction);
-                      } else {
-                        clearOrderBy();
-                      }
-                    }}
-                    size="small"
-                    className="flex-grow"
-                  >
-                    <option value="">Standard sortering</option>
-                    <optgroup label="Grupperinger">
-                      {groupByFields.map((field) => {
-                        const column = Object.values(COLUMN_GROUPS)
-                          .flatMap(group => group.columns)
-                          .find(col => col.value === field);
-                        
-                        return (
-                          <option key={field} value={field === 'created_at' ? 'dato' : field}>
-                            {field === "created_at" ? "Dato" : column?.label || field}
-                          </option>
-                        );
-                      })}
-                    </optgroup>
-                    <optgroup label="Metrikker">
-                      {metrics.map((metric, index) => (
-                        <option 
-                          key={`metrikk_${index}`} 
-                          value={metric.alias || `metrikk_${index + 1}`}
-                        >
-                          {metric.alias || `metrikk_${index + 1}`}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </Select>
+                <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
+                  <div className="flex gap-2">
+                    <Select
+                      label="Sorter etter"
+                      value={orderBy?.column || ""}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const direction = e.target.value === 'dato' ? 'ASC' : 'DESC';
+                          setOrderBy(e.target.value, direction);
+                        } else {
+                          clearOrderBy();
+                        }
+                      }}
+                      size="small"
+                      className="flex-grow"
+                    >
+                      <option value="">Standard sortering</option>
+                      <optgroup label="Grupperinger">
+                        {groupByFields.map((field) => {
+                          const column = Object.values(COLUMN_GROUPS)
+                            .flatMap(group => group.columns)
+                            .find(col => col.value === field);
 
-                  <Select
-                    label="Retning"
-                    value={orderBy?.direction || 'ASC'}
-                    onChange={(e) => setOrderBy(
-                      orderBy?.column || "", 
-                      e.target.value as 'ASC' | 'DESC'
-                    )}
-                    size="small"
-                  >
-                    <option value="ASC">Stigende (A-Å, 0-9)</option>
-                    <option value="DESC">Synkende (Å-A, 9-0)</option>
-                  </Select>
+                          return (
+                            <option key={field} value={field === 'created_at' ? 'dato' : field}>
+                              {field === "created_at" ? "Dato" : column?.label || field}
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                      <optgroup label="Metrikker">
+                        {metrics.map((metric, index) => (
+                          <option
+                            key={`metrikk_${index}`}
+                            value={metric.alias || `metrikk_${index + 1}`}
+                          >
+                            {metric.alias || `metrikk_${index + 1}`}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </Select>
+
+                    <Select
+                      label="Retning"
+                      value={orderBy?.direction || 'ASC'}
+                      onChange={(e) => setOrderBy(
+                        orderBy?.column || "",
+                        e.target.value as 'ASC' | 'DESC'
+                      )}
+                      size="small"
+                    >
+                      <option value="ASC">Stigende (A-Å, 0-9)</option>
+                      <option value="DESC">Synkende (Å-A, 9-0)</option>
+                    </Select>
+                  </div>
                 </div>
-              </div>
               </>
             )}
 
-            <Switch 
+            <Switch
               className="mt-1"
               size="small"
               description={limit && limit !== 1000

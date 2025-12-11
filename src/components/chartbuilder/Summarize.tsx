@@ -1,9 +1,9 @@
 import { Button, Heading, Select, TextField, HelpText, Tabs, Label } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock, LogOut } from 'lucide-react';
-import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'; 
-import { 
-  Parameter, 
-  Metric, 
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import {
+  Parameter,
+  Metric,
   MetricOption,
   ColumnOption,
   Filter
@@ -22,6 +22,7 @@ interface SummarizeProps {
   addMetric: (metricFunction: string) => void;
   moveMetric: (index: number, direction: 'up' | 'down') => void;
   filters: Filter[];
+  hideHeader?: boolean;
 }
 
 const Summarize = forwardRef(({
@@ -34,23 +35,24 @@ const Summarize = forwardRef(({
   updateMetric,
   removeMetric,
   addMetric,
-  moveMetric
+  moveMetric,
+  hideHeader = false
 }: SummarizeProps, ref) => {
-  const [alertInfo, setAlertInfo] = useState<{show: boolean, message: string}>({
+  const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
     message: ''
   });
-  
+
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   const [activeCalculations, setActiveCalculations] = useState<string[]>([]);
   const [activeMetricCategory, setActiveMetricCategory] = useState<string>('antall');
-  
+
   const [editingMetrics, setEditingMetrics] = useState<number[]>([]);
 
   const getUniqueParameters = (params: Parameter[]): Parameter[] => {
     const uniqueParams = new Map<string, Parameter>();
-    
+
     params.forEach(param => {
       const baseName = param.key.split('.').pop()!;
       if (!uniqueParams.has(baseName)) {
@@ -60,7 +62,7 @@ const Summarize = forwardRef(({
         });
       }
     });
-    
+
     return Array.from(uniqueParams.values());
   };
 
@@ -71,22 +73,22 @@ const Summarize = forwardRef(({
     metricsCopy.forEach((_) => {
       removeMetric(0);
     });
-    
+
     setActiveMetricCategory('antall');
-    
+
     if (!silent) {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      
+
       setAlertInfo({
         show: true,
         message: 'Alle målinger ble tilbakestilt'
       });
-      
+
       timeoutRef.current = setTimeout(() => {
-        setAlertInfo(prev => ({...prev, show: false}));
+        setAlertInfo(prev => ({ ...prev, show: false }));
         timeoutRef.current = null;
       }, 4000);
     }
@@ -105,16 +107,16 @@ const Summarize = forwardRef(({
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    setAlertInfo(prev => ({...prev, show: false}));
+    setAlertInfo(prev => ({ ...prev, show: false }));
   };
 
   const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
     const newIndex = metrics.length;
-    
+
     setActiveCalculations([...activeCalculations, `${metricType}_${column || ''}`]);
-    
+
     addMetric(metricType);
-    
+
     setTimeout(() => {
       const updates: Partial<Metric> = {};
       if (column) updates.column = column;
@@ -124,8 +126,8 @@ const Summarize = forwardRef(({
   };
 
   const isMetricAdded = (functionType: string, column?: string, checkMinutes?: boolean): boolean => {
-    return metrics.some(metric => 
-      metric.function === functionType && 
+    return metrics.some(metric =>
+      metric.function === functionType &&
       metric.column === column &&
       (checkMinutes === undefined || metric.showInMinutes === checkMinutes)
     );
@@ -138,7 +140,7 @@ const Summarize = forwardRef(({
 
   useEffect(() => {
     const event = new CustomEvent('summarizeStepStatus', {
-      detail: { 
+      detail: {
         hasUserSelectedMetrics: metrics.length > 0
       }
     });
@@ -164,7 +166,7 @@ const Summarize = forwardRef(({
       { function: 'average', column: 'visit_duration', showInMinutes: true },
       { function: 'average', column: 'visit_duration', showInMinutes: false }
     ];
-  
+
     return shortcutMetrics.some(shortcut => {
       if (shortcut.function !== metric.function) return false;
       if (shortcut.column !== metric.column) return false;
@@ -192,7 +194,7 @@ const Summarize = forwardRef(({
     if (metric.function === 'distinct' && metric.column === 'session_id') {
       return 'Antall unike besøkende';
     }
-    
+
     if (metric.function === 'count' && metric.alias === 'Antall_sidevisninger') {
       return 'Antall sidevisninger';
     }
@@ -218,8 +220,8 @@ const Summarize = forwardRef(({
       return 'Fluktrate';
     }
     if (metric.function === 'average' && metric.column === 'visit_duration') {
-      return metric.showInMinutes 
-        ? 'Besøksvarighet i minutter' 
+      return metric.showInMinutes
+        ? 'Besøksvarighet i minutter'
         : 'Besøksvarighet i sekunder';
     }
     return METRICS.find(m => m.value === metric.function)?.label || 'Måling';
@@ -227,23 +229,25 @@ const Summarize = forwardRef(({
 
   return (
     <>
-    <div className="flex justify-between items-center mb-4">
-      <Heading level="2" size="small">
-        Hva vil du måle?
-      </Heading>
-      
-      <Button 
-        variant="tertiary" 
-        size="small" 
-        onClick={() => resetConfig(false)}
-      >
-        Tilbakestill målinger
-      </Button>
-    </div>
-    <div className="bg-gray-50 p-5 rounded-md border"> 
+      {!hideHeader && (
+        <div className="flex justify-between items-center mb-4">
+          <Heading level="2" size="small">
+            Hva vil du måle?
+          </Heading>
+
+          <Button
+            variant="tertiary"
+            size="small"
+            onClick={() => resetConfig(false)}
+          >
+            Tilbakestill målinger
+          </Button>
+        </div>
+      )}
+      <div>
         {alertInfo.show && (
           <div className="mb-4">
-            <AlertWithCloseButton 
+            <AlertWithCloseButton
               variant="success"
               onClose={handleAlertClose}
             >
@@ -251,7 +255,7 @@ const Summarize = forwardRef(({
             </AlertWithCloseButton>
           </div>
         )}
-        
+
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Heading level="3" size="xsmall" >
@@ -261,9 +265,9 @@ const Summarize = forwardRef(({
               Legg til en eller flere målinger, disse vises som kolonner i tabeller og grafer.
             </HelpText>
           </div>
-          
+
           <div className="space-y-4">
-            <div className="mb-2">              
+            <div className="mb-2">
               <div className="bg-white p-4 rounded-md border shadow-inner">
                 <Tabs
                   value={activeMetricCategory}
@@ -276,11 +280,11 @@ const Summarize = forwardRef(({
                     <Tabs.Tab value="gjennomsnitt" label="Gjennomsnitt" />
                     <Tabs.Tab value="avansert" label="Flere målingsvalg" />
                   </Tabs.List>
-                
+
                   <Tabs.Panel value="antall" className="pt-4">
                     <div className="flex flex-wrap gap-2">
-                      <Button 
-                        variant="secondary" 
+                      <Button
+                        variant="secondary"
                         size="small"
                         onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike_besokende')}
                         icon={<Users size={16} />}
@@ -288,8 +292,8 @@ const Summarize = forwardRef(({
                       >
                         Antall unike besøkende
                       </Button>
-                      <Button 
-                        variant="secondary" 
+                      <Button
+                        variant="secondary"
                         size="small"
                         onClick={() => addConfiguredMetric('count', undefined, 'Antall_sidevisninger')}
                         icon={<BarChart2 size={16} />}
@@ -297,8 +301,8 @@ const Summarize = forwardRef(({
                       >
                         Antall sidevisninger
                       </Button>
-                      <Button 
-                        variant="secondary" 
+                      <Button
+                        variant="secondary"
                         size="small"
                         onClick={() => addConfiguredMetric('count', undefined, 'Antall_hendelser')}
                         icon={<BarChart2 size={16} />}
@@ -308,14 +312,14 @@ const Summarize = forwardRef(({
                       </Button>
                     </div>
                   </Tabs.Panel>
-                  
+
                   <Tabs.Panel value="andel" className="pt-4">
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av alle besøkende på hele nettsiden</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Button 
-                            variant="secondary" 
+                          <Button
+                            variant="secondary"
                             size="small"
                             onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel_av_totale_besokende')}
                             icon={<PieChart size={16} />}
@@ -329,8 +333,8 @@ const Summarize = forwardRef(({
                       <div>
                         <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av besøkende på en side</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Button 
-                            variant="secondary" 
+                          <Button
+                            variant="secondary"
                             size="small"
                             onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel_av_besokende_pa_side')}
                             icon={<PieChart size={16} />}
@@ -344,8 +348,8 @@ const Summarize = forwardRef(({
                       <div>
                         <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av hendelser på en side</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Button 
-                            variant="secondary" 
+                          <Button
+                            variant="secondary"
                             size="small"
                             onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel_av_hendelser_pa_side')}
                             icon={<PieChart size={16} />}
@@ -359,8 +363,8 @@ const Summarize = forwardRef(({
                       <div>
                         <h4 className="text-sm font-medium mb-2 text-gray-700">Fluktrate - andel besøkende som kun ser én side før de forlater nettstedet</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Button 
-                            variant="secondary" 
+                          <Button
+                            variant="secondary"
                             size="small"
                             onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
                             icon={<LogOut size={16} />}
@@ -372,18 +376,18 @@ const Summarize = forwardRef(({
                       </div>
                     </div>
                   </Tabs.Panel>
-                  
+
                   <Tabs.Panel value="gjennomsnitt" className="pt-4">
                     <div className="flex flex-wrap gap-2">
-                    <Button 
-                        variant="secondary" 
+                      <Button
+                        variant="secondary"
                         size="small"
                         onClick={() => {
                           const newIndex = metrics.length;
                           addMetric('average');
                           setTimeout(() => {
-                            updateMetric(newIndex, { 
-                              column: 'visit_duration', 
+                            updateMetric(newIndex, {
+                              column: 'visit_duration',
                               alias: 'Gjennomsnittlig_besokstid_minutter',
                               showInMinutes: true
                             });
@@ -394,8 +398,8 @@ const Summarize = forwardRef(({
                       >
                         Besøksvarighet i minutter
                       </Button>
-                      <Button 
-                        variant="secondary" 
+                      <Button
+                        variant="secondary"
                         size="small"
                         onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_sekunder')}
                         icon={<Clock size={16} />}
@@ -405,7 +409,7 @@ const Summarize = forwardRef(({
                       </Button>
                     </div>
                   </Tabs.Panel>
-                  
+
                   <Tabs.Panel value="avansert" className="pt-4">
                     <div className="flex flex-col gap-2">
                       <Select
@@ -414,15 +418,15 @@ const Summarize = forwardRef(({
                         onChange={(e) => {
                           if (e.target.value) {
                             addMetric(e.target.value);
-                            
+
                             if (e.target.value === 'percentage' || e.target.value === 'andel') {
                               const newIndex = metrics.length;
-                              
+
                               setTimeout(() => {
                                 updateMetric(newIndex, { column: 'session_id' });
                               }, 0);
                             }
-                            
+
                             (e.target as HTMLSelectElement).value = '';
                           }
                         }}
@@ -457,8 +461,8 @@ const Summarize = forwardRef(({
                         {index + 1}.
                       </span>
                       <span className="font-medium">
-                        {isShortcutMetric(metric) && !shouldShowDetailedView(metric, index) 
-                          ? getMetricDisplayName(metric) 
+                        {isShortcutMetric(metric) && !shouldShowDetailedView(metric, index)
+                          ? getMetricDisplayName(metric)
                           : METRICS.find(m => m.value === metric.function)?.label || 'Måling'}
                         {metric.column === 'visit_duration' && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -519,7 +523,7 @@ const Summarize = forwardRef(({
                     )}
                   </div>
                 </div>
-            
+
                 {shouldShowDetailedView(metric, index) && (
                   <div className="mt-4 border-t pt-4">
                     {metric.function === 'count_where' ? (
@@ -534,7 +538,7 @@ const Summarize = forwardRef(({
                               label="Kolonne"
                               value={metric.column || ''}
                               onChange={(e) => {
-                                const updates: Partial<Metric> = { 
+                                const updates: Partial<Metric> = {
                                   column: e.target.value,
                                   showInMinutes: undefined
                                 };
@@ -544,7 +548,7 @@ const Summarize = forwardRef(({
                               className="w-full"
                             >
                               <option value="">Velg kolonne</option>
-                              
+
                               {(metric.function === 'percentage' || metric.function === 'andel') ? (
                                 getMetricColumns(parameters, metric.function).map(col => (
                                   <option key={col.value} value={col.value}>
@@ -554,15 +558,15 @@ const Summarize = forwardRef(({
                               ) : (
                                 <>
                                   {Object.entries(COLUMN_GROUPS).map(([groupKey, group]) => (
-                                      <optgroup key={groupKey} label={(group as { label: string }).label}>
+                                    <optgroup key={groupKey} label={(group as { label: string }).label}>
                                       {(group as { columns: { value: string; label: string }[] }).columns.map(col => (
                                         <option key={col.value} value={col.value}>
-                                        {col.label}
+                                          {col.label}
                                         </option>
                                       ))}
-                                      </optgroup>
+                                    </optgroup>
                                   ))}
-                                  
+
                                   {uniqueParameters.length > 0 && (
                                     <optgroup label="Egendefinerte">
                                       {uniqueParameters.map(param => (
@@ -575,7 +579,7 @@ const Summarize = forwardRef(({
                                 </>
                               )}
                             </Select>
-                            
+
                             {metric.column === 'visit_duration' && (
                               <div className="mt-2">
                                 <Label size="small">Tidsenhet</Label>
@@ -599,7 +603,7 @@ const Summarize = forwardRef(({
                             )}
                           </div>
                         )}
-                        
+
                         <div className="md:w-1/3">
                           <TextField
                             label="Kolonnetittel (valgfritt)"

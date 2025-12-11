@@ -36,6 +36,7 @@ interface ChartFiltersProps {
   availableEvents?: string[];
   maxDaysAvailable?: number; // Added this prop to receive date range info
   onEnableCustomEvents?: () => void;
+  hideHeader?: boolean;
 }
 
 const ChartFilters = forwardRef(({
@@ -44,7 +45,8 @@ const ChartFilters = forwardRef(({
   setFilters,
   availableEvents = [],
   maxDaysAvailable = 365, // Default to a year if not provided
-  onEnableCustomEvents
+  onEnableCustomEvents,
+  hideHeader = false
 }: ChartFiltersProps, ref) => {
   // Add state for custom period inputs
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, { amount: string, unit: string }>>({});
@@ -567,23 +569,25 @@ const ChartFilters = forwardRef(({
 
   return (
     <section>
-      <div className="flex justify-between items-center">
-        <Heading level="2" size="small" spacing>
-          Hvilke hendelser vil du inkludere?
-        </Heading>
+      {!hideHeader && (
+        <div className="flex justify-between items-center">
+          <Heading level="2" size="small" spacing>
+            Hvilke hendelser vil du inkludere?
+          </Heading>
 
-        {/* Add reset button next to the heading */}
-        <Button
-          variant="tertiary"
-          size="small"
-          onClick={() => resetFilters(false)} // Explicitly pass false to show alert
-          className="mb-2"
-        >
-          Tilbakestill filtre
-        </Button>
-      </div>
+          {/* Add reset button next to the heading */}
+          <Button
+            variant="tertiary"
+            size="small"
+            onClick={() => resetFilters(false)} // Explicitly pass false to show alert
+            className="mb-2"
+          >
+            Tilbakestill filtre
+          </Button>
+        </div>
+      )}
 
-      <div className="space-y-6 bg-gray-50 p-5 rounded-lg border shadow-sm relative">
+      <div className="space-y-6 relative">
         <div>
           {/* Show alert if it's active */}
           {alertInfo.show && (
@@ -853,7 +857,7 @@ const ChartFilters = forwardRef(({
 
           {activeFilters && (
             <>
-              <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+              <div className="mt-3">
                 {filters.length === 0 && (
                   <div className="text-sm text-gray-600">
                     Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
@@ -864,12 +868,12 @@ const ChartFilters = forwardRef(({
                   <div className="space-y-3">
                     {/* Add a single date range message if any date filters exist */}
                     {filters.some(isDateRangeFilter) && (
-                      <div className="bg-gray-50 p-4 rounded-md border shadow-sm">Datofilter er lagt til</div>
+                      <div className="p-4">Datofilter er lagt til</div>
                     )}
 
                     {/* Only show non-date range filters in the regular filter list */}
                     {filters.map((filter, index) => !isDateRangeFilter(filter) && (
-                      <div key={index} className="bg-gray-50 p-4 rounded-md border shadow-sm">
+                      <div key={index} className="p-0">
                         <div className="flex justify-between">
                           <div className="flex-1">
                             <div className="flex gap-2 items-end">

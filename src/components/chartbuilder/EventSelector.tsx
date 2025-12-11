@@ -49,7 +49,7 @@ const EventSelector = ({
         Velg hendelse
       </Heading>
 
-      <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+      <div className="mt-3">
         <div className="space-y-4">
           {/* Pageviews section */}
           <div className="space-y-2">
