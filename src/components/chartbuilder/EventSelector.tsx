@@ -1,4 +1,4 @@
-import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Switch, Button } from '@navikt/ds-react';
+import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button } from '@navikt/ds-react';
 import { Filter, Parameter } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
@@ -37,6 +37,7 @@ interface EventSelectorProps {
   removeFilter: (index: number) => void;
   updateFilter: (index: number, updates: Partial<Filter>) => void;
   isDateRangeFilter: (filter: Filter) => boolean;
+  isEventsLoading?: boolean;
 }
 
 const EventSelector = ({
@@ -73,7 +74,8 @@ const EventSelector = ({
   // Active filter props
   removeFilter,
   updateFilter,
-  isDateRangeFilter
+  isDateRangeFilter,
+  isEventsLoading = false
 }: EventSelectorProps) => {
 
   const getCleanParamName = (param: Parameter): string => {
@@ -119,8 +121,8 @@ const EventSelector = ({
           <Tabs.List>
             <Tabs.Tab value="sidestier" label="Sider" />
             <Tabs.Tab value="hendelser" label="Hendelser" />
-            <Tabs.Tab value="flere_valg" label="Flere filtre" />
-            <Tabs.Tab value="active_filters" label={`Aktive filter (${activeFilterCount})`} />
+            <Tabs.Tab value="flere_valg" label="Flere filtervalg" />
+            <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
           </Tabs.List>
 
           <Tabs.Panel value="sidestier" className="pt-6">
@@ -268,149 +270,154 @@ const EventSelector = ({
 
           <Tabs.Panel value="hendelser" className="pt-6">
             <div className="space-y-4">
-              <Switch
-                checked={selectedEventTypes.includes('custom_events')}
-                onChange={(e) => {
-                  handleEventTypeChange('custom_events', e.target.checked);
-                  if (e.target.checked && onEnableCustomEvents) {
+              <RadioGroup
+                legend="Hvilke hendelser?"
+                value={customEventsMode}
+                onChange={(val) => {
+                  const newMode = val as 'all' | 'specific' | 'interactive';
+
+                  // Ensure custom_events is selected
+                  if (!selectedEventTypes.includes('custom_events')) {
+                    handleEventTypeChange('custom_events', true);
+                  }
+
+                  // Trigger data loading for specific/interactive modes or just always when interacting here
+                  if (onEnableCustomEvents) {
                     onEnableCustomEvents();
+                  }
+
+                  setCustomEventsMode(newMode);
+
+                  // Clear events selection when changing modes
+                  if (newMode === 'all' || newMode === 'interactive') {
+                    handleCustomEventsChange([], 'IN');
+                  }
+
+                  // Special handling for interactive mode
+                  if (newMode === 'interactive') {
+                    // Use Metabase parameter syntax: {{event_name}}
+                    handleCustomEventsChange(['{{event_name}}'], '=');
                   }
                 }}
               >
-                Inkluder egendefinerte hendelser
-              </Switch>
-
-              {selectedEventTypes.includes('custom_events') && (
-                <div className="pl-0 mt-4">
-                  <RadioGroup
-                    legend="Hvilke hendelser?"
-                    value={customEventsMode}
-                    onChange={(val) => {
-                      const newMode = val as 'all' | 'specific' | 'interactive';
-                      setCustomEventsMode(newMode);
-
-                      // Clear events selection when changing modes
-                      if (newMode === 'all' || newMode === 'interactive') {
-                        handleCustomEventsChange([], 'IN');
-                      }
-
-                      // Special handling for interactive mode
-                      if (newMode === 'interactive') {
-                        // Use Metabase parameter syntax: {{event_name}}
-                        handleCustomEventsChange(['{{event_name}}'], '=');
-                      }
-                    }}
-                  >
-                    <Radio value="all">Alle (ingen avgrensning)</Radio>
-                    <Radio value="specific">Utvalgte hendelser</Radio>
-                    <Radio value="interactive">Mottaker velger selv</Radio>
-                  </RadioGroup>
-                  <div className="mt-4">
-                    {customEventsMode === 'specific' && (
-                      <div className="bg-white p-4 rounded border">
-                        <div className="mb-3">
-                          <Select
-                            label="Hendelsesnavn"
-                            value={eventNameOperator}
-                            onChange={(e) => {
-                              const newOperator = e.target.value;
-                              setEventNameOperator(newOperator);
-
-                              // Update events format when switching between operators
-                              if (customEvents.length > 0) {
-                                if (newOperator === 'IN' || eventNameOperator === 'IN') {
-                                  handleCustomEventsChange(
-                                    customEvents,
-                                    newOperator
-                                  );
-                                }
-                              }
-                            }}
-                            size="small"
-                            className="w-full md:w-1/3"
-                          >
-                            {OPERATORS.map(op => (
-                              <option key={op.value} value={op.value}>
-                                {op.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </div>
-                        {eventNameOperator === 'IN' ? (
-                          <UNSAFE_Combobox
-                            label="Velg hendelser"
-                            description="Flere hendelser kan velges for 'er lik' operator"
-                            options={customEventsList.map(event => ({
-                              label: event,
-                              value: event
-                            }))}
-                            selectedOptions={customEvents}
-                            onToggleSelected={(option, isSelected) => {
-                              if (option) {
-                                const newSelection = isSelected
-                                  ? [...customEvents, option]
-                                  : customEvents.filter(e => e !== option);
-                                handleCustomEventsChange(newSelection, eventNameOperator);
-                              }
-                            }}
-                            isMultiSelect
-                            size="small"
-                            clearButton
-                            allowNewValues
-                          />
-                        ) : (
-                          <UNSAFE_Combobox
-                            label="Velg hendelse"
-                            description={
-                              eventNameOperator === 'LIKE' ? "Søket vil matche hendelser som inneholder verdien" :
-                                eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
-                                  eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
-                                    null
-                            }
-                            options={customEventsList.map(event => ({
-                              label: event,
-                              value: event
-                            }))}
-                            selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
-                            onToggleSelected={(option, isSelected) => {
-                              if (option) {
-                                handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
-                              }
-                            }}
-                            isMultiSelect={false}
-                            size="small"
-                            clearButton
-                            allowNewValues
-                          />
-                        )}
+                <Radio value="all">Alle (ingen avgrensning)</Radio>
+                <Radio value="specific">Utvalgte hendelser</Radio>
+                <Radio value="interactive">Mottaker velger selv</Radio>
+              </RadioGroup>
+              <div className="mt-4">
+                {customEventsMode === 'specific' && (
+                  <div className="bg-white p-4 rounded border">
+                    {isEventsLoading && (
+                      <div className="mb-4 text-sm text-gray-600 flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                        Laster hendelser...
                       </div>
                     )}
-                    {customEventsMode === 'interactive' && (
-                      <div className="bg-white p-4 rounded border">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-green-600">
-                                <path d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" fill="currentColor" />
-                              </svg>
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium mb-1">Aktivert som filtervalg i Metabase</p>
-                            <p className="text-gray-600">Hendelsesnavn kan velges som filtervalg i Metabase-dashbord</p>
-                          </div>
-                        </div>
-                      </div>
+                    <div className="mb-3">
+                      <Select
+                        label="Hendelsesnavn"
+                        value={eventNameOperator}
+                        disabled={isEventsLoading}
+                        onChange={(e) => {
+                          const newOperator = e.target.value;
+                          setEventNameOperator(newOperator);
+
+                          // Update events format when switching between operators
+                          if (customEvents.length > 0) {
+                            if (newOperator === 'IN' || eventNameOperator === 'IN') {
+                              handleCustomEventsChange(
+                                customEvents,
+                                newOperator
+                              );
+                            }
+                          }
+                        }}
+                        size="small"
+                        className="w-full md:w-1/3"
+                      >
+                        {OPERATORS.map(op => (
+                          <option key={op.value} value={op.value}>
+                            {op.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    {eventNameOperator === 'IN' ? (
+                      <UNSAFE_Combobox
+                        label="Velg hendelser"
+                        description="Flere hendelser kan velges for 'er lik' operator"
+                        disabled={isEventsLoading}
+                        options={customEventsList.map(event => ({
+                          label: event,
+                          value: event
+                        }))}
+                        selectedOptions={customEvents}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            const newSelection = isSelected
+                              ? [...customEvents, option]
+                              : customEvents.filter(e => e !== option);
+                            handleCustomEventsChange(newSelection, eventNameOperator);
+                          }
+                        }}
+                        isMultiSelect
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
+                    ) : (
+                      <UNSAFE_Combobox
+                        label="Velg hendelse"
+                        description={
+                          eventNameOperator === 'LIKE' ? "Søket vil matche hendelser som inneholder verdien" :
+                            eventNameOperator === 'STARTS_WITH' ? "Søket vil finne hendelser som starter med verdien" :
+                              eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
+                                null
+                        }
+                        disabled={isEventsLoading}
+                        options={customEventsList.map(event => ({
+                          label: event,
+                          value: event
+                        }))}
+                        selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
+                        onToggleSelected={(option, isSelected) => {
+                          if (option) {
+                            handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
+                          }
+                        }}
+                        isMultiSelect={false}
+                        size="small"
+                        clearButton
+                        allowNewValues
+                      />
                     )}
                   </div>
-                </div>
-              )}
+                )}
+                {customEventsMode === 'interactive' && (
+                  <div className="bg-white p-4 rounded border">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-green-600">
+                            <path d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium mb-1">Aktivert som filtervalg i Metabase</p>
+                        <p className="text-gray-600">Hendelsesnavn kan velges som filtervalg i Metabase-dashbord</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
           </Tabs.Panel>
 
           <Tabs.Panel value="flere_valg" className="pt-6">
             <div className="mb-4">
-              <Heading level="4" size="xsmall" className="mb-2">Legg til ekstra filtre</Heading>
+              <Heading level="4" size="xsmall" className="mb-2">Legg til flere filtre</Heading>
 
               <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3">
                 <Select
@@ -747,7 +754,7 @@ const EventSelector = ({
           </Tabs.Panel>
         </Tabs>
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -254,6 +254,7 @@ const ChartsPage = () => {
   // const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
   const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false);
+  const [isEventsLoading, setIsEventsLoading] = useState<boolean>(false);
 
 
 
@@ -1399,6 +1400,8 @@ const ChartsPage = () => {
     });
   };
 
+
+
   return (
     <ChartLayout
       title="Grafbyggeren"
@@ -1419,6 +1422,7 @@ const ChartsPage = () => {
               requestIncludeParams={requestIncludeParams}
               disableAutoEvents={true}
               requestLoadEvents={false}
+              onLoadingChange={setIsEventsLoading}
             />
           </section>
 
@@ -1467,6 +1471,7 @@ const ChartsPage = () => {
                     setRequestIncludeParams(true);
                   }}
                   hideHeader={true}
+                  isEventsLoading={isEventsLoading}
                 />
               </section>
 

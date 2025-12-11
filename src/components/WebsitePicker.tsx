@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { UNSAFE_Combobox, Alert, ProgressBar, Button } from '@navikt/ds-react';
+import { UNSAFE_Combobox, Alert, Button } from '@navikt/ds-react';
 import { PadlockLockedIcon } from '@navikt/aksel-icons';
 
 interface Website {
@@ -22,6 +22,7 @@ interface WebsitePickerProps {
   variant?: 'default' | 'minimal'; // Add variant prop
   disableAutoEvents?: boolean; // Add flag to disable auto-fetching of events
   requestLoadEvents?: boolean; // Add flag to manually trigger event loading
+  onLoadingChange?: (isLoading: boolean) => void; // Add callback for loading state
 }
 
 interface EventProperty {
@@ -100,7 +101,8 @@ const WebsitePicker = ({
   requestIncludeParams = false,
   variant = 'default',
   disableAutoEvents = false,
-  requestLoadEvents = false
+  requestLoadEvents = false,
+  onLoadingChange
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -118,8 +120,8 @@ const WebsitePicker = ({
   const [error, setError] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState<boolean>(false);
   const loadingTimerRef = useRef<number | null>(null);
-  const [gbProcessed, setGbProcessed] = useState<string | null>(null);
-  const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
+  // const [gbProcessed, setGbProcessed] = useState<string | null>(null);
+  // const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
   const [includeParams, setIncludeParams] = useState<boolean>(false);
   const prevIncludeParams = useRef<boolean>(false);
 
@@ -222,6 +224,10 @@ const WebsitePicker = ({
   }, [websites, selectedWebsite, onWebsiteChange]);
 
   const handleLoadingState = useCallback((loading: boolean) => {
+    if (onLoadingChange) {
+      onLoadingChange(loading);
+    }
+
     if (loading) {
       loadingTimerRef.current = window.setTimeout(() => {
         setShowLoading(true);
@@ -236,7 +242,7 @@ const WebsitePicker = ({
         loadingTimerRef.current = null;
       }
     }
-  }, []); // Remove showLoading dependency since we handle it directly
+  }, [onLoadingChange]); // Remove showLoading dependency since we handle it directly
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -278,8 +284,8 @@ const WebsitePicker = ({
 
     fetchInProgress.current[websiteId] = true;
     setError(null); // Clear any previous errors
-    setGbProcessed(null); // Clear previous GB count
-    setEstimatedGbProcessed(null); // Clear previous estimated GB
+    // setGbProcessed(null); // Clear previous GB count
+    // setEstimatedGbProcessed(null); // Clear previous estimated GB
 
     try {
       // Show loading UI
@@ -312,13 +318,13 @@ const WebsitePicker = ({
       const gbProcessedValue = responseData.gbProcessed;
       const estimatedGbValue = responseData.estimatedGbProcessed;
 
-      if (gbProcessedValue) {
+      /* if (gbProcessedValue) {
         setGbProcessed(gbProcessedValue);
       }
 
       if (estimatedGbValue) {
         setEstimatedGbProcessed(estimatedGbValue);
-      }
+      } */
 
       console.log(`Fetched ${properties.length} event entries from the API, estimated ${estimatedGbValue} GB, actual ${gbProcessedValue} GB`);
 

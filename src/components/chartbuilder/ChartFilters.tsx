@@ -37,6 +37,7 @@ interface ChartFiltersProps {
   maxDaysAvailable?: number; // Added this prop to receive date range info
   onEnableCustomEvents?: () => void;
   hideHeader?: boolean;
+  isEventsLoading?: boolean;
 }
 
 const ChartFilters = forwardRef(({
@@ -46,7 +47,8 @@ const ChartFilters = forwardRef(({
   availableEvents = [],
   maxDaysAvailable = 365, // Default to a year if not provided
   onEnableCustomEvents,
-  hideHeader = false
+  hideHeader = false,
+  isEventsLoading = false
 }: ChartFiltersProps, ref) => {
   // Add state for custom period inputs
   const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, { amount: string, unit: string }>>({});
@@ -566,6 +568,7 @@ const ChartFilters = forwardRef(({
             removeFilter={removeFilter}
             updateFilter={updateFilter}
             isDateRangeFilter={isDateRangeFilter}
+            isEventsLoading={isEventsLoading}
           />
 
           {/* Date Range Picker - Now AFTER event selection */}

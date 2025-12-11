@@ -525,7 +525,7 @@ const DateRangePicker = forwardRef(({
             <Tabs.Tab value="frequent" label="Ofte brukte" />
             <Tabs.Tab value="dynamic" label="Relative" />
             <Tabs.Tab value="fixed" label="Bestemte" />
-            <Tabs.Tab value="interactive" label="Filtervalg i Metabase" />
+            <Tabs.Tab value="interactive" label="Mottaker velger selv" />
           </Tabs.List>
 
           {/* Frequent dates panel */}
