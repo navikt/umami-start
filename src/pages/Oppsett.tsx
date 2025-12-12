@@ -16,6 +16,7 @@ function Oppsett() {
 
             {/* Kom i gang CTA */}
             <div style={{
+                border: '1px solid #ddd',
                 marginBottom: '48px',
                 padding: '40px',
                 backgroundColor: 'rgb(230, 242, 255)',

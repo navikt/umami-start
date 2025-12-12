@@ -55,7 +55,7 @@ function Home() {
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                     gap: '24px',
-                    marginBottom: '48px'
+                    marginBottom: '25px'
                 }}>
                     {sections.map((section) => (
                         <div
@@ -120,9 +120,10 @@ function Home() {
 
                 {/* Grafbygger section */}
                 <div style={{
+                    border: '1px solid #ddd',
                     marginBottom: '60px',
                     padding: '40px',
-                    backgroundColor: 'rgb(230, 242, 255)',  // Same light blue as hero
+                    backgroundColor: 'rgb(230, 242, 255)',
                     borderRadius: '16px',
                     display: 'flex',
                     flexDirection: 'column',
