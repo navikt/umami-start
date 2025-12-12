@@ -793,7 +793,7 @@ export default function BigQuery() {
                     )}
 
                     {result && (
-                        <ReadMore header="JSON" size="small" className="mb-4" defaultOpen>
+                        <ReadMore header="JSON" size="small" className="mb-4">
                             <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
                         </ReadMore>
                     )}
