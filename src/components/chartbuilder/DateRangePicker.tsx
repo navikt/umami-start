@@ -510,7 +510,7 @@ const DateRangePicker = forwardRef(({
   };
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 pt-2">
       <Heading level="3" size="xsmall" spacing>
         For hvilken tidsperiode?
       </Heading>
