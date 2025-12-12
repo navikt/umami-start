@@ -78,7 +78,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                     {isSidebarOpen && (
                         <>
                             <div className={`bg-[#fafafa] w-full ${sidebarWidth} p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]`}>
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     <div className="pb-2">
                                         <Select
                                             label="Type analyse"

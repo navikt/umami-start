@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { UNSAFE_Combobox, Alert, Button } from '@navikt/ds-react';
-import { PadlockLockedIcon } from '@navikt/aksel-icons';
 
 interface Website {
   id: string;
@@ -186,7 +185,6 @@ const WebsitePicker = ({
         const website = websites.find(w => w.id === websiteIdFromUrl);
         if (website && !selectedWebsite) {
           handleWebsiteChange(website); // Use handleWebsiteChange to ensure caching
-          setShowPicker(false); // Hide picker to display locked view
         }
       }
 
@@ -375,12 +373,9 @@ const WebsitePicker = ({
     }
   }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, includeParams]);
 
-  // State to control whether to show the picker
-  const [showPicker, setShowPicker] = useState<boolean>(!selectedWebsite);
-
-  // Load websites only when showPicker is true
+  // Load websites on mount
   useEffect(() => {
-    if (!showPicker || websitesLoaded.current) {
+    if (websitesLoaded.current) {
       return;
     }
 
@@ -416,7 +411,7 @@ const WebsitePicker = ({
         console.error("Error fetching websites:", error);
         setIsInitialLoading(false);
       });
-  }, [showPicker]);
+  }, []);
 
   // On mount, try to restore from localStorage
   useEffect(() => {
@@ -427,7 +422,7 @@ const WebsitePicker = ({
 
     // Priority 1: URL parameter (need to load websites to find it)
     if (websiteIdFromUrl) {
-      setShowPicker(true); // This will trigger website loading
+      // Websites will load automatically via the effect above
       initialUrlChecked.current = true;
       return;
     }
@@ -454,7 +449,6 @@ const WebsitePicker = ({
       if (website) {
         console.log('[WebsitePicker] Applying website from URL:', website.name);
         handleWebsiteChange(website);
-        setShowPicker(false);
       }
     }
   }, [websites, handleWebsiteChange]);
@@ -535,100 +529,67 @@ const WebsitePicker = ({
 
 
   return (
-    <div className={`space-y-4 ${variant === 'minimal' ? 'mb-1' : ''}`}>
-      <div className="space-y-4">
+    <div className={`${variant === 'minimal' ? 'pb-2' : ''}`}>
+      <div>
         {error && (
           <Alert variant="error" className="mb-4">
             {error}
           </Alert>
         )}
 
-        {/* Show selected website with change button */}
-        {selectedWebsite && !showPicker ? (
-          <div>
-            <label className="navds-label navds-label--medium mb-2 block">Nettside eller app</label>
-            <div className="mb-2">
-              <div className="flex items-center gap-1">
-                <PadlockLockedIcon className="text-blue-600" aria-hidden="true" />
-                <div className="text-lg font-semibold text-gray-900">{selectedWebsite.name}</div>
-              </div>
-            </div>
-            <div className="pb-2">
-              <Button
-                size="small"
-                variant="secondary"
-                onClick={() => {
-                  handleWebsiteChange(null); // Clear selection
-                  setShowPicker(true); // Show picker
-                }}
-              >
-                Bytt nettside eller app
-              </Button>
-            </div>
-          </div>
-        ) : (
-          /* Show combobox when changing or no selection */
-          <>
-            <UNSAFE_Combobox
-              label="Velg nettside eller app"
-              options={websites.map(website => ({
-                label: website.name,
-                value: website.name,
-                website: website
-              }))}
-              selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
-              onToggleSelected={(option: string, isSelected: boolean) => {
-                if (isSelected) {
-                  const website = websites.find(w => w.name === option);
-                  if (website) {
-                    handleWebsiteChange(website);
-                    setShowPicker(false); // Hide picker after selection
-                  }
-                } else {
-                  handleWebsiteChange(null);
+        <UNSAFE_Combobox
+          label="Nettside eller app"
+          options={websites.map(website => ({
+            label: website.name,
+            value: website.name,
+            website: website
+          }))}
+          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+          onToggleSelected={(option: string, isSelected: boolean) => {
+            if (isSelected) {
+              const website = websites.find(w => w.name === option);
+              if (website) {
+                handleWebsiteChange(website);
+              }
+            } else {
+              handleWebsiteChange(null);
+            }
+          }}
+          clearButton
+          isMultiSelect={false}
+        />
+        {!selectedWebsite && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-sm">Hurtigvalg:</span>
+            <Button
+              size="xsmall"
+              variant="secondary"
+              onClick={() => {
+                const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
+                if (website) {
+                  handleWebsiteChange(website);
                 }
               }}
-              clearButton
-            />
-            {!selectedWebsite && (
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm">Hurtigvalg:</span>
-                <Button
-                  size="xsmall"
-                  variant="secondary"
-                  onClick={() => {
-                    const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
-                    if (website) {
-                      handleWebsiteChange(website);
-                      setShowPicker(false);
-                    } else {
-                      setShowPicker(true); // Load websites if not in cache
-                    }
-                  }}
-                >
-                  nav.no
-                </Button>
-                <Button
-                  size="xsmall"
-                  variant="secondary"
-                  onClick={() => {
-                    const website = websites.find(w => w.id === '83b80c84-b551-4dff-a679-f21be5fa0453');
-                    if (website) {
-                      handleWebsiteChange(website);
-                      setShowPicker(false);
-                    } else {
-                      setShowPicker(true); // Load websites if not in cache
-                    }
-                  }}
-                >
-                  navet
-                </Button>
-              </div>
-            )}
-          </>
+            >
+              nav.no
+            </Button>
+            <Button
+              size="xsmall"
+              variant="secondary"
+              onClick={() => {
+                const website = websites.find(w => w.id === '83b80c84-b551-4dff-a679-f21be5fa0453');
+                if (website) {
+                  handleWebsiteChange(website);
+                }
+              }}
+            >
+              navet
+            </Button>
+          </div>
         )}
+      </div>
 
-        {/* {selectedWebsite && includeParams && (
+      {/* {selectedWebsite && includeParams && (
           <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
             <div className="text-sm text-gray-700">
               Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
@@ -637,33 +598,14 @@ const WebsitePicker = ({
           )}  
         */}
 
-      </div>
       {
         showLoading && (
           <>
-            {/*<div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span>Laster inn hendelser...</span>
-              {estimatedGbProcessed && (
-                <span className="text-sm text-gray-600">(estimert {estimatedGbProcessed} GB)</span>
-              )}
-              {gbProcessed && (
-                <span className="text-sm text-gray-600">(faktisk {gbProcessed} GB)</span>
-              )}
-            </div>
-            <ProgressBar
-              size="small"
-              simulated={{
-                seconds: 10,
-                onTimeout: () => { }
-              }}
-              aria-label="Laster inn data"
-            />
-          </div> */}
+            {/* Show loading content here if needed */}
           </>
         )
       }
-    </div >
+    </div>
   );
 };
 
