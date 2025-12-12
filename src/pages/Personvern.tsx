@@ -1,4 +1,4 @@
-import {Heading, Link, VStack, Box} from "@navikt/ds-react";
+import { Heading, Link, VStack, Box } from "@navikt/ds-react";
 import Kontaktboks from '../components/kontaktboks';
 
 function Personvern() {
@@ -20,6 +20,18 @@ function Personvern() {
                         </Heading>
                         <p className="mb-4 leading-normal">
                             Innblikk er en nettside NAV Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan NAV behandler personopplysninger, kan du lese mer i <Link href="https://www.nav.no/no/nav-og-samfunn/om-nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">NAVs generelle personvernerklæring.</Link>
+                        </p>
+                    </section>
+
+                    <section>
+                        <Heading level="2" size="medium" spacing>
+                            Audit logging
+                        </Heading>
+                        <p className="mb-4 leading-normal">
+                            Start Umami sender din Nav-ident sammen med alle spørringer som kjøres. Dette gjør at vi kan logge hvem som har kjørt hvilke spørringer, og er en del av vår sikkerhetsrutine for å beskytte data og oppfylle etterlevelseskrav.
+                        </p>
+                        <p className="leading-normal">
+                            Loggene brukes kun til statistikk og sikkerhetsformål.
                         </p>
                     </section>
 
