@@ -64,7 +64,7 @@ const SQLPreview = ({
   const [hasEventNameFilter, setHasEventNameFilter] = useState(false);
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to?: Date | undefined }>({
-    from: subDays(new Date(), 7),
+    from: subDays(new Date(), 30),
     to: new Date(),
   });
   const [urlPath, setUrlPath] = useState<string>('');
@@ -76,7 +76,7 @@ const SQLPreview = ({
     urlPath: string;
     eventName: string;
   }>({
-    dateRange: { from: subDays(new Date(), 7), to: new Date() },
+    dateRange: { from: subDays(new Date(), 30), to: new Date() },
     urlPath: '',
     eventName: ''
   });
@@ -108,8 +108,8 @@ const SQLPreview = ({
     const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
     setHasUrlPathFilter(urlPathPattern.test(sql));
 
-    // Pattern: {{event_name}}
-    const eventNamePattern = /\{\{event_name\}\}/i;
+    // Pattern: {{event_name}} or {{hendelse}}
+    const eventNamePattern = /\{\{\s*(event_name|hendelse)\s*\}\}/i;
     setHasEventNameFilter(eventNamePattern.test(sql));
   }, [sql]);
 
@@ -127,49 +127,21 @@ const SQLPreview = ({
 
     // URL Path Substitution
     if (hasUrlPathFilter) {
-      // Pattern: [[ {{url_sti}} --]] '/'
-      // If urlPath is set, replace the whole block with the value
-      // If urlPath is empty, keep the default '/' (which is what the pattern effectively does in Metabase if param is missing? 
-      // Actually, in Metabase [[ {{param}} --]] means "if param is present, use it, else ignore block".
-      // But here the pattern is `[[ {{url_sti}} --]] '/'`. 
-      // This looks like: if `url_sti` is present, it comments out the rest? No, `--` is comment in SQL.
-      // `[[ {{url_sti}} --]] '/'`
-      // If `url_sti` is "foo", it becomes `foo -- '/'` -> `foo` (rest commented out).
-      // If `url_sti` is missing, the block is removed? 
-      // Wait, `[[ ... ]]` in Metabase is optional.
-      // If `url_sti` is missing, `[[ ... ]]` is removed. Result: `'/'`.
-      // If `url_sti` is present (e.g. 'foo'), result: `'foo' -- '/'` -> `'foo'`.
-
       const pattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/gi;
       if (urlPath && urlPath.trim() !== '') {
-        // User provided a path. We want the result to be that path (quoted).
-        // The query expects a string literal.
-        // e.g. `AND e.url_path = 'foo'`
-        // The original query has `AND e.url_path = [[ {{url_sti}} --]] '/'`
-        // So we should replace the whole match with `'${urlPath}'`.
-        processedSql = processedSql.replace(pattern, `'${urlPath}'`);
+        processedSql = processedSql.replace(pattern, `'${urlPath.replace(/'/g, "''")}'`);
       } else {
-        // User did not provide a path. Use default `'/'`.
-        // The pattern `[[ {{url_sti}} --]] '/'`
-        // If we remove the `[[...]]` part, we get `'/'`.
-        // So we replace the whole match with `'/'`.
         processedSql = processedSql.replace(pattern, `'/'`);
       }
     }
 
     // Event Name Substitution
     if (hasEventNameFilter) {
-      const pattern = /\{\{event_name\}\}/gi;
+      const pattern = /\{\{\s*(event_name|hendelse)\s*\}\}/gi;
       if (eventName && eventName.trim() !== '') {
-        processedSql = processedSql.replace(pattern, `'${eventName}'`);
+        const safeEventName = eventName.replace(/'/g, "''");
+        processedSql = processedSql.replace(pattern, `'${safeEventName}'`);
       } else {
-        // If no event name, what to do? 
-        // Usually required if not in `[[ ]]`.
-        // Let's assume it's required or replace with empty string/null if that makes sense, 
-        // but for now let's just not replace it if empty? Or replace with ''?
-        // If the user hasn't typed anything, the query might fail if we leave `{{event_name}}`.
-        // Let's replace with `''` (empty string) to be safe, or maybe keep it to show error?
-        // Let's replace with `''` so it's valid SQL at least.
         processedSql = processedSql.replace(pattern, `''`);
       }
     }
@@ -1136,6 +1108,17 @@ const SQLPreview = ({
                 size="small"
                 onClick={() => {
                   onResetAll();
+                  // Reset local filter states
+                  setDateRange({ from: subDays(new Date(), 30), to: new Date() });
+                  setUrlPath('');
+                  setEventName('');
+                  setExecutedParams({
+                    dateRange: { from: subDays(new Date(), 30), to: new Date() },
+                    urlPath: '',
+                    eventName: ''
+                  });
+                  setResult(null); // Clear results
+
                   setShowAlert(true);
 
                   // Move this call AFTER onResetAll to ensure it happens last

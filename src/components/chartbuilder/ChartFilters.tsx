@@ -124,6 +124,32 @@ const ChartFilters = forwardRef(({
   // Add helper function to commit staging filter
   const commitStagingFilter = () => {
     if (stagingFilter) {
+      let currentFilters = [...filters];
+
+      // Auto-adjust event_type if filtering by specific event_name
+      if (stagingFilter.column === 'event_name') {
+        const hasPageviewFilter = currentFilters.some(f => f.column === 'event_type' && f.value === '1');
+
+        if (hasPageviewFilter) {
+          // Remove pageview filter
+          currentFilters = currentFilters.filter(f => f.column !== 'event_type');
+          // Add custom event filter
+          currentFilters.push({ column: 'event_type', operator: '=', value: '2' });
+          // Update UI state
+          setSelectedEventTypes(['custom_events']);
+        } else {
+          // Check if there is NO event_type filter, add one for custom events to be safe?
+          // Usually if there is no filter, it means ALL. But event_name implies custom_events.
+          const hasAnyEventTypeFilter = currentFilters.some(f => f.column === 'event_type');
+          if (!hasAnyEventTypeFilter) {
+            currentFilters.push({ column: 'event_type', operator: '=', value: '2' });
+            setSelectedEventTypes(['custom_events']);
+          }
+        }
+        // Ensure custom events mode is set correctly if we are forcing custom events
+        // setCustomEventsMode('specific'); // Maybe not needed if we just set the filter?
+      }
+
       // Check if this is an interactive filter
       if (stagingFilter.operator === 'INTERACTIVE') {
         // Generate parameter name based on column name
@@ -140,10 +166,10 @@ const ChartFilters = forwardRef(({
           interactive: true
         };
 
-        setFilters([...filters, interactiveFilter]);
+        setFilters([...currentFilters, interactiveFilter]);
       } else {
         // Regular filter
-        setFilters([...filters, stagingFilter]);
+        setFilters([...currentFilters, stagingFilter]);
       }
 
       setStagingFilter(null);
@@ -263,14 +289,33 @@ const ChartFilters = forwardRef(({
     setEventNameOperator(operator);
 
     // Find and remove any existing event_name filters
-    const filtersWithoutEventNames = filters.filter(f => f.column !== 'event_name');
+    let baseFilters = filters.filter(f => f.column !== 'event_name');
 
     // Only add event_name filter if events are selected
     if (selectedEvents.length > 0) {
+      // Auto-correct: Ensure event_type is correct for event queries
+      // If we are filtering by event name, we must allow event type 2. 
+      const pageviewFilterIndex = baseFilters.findIndex(f => f.column === 'event_type' && f.value === '1' && f.operator === '=');
+
+      if (pageviewFilterIndex >= 0) {
+        // Upgrade strict pageview filter to include custom events
+        baseFilters[pageviewFilterIndex] = {
+          column: 'event_type',
+          operator: 'IN',
+          value: '1',
+          multipleValues: ['1', '2']
+        };
+        setSelectedEventTypes(['pageviews', 'custom_events']);
+      } else if (!baseFilters.some(f => f.column === 'event_type')) {
+        // Ensure at least custom events are selected if no type filter exists
+        baseFilters.push({ column: 'event_type', operator: '=', value: '2' });
+        setSelectedEventTypes(['custom_events']);
+      }
+
       // For IN operator, use multipleValues
       if (operator === 'IN') {
         setFilters([
-          ...filtersWithoutEventNames,
+          ...baseFilters,
           {
             column: 'event_name',
             operator: 'IN',
@@ -282,7 +327,7 @@ const ChartFilters = forwardRef(({
       // For other operators (LIKE, STARTS_WITH, etc.), use normal format
       else {
         setFilters([
-          ...filtersWithoutEventNames,
+          ...baseFilters,
           {
             column: 'event_name',
             operator: operator,
@@ -292,7 +337,7 @@ const ChartFilters = forwardRef(({
       }
     } else {
       // Keep just the event_type=2 filter without specific event names
-      setFilters(filtersWithoutEventNames);
+      setFilters(baseFilters);
     }
   };
 

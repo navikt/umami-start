@@ -256,7 +256,7 @@ const EventSelector = ({
                             </span>
                           </div>
                           <div>
-                            <p className="text-gray-600">URL-sti kan velges som et filtervalg</p>
+                            <p className="text-gray-800">URL-sti kan velges som et filtervalg</p>
                           </div>
                         </div>
                       </div>
@@ -275,15 +275,21 @@ const EventSelector = ({
                 onChange={(val) => {
                   const newMode = val as 'all' | 'specific' | 'interactive';
 
-                  // Ensure custom_events is selected
-                  if (!selectedEventTypes.includes('custom_events')) {
-                    handleEventTypeChange('custom_events', true);
-                  }
-
-                  // Trigger data loading for specific/interactive modes or just always when interacting here
-                  if (onEnableCustomEvents) {
+                  // Always trigger data loading for specific/interactive modes
+                  if ((newMode === 'specific' || newMode === 'interactive') && onEnableCustomEvents) {
                     onEnableCustomEvents();
                   }
+
+                  // Force update custom_events type if entering specific/interactive mode
+                  // We remove the check to ensure filters are always re-synced correctly
+                  if (newMode === 'specific' || newMode === 'interactive') {
+                    handleEventTypeChange('custom_events', true);
+                  }
+                  // Also for 'all' mode, if we selected 'hendelser' tab, we probably want custom events?
+                  // No, 'all' might mean just viewing filters.
+                  // But if I click "Alle (ingen avgrensning)" inside "Hvilke hendelser", 
+                  // I probably still want "custom_events" enabled if I am in the Events tab.
+                  // But let's focus on the user's specific complaint about specific/interactive.
 
                   setCustomEventsMode(newMode);
 
@@ -294,7 +300,6 @@ const EventSelector = ({
 
                   // Special handling for interactive mode
                   if (newMode === 'interactive') {
-                    // Use Metabase parameter syntax: {{event_name}}
                     handleCustomEventsChange(['{{event_name}}'], '=');
                   }
                 }}
@@ -403,7 +408,7 @@ const EventSelector = ({
                         </span>
                       </div>
                       <div>
-                        <p className="text-gray-600">Hendelsesnavn kan velges som filtervalg</p>
+                        <p className="text-gray-800">Hendelsesnavn kan velges som filtervalg</p>
                       </div>
                     </div>
                   </div>
