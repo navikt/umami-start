@@ -131,7 +131,7 @@ function Home() {
                 }}>
                     <div>
                         <Heading as="h3" size="small" style={{ marginBottom: '12px', color: '#00347d' }}>
-                            Lag grafer og tabeller for Metabase
+                            Lag tilpassede grafer og tabeller
                         </Heading>
                         <p style={{ margin: 0, color: '#444', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
                             Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
