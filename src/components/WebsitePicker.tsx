@@ -528,6 +528,18 @@ const WebsitePicker = ({
   }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
 
+  const sortedWebsites = [...websites].sort((a, b) => {
+    const priorityIds = ['35abb2b7-3f97-42ce-931b-cf547d40d967', '83b80c84-b551-4dff-a679-f21be5fa0453'];
+    const aIndex = priorityIds.indexOf(a.id);
+    const bIndex = priorityIds.indexOf(b.id);
+
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className={`${variant === 'minimal' ? 'pb-2' : ''}`}>
       <div>
@@ -539,7 +551,7 @@ const WebsitePicker = ({
 
         <UNSAFE_Combobox
           label="Nettside eller app"
-          options={websites.map(website => ({
+          options={sortedWebsites.map(website => ({
             label: website.name,
             value: website.name,
             website: website
