@@ -1529,7 +1529,7 @@ const ChartsPage = () => {
         )
       }
 
-      <div className="sticky top-6">
+      <div className="sticky top-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
         <SQLPreview
           sql={generatedSQL}
           activeStep={currentStep}
