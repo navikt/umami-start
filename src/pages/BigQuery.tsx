@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
+import ChartLayout from '../components/ChartLayout';
 import { Button, Alert, Heading, BodyLong } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
@@ -520,16 +521,14 @@ export default function BigQuery() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-            <Heading level="1" size="large" spacing>
-                Umami SQL-spørringer
-            </Heading>
-            <BodyLong spacing>
-                Kjør SQL-spørringer mot Umami datasettet i BigQuery.
-            </BodyLong>
-            <div className="flex flex-col md:flex-row gap-8 -mt-3 min-w-0">
-                <div className="flex-1 space-y-6 min-w-0">
-                    <ReadMore header="Tilgjengelige tabeller" size="small" className="mb-6">
+        <ChartLayout
+            title="Umami SQL-spørringer"
+            description="Kjør SQL-spørringer mot Umami datasettet i BigQuery."
+            currentPage="sql"
+            wideSidebar={true}
+            filters={
+                <>
+                    <ReadMore header="Tilgjengelige tabeller" size="small">
                         <ul className="space-y-3">
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
@@ -649,14 +648,14 @@ export default function BigQuery() {
                             </ul>
                         </ReadMore>
                     </ReadMore>
+
                     {/* Query Input */}
                     <div>
                         <label className="block font-medium mb-2" htmlFor="sql-editor">SQL-spørring</label>
                         <div
                             className="border rounded resize-y overflow-auto"
-                            style={{ position: 'relative', isolation: 'isolate', minHeight: 100, maxHeight: 800, height: editorHeight }}
+                            style={{ position: 'relative', isolation: 'isolate', minHeight: 100, maxHeight: 600, height: editorHeight }}
                             onMouseUp={e => {
-                                // On mouse up, update the editor height to the container's height
                                 const target = e.currentTarget as HTMLDivElement;
                                 setEditorHeight(target.offsetHeight);
                             }}
@@ -682,50 +681,39 @@ export default function BigQuery() {
                                 }}
                             />
                         </div>
-                        <div className="flex gap-2 mt-2 mb-4">
+                        <div className="flex flex-wrap gap-2 mt-2">
                             <Button size="small" variant="secondary" type="button" onClick={formatSQL}>
-                                {formatSuccess ? '✓ Formatert' : 'Formater SQL'}
+                                {formatSuccess ? '✓ Formatert' : 'Formater'}
                             </Button>
-                            <Button size="small" variant="secondary" type="button" onClick={validateSQL}>Valider SQL</Button>
+                            <Button size="small" variant="secondary" type="button" onClick={validateSQL}>Valider</Button>
                             <Button
                                 size="small"
                                 variant="secondary"
                                 type="button"
                                 onClick={shareQuery}
                             >
-                                {shareSuccess ? '✓ Lenke kopiert' : 'Del spørring'}
+                                {shareSuccess ? '✓ Kopiert' : 'Del'}
                             </Button>
                         </div>
                         {showValidation && validateError && (
                             <div
-                                className={`relative rounded px-4 py-3 mb-2 ${validateError === 'SQL er gyldig!' ? 'bg-green-100 border border-green-400 text-green-800' : 'bg-red-100 border border-red-400 text-red-800'}`}
-                                style={{ fontFamily: 'Menlo, Monaco, "Fira Mono", monospace', fontSize: 14, minHeight: 36 }}
+                                className={`relative rounded px-3 py-2 mt-2 text-sm ${validateError === 'SQL er gyldig!' ? 'bg-green-100 border border-green-400 text-green-800' : 'bg-red-100 border border-red-400 text-red-800'}`}
                             >
                                 <span>{validateError}</span>
                                 <button
                                     type="button"
                                     aria-label="Lukk"
                                     onClick={() => setShowValidation(false)}
-                                    style={{
-                                        position: 'absolute',
-                                        right: 8,
-                                        top: 8,
-                                        background: 'none',
-                                        border: 'none',
-                                        color: 'inherit',
-                                        fontWeight: 'bold',
-                                        fontSize: 18,
-                                        cursor: 'pointer',
-                                        lineHeight: 1,
-                                    }}
+                                    className="absolute right-2 top-2 font-bold cursor-pointer"
                                 >
                                     ×
                                 </button>
                             </div>
                         )}
                     </div>
-                    {/* Submit Button */}
-                    <div className="flex gap-2">
+
+                    {/* Submit Buttons */}
+                    <div className="flex flex-wrap gap-2">
                         <Button
                             onClick={executeQuery}
                             loading={loading}
@@ -742,82 +730,71 @@ export default function BigQuery() {
                             Estimer kostnad
                         </Button>
                     </div>
+
                     {/* Cost Estimate Display */}
                     {estimate && showEstimate && (
-                        <Alert variant="info" className="relative">
+                        <Alert variant="info" className="relative" size="small">
                             <button
                                 type="button"
                                 aria-label="Lukk"
                                 onClick={() => setShowEstimate(false)}
-                                style={{
-                                    position: 'absolute',
-                                    right: 8,
-                                    top: 8,
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'inherit',
-                                    fontWeight: 'bold',
-                                    fontSize: 18,
-                                    cursor: 'pointer',
-                                    lineHeight: 1,
-                                }}
+                                className="absolute right-2 top-2 font-bold cursor-pointer"
                             >
                                 ×
                             </button>
-                            <div className="space-y-2">
-                                <BodyLong>
-                                    <strong>Data å prossesere:</strong>
+                            <div className="space-y-1 text-sm">
+                                <div>
+                                    <strong>Data:</strong>
                                     {parseFloat(estimate.totalBytesProcessedGB) >= 0.01 && ` ${estimate.totalBytesProcessedGB} GB`}
-                                </BodyLong>
+                                </div>
                                 {parseFloat(estimate.estimatedCostUSD) > 0 && (
-                                    <BodyLong>
-                                        <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
-                                    </BodyLong>
+                                    <div>
+                                        <strong>Kostnad:</strong> ${estimate.estimatedCostUSD} USD
+                                    </div>
                                 )}
                                 {estimate.cacheHit && (
-                                    <BodyLong className="text-green-700">
-                                        ✓ This query will use cached results (no cost)
-                                    </BodyLong>
+                                    <div className="text-green-700">
+                                        ✓ Cached (no cost)
+                                    </div>
                                 )}
                             </div>
                         </Alert>
                     )}
-                    {/* Error Display */}
-                    {error && (
-                        <Alert variant="error">
-                            <Heading level="3" size="small" spacing>
-                                Query Error
-                            </Heading>
-                            <BodyLong>{error}</BodyLong>
-                        </Alert>
-                    )}
+                </>
+            }
+        >
+            {/* Error Display */}
+            {error && (
+                <Alert variant="error" className="mb-4">
+                    <Heading level="3" size="small" spacing>
+                        Query Error
+                    </Heading>
+                    <BodyLong>{error}</BodyLong>
+                </Alert>
+            )}
 
-                    {result && (
-                        <ReadMore header="JSON" size="small" className="mb-4">
-                            <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
-                        </ReadMore>
-                    )}
-                </div>
+            {/* Results Display Area */}
+            <ResultsDisplay
+                result={result}
+                loading={loading}
+                error={error}
+                queryStats={result?.queryStats || estimate}
+                lastAction={null}
+                showLoadingMessage={estimating || loading}
+                executeQuery={executeQuery}
+                handleRetry={executeQuery}
+                prepareLineChartData={prepareLineChartData}
+                prepareBarChartData={prepareBarChartData}
+                preparePieChartData={preparePieChartData}
+                sql={query}
+            />
 
-
-                {/* Aside: ResultsDisplay */}
-                <aside className="w-full md:w-[420px] lg:w-[500px] xl:w-[600px] md:min-w-0 flex-shrink">
-                    <ResultsDisplay
-                        result={result}
-                        loading={loading}
-                        error={error}
-                        queryStats={result?.queryStats || estimate}
-                        lastAction={null}
-                        showLoadingMessage={estimating || loading}
-                        executeQuery={executeQuery}
-                        handleRetry={executeQuery}
-                        prepareLineChartData={prepareLineChartData}
-                        prepareBarChartData={prepareBarChartData}
-                        preparePieChartData={preparePieChartData}
-                        sql={query}
-                    />
-                </aside>
-            </div>
-        </div>
+            {/* JSON Output - below results */}
+            {result && (
+                <ReadMore header="JSON" size="small" className="mt-6">
+                    <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
+                </ReadMore>
+            )}
+        </ChartLayout>
     );
 }
