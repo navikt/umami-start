@@ -547,22 +547,24 @@ const WebsitePicker = ({
         {selectedWebsite && !showPicker ? (
           <div>
             <label className="navds-label navds-label--medium mb-2 block">Nettside eller app</label>
-            <div className="bg-white border border-gray-300 border-l-4 border-l-blue-600 p-2 rounded mb-3">
-              <div className="flex items-center gap-2">
+            <div className="mb-2">
+              <div className="flex items-center gap-1">
                 <PadlockLockedIcon className="text-blue-600" aria-hidden="true" />
                 <div className="text-lg font-semibold text-gray-900">{selectedWebsite.name}</div>
               </div>
             </div>
-            <Button
-              size="small"
-              variant="secondary"
-              onClick={() => {
-                handleWebsiteChange(null); // Clear selection
-                setShowPicker(true); // Show picker
-              }}
-            >
-              Bytt nettside eller app
-            </Button>
+            <div className="pb-2">
+              <Button
+                size="small"
+                variant="secondary"
+                onClick={() => {
+                  handleWebsiteChange(null); // Clear selection
+                  setShowPicker(true); // Show picker
+                }}
+              >
+                Bytt nettside eller app
+              </Button>
+            </div>
           </div>
         ) : (
           /* Show combobox when changing or no selection */

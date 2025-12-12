@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Heading, BodyShort } from '@navikt/ds-react';
+import { Heading, BodyShort, Select } from '@navikt/ds-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import AnalyticsNavigation, { type AnalyticsPage } from './AnalyticsNavigation';
+import { useNavigate } from 'react-router-dom';
+import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
+import Kontaktboks from './kontaktboks';
 
 interface ChartLayoutProps {
     title: string;
@@ -12,6 +14,21 @@ interface ChartLayoutProps {
     wideSidebar?: boolean;
 }
 
+const chartGroups = [
+    {
+        title: "Trafikk & hendelser",
+        ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
+    },
+    {
+        title: "Brukerreiser",
+        ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
+    },
+    {
+        title: "Brukere & lojalitet",
+        ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
+    }
+];
+
 const ChartLayout: React.FC<ChartLayoutProps> = ({
     title,
     description,
@@ -21,6 +38,15 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     wideSidebar = false
 }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const navigate = useNavigate();
+
+    const handleChartChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedId = event.target.value;
+        const page = analyticsPages.find(p => p.id === selectedId);
+        if (page) {
+            navigate(page.href);
+        }
+    };
 
     // Trigger window resize event when sidebar toggles to help charts resize
     useEffect(() => {
@@ -53,6 +79,39 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                         <>
                             <div className={`bg-[#fafafa] w-full ${sidebarWidth} p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]`}>
                                 <div className="space-y-6">
+                                    <div className="pb-2">
+                                        <Select
+                                            label="Type analyse"
+                                            value={currentPage || ''}
+                                            onChange={handleChartChange}
+                                            size="medium"
+                                        >
+                                            <option value="" disabled>Velg...</option>
+                                            {chartGroups.map((group) => (
+                                                <optgroup label={group.title} key={group.title}>
+                                                    {group.ids.map(id => {
+                                                        const page = analyticsPages.find(p => p.id === id);
+                                                        if (!page) return null;
+                                                        return (
+                                                            <option key={page.id} value={page.id}>
+                                                                {page.label}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </optgroup>
+                                            ))}
+                                            <optgroup label="Avansert">
+                                                {analyticsPages
+                                                    .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
+                                                    .map(page => (
+                                                        <option key={page.id} value={page.id}>
+                                                            {page.label}
+                                                        </option>
+                                                    ))
+                                                }
+                                            </optgroup>
+                                        </Select>
+                                    </div>
                                     {filters}
                                 </div>
                             </div>
@@ -84,7 +143,12 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                 </div>
             </div>
 
-            {currentPage && <AnalyticsNavigation currentPage={currentPage} />}
+            {/* {currentPage && <AnalyticsNavigation currentPage={currentPage} />} */}
+
+            <div className="mt-12">
+                <Kontaktboks />
+            </div>
+
         </div>
     );
 };
