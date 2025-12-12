@@ -100,7 +100,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                                                     })}
                                                 </optgroup>
                                             ))}
-                                            <optgroup label="Tilpasset">
+                                            <optgroup label="Tilpasset & datasjekk">
                                                 {analyticsPages
                                                     .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
                                                     .map(page => (

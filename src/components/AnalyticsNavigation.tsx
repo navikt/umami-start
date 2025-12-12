@@ -69,6 +69,18 @@ export const analyticsPages = [
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
+    },
+    {
+        id: 'diagnose',
+        href: '/diagnose',
+        label: 'Diagnoseverktøy',
+        description: 'Oversikt over aktivitet på alle nettsteder og apper'
+    },
+    {
+        id: 'personvern',
+        href: '/personvern',
+        label: 'Personvernssjekk',
+        description: 'Søk etter potensielle personopplysninger'
     }
 ];
 
