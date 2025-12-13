@@ -40,6 +40,10 @@ const Dashboard = () => {
         });
     };
 
+    const hasChanges =
+        tempDateRange !== activeFilters.dateRange ||
+        tempUrlPath !== (activeFilters.urlFilters[0] || "");
+
     const filters = (
         <>
             <div className="w-full sm:w-[200px]">
@@ -74,7 +78,7 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-end pb-[2px]">
-                <Button onClick={handleUpdate} size="small">
+                <Button onClick={handleUpdate} size="small" disabled={!hasChanges}>
                     Oppdater
                 </Button>
             </div>
