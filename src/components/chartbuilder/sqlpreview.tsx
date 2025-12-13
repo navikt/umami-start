@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox, ReadMore } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
@@ -45,6 +45,7 @@ const SQLPreview = ({
   isEventsLoading = false
 }: SQLPreviewProps) => {
   const [copied, setCopied] = useState(false);
+  const [copiedDashboard, setCopiedDashboard] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
   const [estimate, setEstimate] = useState<any>(null);
@@ -1079,6 +1080,32 @@ const SQLPreview = ({
             </div>
 
             {sql && <SqlCodeDisplay sql={sql} showEditButton={true} />}
+
+            <div className="mt-4">
+              <ReadMore header="Eksperimentelt">
+                <div className="pt-2">
+                  <p className="mb-2 text-sm text-gray-600">Kopier SQL tilpasset <code>dashboards.ts</code> (med escapes og variabler)</p>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      let dashboardSql = sql;
+                      // Relace website_id with template variable
+                      dashboardSql = dashboardSql.replace(/website_id\s*=\s*'([a-f0-9\-]+)'/gi, "website_id = '{{website_id}}'");
+                      // Escape backticks for TS template literal
+                      dashboardSql = dashboardSql.replace(/`/g, '\\`');
+
+                      navigator.clipboard.writeText(dashboardSql);
+                      setCopiedDashboard(true);
+                      setTimeout(() => setCopiedDashboard(false), 3000);
+                    }}
+                    icon={<Copy size={16} />}
+                    size="small"
+                  >
+                    {copiedDashboard ? 'Kopiert!' : 'Kopier til dashboard'}
+                  </Button>
+                </div>
+              </ReadMore>
+            </div>
           </div>
         )}
         {/* 

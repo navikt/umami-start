@@ -1,5 +1,6 @@
 import { Search, Alert, BodyShort, Link, ReadMore, List, Skeleton } from "@navikt/ds-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Website {
     id: string;
@@ -11,47 +12,71 @@ interface Website {
 }
 
 function Metadashboard() {
+    const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
     const [hasLoadedData, setHasLoadedData] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
 
-    const loadWebsitesData = () => {
-        if (hasLoadedData) return; // Avoid redundant fetches
+    const normalizeDomain = (domain: string) => {
+        if (domain === "www.nav.no") return domain;
+        return domain.replace(/^www\./, "");
+    };
+
+    const fetchWebsites = async (): Promise<Website[]> => {
+        // If we already have data, return it
+        if (hasLoadedData && filteredData) {
+            return filteredData;
+        }
 
         setIsLoading(true);
         const baseUrl = ''; // Use relative path for local API
 
-        fetch(`${baseUrl}/api/bigquery/websites`)
-            .then(response => response.json())
-            .then((response) => {
-                const websitesData = response.data || [];
+        try {
+            const response = await fetch(`${baseUrl}/api/bigquery/websites`);
+            const json = await response.json();
+            const websitesData = json.data || [];
 
-                // Filter for prod websites only
-                const prodWebsites = websitesData.filter((website: Website) =>
-                    website.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
-                );
+            // Filter for prod websites (Team ResearchOps and maybe others if needed)
+            // Umami.jsx looks for:
+            // aa113c34-e213-4ed6-a4f0-0aea8a503e6b (Team ResearchOps?)
+            // bceb3300-a2fb-4f73-8cec-7e3673072b30 (Another team?)
 
-                // Filter out exactly "nav.no"
-                const filteredItems = prodWebsites.filter((item: Website) => item.domain !== "nav.no");
+            const relevantTeams = [
+                'aa113c34-e213-4ed6-a4f0-0aea8a503e6b',
+                'bceb3300-a2fb-4f73-8cec-7e3673072b30'
+            ];
 
-                // Deduplicate by domain
-                const uniqueWebsites = filteredItems.filter((website: Website, index: number, self: Website[]) =>
-                    index === self.findIndex((w) => w.domain === website.domain)
-                );
+            const prodWebsites = websitesData.filter((website: Website) =>
+                relevantTeams.includes(website.teamId)
+            );
 
-                // Sort by domain
-                uniqueWebsites.sort((a: Website, b: Website) => a.domain.localeCompare(b.domain));
+            // Filter out exactly "nav.no" if desired, though logic below handles matching
+            const filteredItems = prodWebsites.filter((item: Website) => item.domain !== "nav.no");
 
-                setFilteredData(uniqueWebsites);
-                setHasLoadedData(true);
-                setIsLoading(false);
-            })
-            .catch(error => {
-                console.error("Error fetching data:", error);
-                setIsLoading(false);
-            });
+            // Deduplicate by domain
+            const uniqueWebsites = filteredItems.filter((website: Website, index: number, self: Website[]) =>
+                index === self.findIndex((w) => w.domain === website.domain)
+            );
+
+            // Sort by domain
+            uniqueWebsites.sort((a: Website, b: Website) => a.domain.localeCompare(b.domain));
+
+            setFilteredData(uniqueWebsites);
+            setHasLoadedData(true);
+            setIsLoading(false);
+            return uniqueWebsites;
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            setIsLoading(false);
+            throw error;
+        }
+    };
+
+    const loadWebsitesData = () => {
+        fetchWebsites().catch(() => { });
     };
 
     const handleReadMoreToggle = (open: boolean) => {
@@ -63,17 +88,17 @@ function Metadashboard() {
     const handleSearchChange = (value: string) => {
         setSearchQuery(value);
         setAlertVisible(false);
+        setSearchError(null);
     };
 
-    const [searchError, setSearchError] = useState<string | null>(null);
-
-    const handleSubmit = (event: React.FormEvent) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!searchQuery) {
             setSearchError("Du må sette inn en URL-adresse.");
             return;
         }
         setSearchError(null);
+        setAlertVisible(false);
 
         let inputUrl = searchQuery;
         if (!inputUrl.startsWith('http://') && !inputUrl.startsWith('https://')) {
@@ -81,13 +106,36 @@ function Metadashboard() {
         }
 
         try {
-            const url = new URL(inputUrl);
-            const normalizedUrl = url.href;
-            // Always redirect to felgen with encoded URL as q param in same tab
-            const felgenUrl = `https://felgen.ansatt.nav.no/?q=${encodeURIComponent(normalizedUrl)}`;
-            window.location.assign(felgenUrl);
+            let urlObj = new URL(inputUrl);
+
+            // Normalize nav.no to www.nav.no for matching consistency,
+            // copying logic from Umami.jsx
+            if (urlObj.hostname === "nav.no") {
+                inputUrl = inputUrl.replace("://nav.no", "://www.nav.no");
+                urlObj = new URL(inputUrl);
+            }
+
+            const websites = await fetchWebsites();
+
+            const inputDomain = urlObj.hostname;
+            const normalizedInputDomain = normalizeDomain(inputDomain);
+
+            const matchedWebsite = websites.find(
+                (item) =>
+                    normalizeDomain(item.domain) === normalizedInputDomain ||
+                    normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
+            );
+
+            if (matchedWebsite) {
+                // Navigate to dashboard
+                // Pass domain/path info if useful
+                navigate(`/dashboard?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}`);
+            } else {
+                setAlertVisible(true);
+            }
+
         } catch (error) {
-            setSearchError("Ugyldig URL-format");
+            setSearchError("Ugyldig URL-format eller feil ved oppslag.");
             console.error("Error:", error);
         }
     };

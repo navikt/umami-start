@@ -28,6 +28,7 @@ import Diagnosis from "./pages/Diagnosis.tsx";
 
 import EventJourney from "./pages/EventJourney.tsx";
 import UserProfile from "./pages/UserProfile.tsx";
+import Dashboard from "./pages/Dashboard.tsx";
 
 
 const routes = [
@@ -57,7 +58,8 @@ const routes = [
     { path: "/markedsanalyse", component: <MarketingAnalysis /> },
     { path: "/personvernssjekk", component: <PrivacyCheck /> },
     { path: "/diagnose", component: <Diagnosis /> },
-    { path: "/profil", component: <UserProfile /> }
+    { path: "/profil", component: <UserProfile /> },
+    { path: "/dashboard", component: <Dashboard /> }
 ];
 
 export default routes;
