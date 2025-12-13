@@ -35,7 +35,7 @@ LIMIT 1000`
     },
     {
       id: "ekstern-trafikk",
-      title: "Nettsider besøkende kommer fra",
+      title: "Eksterne nettsider besøkende kommer fra",
       type: "table",
       width: 'half',
       sql: `WITH base_query AS (

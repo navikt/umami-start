@@ -210,7 +210,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
                                     <Table.Row key={i}>
                                         {Object.values(row).map((val: any, j) => (
                                             <Table.DataCell key={j} className="whitespace-nowrap" title={String(val)}>
-                                                {String(val)}
+                                                {typeof val === 'number' ? val.toLocaleString('nb-NO') : String(val)}
                                             </Table.DataCell>
                                         ))}
                                     </Table.Row>
