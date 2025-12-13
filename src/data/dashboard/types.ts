@@ -3,7 +3,7 @@ export interface SavedChart {
     title: string;
     type: 'line' | 'bar' | 'pie' | 'table' | 'title';
     sql?: string;
-    width?: 'full' | 'half' | '100' | '75' | '50' | '25';
+    width?: 'full' | 'half' | string;
     description?: string;
     config?: any; // ChartConfig | null
     filters?: any[]; // Filter[]

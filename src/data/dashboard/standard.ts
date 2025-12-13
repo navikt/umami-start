@@ -8,7 +8,7 @@ export const standardDashboard: DashboardConfig = {
       id: "traffic",
       title: "Besøk over tid",
       type: "line",
-      width: '50',
+      width: '60',
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
@@ -31,7 +31,7 @@ LIMIT 1000`
       id: "besok gruppert",
       title: "Besøk gruppert på sider",
       type: "table",
-      width: '50',
+      width: '40',
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`

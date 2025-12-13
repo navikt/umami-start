@@ -123,7 +123,7 @@ const Dashboard = () => {
                     </Alert>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
                     {dashboard.charts.map((chart) => (
                         <DashboardWidget
                             key={chart.id}

@@ -137,29 +137,54 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
     }, [chart.sql, websiteId, filters]);
 
     // Render logic based on chart.type
-    // Helper to determine col-span based on width
-    const getColSpan = (width?: string) => {
-        switch (width) {
-            case '100':
-            case 'full':
-                return 'col-span-1 md:col-span-4';
-            case '75':
-                return 'col-span-1 md:col-span-3';
-            case '50':
-            case 'half':
-                return 'col-span-1 md:col-span-2';
-            case '25':
-                return 'col-span-1 md:col-span-1';
-            default:
-                return 'col-span-1 md:col-span-2'; // Default to 50% (half)
+    // Calculate span based on 20-column grid
+    let span = 10; // Default half (50%) => 10/20
+    const w = chart.width;
+
+    if (w === 'full') span = 20;
+    else if (w === 'half') span = 10;
+    else if (w) {
+        // Try parsing number
+        const val = parseInt(w);
+        if (!isNaN(val)) {
+            // value is percentage (e.g. 60), map to 20 columns
+            // 100% = 20 cols. 1% = 0.2 cols.
+            span = Math.round(val * 0.2);
         }
+    }
+
+    // Ensure min 1 span
+    span = Math.max(1, span);
+
+    // Explicit map to ensure Tailwind JIT picks up the classes
+    const SPAN_CLASSES: Record<number, string> = {
+        1: 'md:col-span-1',
+        2: 'md:col-span-2',
+        3: 'md:col-span-3',
+        4: 'md:col-span-4',
+        5: 'md:col-span-5',
+        6: 'md:col-span-6',
+        7: 'md:col-span-7',
+        8: 'md:col-span-8',
+        9: 'md:col-span-9',
+        10: 'md:col-span-10',
+        11: 'md:col-span-11',
+        12: 'md:col-span-12',
+        13: 'md:col-span-13',
+        14: 'md:col-span-14',
+        15: 'md:col-span-15',
+        16: 'md:col-span-16',
+        17: 'md:col-span-17',
+        18: 'md:col-span-18',
+        19: 'md:col-span-19',
+        20: 'md:col-span-20',
     };
 
-    const colSpanClass = getColSpan(chart.width);
+    const colClass = `col-span-full ${SPAN_CLASSES[span] || 'md:col-span-10'}`;
 
     if (chart.type === 'title') {
         return (
-            <div className={`pt-2 ${colSpanClass}`}>
+            <div className={`pt-2 ${colClass}`}>
                 <h2 className="text-2xl font-bold text-gray-800">{chart.title}</h2>
                 {chart.description && <p className="text-gray-600 mt-1">{chart.description}</p>}
             </div>
@@ -172,8 +197,6 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
         if (!data || data.length === 0) return <div className="text-gray-500 p-8 text-center">Ingen data funnet</div>;
 
         if (chart.type === 'line') {
-            // Adapt data for LineChart
-            // Assume col 0 is X (date), col 1 is Y (value)
             const points: ILineChartDataPoint[] = data.map((row: any) => {
                 const keys = Object.keys(row);
                 const xVal = row[keys[0]].value || row[keys[0]]; // Handle BQ format if needed
@@ -256,7 +279,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
     };
 
     return (
-        <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${colSpanClass}`}>
+        <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${colClass}`}>
             <div className="flex flex-col mb-6">
                 <h2 className="text-xl font-semibold">{chart.title}</h2>
                 {chart.description && (
