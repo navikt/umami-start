@@ -23,6 +23,7 @@ interface WebsitePickerProps {
     requestLoadEvents?: boolean; // Add flag to manually trigger event loading
     onLoadingChange?: (isLoading: boolean) => void; // Add callback for loading state
     size?: 'medium' | 'small';
+    disableUrlUpdate?: boolean; // Add flag to disable automatic URL updates
 }
 
 interface EventProperty {
@@ -103,7 +104,8 @@ const DashboardWebsitePicker = ({
     disableAutoEvents = false,
     requestLoadEvents = false,
     onLoadingChange,
-    size = 'medium'
+    size = 'medium',
+    disableUrlUpdate = false
 }: WebsitePickerProps) => {
     const [websites, setWebsites] = useState<Website[]>([]);
     const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -164,7 +166,9 @@ const DashboardWebsitePicker = ({
     // Handle website selection and update URL
     const handleWebsiteChange = useCallback((website: Website | null) => {
         onWebsiteChange(website);
-        updateUrlWithWebsiteId(website);
+        if (!disableUrlUpdate) {
+            updateUrlWithWebsiteId(website);
+        }
 
         // Save/clear selected website in localStorage
         if (website) {
@@ -175,7 +179,7 @@ const DashboardWebsitePicker = ({
 
         // Reset to cheap query when switching websites
         setIncludeParams(false);
-    }, [onWebsiteChange, updateUrlWithWebsiteId]);
+    }, [onWebsiteChange, updateUrlWithWebsiteId, disableUrlUpdate]);
 
     // Check for website ID in URL on initial load
     useEffect(() => {
@@ -542,6 +546,8 @@ const DashboardWebsitePicker = ({
         return a.name.localeCompare(b.name);
     });
 
+
+
     return (
         <div className={`${variant === 'minimal' ? '' : ''}`}>
             <div>
@@ -554,21 +560,15 @@ const DashboardWebsitePicker = ({
                 <UNSAFE_Combobox
                     label="Nettside eller app"
                     size={size}
-                    options={sortedWebsites.map(website => {
-                        const label = (variant === 'minimal' && website.domain) ? website.domain : website.name;
-                        return {
-                            label: label,
-                            value: label,
-                            website: website
-                        };
-                    })}
-                    selectedOptions={selectedWebsite ? [(variant === 'minimal' && selectedWebsite.domain) ? selectedWebsite.domain : selectedWebsite.name] : []}
+                    options={sortedWebsites.map(website => ({
+                        label: website.name,
+                        value: website.name,
+                        website: website
+                    }))}
+                    selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
                     onToggleSelected={(option: string, isSelected: boolean) => {
                         if (isSelected) {
-                            const website = websites.find(w => {
-                                const label = (variant === 'minimal' && w.domain) ? w.domain : w.name;
-                                return label === option;
-                            });
+                            const website = websites.find(w => w.name === option);
                             if (website) {
                                 handleWebsiteChange(website);
                             }

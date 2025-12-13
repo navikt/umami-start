@@ -5,7 +5,6 @@ export const standardDashboard: DashboardConfig = {
   description: "Et standarddashboard med vanlige trafikktall.",
   charts: [
     {
-      id: "traffic",
       title: "Besøk over tid",
       type: "line",
       width: '60',
@@ -28,7 +27,6 @@ ORDER BY dato ASC
 LIMIT 1000`
     },
     {
-      id: "besok gruppert",
       title: "Besøk gruppert på sider",
       type: "table",
       width: '40',
@@ -53,13 +51,11 @@ LIMIT 1000
 `
     },
     {
-      id: "section-traffic",
-      title: "Trafikk",
+      title: "Trafikk til siden",
       type: "title",
       width: '100'
     },
     {
-      id: "ekstern-trafikk",
       title: "Eksterne nettsider besøkende kommer fra",
       type: "table",
       width: '50',
@@ -83,7 +79,6 @@ LIMIT 1000
 `
     },
     {
-      id: "intern-trafikk",
       title: "Interne sider besøkende kommer fra",
       type: "table",
       width: '50',

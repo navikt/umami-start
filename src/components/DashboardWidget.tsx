@@ -118,7 +118,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
                 if (result.queryStats && onDataLoaded) {
                     const gb = result.queryStats.totalBytesProcessed ? (result.queryStats.totalBytesProcessed / (1024 ** 3)) : 0;
                     onDataLoaded({
-                        id: chart.id,
+                        id: chart.id || '',
                         gb: gb,
                         title: chart.title
                     });

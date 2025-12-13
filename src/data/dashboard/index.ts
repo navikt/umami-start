@@ -3,8 +3,16 @@ import { DashboardConfig } from './types';
 
 export * from './types';
 
+const ensureIds = (config: DashboardConfig): DashboardConfig => ({
+    ...config,
+    charts: config.charts.map((chart, index) => ({
+        ...chart,
+        id: chart.id || `auto-id-${index}-${chart.type}`
+    }))
+});
+
 export const dashboards: Record<string, DashboardConfig> = {
-    'standard': standardDashboard,
+    'standard': ensureIds(standardDashboard),
     // Add other dashboards here, e.g.:
     // 'performance': performanceDashboard,
 };

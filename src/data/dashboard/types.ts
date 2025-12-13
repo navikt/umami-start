@@ -1,5 +1,5 @@
 export interface SavedChart {
-    id: string;
+    id?: string;
     title: string;
     type: 'line' | 'bar' | 'pie' | 'table' | 'title';
     sql?: string;
