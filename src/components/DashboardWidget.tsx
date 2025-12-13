@@ -179,6 +179,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
                         <LineChart
                             data={{ lineChartData: lines }}
                             yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                            margins={{ left: 60, right: 20, top: 20, bottom: 40 }}
                         />
                     </ResponsiveContainer>
                 </div>
