@@ -1,6 +1,6 @@
-import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs, Search, Accordion } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
-import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import {
   Parameter,
   DateFormat,
@@ -61,6 +61,7 @@ const DisplayOptions = forwardRef(({
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
   const [showCustomLimit, setShowCustomLimit] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
     message: ''
@@ -91,6 +92,38 @@ const DisplayOptions = forwardRef(({
   };
 
   const uniqueParameters = getUniqueParameters(parameters);
+
+  const groupedAndFilteredParams = useMemo(() => {
+    const groups: Record<string, Parameter[]> = {};
+    const query = searchQuery.toLowerCase();
+
+    parameters.forEach(param => {
+      let eventName = 'Andre';
+
+      if (param.key.includes('.')) {
+        eventName = param.key.split('.')[0];
+      }
+
+      // Filter based on search query
+      const baseName = param.key.split('.').pop()!;
+      if (searchQuery &&
+        !eventName.toLowerCase().includes(query) &&
+        !baseName.toLowerCase().includes(query)) {
+        return;
+      }
+
+      if (!groups[eventName]) {
+        groups[eventName] = [];
+      }
+
+      // Avoid duplicates within the same event
+      if (!groups[eventName].some(p => p.key === param.key)) {
+        groups[eventName].push(param);
+      }
+    });
+
+    return groups;
+  }, [parameters, searchQuery]);
 
   // Check if custom events (event_type = 2) are enabled in filters
   const hasCustomEventsEnabled = filters.some(f =>
@@ -336,23 +369,56 @@ const DisplayOptions = forwardRef(({
 
               {hasCustomParameters && (
                 <Tabs.Panel value="custom" className="pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    {uniqueParameters.map(param => (
-                      <Button
-                        key={`param_${param.key}`}
-                        variant={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`) ? "secondary" : "secondary"}
-                        size="small"
-                        onClick={() => handleAddGroupField(`param_${sanitizeColumnName(param.key)}`)}
-                        disabled={activeGroupings.includes(`param_${sanitizeColumnName(param.key)}`)}
-                      >
-                        {param.key}
-                      </Button>
-                    ))}
+                  <div className="mb-4">
+                    <Search
+                      label="Søk i egendefinerte parametere"
+                      hideLabel={false}
+                      variant="simple"
+                      size="small"
+                      value={searchQuery}
+                      onChange={setSearchQuery}
+                      onClear={() => setSearchQuery('')}
+                    />
                   </div>
-                  {uniqueParameters.length === 0 && (
+
+                  {Object.keys(groupedAndFilteredParams).length === 0 ? (
                     <div className="text-sm text-gray-600 mt-2">
-                      Ingen egendefinerte parametere funnet for denne nettsiden.
+                      {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte parametere funnet for denne nettsiden.'}
                     </div>
+                  ) : (
+                    <Accordion size="small" headingSize="xsmall">
+                      {Object.entries(groupedAndFilteredParams).map(([eventName, params]) => (
+                        <Accordion.Item key={eventName}>
+                          <Accordion.Header>
+                            {eventName === '_manual_parameters_' ? 'Manuelt lagt til' : eventName}
+                            <span className="text-sm text-gray-600 ml-2 font-normal">
+                              ({params.length})
+                            </span>
+                          </Accordion.Header>
+                          <Accordion.Content>
+                            <div className="flex flex-wrap gap-2">
+                              {params.map(param => {
+                                const baseName = param.key.split('.').pop()!;
+                                const columnValue = `param_${sanitizeColumnName(baseName)}`;
+                                const isActive = activeGroupings.includes(columnValue);
+
+                                return (
+                                  <Button
+                                    key={param.key}
+                                    variant={isActive ? "secondary" : "secondary"}
+                                    size="small"
+                                    onClick={() => handleAddGroupField(columnValue)}
+                                    disabled={isActive}
+                                  >
+                                    {baseName}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </Accordion.Content>
+                        </Accordion.Item>
+                      ))}
+                    </Accordion>
                   )}
                 </Tabs.Panel>
               )}
