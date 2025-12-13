@@ -294,7 +294,7 @@ const DisplayOptions = forwardRef(({
               <Tabs.List>
                 <Tabs.Tab value="basic" label="Ofte brukte" />
                 {hasCustomParameters && (
-                  <Tabs.Tab value="custom" label="Egendefinerte" />
+                  <Tabs.Tab value="custom" label="Hendelsesdata" />
                 )}
                 <Tabs.Tab value="advanced" label="Flere valg" />
               </Tabs.List>
@@ -451,7 +451,7 @@ const DisplayOptions = forwardRef(({
                     ))}
 
                     {uniqueParameters.length > 0 && (
-                      <optgroup label="Egendefinerte">
+                      <optgroup label="Hendelsesdata">
                         {uniqueParameters
                           .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
                           .map(param => (
