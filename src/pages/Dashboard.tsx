@@ -1,4 +1,4 @@
-import { Alert, Select, Button, TextField, ReadMore } from "@navikt/ds-react";
+import { Alert, Select, Button, TextField, ReadMore, Label } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
@@ -19,7 +19,7 @@ const Dashboard = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<any>(null);
 
     // UI/Temp State
-    const [tempPathOperator] = useState("equals");
+    const [tempPathOperator, setTempPathOperator] = useState("equals");
     const [tempUrlPath, setTempUrlPath] = useState<string>(path || "");
     const [tempDateRange, setTempDateRange] = useState("this-month");
 
@@ -42,7 +42,8 @@ const Dashboard = () => {
 
     const hasChanges =
         tempDateRange !== activeFilters.dateRange ||
-        tempUrlPath !== (activeFilters.urlFilters[0] || "");
+        tempUrlPath !== (activeFilters.urlFilters[0] || "") ||
+        tempPathOperator !== activeFilters.pathOperator;
 
     const filters = (
         <>
@@ -55,9 +56,22 @@ const Dashboard = () => {
                 />
             </div>
 
-            <div className="w-full sm:w-[200px]">
+            <div className="w-full sm:w-[240px]">
+                <div className="flex items-center gap-2 mb-1">
+                    <Label size="small" htmlFor="url-filter">URL-sti</Label>
+                    <select
+                        className="text-sm bg-white border border-gray-300 rounded text-[#0067c5] font-medium cursor-pointer focus:outline-none py-1 px-2"
+                        value={tempPathOperator}
+                        onChange={(e) => setTempPathOperator(e.target.value)}
+                    >
+                        <option value="equals">er lik</option>
+                        <option value="starts-with">starter med</option>
+                    </select>
+                </div>
                 <TextField
-                    label="URL-sti er lik"
+                    id="url-filter"
+                    label="URL-sti"
+                    hideLabel
                     size="small"
                     value={tempUrlPath}
                     onChange={(e) => setTempUrlPath(e.target.value)}
@@ -109,7 +123,7 @@ const Dashboard = () => {
                     </Alert>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {dashboard.charts.map((chart) => (
                         <DashboardWidget
                             key={chart.id}

@@ -8,7 +8,7 @@ export const standardDashboard: DashboardConfig = {
       id: "traffic",
       title: "Besøk over tid",
       type: "line",
-      width: 'full',
+      width: '50',
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
@@ -28,16 +28,41 @@ ORDER BY dato ASC
 LIMIT 1000`
     },
     {
+      id: "besok gruppert",
+      title: "Besøk gruppert på sider",
+      type: "table",
+      width: '50',
+      sql: `WITH base_query AS (
+  SELECT
+    \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+  WHERE \`team-researchops-prod-01d6.umami.public_website_event\`.website_id = '{{website_id}}'
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.event_type = 1
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.url_path = [[ {{url_sti}} --]] '/'
+  [[AND {{created_at}} ]]
+)
+
+SELECT
+  COUNT(DISTINCT base_query.session_id) as Unike_besokende,
+  base_query.url_path
+FROM base_query
+GROUP BY
+  base_query.url_path
+ORDER BY 1 DESC
+LIMIT 1000
+
+`
+    },
+    {
       id: "section-traffic",
       title: "Trafikk",
       type: "title",
-      width: 'full'
+      width: '100'
     },
     {
       id: "ekstern-trafikk",
       title: "Eksterne nettsider besøkende kommer fra",
       type: "table",
-      width: 'half',
+      width: '50',
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
@@ -61,7 +86,7 @@ LIMIT 1000
       id: "intern-trafikk",
       title: "Interne sider besøkende kommer fra",
       type: "table",
-      width: 'half',
+      width: '50',
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`

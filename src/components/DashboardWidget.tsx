@@ -53,19 +53,19 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
                 // If no value: `url_path = '/'`
                 // So I need to replace the WHOLE sequence `[[ {{url_sti}} --]] '/'` with the active value.
 
-                const urlBlockRegex = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
-
                 if (filters.urlFilters.length > 0) {
-                    // If we have filters, replace the whole block + default with the filter values
-                    // Handling multiple values might require changing = to IN (...), but let's assume single for now or user uses =
-                    // joining with OR is tricky in text replace.
-                    // The user's Combobox allows multiple.
-                    // If multiple: `url_path IN ('/a', '/b')`. 
-                    // But the SQL has `url_path = ...`.
-                    // I will just join them for now or pick the first one to avoid SQL syntax error if I don't parse the `=` sign.
-                    // TODO: Better multi-value support.
-                    const val = filters.urlFilters[0]; // Take first for safety
-                    processedSql = processedSql.replace(urlBlockRegex, `'${val}'`);
+                    const val = filters.urlFilters[0];
+                    const operator = filters.pathOperator || 'equals';
+
+                    // Regex to capture the assignment operator (=) and the template block
+                    // Matches: "= [[ {{url_sti}} --]] 'default'"
+                    const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
+
+                    if (operator === 'starts-with') {
+                        processedSql = processedSql.replace(assignmentRegex, `LIKE '${val}%'`);
+                    } else {
+                        processedSql = processedSql.replace(assignmentRegex, `='${val}'`);
+                    }
                 } else {
                     // If no filters, replace just the `[[...]]` part with empty string? 
                     // No, `[[ {{url_sti}} --]]` acts as a comment marker that says "if variable is missing, use what follows".
@@ -137,9 +137,29 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
     }, [chart.sql, websiteId, filters]);
 
     // Render logic based on chart.type
+    // Helper to determine col-span based on width
+    const getColSpan = (width?: string) => {
+        switch (width) {
+            case '100':
+            case 'full':
+                return 'col-span-1 md:col-span-4';
+            case '75':
+                return 'col-span-1 md:col-span-3';
+            case '50':
+            case 'half':
+                return 'col-span-1 md:col-span-2';
+            case '25':
+                return 'col-span-1 md:col-span-1';
+            default:
+                return 'col-span-1 md:col-span-2'; // Default to 50% (half)
+        }
+    };
+
+    const colSpanClass = getColSpan(chart.width);
+
     if (chart.type === 'title') {
         return (
-            <div className={`col-span-1 md:col-span-2 pt-2 ${chart.width === 'half' ? 'md:col-span-1' : ''}`}>
+            <div className={`pt-2 ${colSpanClass}`}>
                 <h2 className="text-2xl font-bold text-gray-800">{chart.title}</h2>
                 {chart.description && <p className="text-gray-600 mt-1">{chart.description}</p>}
             </div>
@@ -236,7 +256,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
     };
 
     return (
-        <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${chart.width === 'full' ? 'col-span-1 md:col-span-2' : ''}`}>
+        <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${colSpanClass}`}>
             <div className="flex flex-col mb-6">
                 <h2 className="text-xl font-semibold">{chart.title}</h2>
                 {chart.description && (
