@@ -1162,9 +1162,13 @@ const ChartsPage = () => {
       const needsEventData = config.groupByFields.some(field => field.startsWith('param_')) ||
         filters.some(filter => filter.column.startsWith('param_')) ||
         config.metrics.some(metric => metric.column?.startsWith('param_'));
+
       if (needsEventData) {
-        sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
-        sql += '  ON base_query.event_id = event_data.website_event_id\n';
+        sql += 'LEFT JOIN `team-researchops-prod-01d6.umami_views.event_data` AS ed_view\n';
+        sql += '  ON base_query.event_id = ed_view.website_event_id\n';
+        sql += '  AND base_query.website_id = ed_view.website_id\n';
+        sql += '  AND base_query.created_at = ed_view.created_at\n';
+        sql += 'LEFT JOIN UNNEST(ed_view.event_parameters) AS event_data\n';
       }
       if (config.paramAggregation === 'unique') {
         config.groupByFields.forEach(field => {
@@ -1175,9 +1179,8 @@ const ChartsPage = () => {
               return sanitizeColumnName(baseName!) === paramBase;
             });
             if (matchingParam && matchingParam.type === 'string') {
-              sql += `LEFT JOIN \`team-researchops-prod-01d6.umami.public_event_data\` AS event_data_${paramBase}\n`;
-              sql += `  ON base_query.event_id = event_data_${paramBase}.website_event_id\n`;
-              sql += `  AND SUBSTR(event_data_${paramBase}.data_key, INSTR(event_data_${paramBase}.data_key, '.') + 1) = '${paramBase}'\n`;
+              sql += `LEFT JOIN UNNEST(ed_view.event_parameters) AS event_data_${paramBase}\n`;
+              sql += `  ON SUBSTR(event_data_${paramBase}.data_key, INSTR(event_data_${paramBase}.data_key, '.') + 1) = '${paramBase}'\n`;
             }
           }
         });
