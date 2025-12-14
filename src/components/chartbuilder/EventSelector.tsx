@@ -383,7 +383,7 @@ const EventSelector = ({
               >
                 <Radio value="none">Ingen hendelser</Radio>
                 <Radio value="all">Alle hendelser</Radio>
-                <Radio value="specific">Utvalgte hendelser</Radio>
+                <Radio value="specific">Utvalgte hendelser / hendelsesdetaljer</Radio>
                 <Radio value="interactive">Mottaker velger selv</Radio>
               </RadioGroup>
               <div className="mt-4">
@@ -495,21 +495,21 @@ const EventSelector = ({
                       ) : parameters.length === 0 ? (
                         <>
                           <Label as="p" size="small" className="mb-2">
-                            Velg hendelsesdata (valgfritt)
+                            Velg hendelsesdetaljer (valgfritt)
                           </Label>
                           <Button
                             variant="secondary"
                             size="small"
                             onClick={handleFetchEventParams}
                           >
-                            Hent hendelsesdata
+                            Hent hendelsesdetaljer
                           </Button>
                         </>
                       ) : (
                         <div className="space-y-3">
                           {/* Parameter selector */}
                           <UNSAFE_Combobox
-                            label="Velg hendelsesdata (valgfritt)"
+                            label="Velg hendelsesdetaljer (valgfritt)"
                             options={filteredUniqueParams.map(param => ({
                               label: getParamDisplayName(param),
                               value: `param_${getCleanParamName(param)}`
@@ -637,7 +637,7 @@ const EventSelector = ({
                               {col.label}
                             </option>
                             {col.value === 'event_name' && (
-                              <option key="_custom_param_" value="_custom_param_">Hendelsesdata</option>
+                              <option key="_custom_param_" value="_custom_param_">Hendelsesdetaljer</option>
                             )}
                           </>
                         ))}
@@ -677,7 +677,7 @@ const EventSelector = ({
                           ))}
                           {parameters.length > 0 && (
                             <>
-                              <option value="_custom_param_">Hendelsesdata</option>
+                              <option value="_custom_param_">Hendelsesdetaljer</option>
                               {/* Keep the current parameter in the list if it's selected, so the Select shows the right label */}
                               {stagingFilter.column.startsWith('param_') && (
                                 <option value={stagingFilter.column}>
@@ -701,20 +701,20 @@ const EventSelector = ({
                             </div>
                           ) : parameters.length === 0 ? (
                             <div className="flex flex-col gap-2">
-                              <p className="text-sm text-gray-600">Fant ingen hendelsesdata. Du må hente data før du kan filtrere.</p>
+                              <p className="text-sm text-gray-600">Fant ingen hendelsesdetaljer. Du må hente data før du kan filtrere.</p>
                               <Button
                                 variant="secondary"
                                 size="small"
                                 onClick={() => onEnableCustomEvents && onEnableCustomEvents(true)}
                                 type="button"
                               >
-                                Hent hendelsesdata
+                                Hent hendelsesdetaljer
                               </Button>
                             </div>
                           ) : (
                             <UNSAFE_Combobox
-                              label="Velg parameter"
-                              description="Søk etter parameteren du vil filtrere på"
+                              label="Velg hendelsesdetalj"
+                              description="Søk etter hendelsesdetaljen du vil filtrere på"
                               options={uniqueParameters.map(param => ({
                                 label: getParamDisplayName(param),
                                 value: `param_${getCleanParamName(param)}`
@@ -881,7 +881,7 @@ const EventSelector = ({
                               </optgroup>
                             ))}
                             {parameters.length > 0 && (
-                              <optgroup label="Hendelsesdata">
+                              <optgroup label="Hendelsesdetaljer">
                                 {uniqueParameters.map(param => (
                                   <option
                                     key={`param_${param.key}`}

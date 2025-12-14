@@ -352,7 +352,7 @@ const DisplayOptions = forwardRef(({
             >
               <Tabs.List>
                 <Tabs.Tab value="basic" label="Ofte brukte" />
-                <Tabs.Tab value="custom" label="Hendelsesdata" />
+                <Tabs.Tab value="custom" label="Hendelsesdetaljer" />
                 <Tabs.Tab value="advanced" label="Flere valg" />
               </Tabs.List>
 
@@ -438,14 +438,14 @@ const DisplayOptions = forwardRef(({
                         }
                       }}
                     >
-                      Hent hendelsesdata
+                      Hent hendelsesdetaljer
                     </Button>
                   </div>
                 ) : (
                   <>
                     <div className="mb-4">
                       <Search
-                        label="Søk i egendefinerte parametere"
+                        label="Søk i egendefinerte hendelsesdetaljer"
                         hideLabel={false}
                         variant="simple"
                         size="small"
@@ -457,13 +457,13 @@ const DisplayOptions = forwardRef(({
 
                     {Object.keys(groupedAndFilteredParams).length === 0 ? (
                       <div className="text-sm text-gray-600 mt-2">
-                        {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte parametere funnet for denne nettsiden.'}
+                        {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte hendelsesdetaljer funnet for denne nettsiden.'}
                       </div>
                     ) : (
                       <>
                         {hasEventNameFilter && (
                           <div className="mb-3 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded">
-                            Viser kun parametere fra: {selectedEventNames.join(', ')}
+                            Viser kun hendelsesdetaljer fra: {selectedEventNames.join(', ')}
                           </div>
                         )}
                         <Accordion size="small" headingSize="xsmall">
@@ -552,7 +552,7 @@ const DisplayOptions = forwardRef(({
                     ))}
 
                     {uniqueParameters.length > 0 && (
-                      <optgroup label="Hendelsesdata">
+                      <optgroup label="Hendelsesdetaljer">
                         {uniqueParameters
                           .filter(param => !groupByFields.includes(`param_${sanitizeColumnName(param.key)}`))
                           .map(param => (
