@@ -5,7 +5,6 @@ import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-chartin
 import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from './AlertWithCloseButton';
 import ResultsDisplay from './ResultsDisplay';
-import SqlCodeDisplay from './SqlCodeDisplay';
 import { translateValue } from '../../lib/translations';
 
 interface SQLPreviewProps {
@@ -822,7 +821,52 @@ const SQLPreview = ({
           <div>
             {/* Results Section with Integrated Date Filter */}
             <div>
+              {/* Header with Reset Button */}
+              {onResetAll && activeStep > 1 && (
+                <div className="flex justify-end mb-2">
+                  <Button
+                    variant="tertiary"
+                    size="small"
+                    onClick={() => {
+                      onResetAll();
+                      // Reset local filter states
+                      setDateRange({ from: subDays(new Date(), 30), to: new Date() });
+                      setUrlPath('');
+                      setEventName('');
+                      setExecutedParams({
+                        dateRange: { from: subDays(new Date(), 30), to: new Date() },
+                        urlPath: '',
+                        eventName: ''
+                      });
+                      setResult(null); // Clear results
+
+                      setShowAlert(true);
+
+                      // Move this call AFTER onResetAll to ensure it happens last
+                      setTimeout(() => {
+                        ensureFormProgressOpen();
+                      }, 0);
+
+                      // Auto-hide the alert after 4 seconds
+                      setTimeout(() => setShowAlert(false), 4000);
+                    }}
+                    icon={<RotateCcw size={16} />}
+                  >
+                    Tilbakestill alle valg
+                  </Button>
+                </div>
+              )}
+
               <Heading level="2" size="small" className="mb-3">Vis resultater</Heading>
+
+              {/* Success Alert for Reset */}
+              {showAlert && (
+                <div className="mb-3">
+                  <AlertWithCloseButton variant="success">
+                    Alle innstillinger ble tilbakestilt
+                  </AlertWithCloseButton>
+                </div>
+              )}
 
               {/* Metabase Parameters Filter */}
               {(hasMetabaseDateFilter || hasUrlPathFilter || hasEventNameFilter) && (
@@ -921,6 +965,8 @@ const SQLPreview = ({
                 sql={getProcessedSql()}
                 hideHeading={true}
                 containerStyle="none"
+                showSqlCode={true}
+                showEditButton={true}
               />
             </div>
 
@@ -1040,8 +1086,6 @@ const SQLPreview = ({
                 </p>
               </ReadMore>*/}
             </div>
-
-            {sql && <SqlCodeDisplay sql={sql} showEditButton={true} />}
           </div>
         )}
         {/* 
@@ -1059,56 +1103,6 @@ const SQLPreview = ({
           </FormProgress>
         </div>
         */}
-      </div>
-
-      <div className="mt-4 mr-4">
-        {/* Only show reset button after step 1 */}
-        {onResetAll && activeStep > 1 && (
-          <>
-            <div className="flex justify-end">
-              <Button
-                variant="tertiary"
-                size="small"
-                onClick={() => {
-                  onResetAll();
-                  // Reset local filter states
-                  setDateRange({ from: subDays(new Date(), 30), to: new Date() });
-                  setUrlPath('');
-                  setEventName('');
-                  setExecutedParams({
-                    dateRange: { from: subDays(new Date(), 30), to: new Date() },
-                    urlPath: '',
-                    eventName: ''
-                  });
-                  setResult(null); // Clear results
-
-                  setShowAlert(true);
-
-                  // Move this call AFTER onResetAll to ensure it happens last
-                  // Use a small timeout to ensure it happens after any state changes in onResetAll
-                  setTimeout(() => {
-                    ensureFormProgressOpen();
-                  }, 0);
-
-                  // Auto-hide the alert after 4 seconds
-                  setTimeout(() => setShowAlert(false), 4000);
-                }}
-                icon={<RotateCcw size={16} />}
-              >
-                Tilbakestill alle valg
-              </Button>
-            </div>
-
-            {/* Show success alert below the button */}
-            {showAlert && (
-              <div className="mt-2">
-                <AlertWithCloseButton variant="success">
-                  Alle innstillinger ble tilbakestilt
-                </AlertWithCloseButton>
-              </div>
-            )}
-          </>
-        )}
       </div>
 
       {/* Confirmation Modal for Large Queries */}

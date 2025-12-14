@@ -428,6 +428,10 @@ const ResultsDisplay = ({
                 <p className="mt-1">Dette kan ta opptil 20-30 sekunder for store datasett. Vennligst vent.</p>
               </Alert>
             )}
+            {/* SQL Code Display - shown before results are loaded */}
+            {showSqlCode && sql && (
+              <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
+            )}
           </div>
         )}
 
