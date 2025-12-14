@@ -991,7 +991,7 @@ const SQLPreview = ({
                 <div>
                   {!copied ? (
                     <Button
-                      variant="primary"
+                      variant="secondary"
                       onClick={handleCopy}
                       icon={<Copy size={18} />}
                       loading={estimating}
