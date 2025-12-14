@@ -126,10 +126,18 @@ const DisplayOptions = forwardRef(({
   }, [parameters, searchQuery]);
 
   // Check if custom events (event_type = 2) are enabled in filters
-  const hasCustomEventsEnabled = filters.some(f =>
-    (f.column === 'event_type' && f.value === '2') ||
-    (f.column === 'event_name' && f.value && f.value !== '')
-  );
+  const hasCustomEventsEnabled = filters.some(f => {
+    if (f.column === 'event_type') {
+      // Check single value
+      if (f.value === '2') return true;
+      // Check multipleValues array for IN operator
+      if (f.multipleValues?.includes('2')) return true;
+      // Check if value contains '2' (for comma-separated or other formats)
+      if (typeof f.value === 'string' && f.value.includes('2')) return true;
+    }
+    if (f.column === 'event_name' && f.value && f.value !== '') return true;
+    return false;
+  });
 
   const handleAddGroupField = (field: string) => {
     // Check if user is trying to add event_name or event_type without custom events enabled
@@ -227,8 +235,6 @@ const DisplayOptions = forwardRef(({
     setLimitInput(limit?.toString() || '');
   }, [limit]);
 
-  const hasCustomParameters = uniqueParameters.length > 0;
-
   return (
     <>
       {!hideHeader && (
@@ -293,9 +299,7 @@ const DisplayOptions = forwardRef(({
             >
               <Tabs.List>
                 <Tabs.Tab value="basic" label="Ofte brukte" />
-                {hasCustomParameters && (
-                  <Tabs.Tab value="custom" label="Hendelsesdata" />
-                )}
+                <Tabs.Tab value="custom" label="Hendelsesdata" />
                 <Tabs.Tab value="advanced" label="Flere valg" />
               </Tabs.List>
 
@@ -367,61 +371,79 @@ const DisplayOptions = forwardRef(({
                 </div>
               </Tabs.Panel>
 
-              {hasCustomParameters && (
-                <Tabs.Panel value="custom" className="pt-4">
-                  <div className="mb-4">
-                    <Search
-                      label="Søk i egendefinerte parametere"
-                      hideLabel={false}
-                      variant="simple"
+              <Tabs.Panel value="custom" className="pt-4">
+                {uniqueParameters.length === 0 ? (
+                  <div className="flex flex-col items-start justify-center">
+                    <Button
+                      variant="primary"
                       size="small"
-                      value={searchQuery}
-                      onChange={setSearchQuery}
-                      onClear={() => setSearchQuery('')}
-                    />
+                      onClick={() => {
+                        if (onEnableCustomEvents) {
+                          onEnableCustomEvents();
+                          // Show a temporary message or loading state if desired, 
+                          // but the parent likely handles fetching.
+                        }
+                      }}
+                    >
+                      Hent hendelsesdata
+                    </Button>
                   </div>
-
-                  {Object.keys(groupedAndFilteredParams).length === 0 ? (
-                    <div className="text-sm text-gray-600 mt-2">
-                      {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte parametere funnet for denne nettsiden.'}
+                ) : (
+                  <>
+                    <div className="mb-4">
+                      <Search
+                        label="Søk i egendefinerte parametere"
+                        hideLabel={false}
+                        variant="simple"
+                        size="small"
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        onClear={() => setSearchQuery('')}
+                      />
                     </div>
-                  ) : (
-                    <Accordion size="small" headingSize="xsmall">
-                      {Object.entries(groupedAndFilteredParams).map(([eventName, params]) => (
-                        <Accordion.Item key={eventName}>
-                          <Accordion.Header>
-                            {eventName === '_manual_parameters_' ? 'Manuelt lagt til' : eventName}
-                            <span className="text-sm text-gray-600 ml-2 font-normal">
-                              ({params.length})
-                            </span>
-                          </Accordion.Header>
-                          <Accordion.Content>
-                            <div className="flex flex-wrap gap-2">
-                              {params.map(param => {
-                                const baseName = param.key.split('.').pop()!;
-                                const columnValue = `param_${sanitizeColumnName(baseName)}`;
-                                const isActive = activeGroupings.includes(columnValue);
 
-                                return (
-                                  <Button
-                                    key={param.key}
-                                    variant={isActive ? "secondary" : "secondary"}
-                                    size="small"
-                                    onClick={() => handleAddGroupField(columnValue)}
-                                    disabled={isActive}
-                                  >
-                                    {baseName}
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                          </Accordion.Content>
-                        </Accordion.Item>
-                      ))}
-                    </Accordion>
-                  )}
-                </Tabs.Panel>
-              )}
+                    {Object.keys(groupedAndFilteredParams).length === 0 ? (
+                      <div className="text-sm text-gray-600 mt-2">
+                        {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte parametere funnet for denne nettsiden.'}
+                      </div>
+                    ) : (
+                      <Accordion size="small" headingSize="xsmall">
+                        {Object.entries(groupedAndFilteredParams).map(([eventName, params]) => (
+                          <Accordion.Item key={eventName} defaultOpen={!!searchQuery}>
+                            <Accordion.Header>
+                              {eventName === '_manual_parameters_' ? 'Manuelt lagt til' : eventName}
+                              <span className="text-sm text-gray-600 ml-2 font-normal">
+                                ({params.length})
+                              </span>
+                            </Accordion.Header>
+                            <Accordion.Content>
+                              <div className="flex flex-wrap gap-2">
+                                {params.map(param => {
+                                  const baseName = param.key.split('.').pop()!;
+                                  const columnValue = `param_${sanitizeColumnName(baseName)}`;
+                                  const isActive = activeGroupings.includes(columnValue);
+
+                                  return (
+                                    <Button
+                                      key={param.key}
+                                      variant={isActive ? "secondary" : "secondary"}
+                                      size="small"
+                                      onClick={() => handleAddGroupField(columnValue)}
+                                      disabled={isActive}
+                                    >
+                                      {baseName}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            </Accordion.Content>
+                          </Accordion.Item>
+                        ))}
+                      </Accordion>
+                    )}
+                  </>
+                )}
+              </Tabs.Panel>
 
               <Tabs.Panel value="advanced" className="pt-4">
                 <div className="flex gap-2 items-center">

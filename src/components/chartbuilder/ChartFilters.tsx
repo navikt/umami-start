@@ -35,7 +35,7 @@ interface ChartFiltersProps {
   setFilters: (filters: Filter[]) => void;
   availableEvents?: string[];
   maxDaysAvailable?: number; // Added this prop to receive date range info
-  onEnableCustomEvents?: () => void;
+  onEnableCustomEvents?: (withParams?: boolean) => void;
   hideHeader?: boolean;
   isEventsLoading?: boolean;
 }
@@ -67,7 +67,7 @@ const ChartFilters = forwardRef(({
   const [eventNameOperator, setEventNameOperator] = useState<string>('IN');
   // Add these new state variables
   const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific' | 'interactive'>('all');
-  const [customEventsMode, setCustomEventsMode] = useState<'all' | 'specific' | 'interactive'>('all');
+  const [customEventsMode, setCustomEventsMode] = useState<'none' | 'all' | 'specific' | 'interactive'>('none');
 
   // Add alert state
   const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
@@ -235,6 +235,10 @@ const ChartFilters = forwardRef(({
     if (isChecked) {
       if (!newSelection.includes(eventType)) {
         newSelection.push(eventType);
+        // If enabling custom_events, set default mode if currently none
+        if (eventType === 'custom_events' && customEventsMode === 'none') {
+          setCustomEventsMode('all');
+        }
       }
     } else {
       newSelection = newSelection.filter(type => type !== eventType);
@@ -278,23 +282,23 @@ const ChartFilters = forwardRef(({
       } else if (eventType === 'custom_events') {
         // Reset custom events selections when unchecking custom events
         setCustomEvents([]);
-        setCustomEventsMode('all');
+        setCustomEventsMode('none');
       }
     }
   };
 
   // Update the handleCustomEventsChange function to handle different operators
-  const handleCustomEventsChange = (selectedEvents: string[], operator: string = eventNameOperator) => {
+  const handleCustomEventsChange = (selectedEvents: string[], operator: string = eventNameOperator, forceEnable: boolean = false) => {
     setCustomEvents(selectedEvents);
     setEventNameOperator(operator);
 
     // Find and remove any existing event_name filters
     let baseFilters = filters.filter(f => f.column !== 'event_name');
 
-    // Only add event_name filter if events are selected
-    if (selectedEvents.length > 0) {
+    // Logic to ensure custom events (type 2) are enabled
+    // We execute this if we have specific events selected OR if we are forced to enable custom events (e.g. 'all' mode)
+    if (selectedEvents.length > 0 || forceEnable) {
       // Auto-correct: Ensure event_type is correct for event queries
-      // If we are filtering by event name, we must allow event type 2. 
       const pageviewFilterIndex = baseFilters.findIndex(f => f.column === 'event_type' && f.value === '1' && f.operator === '=');
 
       if (pageviewFilterIndex >= 0) {
@@ -306,12 +310,36 @@ const ChartFilters = forwardRef(({
           multipleValues: ['1', '2']
         };
         setSelectedEventTypes(['pageviews', 'custom_events']);
+        // Ensure UI reflects that custom events are active
+        if (customEventsMode === 'none' && !forceEnable) setCustomEventsMode('specific');
       } else if (!baseFilters.some(f => f.column === 'event_type')) {
-        // Ensure at least custom events are selected if no type filter exists
+        // If NO event_filter exists, and we are enabling custom events,
+        // we should probably just add it.
+        // However, if no filter exists, it often means ALL events (1 and 2).
+        // Check if we want to restrict to JUST custom events or allow both.
+        // If forceEnable (All Custom Events) -> usually means type 2.
+
+        // But wait, if NO filter exists, it means implicit 1 and 2.
+        // So we don't strictly need to add one?
+        // Yet, if we are in 'specific' mode, typically we filtered for type 2.
+
+        // Let's stick to the previous logic: ensure explicit type 2 filter if missing.
         baseFilters.push({ column: 'event_type', operator: '=', value: '2' });
         setSelectedEventTypes(['custom_events']);
+        if (customEventsMode === 'none' && !forceEnable) setCustomEventsMode('specific');
+      } else {
+        // If a filter exists but isn't strictly pageviews (e.g. it is already custom_events=2 or IN(1,2)),
+        // we might need to ensure it includes 2.
+        const existingFilter = baseFilters.find(f => f.column === 'event_type');
+        if (existingFilter && existingFilter.value === '2' && existingFilter.operator === '=') {
+          // Already correct.
+        }
+        // if existing is IN(1,2), already correct.
       }
+    }
 
+    // Only add specific event_name filters if we have selected events
+    if (selectedEvents.length > 0) {
       // For IN operator, use multipleValues
       if (operator === 'IN') {
         setFilters([
@@ -336,7 +364,7 @@ const ChartFilters = forwardRef(({
         ]);
       }
     } else {
-      // Keep just the event_type=2 filter without specific event names
+      // Keep just the event_type logic updates (without specific event names)
       setFilters(baseFilters);
     }
   };
@@ -461,7 +489,7 @@ const ChartFilters = forwardRef(({
     setSelectedPaths([]);
     // Keep the pageViewsMode in 'all' state
     setPageViewsMode('all');
-    setCustomEventsMode('all');
+    setCustomEventsMode('none');
     setCustomPeriodInputs({});
     setStagingFilter(null);
     setInteractiveMode(false);

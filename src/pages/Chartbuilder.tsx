@@ -254,6 +254,7 @@ const ChartsPage = () => {
   // const [includeParams, setIncludeParams] = useState<boolean>(false); // Track whether parameters are loaded
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false); // Add state to trigger includeParams reset
   const [requestIncludeParams, setRequestIncludeParams] = useState<boolean>(false);
+  const [requestLoadEvents, setRequestLoadEvents] = useState<boolean>(false);
   const [isEventsLoading, setIsEventsLoading] = useState<boolean>(false);
 
 
@@ -977,16 +978,9 @@ const ChartsPage = () => {
     // Process filters with consistent table references
     filters.forEach(filter => {
       if (filter.column.startsWith('param_')) {
-        const paramBase = filter.column.replace('param_', '');
-        const matchingParams = parameters.filter(p => {
-          const baseName = p.key.split('.').pop();
-          return sanitizeColumnName(baseName!) === paramBase;
-        });
-        if (matchingParams.length > 0) {
-          const param = matchingParams[0];
-          const valueField = param.type === 'number' ? 'number_value' : 'string_value';
-          sql += `  AND event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${filter.value}\n`;
-        }
+        // Skip param_ filters here - they will be processed after the UNNEST join
+        // because event_data is only available after LEFT JOIN UNNEST
+        return;
       } else {
         if (filter.interactive === true && filter.metabaseParam === true && filter.value) {
           // Special handling for interactive filters - no quotes should be added
@@ -1169,21 +1163,42 @@ const ChartsPage = () => {
         sql += '  AND base_query.website_id = ed_view.website_id\n';
         sql += '  AND base_query.created_at = ed_view.created_at\n';
         sql += 'LEFT JOIN UNNEST(ed_view.event_parameters) AS event_data\n';
-      }
-      if (config.paramAggregation === 'unique') {
-        config.groupByFields.forEach(field => {
-          if (field.startsWith('param_')) {
-            const paramBase = field.replace('param_', '');
-            const matchingParam = parameters.find(p => {
+
+        // Add additional UNNEST joins for unique param aggregation BEFORE the WHERE clause
+        if (config.paramAggregation === 'unique') {
+          config.groupByFields.forEach(field => {
+            if (field.startsWith('param_')) {
+              const paramBase = field.replace('param_', '');
+              const matchingParam = parameters.find(p => {
+                const baseName = p.key.split('.').pop();
+                return sanitizeColumnName(baseName!) === paramBase;
+              });
+              if (matchingParam && matchingParam.type === 'string') {
+                sql += `LEFT JOIN UNNEST(ed_view.event_parameters) AS event_data_${paramBase}\n`;
+                sql += `  ON SUBSTR(event_data_${paramBase}.data_key, INSTR(event_data_${paramBase}.data_key, '.') + 1) = '${paramBase}'\n`;
+              }
+            }
+          });
+        }
+
+        // Add WHERE clause for param_ filters AFTER all JOINs
+        const paramFilters = filters.filter(f => f.column.startsWith('param_'));
+        if (paramFilters.length > 0) {
+          paramFilters.forEach((filter, idx) => {
+            const paramBase = filter.column.replace('param_', '');
+            const matchingParams = parameters.filter(p => {
               const baseName = p.key.split('.').pop();
               return sanitizeColumnName(baseName!) === paramBase;
             });
-            if (matchingParam && matchingParam.type === 'string') {
-              sql += `LEFT JOIN UNNEST(ed_view.event_parameters) AS event_data_${paramBase}\n`;
-              sql += `  ON SUBSTR(event_data_${paramBase}.data_key, INSTR(event_data_${paramBase}.data_key, '.') + 1) = '${paramBase}'\n`;
+            if (matchingParams.length > 0) {
+              const param = matchingParams[0];
+              const valueField = param.type === 'number' ? 'number_value' : 'string_value';
+              // Use WHERE for first param filter, AND for subsequent ones
+              const connector = idx === 0 ? 'WHERE' : '  AND';
+              sql += `${connector} event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${filter.value}\n`;
             }
-          }
-        });
+          });
+        }
       }
     }
 
@@ -1424,7 +1439,7 @@ const ChartsPage = () => {
               resetIncludeParams={resetIncludeParams}
               requestIncludeParams={requestIncludeParams}
               disableAutoEvents={true}
-              requestLoadEvents={false}
+              requestLoadEvents={requestLoadEvents}
               onLoadingChange={setIsEventsLoading}
             />
           </section>
@@ -1471,9 +1486,14 @@ const ChartsPage = () => {
                   setFilters={setFilters}
                   availableEvents={availableEvents}
                   maxDaysAvailable={dateRangeInDays}
-                  onEnableCustomEvents={() => {
-                    // Force reload logic or handle usage
-                    setRequestIncludeParams(true);
+                  onEnableCustomEvents={(withParams = false) => {
+                    // Always request to load events (at least names)
+                    setRequestLoadEvents(true);
+
+                    // If params also needed, request them
+                    if (withParams) {
+                      setRequestIncludeParams(true);
+                    }
                   }}
                   hideHeader={true}
                   isEventsLoading={isEventsLoading}
@@ -1510,6 +1530,9 @@ const ChartsPage = () => {
                     if (chartFiltersRef.current) {
                       chartFiltersRef.current.enableCustomEvents();
                     }
+                    // Also trigger the data fetch logic
+                    setRequestLoadEvents(true);
+                    setRequestIncludeParams(true);
                   }}
                   hideHeader={true}
                 />
