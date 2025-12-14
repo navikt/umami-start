@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox, ReadMore } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
@@ -45,7 +45,6 @@ const SQLPreview = ({
   isEventsLoading = false
 }: SQLPreviewProps) => {
   const [copied, setCopied] = useState(false);
-  const [copiedDashboard, setCopiedDashboard] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
   const [estimate, setEstimate] = useState<any>(null);
@@ -823,15 +822,11 @@ const SQLPreview = ({
           <div>
             {/* Results Section with Integrated Date Filter */}
             <div>
-              <Heading level="2" size="small" className="mb-4">Vis resultater</Heading>
+              <Heading level="2" size="small" className="mb-3">Vis resultater</Heading>
 
               {/* Metabase Parameters Filter */}
               {(hasMetabaseDateFilter || hasUrlPathFilter || hasEventNameFilter) && (
-                <div className="mb-3 p-4 bg-green-50 border border-green-100 rounded-lg">
-                  {/*<Heading level="3" size="xsmall" className="mb-3">
-                    Velg parametere
-                  </Heading>*/}
-
+                <div className="mb-3">
                   <div className="flex flex-wrap gap-4 items-end">
                     {/* Date Filter */}
                     {hasMetabaseDateFilter && (
@@ -876,7 +871,6 @@ const SQLPreview = ({
                     )}
 
                     {/* Event Name Filter */}
-                    {/* Event Name Filter */}
                     {hasEventNameFilter && (
                       <div className="w-64">
                         {isEventsLoading && <div className="text-xs text-gray-500 mb-1">Laster hendelser...</div>}
@@ -896,10 +890,9 @@ const SQLPreview = ({
                         </div>
                       </div>
                     )}
-                  </div>
-                  {/* Update Button */}
-                  {hasChanges() && (result || error) && (
-                    <div className="mt-5">
+
+                    {/* Update Button - inline with filters */}
+                    {hasChanges() && (result || error) && (
                       <Button
                         variant="primary"
                         size="small"
@@ -908,8 +901,8 @@ const SQLPreview = ({
                       >
                         Oppdater
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -927,185 +920,128 @@ const SQLPreview = ({
                 preparePieChartData={preparePieChartData}
                 sql={getProcessedSql()}
                 hideHeading={true}
+                containerStyle="none"
               />
             </div>
 
             {/* Metabase Section */}
-            <div className="space-y-2 mb-4">
+            <div className="space-y-3 mb-4">
               <Heading level="2" size="small">Legg til i Metabase</Heading>
 
               {/* Add incompatibility warning */}
               {showIncompatibilityWarning && (
-                <Alert variant="warning" className="mt-3 mb-3">
+                <Alert variant="warning" size="small">
                   <div>
                     <p className="font-medium">Interaktiv dato + besøksvarighet = funker ikke</p>
-                    <p className="mt-1">
+                    <p className="mt-1 text-sm">
                       Du bruker både interaktivt datofilter og besøksvarighet, som ikke fungerer sammen i Metabase.
-                      Vurder å bruke en av de andre datofiltrene i stedet.
                     </p>
                   </div>
                 </Alert>
               )}
-            </div>
 
-            <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <div className="flex-grow">
-                    <p className="font-medium">Kopier spørringen</p>
-                    <div className="mt-2">
-                      {!copied ? (
-                        <Button
-                          variant="primary"
-                          onClick={handleCopy}
-                          icon={<Copy size={18} />}
-                          className="w-full md:w-auto"
-                          loading={estimating}
-                        >
-                          Kopier spørringen
-                        </Button>
-                      ) : (
-                        <Alert variant="success" className="w-fit p-2 flex items-center">
-                          Spørringen er kopiert!
-                        </Alert>
-                      )}
-
-                      {/* Cost Estimate Display */}
-                      {estimating && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          Estimerer kostnad...
-                        </div>
-                      )}
-
-                      {estimate && !estimating && (() => {
-                        const gb = parseFloat(estimate.totalBytesProcessedGB);
-                        // const mb = parseFloat(estimate.totalBytesProcessedMB);
-
-                        // Determine variant and message based on data size
-                        let variant: 'info' | 'warning' | 'error' = 'info';
-                        let showAsAlert = false;
-
-                        if (gb >= 300) {
-                          variant = 'error';
-                          showAsAlert = true;
-                        } else if (gb >= 100) {
-                          variant = 'warning';
-                          showAsAlert = true;
-                        } else if (gb >= 50) {
-                          variant = 'info';
-                          showAsAlert = true;
-                        }
-                        // Less than 1 GB - just show as simple text line
-
-                        if (!showAsAlert) {
-                          // Simple line for small queries (< 1 GB)
-                          return (
-                            <div className="mt-2 text-sm text-gray-800">
-                              Data å prosessere: {gb} GB
-                              {parseFloat(estimate.estimatedCostUSD) > 0 && ` • Kostnad: $${estimate.estimatedCostUSD}`}
-                            </div>
-                          );
-                        }
-
-                        // Alert for larger queries
-                        return (
-                          <Alert variant={variant} className="mt-2">
-                            <div className="text-sm space-y-1">
-                              <p>
-                                <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
-                              </p>
-                              {parseFloat(estimate.estimatedCostUSD) > 0 && (
-                                <p>
-                                  <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
-                                </p>
-                              )}
-                              {gb >= 300 && (
-                                <p className="font-medium mt-2">
-                                  ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
-                                </p>
-                              )}
-                              {gb >= 100 && gb < 300 && (
-                                <p className="font-medium mt-2">
-                                  Dette er en stor spørring. Sjekk at du trenger all denne dataen.
-                                </p>
-                              )}
-                            </div>
-                          </Alert>
-                        );
-                      })()}
-                      {/* {estimateError && (
-                        <Alert variant="warning" className="mt-2">
-                          <p className="text-sm">Kunne ikke estimere kostnad: {estimateError}</p>
-                        </Alert>
-                      )} */}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    2
-                  </div>
-                  <div className="flex-grow">
-                    <p className="font-medium mb-2">Lim inn i Metabase</p>
-                    <Link
-                      href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+              {/* Actions */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  {!copied ? (
+                    <Button
+                      variant="primary"
+                      onClick={handleCopy}
+                      icon={<Copy size={18} />}
+                      loading={estimating}
                     >
-                      Åpne Metabase <ExternalLink size={14} />
-                    </Link>{' '}
-                    (Merk: Hvis siden "Velg dine startdata" vises, lukk den og klikk på lenken på nytt.)
-                  </div>
+                      Kopier spørringen
+                    </Button>
+                  ) : (
+                    <Alert variant="success" size="small" className="w-fit py-1 px-3">
+                      Spørringen er kopiert!
+                    </Alert>
+                  )}
+
+                  {/* Cost Estimate Display */}
+                  {estimating && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      Estimerer kostnad...
+                    </div>
+                  )}
+
+                  {estimate && !estimating && (() => {
+                    const gb = parseFloat(estimate.totalBytesProcessedGB);
+
+                    let variant: 'info' | 'warning' | 'error' = 'info';
+                    let showAsAlert = false;
+
+                    if (gb >= 300) {
+                      variant = 'error';
+                      showAsAlert = true;
+                    } else if (gb >= 100) {
+                      variant = 'warning';
+                      showAsAlert = true;
+                    } else if (gb >= 50) {
+                      variant = 'info';
+                      showAsAlert = true;
+                    }
+
+                    if (!showAsAlert) {
+                      return (
+                        <div className="mt-2 text-sm text-gray-600">
+                          Data å prosessere: {gb} GB
+                          {parseFloat(estimate.estimatedCostUSD) > 0 && ` • Kostnad: $${estimate.estimatedCostUSD}`}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Alert variant={variant} size="small" className="mt-2">
+                        <div className="text-sm space-y-1">
+                          <p>
+                            <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
+                          </p>
+                          {parseFloat(estimate.estimatedCostUSD) > 0 && (
+                            <p>
+                              <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
+                            </p>
+                          )}
+                          {gb >= 300 && (
+                            <p className="font-medium mt-2">
+                              ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
+                            </p>
+                          )}
+                          {gb >= 100 && gb < 300 && (
+                            <p className="font-medium mt-2">
+                              Dette er en stor spørring. Sjekk at du trenger all denne dataen.
+                            </p>
+                          )}
+                        </div>
+                      </Alert>
+                    );
+                  })()}
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      Trykk på <span role="img" aria-label="spill av-knapp">▶️</span> "vis resultater"-knappen
-                    </p>
-                    <p className="text-md text-gray-700 mt-1">
-                      Trykk "visualisering" for å bytte fra tabell til graf
-                    </p>
-                  </div>
-                </div>
+                <Link
+                  href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1"
+                >
+                  Åpne Metabase <ExternalLink size={14} />
+                </Link>
               </div>
+
+              {/* Detailed instructions in ReadMore 
+              <ReadMore header="Neste steg i Metabase" size="small">
+                <ol className="list-decimal list-inside space-y-2 text-sm mt-2" start={3}>
+                  <li>Lim inn spørringen i SQL-editoren</li>
+                  <li>Trykk på <span role="img" aria-label="spill av-knapp">▶️</span> "vis resultater"-knappen</li>
+                  <li>Trykk "Visualisering" for å bytte fra tabell til graf</li>
+                </ol>
+                <p className="text-sm text-gray-600 mt-2">
+                  Merk: Hvis siden "Velg dine startdata" vises, lukk den og klikk på lenken på nytt.
+                </p>
+              </ReadMore>*/}
             </div>
 
             {sql && <SqlCodeDisplay sql={sql} showEditButton={true} />}
-
-            <div className="mt-4">
-              <ReadMore header="Eksperimentelt">
-                <div className="pt-2">
-                  <p className="mb-2 text-sm text-gray-600">Kopier SQL tilpasset <code>dashboards.ts</code> (med escapes og variabler)</p>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      let dashboardSql = sql;
-                      // Relace website_id with template variable
-                      dashboardSql = dashboardSql.replace(/website_id\s*=\s*'([a-f0-9\-]+)'/gi, "website_id = '{{website_id}}'");
-                      // Escape backticks for TS template literal
-                      dashboardSql = dashboardSql.replace(/`/g, '\\`');
-
-                      navigator.clipboard.writeText(dashboardSql);
-                      setCopiedDashboard(true);
-                      setTimeout(() => setCopiedDashboard(false), 3000);
-                    }}
-                    icon={<Copy size={16} />}
-                    size="small"
-                  >
-                    {copiedDashboard ? 'Kopiert!' : 'Kopier til dashboard'}
-                  </Button>
-                </div>
-              </ReadMore>
-            </div>
           </div>
         )}
         {/* 

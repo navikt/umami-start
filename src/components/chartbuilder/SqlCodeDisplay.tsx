@@ -1,4 +1,6 @@
-import { Button, CopyButton, ReadMore } from '@navikt/ds-react';
+import { useState } from 'react';
+import { Button, CopyButton, ReadMore, Tooltip } from '@navikt/ds-react';
+import { Copy } from 'lucide-react';
 
 interface SqlCodeDisplayProps {
   sql: string;
@@ -6,7 +8,21 @@ interface SqlCodeDisplayProps {
 }
 
 const SqlCodeDisplay = ({ sql, showEditButton = false }: SqlCodeDisplayProps) => {
+  const [copiedDashboard, setCopiedDashboard] = useState(false);
+
   if (!sql) return null;
+
+  const handleCopyToDashboard = () => {
+    let dashboardSql = sql;
+    // Replace website_id with template variable
+    dashboardSql = dashboardSql.replace(/website_id\s*=\s*'([a-f0-9\-]+)'/gi, "website_id = '{{website_id}}'");
+    // Escape backticks for TS template literal
+    dashboardSql = dashboardSql.replace(/`/g, '\\`');
+
+    navigator.clipboard.writeText(dashboardSql);
+    setCopiedDashboard(true);
+    setTimeout(() => setCopiedDashboard(false), 3000);
+  };
 
   return (
     <div className="mt-6">
@@ -17,6 +33,18 @@ const SqlCodeDisplay = ({ sql, showEditButton = false }: SqlCodeDisplayProps) =>
           </pre>
           <div className="absolute top-2 right-2 flex gap-2">
             <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
+            <Tooltip content="Kopier med {{website_id}} variabel for dashboards.ts">
+              <Button
+                size="xsmall"
+                variant="tertiary"
+                type="button"
+                onClick={handleCopyToDashboard}
+                icon={<Copy size={14} />}
+                aria-label="Kopier til dashboard"
+              >
+                {copiedDashboard ? 'Kopiert!' : 'Dashboard'}
+              </Button>
+            </Tooltip>
             {showEditButton && (
               <Button
                 size="xsmall"
