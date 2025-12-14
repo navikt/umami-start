@@ -1,4 +1,4 @@
-import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs, Search, Accordion } from '@navikt/ds-react';
+import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs, Search, Accordion, Pagination } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import {
@@ -62,6 +62,8 @@ const DisplayOptions = forwardRef(({
   const [showCustomLimit, setShowCustomLimit] = useState<boolean>(false);
   const [activeGroupings, setActiveGroupings] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 10;
   const [alertInfo, setAlertInfo] = useState<{ show: boolean, message: string }>({
     show: false,
     message: ''
@@ -93,6 +95,24 @@ const DisplayOptions = forwardRef(({
 
   const uniqueParameters = getUniqueParameters(parameters);
 
+  // Get selected event names from filters
+  const selectedEventNames = useMemo(() => {
+    const eventNameFilter = filters.find(f => f.column === 'event_name');
+    if (!eventNameFilter) return [];
+
+    // Handle multiple values (IN operator)
+    if (eventNameFilter.multipleValues && eventNameFilter.multipleValues.length > 0) {
+      return eventNameFilter.multipleValues;
+    }
+    // Handle single value
+    if (eventNameFilter.value && typeof eventNameFilter.value === 'string') {
+      return [eventNameFilter.value];
+    }
+    return [];
+  }, [filters]);
+
+  const hasEventNameFilter = selectedEventNames.length > 0;
+
   const groupedAndFilteredParams = useMemo(() => {
     const groups: Record<string, Parameter[]> = {};
     const query = searchQuery.toLowerCase();
@@ -102,6 +122,16 @@ const DisplayOptions = forwardRef(({
 
       if (param.key.includes('.')) {
         eventName = param.key.split('.')[0];
+      }
+
+      // Filter by selected event names if any are selected
+      if (hasEventNameFilter) {
+        const matchesSelectedEvent = selectedEventNames.some(
+          selectedEvent => eventName.toLowerCase() === selectedEvent.toLowerCase()
+        );
+        if (!matchesSelectedEvent) {
+          return;
+        }
       }
 
       // Filter based on search query
@@ -123,7 +153,30 @@ const DisplayOptions = forwardRef(({
     });
 
     return groups;
-  }, [parameters, searchQuery]);
+  }, [parameters, searchQuery, hasEventNameFilter, selectedEventNames]);
+
+  // Pagination logic
+  const sortedEventNames = useMemo(() => {
+    return Object.keys(groupedAndFilteredParams).sort((a, b) => a.localeCompare(b, 'nb-NO'));
+  }, [groupedAndFilteredParams]);
+
+  const totalPages = Math.ceil(sortedEventNames.length / ITEMS_PER_PAGE);
+  const showPagination = !hasEventNameFilter && !searchQuery && sortedEventNames.length > ITEMS_PER_PAGE;
+
+  const paginatedEventNames = useMemo(() => {
+    if (hasEventNameFilter || searchQuery) {
+      // Show all when filtered
+      return sortedEventNames;
+    }
+    // Paginate when not filtered
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedEventNames.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  }, [sortedEventNames, currentPage, hasEventNameFilter, searchQuery]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, hasEventNameFilter]);
 
   // Check if custom events (event_type = 2) are enabled in filters
   const hasCustomEventsEnabled = filters.some(f => {
@@ -407,39 +460,65 @@ const DisplayOptions = forwardRef(({
                         {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte parametere funnet for denne nettsiden.'}
                       </div>
                     ) : (
-                      <Accordion size="small" headingSize="xsmall">
-                        {Object.entries(groupedAndFilteredParams).map(([eventName, params]) => (
-                          <Accordion.Item key={eventName} defaultOpen={!!searchQuery}>
-                            <Accordion.Header>
-                              {eventName === '_manual_parameters_' ? 'Manuelt lagt til' : eventName}
-                              <span className="text-sm text-gray-600 ml-2 font-normal">
-                                ({params.length})
-                              </span>
-                            </Accordion.Header>
-                            <Accordion.Content>
-                              <div className="flex flex-wrap gap-2">
-                                {params.map(param => {
-                                  const baseName = param.key.split('.').pop()!;
-                                  const columnValue = `param_${sanitizeColumnName(baseName)}`;
-                                  const isActive = activeGroupings.includes(columnValue);
+                      <>
+                        {hasEventNameFilter && (
+                          <div className="mb-3 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded">
+                            Viser kun parametere fra: {selectedEventNames.join(', ')}
+                          </div>
+                        )}
+                        <Accordion size="small" headingSize="xsmall">
+                          {paginatedEventNames.map(eventName => {
+                            const params = groupedAndFilteredParams[eventName];
+                            if (!params) return null;
+                            return (
+                              <Accordion.Item key={eventName} defaultOpen={!!searchQuery || hasEventNameFilter}>
+                                <Accordion.Header>
+                                  {eventName === '_manual_parameters_' ? 'Manuelt lagt til' : eventName}
+                                  <span className="text-sm text-gray-600 ml-2 font-normal">
+                                    ({params.length})
+                                  </span>
+                                </Accordion.Header>
+                                <Accordion.Content>
+                                  <div className="flex flex-wrap gap-2">
+                                    {params.map(param => {
+                                      const baseName = param.key.split('.').pop()!;
+                                      const columnValue = `param_${sanitizeColumnName(baseName)}`;
+                                      const isActive = activeGroupings.includes(columnValue);
 
-                                  return (
-                                    <Button
-                                      key={param.key}
-                                      variant={isActive ? "secondary" : "secondary"}
-                                      size="small"
-                                      onClick={() => handleAddGroupField(columnValue)}
-                                      disabled={isActive}
-                                    >
-                                      {baseName}
-                                    </Button>
-                                  );
-                                })}
-                              </div>
-                            </Accordion.Content>
-                          </Accordion.Item>
-                        ))}
-                      </Accordion>
+                                      return (
+                                        <Button
+                                          key={param.key}
+                                          variant={isActive ? "secondary" : "secondary"}
+                                          size="small"
+                                          onClick={() => handleAddGroupField(columnValue)}
+                                          disabled={isActive}
+                                        >
+                                          {baseName}
+                                        </Button>
+                                      );
+                                    })}
+                                  </div>
+                                </Accordion.Content>
+                              </Accordion.Item>
+                            );
+                          })}
+                        </Accordion>
+                        {showPagination && (
+                          <div className="mt-4 flex justify-center">
+                            <Pagination
+                              page={currentPage}
+                              onPageChange={setCurrentPage}
+                              count={totalPages}
+                              size="small"
+                            />
+                          </div>
+                        )}
+                        {!showPagination && sortedEventNames.length > 0 && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            Viser {paginatedEventNames.length} av {sortedEventNames.length} hendelser
+                          </div>
+                        )}
+                      </>
                     )}
                   </>
                 )}
