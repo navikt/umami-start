@@ -1195,7 +1195,15 @@ const ChartsPage = () => {
               const valueField = param.type === 'number' ? 'number_value' : 'string_value';
               // Use WHERE for first param filter, AND for subsequent ones
               const connector = idx === 0 ? 'WHERE' : '  AND';
-              sql += `${connector} event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${filter.value}\n`;
+
+              // Properly format the value (quote strings, escape single quotes)
+              let formattedValue = filter.value;
+              if (param.type === 'string' && filter.value) {
+                // Escape single quotes and wrap in quotes
+                formattedValue = `'${String(filter.value).replace(/'/g, "''")}'`;
+              }
+
+              sql += `${connector} event_data.data_key = '${paramBase}' AND event_data.${valueField} ${filter.operator} ${formattedValue}\n`;
             }
           });
         }
