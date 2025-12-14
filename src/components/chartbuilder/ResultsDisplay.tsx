@@ -167,18 +167,15 @@ const ResultsDisplay = ({
 
   // Handler for sorting (memoized to prevent recreating on every render)
   const handleSort = useCallback((column: string) => {
-    setSortColumn(prevColumn => {
-      if (prevColumn === column) {
-        // Toggle direction if same column
-        setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-        return column;
-      } else {
-        // New column, default to ascending
-        setSortDirection('asc');
-        return column;
-      }
-    });
-  }, []);
+    if (sortColumn === column) {
+      // Same column - toggle direction
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column - set column and default to descending for numbers (most useful default)
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  }, [sortColumn]);
 
   // Memoize the table rendering to prevent re-renders when only searchQuery changes
   const tableContent = useMemo(() => {
