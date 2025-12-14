@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label } from '@navikt/ds-react';
+import { useState, useEffect, useRef } from 'react';
+import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label, Skeleton } from '@navikt/ds-react';
 import { Filter, Parameter } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
@@ -119,6 +119,18 @@ const EventSelector = ({
   const [eventParamValue, setEventParamValue] = useState<string>('');
   const [isParamsLoading, setIsParamsLoading] = useState<boolean>(false);
 
+  // Sync isParamsLoading with the global isEventsLoading prop
+  // This ensures isParamsLoading turns off when the actual data loading finishes
+  const prevIsEventsLoading = useRef(isEventsLoading);
+
+  useEffect(() => {
+    // If loading finished (went from true to false), turn off params loading
+    if (prevIsEventsLoading.current && !isEventsLoading) {
+      setIsParamsLoading(false);
+    }
+    prevIsEventsLoading.current = isEventsLoading;
+  }, [isEventsLoading]);
+
   // Get parameters filtered by selected events
   const filteredParameters = parameters.filter(param => {
     if (customEvents.length === 0) return true;
@@ -172,8 +184,7 @@ const EventSelector = ({
     if (onEnableCustomEvents) {
       onEnableCustomEvents(true);
     }
-    // Loading state will be cleared when parameters prop updates
-    setTimeout(() => setIsParamsLoading(false), 2000);
+    // Loading state will be controlled by useEffect based on isEventsLoading prop
   };
 
   return (
@@ -341,8 +352,8 @@ const EventSelector = ({
                 onChange={(val) => {
                   const newMode = val as 'none' | 'all' | 'specific' | 'interactive';
 
-                  // Always trigger data loading for specific/interactive/all modes (fetch names only)
-                  if (newMode !== 'none' && onEnableCustomEvents) {
+                  // Only trigger data loading if events haven't been loaded yet
+                  if (newMode !== 'none' && onEnableCustomEvents && customEventsList.length === 0) {
                     onEnableCustomEvents(false);
                   }
 
@@ -378,50 +389,51 @@ const EventSelector = ({
               <div className="mt-4">
                 {(customEventsMode === 'specific') && (
                   <div className="bg-white p-4 rounded border">
-                    {isEventsLoading && (
-                      <div className="mb-4 text-sm text-gray-600 flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                        Laster hendelser...
+                    {isEventsLoading && !isParamsLoading && customEventsList.length === 0 && (
+                      <div className="mb-4 space-y-3">
+                        <Skeleton variant="text" width="40%" />
+                        <Skeleton variant="rectangle" height={40} />
+                        <Skeleton variant="rectangle" height={40} />
                       </div>
                     )}
-                    {customEventsMode === 'specific' && (
-                      <div className="mb-3">
-                        <Select
-                          label="Hendelsesnavn"
-                          value={eventNameOperator}
-                          disabled={isEventsLoading}
-                          onChange={(e) => {
-                            const newOperator = e.target.value;
-                            setEventNameOperator(newOperator);
+                    {customEventsMode === 'specific' && (!isEventsLoading || isParamsLoading) && (
+                      <>
+                        <div className="mb-3">
+                          <Select
+                            label="Hendelsesnavn"
+                            value={eventNameOperator}
+                            onChange={(e) => {
+                              const newOperator = e.target.value;
+                              setEventNameOperator(newOperator);
 
-                            // Update events format when switching between operators
-                            if (customEvents.length > 0) {
-                              if (newOperator === 'IN' || eventNameOperator === 'IN') {
-                                handleCustomEventsChange(
-                                  customEvents,
-                                  newOperator
-                                );
+                              // Update events format when switching between operators
+                              if (customEvents.length > 0) {
+                                if (newOperator === 'IN' || eventNameOperator === 'IN') {
+                                  handleCustomEventsChange(
+                                    customEvents,
+                                    newOperator
+                                  );
+                                }
                               }
-                            }
-                          }}
-                          size="small"
-                          className="w-full md:w-1/3"
-                        >
-                          {OPERATORS.map(op => (
-                            <option key={op.value} value={op.value}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                            }}
+                            size="small"
+                            className="w-full md:w-1/3"
+                          >
+                            {OPERATORS.map(op => (
+                              <option key={op.value} value={op.value}>
+                                {op.label}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      </>
                     )}
-                    {customEventsMode === 'specific' && (
+                    {customEventsMode === 'specific' && (!isEventsLoading || isParamsLoading) && (
                       <>
                         {eventNameOperator === 'IN' ? (
                           <UNSAFE_Combobox
                             label="Velg hendelser"
                             description="Flere hendelser kan velges for 'er lik' operator"
-                            disabled={isEventsLoading}
                             options={customEventsList.map(event => ({
                               label: event,
                               value: event
@@ -449,7 +461,6 @@ const EventSelector = ({
                                   eventNameOperator === 'ENDS_WITH' ? "Søket vil finne hendelser som slutter med verdien" :
                                     null
                             }
-                            disabled={isEventsLoading}
                             options={customEventsList.map(event => ({
                               label: event,
                               value: event
@@ -469,9 +480,19 @@ const EventSelector = ({
                       </>
                     )}
 
+
                     {/* Hendelsesdata filter section */}
                     <div className="mt-6 pt-4 border-t border-gray-200">
-                      {parameters.length === 0 ? (
+                      {(isParamsLoading || isEventsLoading) ? (
+                        <div className="space-y-3">
+                          <Skeleton variant="text" width="50%" />
+                          <Skeleton variant="rectangle" height={40} />
+                          <div className="flex gap-2">
+                            <Skeleton variant="rectangle" height={40} width="33%" />
+                            <Skeleton variant="rectangle" height={40} className="flex-1" />
+                          </div>
+                        </div>
+                      ) : parameters.length === 0 ? (
                         <>
                           <Label as="p" size="small" className="mb-2">
                             Velg hendelsesdata (valgfritt)
@@ -480,7 +501,6 @@ const EventSelector = ({
                             variant="secondary"
                             size="small"
                             onClick={handleFetchEventParams}
-                            loading={isParamsLoading}
                           >
                             Hent hendelsesdata
                           </Button>
@@ -505,7 +525,7 @@ const EventSelector = ({
                             }}
                             isMultiSelect={false}
                             size="small"
-                            shouldAutocomplete={true}
+                            shouldAutocomplete={false}
                           />
 
                           {/* Operator and value when param is selected */}
@@ -675,9 +695,9 @@ const EventSelector = ({
                       {stagingFilter.column === '_custom_param_' && (
                         <div>
                           {isEventsLoading ? (
-                            <div className="text-sm text-gray-600 flex items-center gap-2 py-2">
-                              <span className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                              Henter hendelsesdata...
+                            <div className="space-y-2">
+                              <Skeleton variant="text" width="30%" />
+                              <Skeleton variant="rectangle" height={40} />
                             </div>
                           ) : parameters.length === 0 ? (
                             <div className="flex flex-col gap-2">
