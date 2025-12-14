@@ -1,4 +1,5 @@
-import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button } from '@navikt/ds-react';
+import { useState } from 'react';
+import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label } from '@navikt/ds-react';
 import { Filter, Parameter } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
@@ -38,6 +39,7 @@ interface EventSelectorProps {
   updateFilter: (index: number, updates: Partial<Filter>) => void;
   isDateRangeFilter: (filter: Filter) => boolean;
   isEventsLoading?: boolean;
+  addFilterDirectly?: (filter: Filter) => void;
 }
 
 const EventSelector = ({
@@ -75,7 +77,8 @@ const EventSelector = ({
   removeFilter,
   updateFilter,
   isDateRangeFilter,
-  isEventsLoading = false
+  isEventsLoading = false,
+  addFilterDirectly
 }: EventSelectorProps) => {
 
   const getCleanParamName = (param: Parameter): string => {
@@ -109,6 +112,69 @@ const EventSelector = ({
   };
 
   const activeFilterCount = filters.filter(f => !isDateRangeFilter(f)).length;
+
+  // State for event param filter in "Utvalgte hendelser" mode
+  const [selectedEventParam, setSelectedEventParam] = useState<string>('');
+  const [eventParamOperator, setEventParamOperator] = useState<string>('=');
+  const [eventParamValue, setEventParamValue] = useState<string>('');
+  const [isParamsLoading, setIsParamsLoading] = useState<boolean>(false);
+
+  // Get parameters filtered by selected events
+  const filteredParameters = parameters.filter(param => {
+    if (customEvents.length === 0) return true;
+    const eventName = param.key.includes('.') ? param.key.split('.')[0] : 'Andre';
+    return customEvents.some(e => e.toLowerCase() === eventName.toLowerCase());
+  });
+
+  // Get unique filtered parameters
+  const filteredUniqueParams = filteredParameters.reduce((acc: Parameter[], param) => {
+    const baseName = getCleanParamName(param);
+    if (!acc.some(p => getCleanParamName(p) === baseName)) {
+      acc.push(param);
+    }
+    return acc;
+  }, []);
+
+  // Handle adding/updating the event param filter
+  const handleAddEventParamFilter = (valueOverride?: string) => {
+    const value = valueOverride ?? eventParamValue;
+    if (!selectedEventParam || !value) return;
+
+    // Check if a filter for this column already exists
+    const existingFilterIndex = filters.findIndex(f => f.column === selectedEventParam);
+
+    if (existingFilterIndex >= 0) {
+      // Update the existing filter
+      updateFilter(existingFilterIndex, {
+        operator: eventParamOperator,
+        value: value
+      });
+    } else {
+      // Create a new filter
+      const newFilter: Filter = {
+        column: selectedEventParam,
+        operator: eventParamOperator,
+        value: value
+      };
+
+      // Use addFilterDirectly if available to directly add to filters
+      if (addFilterDirectly) {
+        addFilterDirectly(newFilter);
+      }
+    }
+
+    // Don't reset the form - keep the selection visible so user can see what's applied
+  };
+
+  // Handle fetching params for events
+  const handleFetchEventParams = () => {
+    setIsParamsLoading(true);
+    if (onEnableCustomEvents) {
+      onEnableCustomEvents(true);
+    }
+    // Loading state will be cleared when parameters prop updates
+    setTimeout(() => setIsParamsLoading(false), 2000);
+  };
 
   return (
     <div className='mb-4'>
@@ -402,6 +468,90 @@ const EventSelector = ({
                         )}
                       </>
                     )}
+
+                    {/* Hendelsesdata filter section */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      {parameters.length === 0 ? (
+                        <>
+                          <Label as="p" size="small" className="mb-2">
+                            Velg hendelsesdata (valgfritt)
+                          </Label>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={handleFetchEventParams}
+                            loading={isParamsLoading}
+                          >
+                            Hent hendelsesdata
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          {/* Parameter selector */}
+                          <UNSAFE_Combobox
+                            label="Velg hendelsesdata (valgfritt)"
+                            options={filteredUniqueParams.map(param => ({
+                              label: getParamDisplayName(param),
+                              value: `param_${getCleanParamName(param)}`
+                            }))}
+                            selectedOptions={selectedEventParam ? [selectedEventParam] : []}
+                            onToggleSelected={(option, isSelected) => {
+                              if (isSelected && option) {
+                                setSelectedEventParam(option);
+                                setEventParamValue('');
+                              } else {
+                                setSelectedEventParam('');
+                              }
+                            }}
+                            isMultiSelect={false}
+                            size="small"
+                            shouldAutocomplete={true}
+                          />
+
+                          {/* Operator and value when param is selected */}
+                          {selectedEventParam && (
+                            <>
+                              <div className="flex gap-2 items-end">
+                                <Select
+                                  label="Operator"
+                                  value={eventParamOperator}
+                                  onChange={(e) => setEventParamOperator(e.target.value)}
+                                  size="small"
+                                  className="w-1/3"
+                                >
+                                  {OPERATORS.map(op => (
+                                    <option key={op.value} value={op.value}>
+                                      {op.label}
+                                    </option>
+                                  ))}
+                                </Select>
+
+                                <div className="flex-1">
+                                  <UNSAFE_Combobox
+                                    label="Verdi"
+                                    options={[]}
+                                    selectedOptions={eventParamValue ? [eventParamValue] : []}
+                                    onToggleSelected={(option, isSelected) => {
+                                      if (option) {
+                                        const newValue = isSelected ? option : '';
+                                        setEventParamValue(newValue);
+                                        // Auto-apply filter when value is set (pass value directly)
+                                        if (isSelected && newValue && selectedEventParam) {
+                                          handleAddEventParamFilter(newValue);
+                                        }
+                                      }
+                                    }}
+                                    isMultiSelect={false}
+                                    size="small"
+                                    allowNewValues
+                                  />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 {customEventsMode === 'interactive' && (

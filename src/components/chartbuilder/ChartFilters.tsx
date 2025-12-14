@@ -223,6 +223,11 @@ const ChartFilters = forwardRef(({
     ));
   };
 
+  // Add a filter directly to the filters array (without staging)
+  const addFilterDirectly = (filter: Filter) => {
+    setFilters([...filters, filter]);
+  };
+
   // Add this helper function
   const isDateRangeFilter = (filter: Filter): boolean => {
     return filter.column === 'created_at' && ['>=', '<='].includes(filter.operator || '');
@@ -642,6 +647,7 @@ const ChartFilters = forwardRef(({
             updateFilter={updateFilter}
             isDateRangeFilter={isDateRangeFilter}
             isEventsLoading={isEventsLoading}
+            addFilterDirectly={addFilterDirectly}
           />
 
           {/* Date Range Picker - Now AFTER event selection */}
