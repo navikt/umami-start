@@ -544,7 +544,7 @@ const SQLPreview = ({
       // Check if we should warn the user
       let shouldWarn = false;
 
-      if (gb >= 15) {
+      if (gb >= 50) {
         shouldWarn = true;
       }
 
