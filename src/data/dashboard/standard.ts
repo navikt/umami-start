@@ -5,6 +5,11 @@ export const standardDashboard: DashboardConfig = {
   description: "Et standarddashboard med vanlige trafikktall.",
   charts: [
     {
+      title: "Siteimprove",
+      type: "siteimprove",
+      width: '100'
+    },
+    {
       title: "Besøk over tid",
       type: "line",
       width: '60',

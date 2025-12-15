@@ -1,6 +1,6 @@
 import { Alert, Select, Button, TextField, ReadMore, Label } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { getDashboard } from "../data/dashboard";
 import { DashboardWidget } from "../components/DashboardWidget";
@@ -31,33 +31,27 @@ const Dashboard = () => {
         metricType: 'visitors' as 'visitors' | 'pageviews' // Keeping for type compatibility, though unused UI
     });
 
+    // Active website state to ensure widget only updates on "Oppdater"
+    const [activeWebsite, setActiveWebsite] = useState<any>(null);
+
+    // Sync activeWebsite when selectedWebsite matches the URL websiteId (initial load or after navigation)
+    useEffect(() => {
+        if (selectedWebsite && selectedWebsite.id === websiteId) {
+            setActiveWebsite(selectedWebsite);
+        }
+    }, [selectedWebsite, websiteId]);
+
     const handleUpdate = () => {
         // Update URL with selected website ID
         if (selectedWebsite) {
+            setActiveWebsite(selectedWebsite); // Explicitly update active website
             const url = new URL(window.location.href);
             url.searchParams.set('websiteId', selectedWebsite.id);
             if (activeFilters.urlFilters !== (tempUrlPath ? [tempUrlPath] : [])) {
                 if (tempUrlPath) url.searchParams.set('path', tempUrlPath);
                 else url.searchParams.delete('path');
             }
-            // Update URL without full page reload, but triggering re-render via router if possible? 
-            // Actually, simply pushing state won't trigger React Router's URL awareness if not using navigate. 
-            // But let's stick to consistent behavior. If we pushState, the `useSearchParams` hook MIGHT update if we trigger an event? 
-            // Better to use setSearchParams if available, or force reload/navigate.
-            // Let's us window.location.href update for simplicity as it ensures data fetch.
-            // Actually, we can use window.history.pushState and then a manual forceUpdate or similar?
-            // The cleanest way is to use `setSearchParams` from `useSearchParams`.
-
-            // Re-implementing using standard URL manipulation and allowing React Router to pick it up if possible, 
-            // but since we are inside a component, let's just rely on the fact that `websiteId` comes from `useSearchParams`.
-            // We need to trigger a navigation.
-
             window.history.pushState({}, '', url.toString());
-            // Force a "navigation" event or simply reload?
-            // To make `useSearchParams` react, we usually need to use `setSearchParams`.
-            // Let's refactor to use `setSearchParams` properly if possible, but for now matching existing patterns.
-            // If `Dashboard.tsx` relies on `useSearchParams`, `pushState` won't trigger a re-render of `websiteId`.
-            // So we need to force a re-render. 
         }
 
         setActiveFilters({
@@ -66,10 +60,6 @@ const Dashboard = () => {
             dateRange: tempDateRange,
             metricType: 'visitors'
         });
-
-        // Force reload by dispatching a popstate event? No, that's hacky.
-        // Let's just user navigate? I don't see `useNavigate` imported.
-        // Let's use `window.dispatchEvent(new Event('popstate'));` as a hack or better, import `useNavigate`.
     };
 
     const hasChanges =
@@ -165,6 +155,7 @@ const Dashboard = () => {
                             websiteId={websiteId}
                             filters={activeFilters}
                             onDataLoaded={handleDataLoaded}
+                            selectedWebsite={activeWebsite}
                         />
                     ))}
 

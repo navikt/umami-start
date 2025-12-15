@@ -3,10 +3,15 @@ import { Loader, Alert, Table, Pagination } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { SavedChart } from '../data/dashboard/types';
 import { format, subDays } from 'date-fns';
+import { getBaseUrl } from '../lib/environment';
+// @ts-ignore
+import SiteScores from './SiteScores';
+import teamsData from '../data/teamsData.json';
 
 interface DashboardWidgetProps {
     chart: SavedChart;
     websiteId: string;
+    selectedWebsite?: any;
     filters: {
         urlFilters: string[];
         dateRange: string;
@@ -16,7 +21,7 @@ interface DashboardWidgetProps {
     onDataLoaded?: (stats: { id: string; gb: number; title: string }) => void;
 }
 
-export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: DashboardWidgetProps) => {
+export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite }: DashboardWidgetProps) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any[]>([]);
@@ -182,6 +187,64 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
 
     const colClass = `col-span-full ${SPAN_CLASSES[span] || 'md:col-span-10'}`;
 
+    if (chart.type === 'siteimprove') {
+        if (!selectedWebsite) return null;
+
+        let team = null;
+        let siteDomain = selectedWebsite.domain;
+        if (!siteDomain.startsWith('http')) {
+            siteDomain = `https://${siteDomain}`;
+        }
+
+        try {
+            // Try to match by origin if valid URL
+            const urlObj = new URL(siteDomain);
+            const domain = urlObj.origin;
+            team = teamsData.find((t: any) => {
+                if (!t.teamDomain) return false;
+                // Normalize team domain to origin to ensure safely matching
+                try {
+                    const teamUrl = new URL(t.teamDomain);
+                    return domain === teamUrl.origin;
+                } catch {
+                    // Fallback if teamDomain in matching data is weird
+                    return domain.startsWith(t.teamDomain);
+                }
+            });
+            console.log('[DashboardWidget] Matched team by origin:', team, 'for domain:', domain);
+        } catch (e) {
+            console.error('Error parsing URL:', e);
+            // Fallback to direct string match or partial match
+            team = teamsData.find((t: any) => t.teamDomain === selectedWebsite.domain || selectedWebsite.domain.includes(t.teamDomain) || t.teamDomain.includes(selectedWebsite.domain));
+            console.log('[DashboardWidget] Matched team by string fallback:', team, 'for domain:', selectedWebsite.domain);
+        }
+
+        if (!team || !team.teamSiteimproveSite) {
+            console.log('[DashboardWidget] No compatible team found or missing Siteimprove ID');
+            return null;
+        }
+
+        // Construct page URL from filters
+        const path = (filters.urlFilters && filters.urlFilters.length > 0) ? filters.urlFilters[0] : '/';
+        // Ensure path starts with slash if not empty
+        const safePath = path.startsWith('/') ? path : `/${path}`;
+        const fullUrl = `${team.teamDomain}${safePath}`;
+
+        const baseUrl = getBaseUrl({
+            localUrl: "https://reops-proxy.intern.nav.no",
+            prodUrl: "https://reops-proxy.ansatt.nav.no",
+        });
+
+        return (
+            <SiteScores
+                className={colClass}
+                pageUrl={fullUrl}
+                siteimproveSelectedDomain={team.teamSiteimproveSite}
+                baseUrl={baseUrl}
+            />
+        );
+    }
+
     if (chart.type === 'title') {
         return (
             <div className={`pt-2 ${colClass}`}>
@@ -274,6 +337,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded }: Das
                 </div>
             );
         }
+
 
         return <div>Ukjent diagramtype: {chart.type}</div>;
     };
