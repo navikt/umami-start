@@ -96,7 +96,7 @@ try {
 }
 
 // Helper function to add audit logging to BigQuery queries
-function addAuditLogging(queryConfig, navIdent) {
+function addAuditLogging(queryConfig, navIdent, analysisType = null) {
     // Add NAV ident as a label (queryable metadata in BigQuery)
     queryConfig.labels = {
         ...queryConfig.labels,
@@ -104,9 +104,17 @@ function addAuditLogging(queryConfig, navIdent) {
         user_type: 'internal'
     };
 
+    if (analysisType) {
+        queryConfig.labels.analysis_type = analysisType.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    }
+
     // Add NAV ident as SQL comment (visible in query history)
     if (queryConfig.query && navIdent) {
-        queryConfig.query = `-- Nav ident: ${navIdent}\n-- Timestamp: ${new Date().toISOString()}\n${queryConfig.query}`;
+        let comment = `-- Nav ident: ${navIdent}\n-- Timestamp: ${new Date().toISOString()}`;
+        if (analysisType) {
+            comment += `\n-- Analysis: ${analysisType}`;
+        }
+        queryConfig.query = `${comment}\n${queryConfig.query}`;
     }
 
     return queryConfig;
@@ -2827,7 +2835,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             try {
                 const [siteRows] = await bigquery.query(addAuditLogging({
                     query: `SELECT website_id, name FROM \`team-researchops-prod-01d6.umami.public_website\``
-                }, navIdent));
+                }, navIdent, 'Personvernssjekk'));
                 siteRows.forEach(r => websiteMap.set(r.website_id, r.name));
             } catch (e) {
                 console.error('Error fetching websites for global search:', e);
@@ -2965,7 +2973,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                     location: 'europe-north1',
                     params: params,
                     dryRun: true
-                }, navIdent));
+                }, navIdent, 'Personvernssjekk'));
 
                 const stats = dryRunJob.metadata.statistics;
                 const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2994,7 +3002,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             query: finalQuery,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Personvernssjekk'));
 
         const [rows] = await job.getQueryResults();
 
