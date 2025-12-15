@@ -13,7 +13,7 @@ const PATTERNS: Record<string, RegExp> = {
     'Navident': /\b[a-zA-Z]\d{6}\b/g,
     'E-post': /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
     'IP-adresse': /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
-    'Telefonnummer': /(?<![-0-9a-fA-F])[2-9]\d{7}(?![-0-9a-fA-F])/g,
+    'Telefonnummer': /(?<!\/vis\/)(?<![-0-9a-fA-F])[2-9]\d{7}(?![-0-9a-fA-F])/g,
     'Bankkort': /(?<![0-9a-fA-F]-)\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b(?!-[0-9a-fA-F])/g,
     'Mulig navn': /\b[A-ZÆØÅ][a-zæøå]{1,20}\s[A-ZÆØÅ][a-zæøå]{1,20}(?:\s[A-ZÆØÅ][a-zæøå]{1,20})?\b/g,
     'Mulig adresse': /\b\d{4}\s[A-ZÆØÅ][A-ZÆØÅa-zæøå]+(?:\s[A-ZÆØÅa-zæøå]+)*\b/g,

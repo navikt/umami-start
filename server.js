@@ -2818,8 +2818,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             { table: 'public_session', column: 'os' },
             { table: 'public_session', column: 'device' },
             { table: 'public_session', column: 'city' },
-            // public_event_data
-            { table: 'public_event_data', column: 'string_value' }
+
         ];
 
         // If global search, fetch website names first
@@ -2839,6 +2838,11 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 
         for (const check of checks) {
             for (const [type, pattern] of Object.entries(patterns)) {
+                // Special filter for phone numbers to avoid matching /vis/123...
+                const extraFilter = type === 'Telefonnummer'
+                    ? `AND NOT REGEXP_CONTAINS(${check.column}, r'/vis/[0-9]+')`
+                    : '';
+
                 if (websiteId) {
                     unionQueries.push(`
                         SELECT 
@@ -2855,6 +2859,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                         WHERE website_id = @websiteId
                         AND created_at BETWEEN @startDate AND @endDate
                         AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                        ${extraFilter}
                     `);
                 } else {
                     // Global search: group by website_id
@@ -2873,9 +2878,68 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                         FROM \`team-researchops-prod-01d6.umami.${check.table}\`
                         WHERE created_at BETWEEN @startDate AND @endDate
                         AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                        ${extraFilter}
                         GROUP BY website_id
                     `);
                 }
+            }
+        }
+
+        // Special check for event_data (nested in views)
+        for (const [type, pattern] of Object.entries(patterns)) {
+            // Special filter for phone numbers to avoid matching /vis/123...
+            const extraFilter = type === 'Telefonnummer'
+                ? `AND NOT REGEXP_CONTAINS(p.string_value, r'/vis/[0-9]+')`
+                : '';
+
+            if (websiteId) {
+                unionQueries.push(`
+                    SELECT 
+                        'event_data' as table_name,
+                        'string_value' as column_name,
+                        '${type}' as match_type,
+                        COUNT(*) as count,
+                        ${type === 'E-post' ? `COUNTIF(REGEXP_CONTAINS(p.string_value, r'@nav'))` : '0'} as nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT p.string_value)` : '0'} as unique_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_other_count,
+                        ARRAY_AGG(DISTINCT p.string_value LIMIT 5) as examples
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                    JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                        ON e.event_id = d.website_event_id
+                        AND e.website_id = d.website_id
+                        AND e.created_at = d.created_at
+                    CROSS JOIN UNNEST(d.event_parameters) AS p
+                    WHERE e.website_id = @websiteId
+                    AND e.created_at BETWEEN @startDate AND @endDate
+                    AND REGEXP_CONTAINS(p.string_value, r'${pattern}')
+                    ${extraFilter}
+                `);
+            } else {
+                // Global search: group by website_id
+                unionQueries.push(`
+                    SELECT 
+                        e.website_id,
+                        'event_data' as table_name,
+                        'string_value' as column_name,
+                        '${type}' as match_type,
+                        COUNT(*) as count,
+                        ${type === 'E-post' ? `COUNTIF(REGEXP_CONTAINS(p.string_value, r'@nav'))` : '0'} as nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT p.string_value)` : '0'} as unique_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_other_count,
+                        ARRAY_AGG(DISTINCT p.string_value LIMIT 5) as examples
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                    JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                        ON e.event_id = d.website_event_id
+                        AND e.website_id = d.website_id
+                        AND e.created_at = d.created_at
+                    CROSS JOIN UNNEST(d.event_parameters) AS p
+                    WHERE e.created_at BETWEEN @startDate AND @endDate
+                    AND REGEXP_CONTAINS(p.string_value, r'${pattern}')
+                    ${extraFilter}
+                    GROUP BY e.website_id
+                `);
             }
         }
 
