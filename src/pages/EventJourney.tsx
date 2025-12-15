@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Radio, RadioGroup, Heading, Table, Modal, Label } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
 
 const EventJourney = () => {
@@ -13,6 +14,8 @@ const EventJourney = () => {
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '/');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
 
     // Client-side filter state
     const [filterText, setFilterText] = useState<string>('');
@@ -63,6 +66,28 @@ const EventJourney = () => {
         if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
+        } else if (period === 'last_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                setError('Vennligst velg en gyldig periode.');
+                setLoading(false);
+                return;
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
         } else {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
@@ -147,14 +172,14 @@ const EventJourney = () => {
                         onChange={(e) => setUrlPath(e.target.value)}
                     />
 
-                    <RadioGroup
-                        legend="Periode"
-                        value={period}
-                        onChange={(val: string) => setPeriod(val)}
-                    >
-                        <Radio value="current_month">Denne måneden</Radio>
-                        <Radio value="last_month">Forrige måned</Radio>
-                    </RadioGroup>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <Button
                         onClick={fetchData}

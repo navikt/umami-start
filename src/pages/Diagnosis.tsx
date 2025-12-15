@@ -3,6 +3,7 @@ import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from 
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/PeriodPicker';
 import AnalyticsNavigation from '../components/AnalyticsNavigation';
 import { Website } from '../types/chart';
 import { format } from 'date-fns';
@@ -26,6 +27,8 @@ interface HistoryData {
 
 const Diagnosis = () => {
     const [period, setPeriod] = useState<string>('current_month');
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
     const [data, setData] = useState<DiagnosisData[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -56,9 +59,31 @@ const Diagnosis = () => {
         if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
-        } else {
+        } else if (period === 'last_month') {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                setError('Vennligst velg en gyldig periode.');
+                setLoading(false);
+                return;
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
         }
 
         try {
@@ -255,16 +280,17 @@ const Diagnosis = () => {
                         variant="minimal"
                     />
 
-                    <RadioGroup
-                        legend="Periode"
-                        value={period}
-                        onChange={(val: string) => setPeriod(val)}
-                    >
-                        <Radio value="current_month">Denne måneden</Radio>
-                        <Radio value="last_month">Forrige måned</Radio>
-                    </RadioGroup>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <RadioGroup
+                        size="small"
                         legend="Miljø"
                         value={environment}
                         onChange={(val: string) => setEnvironment(val)}

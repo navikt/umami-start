@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Heading } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Switch, Heading } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
 
 const Retention = () => {
@@ -15,6 +16,8 @@ const Retention = () => {
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
     const [businessDaysOnly, setBusinessDaysOnly] = useState<boolean>(() => {
         const param = searchParams.get('businessDaysOnly');
         return param === 'true';
@@ -106,10 +109,33 @@ const Retention = () => {
             // First day of current month to now
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
-        } else {
+        } else if (period === 'last_month') {
             // First day to last day of previous month
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                setError('Vennligst velg en gyldig periode.');
+                setLoading(false);
+                return;
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
+        } else {
+            // Default fallback
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
         }
 
         try {
@@ -235,20 +261,21 @@ const Retention = () => {
                         onChange={(e) => setUrlPath(e.target.value)}
                     />
 
-                    <RadioGroup
-                        legend="Periode"
-                        value={period}
-                        onChange={(val: string) => setPeriod(val)}
-                    >
-                        <Radio value="current_month">Denne måneden</Radio>
-                        <Radio value="last_month">Forrige måned</Radio>
-                    </RadioGroup>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <Switch
+                        size="small"
                         checked={businessDaysOnly}
                         onChange={(e) => setBusinessDaysOnly(e.target.checked)}
                     >
-                        Kun virkedager
+                        Vis kun virkedager
                     </Switch>
 
                     <Button

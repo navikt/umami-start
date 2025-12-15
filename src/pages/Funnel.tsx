@@ -4,6 +4,7 @@ import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Sel
 import { Plus, Trash2, Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/PeriodPicker';
 import FunnelChart from '../components/FunnelChart';
 import HorizontalFunnelChart from '../components/HorizontalFunnelChart';
 import FunnelStats from '../components/FunnelStats';
@@ -33,6 +34,8 @@ const Funnel = () => {
     });
 
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
 
     const [onlyDirectEntry, setOnlyDirectEntry] = useState<boolean>(() => {
         const param = searchParams.get('strict');
@@ -236,6 +239,28 @@ const Funnel = () => {
         if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
+        } else if (period === 'last_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                setError('Vennligst velg en gyldig periode.');
+                setLoading(false);
+                return;
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
         } else {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
@@ -316,6 +341,28 @@ const Funnel = () => {
         if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
+        } else if (period === 'last_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                setTimingError('Vennligst velg en gyldig periode.');
+                setTimingLoading(false);
+                return;
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
         } else {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
@@ -396,16 +443,17 @@ const Funnel = () => {
                         variant="minimal"
                     />
 
-                    <RadioGroup
-                        legend="Periode"
-                        value={period}
-                        onChange={(val: string) => setPeriod(val)}
-                    >
-                        <Radio value="current_month">Denne måneden</Radio>
-                        <Radio value="last_month">Forrige måned</Radio>
-                    </RadioGroup>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <RadioGroup
+                        size="small"
                         legend="Flyt"
                         value={onlyDirectEntry ? 'strict' : 'loose'}
                         onChange={(val: string) => setOnlyDirectEntry(val === 'strict')}

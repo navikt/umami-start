@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Radio, RadioGroup, Heading, Table, Pagination, Search, Modal, Link, Label, BodyShort } from '@navikt/ds-react';
+import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, Label, BodyShort } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
 import { translateCountry } from '../lib/translations';
 
@@ -13,6 +14,8 @@ const UserProfiles = () => {
 
     // State
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [users, setUsers] = useState<any[]>([]);
     const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -43,9 +46,29 @@ const UserProfiles = () => {
         if (period === 'current_month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
-        } else {
+        } else if (period === 'last_month') {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                throw new Error('Vennligst velg en gyldig periode.');
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
         }
         return { startDate, endDate };
     };
@@ -173,17 +196,17 @@ const UserProfiles = () => {
                         variant="minimal"
                     />
 
-                    <RadioGroup
-                        legend="Periode"
-                        value={period}
-                        onChange={(val: string) => {
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={(val) => {
                             setPeriod(val);
                             setPage(1);
                         }}
-                    >
-                        <Radio value="current_month">Denne måneden</Radio>
-                        <Radio value="last_month">Forrige måned</Radio>
-                    </RadioGroup>
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="mt-4">
                         <Label htmlFor="user-search" size="small" spacing>Søk etter bruker ID</Label>

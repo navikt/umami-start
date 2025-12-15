@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, RadioGroup, Radio, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
 
@@ -17,10 +18,9 @@ const EventExplorer = () => {
     const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
-    const [dateRange, setDateRange] = useState<'thisMonth' | 'lastMonth'>(() => {
-        const range = searchParams.get('dateRange');
-        return (range === 'lastMonth' ? 'lastMonth' : 'thisMonth') as 'thisMonth' | 'lastMonth';
-    });
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('usage');
     const [showAverage, setShowAverage] = useState<boolean>(false);
@@ -47,7 +47,7 @@ const EventExplorer = () => {
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
         // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('dateRange') || searchParams.has('pagePath') || searchParams.has('event');
+        const hasConfigParams = searchParams.has('period') || searchParams.has('pagePath') || searchParams.has('event');
         if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loadingEvents) {
             setHasAutoSubmitted(true);
             fetchEvents();
@@ -65,16 +65,37 @@ const EventExplorer = () => {
     };
 
     // Calculate dates based on selection
+    // Calculate dates based on selection
     const getDates = () => {
         const now = new Date();
         let startAt, endAt;
 
-        if (dateRange === 'thisMonth') {
+        if (period === 'current_month') {
             startAt = new Date(now.getFullYear(), now.getMonth(), 1);
             endAt = now;
-        } else {
+        } else if (period === 'last_month') {
             startAt = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endAt = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                throw new Error('Vennligst velg en gyldig periode.');
+            }
+            startAt = new Date(customStartDate);
+            startAt.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endAt = now;
+            } else {
+                endAt = new Date(customEndDate);
+                endAt.setHours(23, 59, 59, 999);
+            }
+        } else {
+            startAt = new Date(now.getFullYear(), now.getMonth(), 1);
+            endAt = now;
         }
         return { startAt, endAt };
     };
@@ -110,7 +131,7 @@ const EventExplorer = () => {
 
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
-            newParams.set('dateRange', dateRange);
+            newParams.set('period', period);
             if (pagePath) {
                 newParams.set('pagePath', pagePath);
             } else {
@@ -121,7 +142,7 @@ const EventExplorer = () => {
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
         } catch (err) {
             console.error('Error fetching events:', err);
-            setError('Kunne ikke hente hendelser.');
+            setError((err as Error).message || 'Kunne ikke hente hendelser.');
         } finally {
             setLoadingEvents(false);
         }
@@ -180,7 +201,7 @@ const EventExplorer = () => {
 
                 // Update URL with selected event for sharing
                 const newParams = new URLSearchParams(window.location.search);
-                newParams.set('dateRange', dateRange);
+                newParams.set('period', period);
                 newParams.set('event', selectedEvent);
                 if (pagePath) {
                     newParams.set('pagePath', pagePath);
@@ -356,14 +377,14 @@ const EventExplorer = () => {
                         onChange={(e) => setPagePath(e.target.value)}
                     />
 
-                    <RadioGroup
-                        legend="Velg periode"
-                        value={dateRange}
-                        onChange={(val: 'thisMonth' | 'lastMonth') => setDateRange(val)}
-                    >
-                        <Radio value="thisMonth">Denne måneden</Radio>
-                        <Radio value="lastMonth">Forrige måned</Radio>
-                    </RadioGroup>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <Button
                         onClick={fetchEvents}

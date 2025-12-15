@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Radio, RadioGroup, Table, Heading, Tabs, Switch, DatePicker, ReadMore, Pagination, VStack } from '@navikt/ds-react';
-import { format, parse, isValid } from 'date-fns';
+import { Button, Alert, Loader, Table, Heading, Tabs, Switch, ReadMore, Pagination, VStack } from '@navikt/ds-react';
+import PeriodPicker from '../components/PeriodPicker';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import { Website } from '../types/chart';
@@ -122,8 +122,6 @@ const PrivacyCheck = () => {
     const [showEmpty, setShowEmpty] = useState<boolean>(false);
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [fromInputValue, setFromInputValue] = useState<string>('');
-    const [toInputValue, setToInputValue] = useState<string>('');
     const [dryRunStats, setDryRunStats] = useState<any>(null);
     const [showDryRunWarning, setShowDryRunWarning] = useState<boolean>(false);
     const [detailsPage, setDetailsPage] = useState<number>(1);
@@ -140,24 +138,6 @@ const PrivacyCheck = () => {
             setActiveTab('redacted');
         }
     }, [data, matchTypes.length, hasRedactions, activeTab]);
-
-
-    // Sync input strings when dates change (e.g. from calendar selection)
-    useEffect(() => {
-        if (customStartDate) {
-            setFromInputValue(format(customStartDate, 'dd.MM.yyyy'));
-        } else {
-            setFromInputValue('');
-        }
-    }, [customStartDate]);
-
-    useEffect(() => {
-        if (customEndDate) {
-            setToInputValue(format(customEndDate, 'dd.MM.yyyy'));
-        } else {
-            setToInputValue('');
-        }
-    }, [customEndDate]);
 
     const fetchData = async (force: boolean = false) => {
         setLoading(true);
@@ -340,59 +320,15 @@ const PrivacyCheck = () => {
                         variant="minimal"
                     />
 
-                    <RadioGroup
-                        legend="Periode"
-                        value={period}
-                        onChange={(val: string) => setPeriod(val)}
-                        size="small"
-                    >
-                        <Radio value="today">I dag</Radio>
-                        <Radio value="current_month">Denne måneden</Radio>
-                        <Radio value="last_month">Forrige måned</Radio>
-                        <Radio value="custom">Egendefinert</Radio>
-                    </RadioGroup>
-
-                    {period === 'custom' && (
-                        <div className="mb-4">
-                            <DatePicker
-                                mode="range"
-                                onSelect={(range) => {
-                                    if (range) {
-                                        setCustomStartDate(range.from);
-                                        setCustomEndDate(range.to);
-                                    }
-                                }}
-                                selected={{ from: customStartDate, to: customEndDate }}
-                            >
-                                <div className="flex gap-4">
-                                    <DatePicker.Input
-                                        id="custom-date-from"
-                                        label="Fra dato"
-                                        value={fromInputValue}
-                                        onChange={(e) => {
-                                            setFromInputValue(e.target.value);
-                                            const date = parse(e.target.value, 'dd.MM.yyyy', new Date());
-                                            if (isValid(date) && e.target.value.length === 10) {
-                                                setCustomStartDate(date);
-                                            }
-                                        }}
-                                    />
-                                    <DatePicker.Input
-                                        id="custom-date-to"
-                                        label="Til dato"
-                                        value={toInputValue}
-                                        onChange={(e) => {
-                                            setToInputValue(e.target.value);
-                                            const date = parse(e.target.value, 'dd.MM.yyyy', new Date());
-                                            if (isValid(date) && e.target.value.length === 10) {
-                                                setCustomEndDate(date);
-                                            }
-                                        }}
-                                    />
-                                </div>
-                            </DatePicker>
-                        </div>
-                    )}
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                        showToday={true}
+                    />
 
                     <Button
                         onClick={() => fetchData(false)}
