@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
-import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
+import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -207,21 +207,41 @@ const TrafficAnalysis = () => {
     };
 
     // Prepare Chart Data
-    const chartData: ILineChartProps | null = useMemo(() => {
+    const chartData = useMemo(() => {
         if (!seriesData.length) return null;
 
         const metricLabel = submittedMetricType === 'pageviews' ? 'sidevisninger' : (submittedMetricType === 'proportion' ? 'andel' : 'besøkende');
         const metricLabelCapitalized = submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende');
 
-        const points: ILineChartDataPoint[] = seriesData.map((item: any) => ({
-            x: new Date(item.time),
-            y: submittedMetricType === 'proportion' ? item.count * 100 : item.count, // Convert to percentage for chart
-            legend: new Date(item.time).toLocaleDateString('nb-NO'),
-            xAxisCalloutData: new Date(item.time).toLocaleDateString('nb-NO'),
-            yAxisCalloutData: submittedMetricType === 'proportion'
-                ? `${(item.count * 100).toFixed(1)}%`
-                : `${item.count} ${metricLabel}`
-        }));
+        const points: ILineChartDataPoint[] = seriesData.map((item: any) => {
+            let val = Number(item.count) || 0; // Ensure it's a number, default to 0
+
+            if (submittedMetricType === 'proportion') {
+                // Sanitize proportion data to prevent massive axis scaling
+                if (val > 1.01) val = 0; // Allow slight precision error (1.01 = 101%), typically user bug
+                if (val < 0) val = 0;
+            }
+
+            return {
+                x: new Date(item.time),
+                y: submittedMetricType === 'proportion' ? Math.min(val * 100, 100) : val, // Hard cap visual at 100%
+                legend: new Date(item.time).toLocaleDateString('nb-NO'),
+                xAxisCalloutData: new Date(item.time).toLocaleDateString('nb-NO'),
+                yAxisCalloutData: submittedMetricType === 'proportion'
+                    ? `${(val * 100).toFixed(1)}%`
+                    : `${val} ${metricLabel}`
+            };
+        });
+
+        // Calculate Y-axis bounds from actual data
+        const yValues = points.map(p => p.y);
+        const dataMax = Math.max(...yValues, 0);
+
+        // Add 10% padding to max, ensure min is 0 for cleaner charts
+        const yMax = submittedMetricType === 'proportion'
+            ? Math.max(dataMax * 1.1, 1) // At least 1% for proportion, with padding
+            : dataMax * 1.1;
+        const yMin = 0;
 
         const lines = [
             {
@@ -237,7 +257,9 @@ const TrafficAnalysis = () => {
             const avgPoints = points.map(p => ({
                 ...p,
                 y: avg,
-                yAxisCalloutData: `Gjennomsnitt: ${Math.round(avg)}`
+                yAxisCalloutData: submittedMetricType === 'proportion'
+                    ? `Gjennomsnitt: ${avg.toFixed(1)}%`
+                    : `Gjennomsnitt: ${Math.round(avg)}`
             }));
 
             lines.push({
@@ -251,6 +273,8 @@ const TrafficAnalysis = () => {
             data: {
                 lineChartData: lines
             },
+            yMax,
+            yMin,
         };
     }, [seriesData, showAverage, submittedMetricType]);
 
@@ -536,10 +560,13 @@ const TrafficAnalysis = () => {
                                             {chartData ? (
                                                 <ResponsiveContainer>
                                                     <LineChart
+                                                        key={`${submittedMetricType}-${period}-${urlPath}-${seriesData.length}`}
                                                         data={chartData.data}
                                                         legendsOverflowText={'Overflow Items'}
-                                                        yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d}%` : d.toLocaleString('nb-NO')}
-                                                        yAxisTickCount={10}
+                                                        yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
+                                                        yAxisTickCount={6}
+                                                        yMaxValue={chartData.yMax}
+                                                        yMinValue={chartData.yMin}
                                                         allowMultipleShapesForPoints={false}
                                                         enablePerfOptimization={true}
                                                         margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
