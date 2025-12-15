@@ -3443,7 +3443,8 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
                 LEFT JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                     ON e.event_id = d.website_event_id
-                    AND d.created_at BETWEEN @startDate AND @endDate
+                    AND e.website_id = d.website_id
+                    AND e.created_at = d.created_at
                 LEFT JOIN UNNEST(d.event_parameters) AS p
                 WHERE e.website_id = @websiteId
                 AND e.created_at BETWEEN @startDate AND @endDate
@@ -3552,7 +3553,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Hendelsesflyt'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -3567,8 +3568,8 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
             console.log('[Event Journeys] Dry run failed:', dryRunError.message);
         }
 
-        const [journeyRows] = await bigquery.query(addAuditLogging({ query, params }, navIdent));
-        const [statsRows] = await bigquery.query(addAuditLogging({ query: statsQuery, params }, navIdent));
+        const [journeyRows] = await bigquery.query(addAuditLogging({ query, params }, navIdent, 'Hendelsesflyt'));
+        const [statsRows] = await bigquery.query(addAuditLogging({ query: statsQuery, params }, navIdent, 'Hendelsesflyt'));
         const journeyStats = statsRows[0] || {};
 
         const journeys = journeyRows.map(row => ({
