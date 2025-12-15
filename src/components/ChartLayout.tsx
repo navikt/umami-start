@@ -81,10 +81,10 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                                 <div className="space-y-4">
                                     <div className="pb-2">
                                         <Select
+                                            size="small"
                                             label="Type analyse"
                                             value={currentPage || ''}
                                             onChange={handleChartChange}
-                                            size="medium"
                                         >
                                             <option value="" disabled>Velg...</option>
                                             {chartGroups.map((group) => (

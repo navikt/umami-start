@@ -550,6 +550,7 @@ const WebsitePicker = ({
         )}
 
         <UNSAFE_Combobox
+          size="small"
           label="Nettside eller app"
           options={sortedWebsites.map(website => ({
             label: website.name,

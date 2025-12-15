@@ -209,6 +209,7 @@ const UserComposition = () => {
                     />
 
                     <TextField
+                        size="small"
                         label="URL-sti (valgfritt)"
                         description="F.eks. / for forsiden"
                         value={pagePath}

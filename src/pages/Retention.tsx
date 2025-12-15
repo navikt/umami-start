@@ -255,6 +255,7 @@ const Retention = () => {
                     />
 
                     <TextField
+                        size="small"
                         label="Url-sti (valgfritt)"
                         description="F.eks. / for forsiden"
                         value={urlPath}

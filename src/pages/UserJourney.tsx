@@ -331,6 +331,7 @@ const UserJourney = () => {
                     />
 
                     <TextField
+                        size="small"
                         label="Start URL-sti"
                         description="F.eks. / for forsiden"
                         value={startUrl}
@@ -360,6 +361,7 @@ const UserJourney = () => {
                     </RadioGroup>
 
                     <Select
+                        size="small"
                         label="Antall steg"
                         description="Hvor mange steg vil du se?"
                         value={steps}
@@ -375,6 +377,7 @@ const UserJourney = () => {
                     </Select>
 
                     <TextField
+                        size="small"
                         label="Maks antall sider"
                         description="Viser de mest besøkte sidene"
                         type="number"

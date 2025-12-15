@@ -166,6 +166,7 @@ const EventJourney = () => {
                     />
 
                     <TextField
+                        size="small"
                         label="URL-sti"
                         description="Hvilken side vil du analysere?"
                         value={urlPath}

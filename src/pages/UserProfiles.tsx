@@ -211,6 +211,7 @@ const UserProfiles = () => {
                     <div className="mt-4">
                         <Label htmlFor="user-search" size="small" spacing>Søk etter bruker ID</Label>
                         <Search
+                            size="small"
                             id="user-search"
                             label="Søk etter bruker ID"
                             hideLabel={true}
