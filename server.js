@@ -97,11 +97,14 @@ try {
 
 // Helper function to add audit logging to BigQuery queries
 function addAuditLogging(queryConfig, navIdent, analysisType = null) {
+    const isDryRun = queryConfig.dryRun === true;
+
     // Add NAV ident as a label (queryable metadata in BigQuery)
     queryConfig.labels = {
         ...queryConfig.labels,
         nav_ident: navIdent.toLowerCase().replace(/[^a-z0-9_-]/g, '_'), // Labels must be lowercase and alphanumeric
-        user_type: 'internal'
+        user_type: 'internal',
+        job_mode: isDryRun ? 'dry_run' : 'execution'
     };
 
     if (analysisType) {
@@ -111,6 +114,9 @@ function addAuditLogging(queryConfig, navIdent, analysisType = null) {
     // Add NAV ident as SQL comment (visible in query history)
     if (queryConfig.query && navIdent) {
         let comment = `-- Nav ident: ${navIdent}\n-- Timestamp: ${new Date().toISOString()}`;
+        if (isDryRun) {
+            comment += `\n-- Mode: Dry Run`;
+        }
         if (analysisType) {
             comment += `\n-- Analysis: ${analysisType}`;
         }
