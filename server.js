@@ -426,7 +426,7 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
 // BigQuery API endpoint
 app.post('/api/bigquery', async (req, res) => {
     try {
-        const { query } = req.body
+        const { query, analysisType } = req.body
 
         console.log('[BigQuery API] Request received');
 
@@ -451,7 +451,7 @@ app.post('/api/bigquery', async (req, res) => {
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1'
-        }, navIdent, 'Sqlverktøy'));
+        }, navIdent, analysisType || 'Sqlverktøy'));
 
         console.log('[BigQuery API] Query job created, waiting for results...');
 
@@ -468,7 +468,7 @@ app.post('/api/bigquery', async (req, res) => {
                 query: query,
                 location: 'europe-north1',
                 dryRun: true
-            }, navIdent, 'Sqlverktøy'));
+            }, navIdent, analysisType || 'Sqlverktøy'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1811,7 +1811,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
 // BigQuery dry run endpoint - estimate query cost
 app.post('/api/bigquery/estimate', async (req, res) => {
     try {
-        const { query } = req.body
+        const { query, analysisType } = req.body
 
         if (!query) {
             return res.status(400).json({ error: 'Query is required' })
@@ -1832,7 +1832,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
             query: query,
             location: 'europe-north1',
             dryRun: true
-        }, navIdent, 'Sqlverktøy'));
+        }, navIdent, analysisType || 'Sqlverktøy'));
 
         const stats = job.metadata.statistics;
         const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);

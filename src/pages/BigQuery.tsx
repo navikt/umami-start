@@ -85,7 +85,7 @@ export default function BigQuery() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query }),
+                body: JSON.stringify({ query, analysisType: 'Sqlverktøy' }),
             });
 
             const data = await response.json();
@@ -117,7 +117,7 @@ export default function BigQuery() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query }),
+                body: JSON.stringify({ query, analysisType: 'Sqlverktøy' }),
             });
 
             const data = await response.json();

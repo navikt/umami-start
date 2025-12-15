@@ -492,7 +492,7 @@ const SQLPreview = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: processedSql }),
+          body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
@@ -528,7 +528,7 @@ const SQLPreview = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: processedSql }),
+          body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
@@ -586,7 +586,7 @@ const SQLPreview = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: processedSql }),
+          body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
@@ -607,7 +607,7 @@ const SQLPreview = ({
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query: processedSql }),
+            body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
           }),
           timeoutPromise(API_TIMEOUT_MS)
         ]) as Response;
@@ -639,7 +639,7 @@ const SQLPreview = ({
           fetch('/api/bigquery/estimate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: getProcessedSql() }),
+            body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
           }),
           timeoutPromise(API_TIMEOUT_MS),
         ]) as Response;
@@ -662,7 +662,7 @@ const SQLPreview = ({
           fetch('/api/bigquery/estimate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: getProcessedSql() }),
+            body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
           }),
           timeoutPromise(API_TIMEOUT_MS),
         ]) as Response;
