@@ -198,7 +198,7 @@ const EventSelector = ({
           <Tabs.List>
             <Tabs.Tab value="sidestier" label="Sidevisninger" />
             <Tabs.Tab value="hendelser" label="Hendelser" />
-            <Tabs.Tab value="flere_valg" label="Filtervalg" />
+            <Tabs.Tab value="flere_valg" label="Filtre" />
             <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
           </Tabs.List>
 
@@ -749,7 +749,7 @@ const EventSelector = ({
                               size="small"
                               className="w-1/3"
                             >
-                              <option value="INTERACTIVE">Filtervalg i Metabase</option>
+                              <option value="INTERACTIVE">Mottaker velger selv</option>
                               {OPERATORS.map(op => (
                                 <option key={op.value} value={op.value}>
                                   {op.label}
@@ -763,7 +763,7 @@ const EventSelector = ({
                             {stagingFilter.operator === 'INTERACTIVE' && (
                               <div className="mt-0 bg-blue-50 p-2 rounded text-sm h-full flex flex-col justify-center">
                                 <p className="font-medium text-xs">
-                                  Filtervalg i Metabase
+                                  Mottaker velger selv
                                 </p>
                                 <p className="text-xs text-gray-600 truncate">
                                   Param: {stagingFilter.column === 'url_path' ? 'url_sti' :
@@ -898,7 +898,7 @@ const EventSelector = ({
                           {filter.interactive ? (
                             <div className="mb-1">
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                Filtervalg i Metabase
+                                Mottaker velger selv
                               </span>
                             </div>
                           ) : (
