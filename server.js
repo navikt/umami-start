@@ -2030,7 +2030,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Traktanalyse'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2053,7 +2053,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Traktanalyse'));
 
         const [rows] = await job.getQueryResults();
 
@@ -2392,7 +2392,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Traktanalyse'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2415,7 +2415,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Traktanalyse'));
 
         const [rows] = await job.getQueryResults();
 
