@@ -125,7 +125,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
     return (
         <>
             {scoreOverview && (
-                <div className={`p-2 w-full bg-white border border-gray-600 rounded mb-2 ${className || ''}`}>
+                <div className={`p-2 w-full bg-white border border-gray-200 rounded-lg shadow-sm mb-2 ${className || ''}`}>
                     <div className="w-full">
                         <div className="mt-1 bg-white p-2 rounded-lg">
                             <h2 className="text-lg font-semibold mb-1" style={{ color: '#000000' }}>
