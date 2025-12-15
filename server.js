@@ -570,7 +570,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
         const events = rows.map(row => ({
@@ -588,7 +588,7 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Hendelsesutforsker'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -676,10 +676,11 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+                AND e.website_id = d.website_id
+                AND e.created_at = d.created_at
             CROSS JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name IS NOT NULL
             AND p.data_key IS NOT NULL
             ${urlFilter}
@@ -716,7 +717,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Hendelsesutforsker'));
 
             const dryRunMetadata = dryRunJob.metadata;
             estimatedBytes = dryRunMetadata.statistics?.totalBytesProcessed || '0';
@@ -733,7 +734,7 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -842,7 +843,7 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -962,10 +963,11 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+                AND e.website_id = d.website_id
+                AND e.created_at = d.created_at
             CROSS JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name = @eventName
             AND p.data_key = @parameterName
             ${urlFilter}
@@ -974,13 +976,11 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             LIMIT 100
         `;
 
-
-
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -999,7 +999,7 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Hendelsesutforsker'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1072,10 +1072,11 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+                AND e.website_id = d.website_id
+                AND e.created_at = d.created_at
             LEFT JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name = @eventName
             ${urlFilter}
             GROUP BY e.event_id, e.created_at
@@ -1092,7 +1093,7 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1128,7 +1129,7 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent));
+            }, navIdent, 'Hendelsesutforsker'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
