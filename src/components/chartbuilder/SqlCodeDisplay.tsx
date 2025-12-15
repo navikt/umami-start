@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, CopyButton, ReadMore, Tooltip } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 
 interface SqlCodeDisplayProps {
   sql: string;
@@ -27,11 +28,8 @@ const SqlCodeDisplay = ({ sql, showEditButton = false }: SqlCodeDisplayProps) =>
   return (
     <div className="mt-2">
       <ReadMore header="Vis SQL-kode" size="medium">
-        <div className="relative">
-          <pre className="p-4 pt-12 rounded overflow-x-auto whitespace-pre-wrap max-h-[calc(100vh-500px)] overflow-y-auto text-sm">
-            {sql}
-          </pre>
-          <div className="absolute top-2 right-2 flex gap-2">
+        <div className="space-y-2">
+          <div className="flex justify-end gap-2 items-center">
             <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
             <Tooltip content="Kopier med {{website_id}} variabel for dashboards.ts">
               <Button
@@ -59,6 +57,30 @@ const SqlCodeDisplay = ({ sql, showEditButton = false }: SqlCodeDisplayProps) =>
                 Rediger SQL
               </Button>
             )}
+          </div>
+          <div className="border rounded-md overflow-hidden bg-[#1e1e1e]">
+            <Editor
+              height="400px"
+              defaultLanguage="sql"
+              value={sql}
+              theme="vs-dark"
+              options={{
+                readOnly: true,
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                wordWrap: 'on',
+                fixedOverflowWidgets: true,
+                stickyScroll: { enabled: false },
+                lineNumbersMinChars: 4,
+                glyphMargin: false,
+                renderLineHighlight: 'none', // cleaner look for read-only
+                contextmenu: false, // disable context menu for cleaner feel
+              }}
+            />
           </div>
         </div>
       </ReadMore>
