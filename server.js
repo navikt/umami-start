@@ -2131,91 +2131,81 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
             { key: 'url_query', label: 'query' }
         ];
 
-        // Function to build query for a specific dimension
-        const buildQuery = (dimension) => `
-            SELECT
-                COALESCE(${dimension}, '(none)') as name,
-                ${countExpression} as count
-            FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            AND event_type = 1 -- Pageview
-            ${urlFilter}
-            GROUP BY 1
-            ORDER BY 2 DESC
-            LIMIT @limit
+        // Construct a single query using UNION ALL with a CTE to avoid multi-scanning the table
+        // We select all necessary columns in the CTE
+        const cteColumns = dimensions.map(d => d.key).join(', ');
+        const unionParts = dimensions.map(dim => `
+            (
+                SELECT 
+                    '${dim.label}' as dimension,
+                    COALESCE(${dim.key}, '(none)') as name,
+                    ${countExpression} as count
+                FROM base_data
+                GROUP BY 1, 2
+                ORDER BY count DESC
+                LIMIT @limit
+            )
+        `).join(' UNION ALL ');
+
+        const query = `
+            WITH base_data AS (
+                SELECT 
+                    session_id,
+                    ${cteColumns}
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                WHERE website_id = @websiteId
+                AND created_at BETWEEN @startDate AND @endDate
+                AND event_type = 1 -- Pageview
+                ${urlFilter}
+            )
+            ${unionParts}
         `;
 
-        // Run all queries in parallel
-        console.log(`[Marketing] Fetching stats for website ${websiteId} with limit ${limit}`);
-        const promises = dimensions.map(async (dim) => {
-            const query = buildQuery(dim.key);
+        // Execute single query
+        console.log(`[Marketing] Fetching stats for website ${websiteId} (Single Query Optimization)`);
 
-            try {
-                // Execute query
-                // Get NAV ident from authenticated user for audit logging
-                const navIdent = req.user?.navIdent || 'UNKNOWN';
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        }, navIdent, 'Markedsanalyse'));
 
-                const [job] = await bigquery.createQueryJob(addAuditLogging({
-                    query: query,
-                    location: 'europe-north1',
-                    params: params
-                }, navIdent));
-                const [rows] = await job.getQueryResults();
-                console.log(`[Marketing] ${dim.key} returned ${rows.length} rows`);
+        const [rows] = await job.getQueryResults();
+        console.log(`[Marketing] Query returned ${rows.length} rows total`);
 
-                // Get dry run stats
-                let stats = null;
-                try {
-                    // Get NAV ident from authenticated user for audit logging
+        // Get dry run stats for the single query
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            }, navIdent, 'Markedsanalyse'));
 
-                    const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
-                        query: query,
-                        location: 'europe-north1',
-                        params: params,
-                        dryRun: true
-                    }, navIdent));
-                    const meta = dryRunJob.metadata.statistics;
-                    stats = {
-                        bytes: parseInt(meta.totalBytesProcessed),
-                        gb: (parseInt(meta.totalBytesProcessed) / (1024 ** 3)).toFixed(2),
-                        cost: ((parseInt(meta.totalBytesProcessed) / (1024 ** 4)) * 6.25).toFixed(4)
-                    };
-                } catch (e) {
-                    console.log(`[Marketing] Dry run failed for ${dim.key}: `, e.message);
-                }
+            const meta = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(meta.totalBytesProcessed);
+            queryStats = {
+                totalBytesProcessedGB: (bytesProcessed / (1024 ** 3)).toFixed(2),
+                estimatedCostUSD: ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3)
+            };
+            console.log(`[Marketing] Dry run - Processing ${queryStats.totalBytesProcessedGB} GB`);
+        } catch (e) {
+            console.log(`[Marketing] Dry run failed: `, e.message);
+        }
 
-                return {
-                    label: dim.label,
-                    data: rows.map(row => ({ name: row.name, count: parseInt(row.count) })),
-                    stats
-                };
-            } catch (err) {
-                console.error(`[Marketing] Error fetching ${dim.key}: `, err);
-                throw err;
-            }
-        });
-
-        const results = await Promise.all(promises);
-        console.log('[Marketing] All queries completed');
-
-        // Aggregate results
+        // Aggregate results by dimension label
         const responseData = {};
-        let totalBytes = 0;
-        let totalCost = 0;
+        dimensions.forEach(dim => responseData[dim.label] = []);
 
-        results.forEach(res => {
-            responseData[res.label] = res.data;
-            if (res.stats) {
-                totalBytes += res.stats.bytes;
-                totalCost += parseFloat(res.stats.cost);
+        rows.forEach(row => {
+            if (responseData[row.dimension]) {
+                responseData[row.dimension].push({
+                    name: row.name,
+                    count: parseInt(row.count)
+                });
             }
         });
-
-        const queryStats = {
-            totalBytesProcessedGB: (totalBytes / (1024 ** 3)).toFixed(2),
-            estimatedCostUSD: totalCost.toFixed(3)
-        };
 
         res.json({ data: responseData, queryStats });
     } catch (error) {
