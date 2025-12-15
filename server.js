@@ -1186,23 +1186,71 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         if (interval === 'hour') timeTrunc = 'HOUR';
         if (interval === 'week') timeTrunc = 'WEEK';
         if (interval === 'month') timeTrunc = 'MONTH';
-        // Choose aggregation based on metric type
-        const countExpression = metricType === 'pageviews'
-            ? 'COUNT(*)'
-            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        let query;
 
-        const query = `
-            SELECT
-                TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
-                ${countExpression} as count
-            FROM \`team-researchops-prod-01d6.umami_views.event\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            AND event_type = 1 -- Pageview
-            ${urlFilter}
-            GROUP BY 1
-            ORDER BY 1
-        `;
+        if (metricType === 'proportion') {
+            // Proportion query (Andel)
+            // Calculates: (Visitors to URL) / (Total Visitors) per time period
+            query = `
+                WITH base_query AS (
+                    SELECT
+                        TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                        session_id,
+                        CASE
+                            WHEN (
+                                url_path = @urlPath 
+                                OR url_path = @urlPathSlash 
+                                OR url_path LIKE @urlPathQuery
+                            ) THEN TRUE
+                            ELSE FALSE
+                        END AS has_visited
+                    FROM \`team-researchops-prod-01d6.umami_views.event\`
+                    WHERE website_id = @websiteId
+                    AND created_at BETWEEN @startDate AND @endDate
+                    AND event_type = 1 -- Pageview
+                ),
+                totals as (
+                    SELECT 
+                        time,
+                        COUNT(DISTINCT session_id) AS total_visitors
+                    FROM base_query
+                    GROUP BY time
+                ),
+                specifics as (
+                    SELECT 
+                        time,
+                        COUNT(DISTINCT session_id) AS specific_visitors
+                    FROM base_query
+                    WHERE has_visited = TRUE
+                    GROUP BY time
+                )
+                SELECT
+                    totals.time,
+                    SAFE_DIVIDE(specifics.specific_visitors, totals.total_visitors) as count
+                FROM totals
+                LEFT JOIN specifics ON totals.time = specifics.time
+                ORDER BY totals.time
+            `;
+        } else {
+            // Standard query (Visitors or Pageviews)
+            // Choose aggregation based on metric type
+            const countExpression = metricType === 'pageviews'
+                ? 'COUNT(*)'
+                : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+
+            query = `
+                SELECT
+                    TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                    ${countExpression} as count
+                FROM \`team-researchops-prod-01d6.umami_views.event\`
+                WHERE website_id = @websiteId
+                AND created_at BETWEEN @startDate AND @endDate
+                AND event_type = 1 -- Pageview
+                ${urlFilter}
+                GROUP BY 1
+                ORDER BY 1
+            `;
+        }
 
 
 
@@ -1216,7 +1264,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 
         const data = rows.map(row => ({
             time: row.time.value,
-            count: parseInt(row.count)
+            count: Number(row.count)
         }));
 
         // Get dry run stats
@@ -1281,15 +1329,36 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
         };
 
         // Choose aggregation based on metric type
-        const countExpression = metricType === 'pageviews'
-            ? 'COUNT(*)'
-            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        let countExpression = '';
+        let proportionCTE = '';
+
+        if (metricType === 'proportion') {
+            proportionCTE = `
+                total_site_visitors AS (
+                    SELECT COUNT(DISTINCT session_id) as total_count
+                    FROM \`team-researchops-prod-01d6.umami_views.event\`
+                    WHERE website_id = @websiteId
+                      AND created_at BETWEEN @startDate AND @endDate
+                      AND event_type = 1 -- Pageview
+                ),`;
+            // Will be set specifically per query branch due to alias differences
+        } else if (metricType === 'pageviews') {
+            countExpression = 'COUNT(*)';
+        } else {
+            countExpression = 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        }
 
         if (req.query.urlPath) {
             // Page-centric flow: Source -> Specific Page -> Next
             params.urlPath = req.query.urlPath;
+
+            const countExpr = metricType === 'proportion'
+                ? 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(session_id), (SELECT total_count FROM total_site_visitors))'
+                : countExpression;
+
             query = `
-                WITH session_events AS (
+                WITH ${proportionCTE}
+                session_events AS (
                     SELECT
                         session_id,
                         referrer_domain,
@@ -1320,7 +1389,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     END as source,
                     url_path as landing_page, -- Using 'landing_page' alias to match frontend expectation (it's the center node)
                     COALESCE(next_page, 'Exit') as next_page,
-                    ${metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(session_id)'} as count
+                    ${countExpr} as count
                 FROM events_with_context
                 WHERE url_path = @urlPath
                 GROUP BY 1, 2, 3
@@ -1329,8 +1398,14 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             `;
         } else {
             // Default: Landing Page Flow (Source -> Landing Page -> Next)
+
+            const countExpr = metricType === 'proportion'
+                ? 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(s.session_id), (SELECT total_count FROM total_site_visitors))'
+                : (metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(s.session_id)');
+
             query = `
-                WITH session_events AS (
+                WITH ${proportionCTE}
+                session_events AS (
                     SELECT
                         session_id,
                         referrer_domain,
@@ -1366,7 +1441,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     COALESCE(s.referrer_domain, 'Direkte / Annet') as source,
                     s.landing_page,
                     COALESCE(sp.second_page, 'Exit') as next_page,
-                    ${metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(s.session_id)'} as count
+                    ${countExpr} as count
                 FROM session_starts s
                 LEFT JOIN second_pages sp ON s.session_id = sp.session_id
                 GROUP BY 1, 2, 3
@@ -1389,7 +1464,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             source: row.source,
             landingPage: row.landing_page,
             nextPage: row.next_page,
-            count: parseInt(row.count)
+            count: Number(row.count)
         }));
 
         // Get dry run stats

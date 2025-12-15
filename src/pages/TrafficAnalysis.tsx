@@ -47,6 +47,12 @@ const TrafficAnalysis = () => {
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
 
+        // Validation for proportion view
+        if (metricType === 'proportion' && !urlPath) {
+            setError('Du må oppgi en URL-sti for å se andel.');
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setSeriesData([]);
@@ -156,15 +162,17 @@ const TrafficAnalysis = () => {
     const chartData: ILineChartProps | null = useMemo(() => {
         if (!seriesData.length) return null;
 
-        const metricLabel = submittedMetricType === 'pageviews' ? 'sidevisninger' : 'besøkende';
-        const metricLabelCapitalized = submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende';
+        const metricLabel = submittedMetricType === 'pageviews' ? 'sidevisninger' : (submittedMetricType === 'proportion' ? 'andel' : 'besøkende');
+        const metricLabelCapitalized = submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende');
 
         const points: ILineChartDataPoint[] = seriesData.map((item: any) => ({
             x: new Date(item.time),
-            y: item.count,
+            y: submittedMetricType === 'proportion' ? item.count * 100 : item.count, // Convert to percentage for chart
             legend: new Date(item.time).toLocaleDateString('nb-NO'),
             xAxisCalloutData: new Date(item.time).toLocaleDateString('nb-NO'),
-            yAxisCalloutData: `${item.count} ${metricLabel}`
+            yAxisCalloutData: submittedMetricType === 'proportion'
+                ? `${(item.count * 100).toFixed(1)}%`
+                : `${item.count} ${metricLabel}`
         }));
 
         const lines = [
@@ -235,14 +243,14 @@ const TrafficAnalysis = () => {
     const downloadCSV = () => {
         if (!seriesData.length) return;
 
-        const metricLabel = submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende';
+        const metricLabel = submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende');
         const headers = ['Dato', metricLabel];
         const csvRows = [
             headers.join(','),
             ...seriesData.map((item) => {
                 return [
                     new Date(item.time).toLocaleDateString('nb-NO'),
-                    item.count
+                    submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
                 ].join(',');
             })
         ];
@@ -341,7 +349,7 @@ const TrafficAnalysis = () => {
                             <Table.Row>
                                 <Table.HeaderCell>Navn</Table.HeaderCell>
                                 <Table.HeaderCell align="right">
-                                    {submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                    {submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')}
                                 </Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
@@ -349,7 +357,9 @@ const TrafficAnalysis = () => {
                             {paginatedData.map((row, i) => (
                                 <Table.Row key={i}>
                                     <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
-                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell align="right">
+                                        {submittedMetricType === 'proportion' ? `${(row.count * 100).toFixed(1)}%` : row.count.toLocaleString('nb-NO')}
+                                    </Table.DataCell>
                                 </Table.Row>
                             ))}
                             {filteredData.length === 0 && (
@@ -403,6 +413,7 @@ const TrafficAnalysis = () => {
                     >
                         <Radio value="visitors">Besøkende</Radio>
                         <Radio value="pageviews">Sidevisninger</Radio>
+                        <Radio value="proportion">Andel (av besøkende)</Radio>
                     </RadioGroup>
 
                     <TextField
@@ -476,7 +487,7 @@ const TrafficAnalysis = () => {
                                                 <LineChart
                                                     data={chartData.data}
                                                     legendsOverflowText={'Overflow Items'}
-                                                    yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                    yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d}%` : d.toLocaleString('nb-NO')}
                                                     yAxisTickCount={10}
                                                     allowMultipleShapesForPoints={false}
                                                     enablePerfOptimization={true}
@@ -498,7 +509,7 @@ const TrafficAnalysis = () => {
                                             <Table.Row>
                                                 <Table.HeaderCell>Dato</Table.HeaderCell>
                                                 <Table.HeaderCell align="right">
-                                                    {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : 'Antall besøkende'}
+                                                    {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende')}
                                                 </Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
@@ -509,7 +520,7 @@ const TrafficAnalysis = () => {
                                                         {new Date(item.time).toLocaleDateString('nb-NO')}
                                                     </Table.DataCell>
                                                     <Table.DataCell align="right">
-                                                        {item.count.toLocaleString('nb-NO')}
+                                                        {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
                                                     </Table.DataCell>
                                                 </Table.Row>
                                             ))}

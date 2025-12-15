@@ -84,7 +84,7 @@ export const analyticsPages = [
     },
     {
         id: 'personvern',
-        href: '/personvern',
+        href: '/personvernssjekk',
         label: 'Personvernssjekk',
         description: 'Søk etter potensielle personopplysninger'
     }
