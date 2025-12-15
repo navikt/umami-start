@@ -892,7 +892,7 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
             params: {
                 websiteId: websiteId
             }
-        }, navIdent));
+        }, navIdent, 'Datovelger'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1543,7 +1543,7 @@ app.get('/api/bigquery/websites', async (req, res) => {
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1'
-        }, navIdent));
+        }, navIdent, 'Nettsidevelger'));
 
         const [rows] = await job.getQueryResults();
 
@@ -3122,7 +3122,7 @@ app.post('/api/bigquery/users', async (req, res) => {
             query: countQuery,
             location: 'europe-north1',
             params: params
-        }, navIdent));
+        }, navIdent, 'Brukerprofiler'));
 
         const [countRows] = await countJob.getQueryResults();
         const total = countRows[0]?.total || 0;
