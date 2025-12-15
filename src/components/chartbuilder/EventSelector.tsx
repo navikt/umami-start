@@ -597,12 +597,9 @@ const EventSelector = ({
 
           <Tabs.Panel value="flere_valg" className="pt-6">
             <div className="mb-4">
-              <Heading level="4" size="xsmall" className="mb-2">Legg til flere filtre</Heading>
-
-              <div className="flex gap-2 items-center bg-white p-3 rounded-md border mt-3 mb-6">
+              <div className="flex gap-2 items-center bg-white p-3 rounded-md border border-gray-500 mt-3 mb-6">
                 <Select
-                  label="Standard filtre"
-                  description="Velg standard felter å filtrere på."
+                  label="Legg til filtre"
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val) {
@@ -860,7 +857,7 @@ const EventSelector = ({
               <div className="space-y-3">
                 {/* Only show non-date range filters in the regular filter list */}
                 {filters.map((filter, index) => !isDateRangeFilter(filter) && (
-                  <div key={index} className="bg-white p-3 rounded border border-gray-200">
+                  <div key={index} className="bg-white p-3 rounded border border-gray-500">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 space-y-2">
                         <div className="flex gap-2 items-end flex-wrap">
