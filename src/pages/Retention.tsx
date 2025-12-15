@@ -228,6 +228,13 @@ const Retention = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="Url-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={urlPath}
+                        onChange={(e) => setUrlPath(e.target.value)}
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -236,13 +243,6 @@ const Retention = () => {
                         <Radio value="current_month">Denne måneden</Radio>
                         <Radio value="last_month">Forrige måned</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="Url-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={urlPath}
-                        onChange={(e) => setUrlPath(e.target.value)}
-                    />
 
                     <Switch
                         checked={businessDaysOnly}

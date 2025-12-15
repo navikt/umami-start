@@ -140,6 +140,13 @@ const EventJourney = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="URL-sti"
+                        description="Hvilken side vil du analysere?"
+                        value={urlPath}
+                        onChange={(e) => setUrlPath(e.target.value)}
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -148,13 +155,6 @@ const EventJourney = () => {
                         <Radio value="current_month">Denne måneden</Radio>
                         <Radio value="last_month">Forrige måned</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="URL-sti"
-                        description="Hvilken side vil du analysere?"
-                        value={urlPath}
-                        onChange={(e) => setUrlPath(e.target.value)}
-                    />
 
                     <Button
                         onClick={fetchData}

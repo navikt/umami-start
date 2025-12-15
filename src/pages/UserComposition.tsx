@@ -183,6 +183,13 @@ const UserComposition = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="URL-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={pagePath}
+                        onChange={(e) => setPagePath(e.target.value)}
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -191,13 +198,6 @@ const UserComposition = () => {
                         <Radio value="current_month">Denne måneden</Radio>
                         <Radio value="last_month">Forrige måned</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={pagePath}
-                        onChange={(e) => setPagePath(e.target.value)}
-                    />
 
                     <Button
                         onClick={fetchData}

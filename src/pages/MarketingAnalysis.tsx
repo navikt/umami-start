@@ -259,6 +259,14 @@ const MarketingAnalysis = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="URL-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={urlPath}
+                        onChange={(e) => setUrlPath(e.target.value)}
+                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -276,14 +284,6 @@ const MarketingAnalysis = () => {
                         <Radio value="visitors">Besøkende</Radio>
                         <Radio value="pageviews">Sidevisninger</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={urlPath}
-                        onChange={(e) => setUrlPath(e.target.value)}
-                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
-                    />
 
                     <Button
                         onClick={fetchData}

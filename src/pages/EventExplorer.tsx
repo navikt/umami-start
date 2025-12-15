@@ -349,6 +349,13 @@ const EventExplorer = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="URL-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={pagePath}
+                        onChange={(e) => setPagePath(e.target.value)}
+                    />
+
                     <RadioGroup
                         legend="Velg periode"
                         value={dateRange}
@@ -357,13 +364,6 @@ const EventExplorer = () => {
                         <Radio value="thisMonth">Denne måneden</Radio>
                         <Radio value="lastMonth">Forrige måned</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={pagePath}
-                        onChange={(e) => setPagePath(e.target.value)}
-                    />
 
                     <Button
                         onClick={fetchEvents}

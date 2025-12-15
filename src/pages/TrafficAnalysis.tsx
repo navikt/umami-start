@@ -397,6 +397,14 @@ const TrafficAnalysis = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="URL-sti (valgfritt)"
+                        description="F.eks. / for forsiden"
+                        value={urlPath}
+                        onChange={(e) => setUrlPath(e.target.value)}
+                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -415,14 +423,6 @@ const TrafficAnalysis = () => {
                         <Radio value="pageviews">Sidevisninger</Radio>
                         <Radio value="proportion">Andel (av besøkende)</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={urlPath}
-                        onChange={(e) => setUrlPath(e.target.value)}
-                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
-                    />
 
                     <Button
                         onClick={fetchSeriesData}

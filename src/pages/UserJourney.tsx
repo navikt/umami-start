@@ -305,6 +305,13 @@ const UserJourney = () => {
                         variant="minimal"
                     />
 
+                    <TextField
+                        label="Start URL-sti"
+                        description="F.eks. / for forsiden"
+                        value={startUrl}
+                        onChange={(e) => setStartUrl(e.target.value)}
+                    />
+
                     <RadioGroup
                         legend="Periode"
                         value={period}
@@ -325,15 +332,6 @@ const UserJourney = () => {
                         <Radio value="forward">Fremover (hva skjer etter)</Radio>
                         <Radio value="backward">Bakover (hvordan kom de hit)</Radio>
                     </RadioGroup>
-
-                    <TextField
-                        label="Start URL-sti"
-                        description="F.eks. / for forsiden"
-                        value={startUrl}
-                        onChange={(e) => setStartUrl(e.target.value)}
-                    />
-
-
 
                     <Select
                         label="Antall steg"
