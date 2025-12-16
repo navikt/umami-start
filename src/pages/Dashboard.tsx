@@ -1,10 +1,11 @@
 import { Alert, Select, Button, TextField, ReadMore, Label } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { getDashboard } from "../data/dashboard";
 import { DashboardWidget } from "../components/DashboardWidget";
 import DashboardWebsitePicker from "../components/DashboardWebsitePicker";
+import { fetchDashboardDataBatched, isBatchableChart } from "../lib/batchedDashboardFetcher";
 
 const Dashboard = () => {
     const [searchParams] = useSearchParams();
@@ -34,12 +35,80 @@ const Dashboard = () => {
     // Active website state to ensure widget only updates on "Oppdater"
     const [activeWebsite, setActiveWebsite] = useState<any>(null);
 
+    // Batched session data - stores pre-fetched data for session-metric charts
+    const [batchedData, setBatchedData] = useState<Map<string, any[]>>(new Map());
+    // Track if batching is complete
+    const [batchingComplete, setBatchingComplete] = useState(false);
+
+    // SYNC: Compute batchable chart IDs immediately (not in effect) so widgets know on first render
+    const batchableChartIds = useMemo(() => {
+        const batchableCharts = dashboard.charts.filter(c => c.id && isBatchableChart(c));
+        // Only batch if we have 2+ charts to batch
+        if (batchableCharts.length < 2) return new Set<string>();
+        return new Set(batchableCharts.map(c => c.id!));
+    }, [dashboard.charts]);
+
     // Sync activeWebsite when selectedWebsite matches the URL websiteId (initial load or after navigation)
     useEffect(() => {
         if (selectedWebsite && selectedWebsite.id === websiteId) {
             setActiveWebsite(selectedWebsite);
         }
     }, [selectedWebsite, websiteId]);
+
+    // Reset batching state when filters change
+    useEffect(() => {
+        setBatchingComplete(false);
+        setBatchedData(new Map());
+    }, [websiteId, activeFilters]);
+
+    // Fetch batched session data when filters/websiteId change
+    useEffect(() => {
+        const fetchBatchedData = async () => {
+            if (!websiteId) {
+                setBatchingComplete(true);
+                return;
+            }
+
+            // Get charts that can be batched (session-metric charts)
+            const batchableCharts = dashboard.charts.filter(c => c.id && isBatchableChart(c));
+
+            if (batchableCharts.length < 2) {
+                // Not worth batching if less than 2 charts
+                setBatchedData(new Map());
+                setBatchingComplete(true);
+                return;
+            }
+
+            try {
+                const result = await fetchDashboardDataBatched(
+                    dashboard.charts,
+                    websiteId,
+                    activeFilters
+                );
+
+                setBatchedData(result.chartResults);
+
+                // Report stats for batched charts
+                for (const [chartId, bytes] of result.chartBytes) {
+                    const chart = dashboard.charts.find(c => c.id === chartId);
+                    if (chart) {
+                        const gb = bytes / (1024 ** 3);
+                        setStats(prev => ({
+                            ...prev,
+                            [chartId]: { gb, title: chart.title }
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error('[Dashboard] Batched fetch failed:', error);
+                setBatchedData(new Map());
+            } finally {
+                setBatchingComplete(true);
+            }
+        };
+
+        fetchBatchedData();
+    }, [websiteId, activeFilters, dashboard.charts]);
 
     const handleUpdate = () => {
         // Update URL with selected website ID
@@ -156,6 +225,8 @@ const Dashboard = () => {
                             filters={activeFilters}
                             onDataLoaded={handleDataLoaded}
                             selectedWebsite={activeWebsite}
+                            prefetchedData={chart.id ? batchedData.get(chart.id) : undefined}
+                            shouldWaitForBatch={chart.id ? batchableChartIds.has(chart.id) && !batchingComplete : false}
                         />
                     ))}
 
@@ -165,21 +236,50 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {Object.keys(stats).length > 0 && (
-                        <div className="col-span-full mt-5">
-                            <div>
-                                <ReadMore header={`${Math.round(totalGb)} GB prosessert`} size="small">
-                                    <ul className="text-sm text-gray-600 list-disc pl-5">
-                                        {Object.entries(stats).map(([id, stat]) => (
-                                            <li key={id}>
-                                                <span className="font-medium">{Math.round(stat.gb)} GB</span> - {stat.title}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </ReadMore>
+                    {Object.keys(stats).length > 0 && (() => {
+                        // Separate batched and individual charts
+                        const batchedChartStats = Object.entries(stats).filter(([id]) => batchableChartIds.has(id));
+                        const individualChartStats = Object.entries(stats).filter(([id]) => !batchableChartIds.has(id));
+                        const batchedTotalGb = batchedChartStats.reduce((acc, [, stat]) => acc + stat.gb, 0);
+
+                        return (
+                            <div className="col-span-full mt-5">
+                                <div>
+                                    <ReadMore header={`${Math.round(totalGb)} GB prosessert`} size="small">
+                                        <div className="text-sm text-gray-600">
+                                            {/* Individual queries */}
+                                            {individualChartStats.length > 0 && (
+                                                <ul className="list-disc pl-5 mb-3">
+                                                    {individualChartStats.map(([id, stat]) => (
+                                                        <li key={id}>
+                                                            <span className="font-medium">{Math.round(stat.gb)} GB</span> - {stat.title}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+
+                                            {/* Batched queries - shown grouped */}
+                                            {batchedChartStats.length > 0 && (
+                                                <div className="border-l-4 border-green-500 pl-3 py-1 bg-green-50 rounded-r">
+                                                    <div className="font-medium text-green-700 mb-1">
+                                                        Kombinert spørring: {Math.round(batchedTotalGb)} GB for {batchedChartStats.length} diagrammer
+                                                    </div>
+                                                    <ul className="list-disc pl-5 text-green-800">
+                                                        {batchedChartStats.map(([id, stat]) => (
+                                                            <li key={id}>{stat.title}</li>
+                                                        ))}
+                                                    </ul>
+                                                    <div className="text-xs text-green-600 mt-1">
+                                                        Spart ~{Math.round(batchedTotalGb * (batchedChartStats.length - 1))} GB ved å kombinere disse spørringene
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </ReadMore>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             )}
         </DashboardLayout>

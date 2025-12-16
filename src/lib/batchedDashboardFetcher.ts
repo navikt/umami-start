@@ -1,0 +1,259 @@
+/**
+ * Batched Dashboard Data Fetcher
+ * 
+ * Optimizes dashboard data loading by combining multiple similar queries
+ * into a single query, significantly reducing BigQuery scanning costs.
+ * 
+ * Main optimization: Session metric charts (country, language, device, browser, os, screen)
+ * all share the same base scan - we can fetch raw session data ONCE
+ * and compute all aggregates client-side.
+ */
+
+import { SavedChart } from '../data/dashboard/types';
+import { format, subDays } from 'date-fns';
+
+interface Filters {
+    urlFilters: string[];
+    dateRange: string;
+    pathOperator: string;
+    metricType: 'visitors' | 'pageviews';
+}
+
+interface FetchResult {
+    data: any[];
+    queryStats?: {
+        totalBytesProcessed: number;
+    };
+}
+
+interface BatchedFetchResult {
+    chartResults: Map<string, any[]>;
+    totalBytesProcessed: number;
+    chartBytes: Map<string, number>;
+}
+
+// Session fields that can be batched together
+const SESSION_FIELDS = ['country', 'language', 'device', 'os', 'browser', 'screen'];
+
+/**
+ * Detects which session field a chart is grouping by
+ */
+function getSessionField(chart: SavedChart): string | null {
+    if (!chart.sql) return null;
+
+    const sql = chart.sql.toLowerCase();
+    if (!sql.includes('public_session')) return null;
+
+    for (const field of SESSION_FIELDS) {
+        if (sql.includes(`base_query.${field}`) && sql.includes(`group by`)) {
+            // Check it's actually grouping by this field
+            const groupMatch = sql.match(/group\s+by\s+[\s\S]*?base_query\.(\w+)/i);
+            if (groupMatch && groupMatch[1].toLowerCase() === field) {
+                return field;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * Builds a combined query that fetches raw session data in a SINGLE scan.
+ * We then aggregate client-side. This is cheaper because BigQuery bills by bytes scanned,
+ * and a single scan = ~10GB vs 6 separate scans = ~60GB.
+ */
+function buildCombinedSessionQuery(
+    websiteId: string,
+    filters: Filters,
+    fields: string[]
+): string {
+    const tableName = '`team-researchops-prod-01d6.umami.public_website_event`';
+    const sessionTable = '`team-researchops-prod-01d6.umami.public_session`';
+
+    // Build the fields string
+    const fieldsSelect = fields.map(f => `${sessionTable}.${f}`).join(',\n    ');
+
+    // Calculate dates
+    const now = new Date();
+    let startDate: Date;
+    let endDate = now;
+
+    if (filters.dateRange === 'this-month') {
+        startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+    } else if (filters.dateRange === 'last-month') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else {
+        startDate = subDays(now, 30);
+    }
+
+    const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
+    const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
+
+    // Build URL filter
+    let urlCondition = "= '/'";
+    if (filters.urlFilters.length > 0) {
+        const val = filters.urlFilters[0];
+        if (filters.pathOperator === 'starts-with') {
+            urlCondition = `LIKE '${val}%'`;
+        } else {
+            urlCondition = `= '${val}'`;
+        }
+    }
+
+    // Single scan query that fetches distinct sessions with all needed fields
+    return `
+WITH base_query AS (
+  SELECT
+    ${tableName}.session_id,
+    ${fieldsSelect}
+  FROM ${tableName}
+  LEFT JOIN ${sessionTable}
+    ON ${tableName}.session_id = ${sessionTable}.session_id
+  WHERE ${tableName}.website_id = '${websiteId}'
+  AND ${tableName}.event_type = 1
+  AND ${tableName}.url_path ${urlCondition}
+  AND ${tableName}.created_at BETWEEN ${fromSql} AND ${toSql}
+)
+
+SELECT DISTINCT
+  session_id,
+  ${fields.join(',\n  ')}
+FROM base_query
+LIMIT 100000
+  `.trim();
+}
+
+/**
+ * Aggregates raw session data for a specific field (client-side)
+ */
+function aggregateByField(rawData: any[], field: string): any[] {
+    const counts = new Map<string, Set<string>>();
+
+    for (const row of rawData) {
+        const key = row[field] || 'Ukjent';
+        if (!counts.has(key)) {
+            counts.set(key, new Set());
+        }
+        counts.get(key)!.add(row.session_id);
+    }
+
+    // Convert to sorted array
+    const result = Array.from(counts.entries())
+        .map(([value, sessions]) => ({
+            [field]: value,
+            Unike_besokende: sessions.size
+        }))
+        .sort((a, b) => b.Unike_besokende - a.Unike_besokende);
+
+    // Apply device filter if needed (device NOT LIKE '%x%')
+    if (field === 'device') {
+        return result.filter(row => !String(row.device).includes('x'));
+    }
+
+    return result.slice(0, 1000); // Match original LIMIT
+}
+
+/**
+ * Main batched fetch function for dashboard
+ */
+export async function fetchDashboardDataBatched(
+    charts: SavedChart[],
+    websiteId: string,
+    filters: Filters
+): Promise<BatchedFetchResult> {
+    const chartResults = new Map<string, any[]>();
+    const chartBytes = new Map<string, number>();
+    let totalBytesProcessed = 0;
+
+    // Identify session-metric charts that can be batched
+    const sessionCharts: SavedChart[] = [];
+    const sessionFieldsNeeded: string[] = [];
+    const otherCharts: SavedChart[] = [];
+
+    for (const chart of charts) {
+        if (!chart.sql || !chart.id) continue;
+
+        const field = getSessionField(chart);
+        if (field) {
+            sessionCharts.push(chart);
+            if (!sessionFieldsNeeded.includes(field)) {
+                sessionFieldsNeeded.push(field);
+            }
+        } else {
+            otherCharts.push(chart);
+        }
+    }
+
+    console.log(`[QueryBatcher] Found ${sessionCharts.length} session charts to batch (${sessionFieldsNeeded.join(', ')})`);
+    console.log(`[QueryBatcher] ${otherCharts.length} charts will be fetched individually`);
+
+    // Fetch batched session data if we have session charts
+    if (sessionCharts.length > 1 && sessionFieldsNeeded.length > 0) {
+        try {
+            const combinedSql = buildCombinedSessionQuery(websiteId, filters, sessionFieldsNeeded);
+
+            console.log('[QueryBatcher] Executing combined session query for:', sessionFieldsNeeded);
+
+            const response = await fetch('/api/bigquery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: combinedSql }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch batched session data');
+            }
+
+            const result: FetchResult = await response.json();
+            const rawData = result.data || [];
+
+            const batchBytes = result.queryStats?.totalBytesProcessed || 0;
+            totalBytesProcessed += batchBytes;
+
+            // Distribute bytes evenly among batched charts
+            const bytesPerChart = batchBytes / sessionCharts.length;
+
+            // Aggregate raw data for each chart's field (client-side)
+            for (const chart of sessionCharts) {
+                const field = getSessionField(chart);
+                if (field) {
+                    const aggregated = aggregateByField(rawData, field);
+                    chartResults.set(chart.id!, aggregated);
+                    chartBytes.set(chart.id!, bytesPerChart);
+                }
+            }
+
+            console.log(`[QueryBatcher] Batched query processed ${Math.round(batchBytes / (1024 ** 3))} GB for ${sessionCharts.length} charts`);
+
+        } catch (error) {
+            console.error('[QueryBatcher] Batched fetch failed, falling back to individual:', error);
+            // Fall back to individual fetches
+            otherCharts.push(...sessionCharts);
+            sessionCharts.length = 0;
+        }
+    } else {
+        // Not worth batching, add to individual
+        otherCharts.push(...sessionCharts);
+    }
+
+    // Fetch individual charts (skipped for now - handled by DashboardWidget)
+    // The Dashboard component will handle these normally
+
+    return {
+        chartResults,
+        totalBytesProcessed,
+        chartBytes
+    };
+}
+
+/**
+ * Check if a chart can be handled by batch fetching
+ */
+export function isBatchableChart(chart: SavedChart): boolean {
+    return getSessionField(chart) !== null;
+}
+
+/**
+ * Get the session field for a chart (exposed for Dashboard component)
+ */
+export { getSessionField };

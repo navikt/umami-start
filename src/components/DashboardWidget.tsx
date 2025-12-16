@@ -20,15 +20,51 @@ interface DashboardWidgetProps {
         metricType: 'visitors' | 'pageviews';
     };
     onDataLoaded?: (stats: { id: string; gb: number; title: string }) => void;
+    // Pre-fetched data from batched query (optional - if provided, skip individual fetch)
+    prefetchedData?: any[];
+    // If true, this chart is being batch-loaded and should wait instead of fetching individually
+    shouldWaitForBatch?: boolean;
 }
 
-export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite }: DashboardWidgetProps) => {
-    const [loading, setLoading] = useState(false);
+export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch }: DashboardWidgetProps) => {
+    // Initialize loading=true if we're a batchable widget (so we wait for batch data)
+    const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any[]>([]);
     const [page, setPage] = useState(1);
+    // Track if individual fetch has been done to prevent repeat fetches
+    const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
+
+    // If prefetchedData is available, use it directly instead of fetching
+    useEffect(() => {
+        if (prefetchedData !== undefined) {
+            setData(prefetchedData);
+            setLoading(false);
+            setError(null);
+            setPage(1);
+            setHasFetchedIndividually(false); // Reset since we got batch data
+            return;
+        }
+    }, [prefetchedData]);
+
+    // Reset fetch flag when filters change (to allow refetch with new params)
+    useEffect(() => {
+        setHasFetchedIndividually(false);
+    }, [websiteId, filters]);
 
     useEffect(() => {
+        // Skip if we already have batch data
+        if (prefetchedData !== undefined) return;
+
+        // If told to wait for batch, just ensure loading state is shown
+        if (shouldWaitForBatch) {
+            setLoading(true);
+            return;
+        }
+
+        // If we've already fetched individually, don't fetch again
+        if (hasFetchedIndividually) return;
+
         const fetchData = async () => {
             if (!chart.sql) return;
 
@@ -131,6 +167,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 }
 
                 setPage(1); // Reset to first page on new data
+                setHasFetchedIndividually(true); // Mark as fetched to prevent re-fetch
             } catch (err: any) {
                 console.error(err);
                 setError(err.message);
@@ -140,7 +177,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         };
 
         fetchData();
-    }, [chart.sql, websiteId, filters]);
+    }, [chart.sql, websiteId, filters, prefetchedData, shouldWaitForBatch, hasFetchedIndividually]);
 
     // Render logic based on chart.type
     // Calculate span based on 20-column grid
