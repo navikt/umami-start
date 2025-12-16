@@ -481,11 +481,15 @@ const WebsitePicker = ({
       }
     } else if (needsFullLoad) {
       // We are on the same website, but now requesting full load
-      apiCache.current = {};
-      fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+      // Skip if requestIncludeParams is also true - let the includeParams effect handle it
+      // to ensure we fetch with includeParams=true instead of false
+      if (!requestIncludeParams) {
+        apiCache.current = {};
+        fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+      }
       setFullEventsLoadedId(selectedWebsite.id);
     }
-  }, [selectedWebsite, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, disableAutoEvents, requestLoadEvents, fullEventsLoadedId]);
+  }, [selectedWebsite, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, disableAutoEvents, requestLoadEvents, fullEventsLoadedId, requestIncludeParams]);
 
   // Reload when includeParams changes (only if onEventsLoad callback is provided)
   useEffect(() => {

@@ -1554,6 +1554,7 @@ const ChartsPage = () => {
                     setRequestIncludeParams(true);
                   }}
                   hideHeader={true}
+                  isEventsLoading={isEventsLoading}
                 />
               </section>
             </>

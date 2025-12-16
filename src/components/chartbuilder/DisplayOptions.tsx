@@ -33,6 +33,7 @@ interface DisplayOptionsProps {
   filters: Filter[];
   onEnableCustomEvents?: () => void;
   hideHeader?: boolean;
+  isEventsLoading?: boolean;
 }
 
 const DisplayOptions = forwardRef(({
@@ -55,7 +56,8 @@ const DisplayOptions = forwardRef(({
   metrics,
   filters,
   onEnableCustomEvents,
-  hideHeader = false
+  hideHeader = false,
+  isEventsLoading = false
 }: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
@@ -70,6 +72,7 @@ const DisplayOptions = forwardRef(({
   });
   const [limitInput, setLimitInput] = useState<string>('');
   const [eventNameWarning, setEventNameWarning] = useState<boolean>(false);
+  const [isLoadingParams, setIsLoadingParams] = useState<boolean>(false);
 
   // Add a ref to store the timeout ID
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -177,6 +180,13 @@ const DisplayOptions = forwardRef(({
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, hasEventNameFilter]);
+
+  // Reset local loading state when parameters are loaded or external loading completes
+  useEffect(() => {
+    if (parameters.length > 0 || !isEventsLoading) {
+      setIsLoadingParams(false);
+    }
+  }, [parameters.length, isEventsLoading]);
 
   // Check if custom events (event_type = 2) are enabled in filters
   const hasCustomEventsEnabled = filters.some(f => {
@@ -430,15 +440,16 @@ const DisplayOptions = forwardRef(({
                     <Button
                       variant="primary"
                       size="small"
+                      loading={isLoadingParams || isEventsLoading}
+                      disabled={isLoadingParams || isEventsLoading}
                       onClick={() => {
                         if (onEnableCustomEvents) {
+                          setIsLoadingParams(true);
                           onEnableCustomEvents();
-                          // Show a temporary message or loading state if desired, 
-                          // but the parent likely handles fetching.
                         }
                       }}
                     >
-                      Hent hendelsesdetaljer
+                      {isLoadingParams || isEventsLoading ? 'Henter hendelsesdetaljer...' : 'Hent hendelsesdetaljer'}
                     </Button>
                   </div>
                 ) : (
