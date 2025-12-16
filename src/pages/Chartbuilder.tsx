@@ -169,10 +169,48 @@ const getParameterAggregator = (paramType: string): string => {
 };
 
 // Add this helper function near the top with other helpers
+const SESSION_COLUMNS = ['browser', 'os', 'device', 'screen', 'language', 'country', 'subdivision1', 'city'] as const;
+
 const isSessionColumn = (column: string): boolean => {
   // These are columns that exist in the session table rather than the event table
-  const sessionColumns = ['browser', 'os', 'device', 'screen', 'language', 'country', 'subdivision1', 'city'];
-  return sessionColumns.includes(column);
+  return (SESSION_COLUMNS as readonly string[]).includes(column);
+};
+
+// Helper function to get only the specific session columns that are actually needed
+const getRequiredSessionColumns = (
+  chartConfig: ChartConfig,
+  filtersList: Filter[]
+): string[] => {
+  const requiredColumns = new Set<string>();
+
+  // Check group by fields
+  chartConfig.groupByFields.forEach(field => {
+    if (isSessionColumn(field)) {
+      requiredColumns.add(field);
+    }
+  });
+
+  // Check filters
+  filtersList.forEach(filter => {
+    if (isSessionColumn(filter.column)) {
+      requiredColumns.add(filter.column);
+    }
+  });
+
+  // Check metrics
+  chartConfig.metrics.forEach(metric => {
+    // Check the main column
+    if (metric.column && isSessionColumn(metric.column)) {
+      requiredColumns.add(metric.column);
+    }
+
+    // Check count_where conditions
+    if (metric.function === 'count_where' && metric.whereColumn && isSessionColumn(metric.whereColumn)) {
+      requiredColumns.add(metric.whereColumn);
+    }
+  });
+
+  return Array.from(requiredColumns);
 };
 
 // Modified function to accept params instead of using closure variables
@@ -765,6 +803,7 @@ const ChartsPage = () => {
 
     const requiredTables = getRequiredTables(config, filters);
     const needsSessionJoin = requiredTables.session;
+    const requiredSessionColumns = getRequiredSessionColumns(config, filters);
 
     const needsUrlFullpath = filters.some(f => f.column === 'url_fullpath') ||
       config.groupByFields.includes('url_fullpath');
@@ -807,16 +846,9 @@ const ChartsPage = () => {
         sql += '    ,COALESCE(vd.duration, 0) as visit_duration\n';
       }
 
-      // Add session columns if needed
-      if (requiredTables.session) {
-        sql += '    ,s.browser,\n';
-        sql += '    s.os,\n';
-        sql += '    s.device,\n';
-        sql += '    s.screen,\n';
-        sql += '    s.language,\n';
-        sql += '    s.country,\n';
-        sql += '    s.subdivision1,\n';
-        sql += '    s.city\n';
+      // Add only the session columns that are actually needed
+      if (requiredTables.session && requiredSessionColumns.length > 0) {
+        sql += '    ,' + requiredSessionColumns.map(col => `s.${col}`).join(',\n    ') + '\n';
       }
 
       // FROM and JOIN clauses - Adjusted for interactive mode
@@ -876,16 +908,9 @@ const ChartsPage = () => {
       sql += '    e.*,\n';
       sql += '    vm.duration_seconds as visit_duration\n';
 
-      // Continue with session columns if needed
-      if (requiredTables.session) {
-        sql += '    ,s.browser,\n';
-        sql += '    s.os,\n';
-        sql += '    s.device,\n';
-        sql += '    s.screen,\n';
-        sql += '    s.language,\n';
-        sql += '    s.country,\n';
-        sql += '    s.subdivision1,\n';
-        sql += '    s.city\n';
+      // Add only the session columns that are actually needed
+      if (requiredTables.session && requiredSessionColumns.length > 0) {
+        sql += '    ,' + requiredSessionColumns.map(col => `s.${col}`).join(',\n    ') + '\n';
       }
 
       // FROM and JOIN clauses - adapted for visit_duration - ALWAYS ADD THIS
@@ -916,17 +941,10 @@ const ChartsPage = () => {
         // In interactive mode, use full table names in the SELECT statement
         sql += `    ${fullWebsiteTable}.*`;
 
-        // Add session fields if they're needed
-        if (needsSessionJoin) {
+        // Add only the session fields that are actually needed
+        if (needsSessionJoin && requiredSessionColumns.length > 0) {
           sql += ',\n';
-          sql += `    ${fullSessionTable}.browser,\n`;
-          sql += `    ${fullSessionTable}.os,\n`;
-          sql += `    ${fullSessionTable}.device,\n`;
-          sql += `    ${fullSessionTable}.screen,\n`;
-          sql += `    ${fullSessionTable}.language,\n`;
-          sql += `    ${fullSessionTable}.country,\n`;
-          sql += `    ${fullSessionTable}.subdivision1,\n`;
-          sql += `    ${fullSessionTable}.city`;
+          sql += '    ' + requiredSessionColumns.map(col => `${fullSessionTable}.${col}`).join(',\n    ');
         }
 
         if (needsUrlFullpath) {
@@ -945,17 +963,10 @@ const ChartsPage = () => {
         // In normal mode, use aliases as before
         sql += '    e.*';
 
-        // Add session fields if they're needed
-        if (needsSessionJoin) {
+        // Add only the session fields that are actually needed
+        if (needsSessionJoin && requiredSessionColumns.length > 0) {
           sql += ',\n';
-          sql += '    s.browser,\n';
-          sql += '    s.os,\n';
-          sql += '    s.device,\n';
-          sql += '    s.screen,\n';
-          sql += '    s.language,\n';
-          sql += '    s.country,\n';
-          sql += '    s.subdivision1,\n';
-          sql += '    s.city';
+          sql += '    ' + requiredSessionColumns.map(col => `s.${col}`).join(',\n    ');
         }
 
         if (needsUrlFullpath) {

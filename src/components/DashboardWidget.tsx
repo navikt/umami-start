@@ -4,6 +4,7 @@ import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/r
 import { SavedChart } from '../data/dashboard/types';
 import { format, subDays } from 'date-fns';
 import { getBaseUrl } from '../lib/environment';
+import { translateValue } from '../lib/translations';
 // @ts-ignore
 import SiteScores from './SiteScores';
 import teamsData from '../data/teamsData.json';
@@ -100,7 +101,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
                 const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
 
-                const dateReplacement = `AND created_at BETWEEN ${fromSql} AND ${toSql}`;
+                const dateReplacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
 
                 // Replace the block
                 processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, dateReplacement);
@@ -312,15 +313,25 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {currentData.map((row, i) => (
-                                    <Table.Row key={i}>
-                                        {Object.values(row).map((val: any, j) => (
-                                            <Table.DataCell key={j} className="whitespace-nowrap" title={String(val)}>
-                                                {typeof val === 'number' ? val.toLocaleString('nb-NO') : String(val)}
-                                            </Table.DataCell>
-                                        ))}
-                                    </Table.Row>
-                                ))}
+                                {currentData.map((row, i) => {
+                                    const keys = Object.keys(row);
+                                    return (
+                                        <Table.Row key={i}>
+                                            {keys.map((key, j) => {
+                                                const val = row[key];
+                                                const translatedVal = translateValue(key, val);
+                                                const displayVal = typeof translatedVal === 'number'
+                                                    ? translatedVal.toLocaleString('nb-NO')
+                                                    : String(translatedVal);
+                                                return (
+                                                    <Table.DataCell key={j} className="whitespace-nowrap" title={String(val)}>
+                                                        {displayVal}
+                                                    </Table.DataCell>
+                                                );
+                                            })}
+                                        </Table.Row>
+                                    );
+                                })}
                             </Table.Body>
                         </Table>
                     </div>
