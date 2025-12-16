@@ -1013,6 +1013,8 @@ const SQLPreview = ({
 
                   {estimate && !estimating && (() => {
                     const gb = parseFloat(estimate.totalBytesProcessedGB);
+                    // Calculate cost if not provided by backend (approx $6.25 per TB)
+                    const cost = parseFloat(estimate.estimatedCostUSD) || (gb * 0.00625);
 
                     let variant: 'info' | 'warning' | 'error' = 'info';
                     let showAsAlert = false;
@@ -1032,7 +1034,7 @@ const SQLPreview = ({
                       return (
                         <div className="mt-2 text-sm text-gray-600">
                           Data å prosessere: {gb} GB
-                          {parseFloat(estimate.estimatedCostUSD) > 0 && ` • Kostnad: $${estimate.estimatedCostUSD}`}
+                          {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
                         </div>
                       );
                     }
@@ -1042,12 +1044,8 @@ const SQLPreview = ({
                         <div className="text-sm space-y-1">
                           <p>
                             <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
+                            {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
                           </p>
-                          {parseFloat(estimate.estimatedCostUSD) > 0 && (
-                            <p>
-                              <strong>Estimert kostnad:</strong> ${estimate.estimatedCostUSD} USD
-                            </p>
-                          )}
                           {gb >= 300 && (
                             <p className="font-medium mt-2">
                               ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
@@ -1117,6 +1115,8 @@ const SQLPreview = ({
         <Modal.Body>
           {pendingQueryEstimate && (() => {
             const gb = parseFloat(pendingQueryEstimate.totalBytesProcessedGB);
+            // Calculate cost if not provided by backend (approx $6.25 per TB)
+            const cost = parseFloat(pendingQueryEstimate.estimatedCostUSD) || (gb * 0.00625);
             let variant: 'info' | 'warning' | 'error' = 'info';
             let message = '';
 
@@ -1138,12 +1138,8 @@ const SQLPreview = ({
                     <p className="font-medium">{message}</p>
                     <p>
                       <strong>Data å prosessere:</strong> {pendingQueryEstimate.totalBytesProcessedGB} GB
+                      {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
                     </p>
-                    {parseFloat(pendingQueryEstimate.estimatedCostUSD) > 0 && (
-                      <p>
-                        <strong>Estimert kostnad:</strong> ${pendingQueryEstimate.estimatedCostUSD} USD
-                      </p>
-                    )}
                   </div>
                 </Alert>
                 <p>Er du sikker på at du vil kjøre denne spørringen?</p>
