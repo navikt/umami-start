@@ -855,6 +855,11 @@ const ChartsPage = () => {
         if (interactiveDateFilter) {
           sql += `  [[AND {{created_at}} ]]\n`; // Corrected format for interactive mode
         }
+      } else {
+        // PERF: Add standard date filters to the CTE
+        // This ensures the CTE works on a partition subset instead of scanning the full table
+        sql += getDateFilterConditions();
+        sql += '\n'; // Add newline for cleaner SQL
       }
 
       sql += '  GROUP BY visit_id\n';
@@ -922,6 +927,11 @@ const ChartsPage = () => {
         if (interactiveDateFilter) {
           sql += `  [[AND {{created_at}} ]]\n`; // Corrected format for interactive mode
         }
+      } else {
+        // PERF: Add standard date filters to the CTE
+        // This ensures the CTE works on a partition subset instead of scanning the full table
+        sql += getDateFilterConditions();
+        sql += '\n'; // Add newline for cleaner SQL
       }
 
       sql += '  GROUP BY visit_id\n';
