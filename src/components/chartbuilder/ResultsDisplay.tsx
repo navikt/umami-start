@@ -26,6 +26,7 @@ interface ResultsDisplayProps {
   showEditButton?: boolean;
   hiddenTabs?: string[];
   containerStyle?: 'green' | 'white' | 'none';
+  showCost?: boolean;
 }
 
 const ResultsDisplay = ({
@@ -46,6 +47,7 @@ const ResultsDisplay = ({
   preparePieChartData,
   hiddenTabs: propHiddenTabs = [],
   containerStyle = 'green',
+  showCost = false,
 }: ResultsDisplayProps) => {
   // Read initial tab from URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -576,6 +578,11 @@ const ResultsDisplay = ({
                         {queryStats && (
                           <span>
                             Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                            {showCost && (() => {
+                              const gb = parseFloat(queryStats.totalBytesProcessedGB);
+                              const cost = parseFloat(queryStats.estimatedCostUSD) || (gb * 0.00625);
+                              return cost > 0 ? ` • Kostnad: $${cost.toFixed(2)}` : '';
+                            })()}
                           </span>
                         )}
                       </div>

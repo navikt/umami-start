@@ -310,7 +310,6 @@ app.get('/api/user/me', async (req, res) => {
         let name = parsed.name || '';
 
         // Fix potential encoding issues (UTF-8 bytes interpreted as Latin-1)
-        // Example: "VebjÃ¸rn" -> "Vebjørn"
         if (name.includes('Ã')) {
             try {
                 name = Buffer.from(name, 'latin1').toString('utf-8');
@@ -382,7 +381,7 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent, 'Diagnoseverktøy'));
+        }, navIdent, 'Diagnoseverktoy'));
 
         const [rows] = await job.getQueryResults();
 
@@ -405,7 +404,7 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent, 'Diagnoseverktøy'));
+            }, navIdent, 'Diagnoseverktoy'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -457,7 +456,7 @@ app.post('/api/bigquery', async (req, res) => {
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1'
-        }, navIdent, analysisType || 'Sqlverktøy'));
+        }, navIdent, analysisType || 'Sqlverktoy'));
 
         console.log('[BigQuery API] Query job created, waiting for results...');
 
@@ -474,7 +473,7 @@ app.post('/api/bigquery', async (req, res) => {
                 query: query,
                 location: 'europe-north1',
                 dryRun: true
-            }, navIdent, analysisType || 'Sqlverktøy'));
+            }, navIdent, analysisType || 'Sqlverktoy'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1840,7 +1839,7 @@ app.post('/api/bigquery/estimate', async (req, res) => {
             query: query,
             location: 'europe-north1',
             dryRun: true
-        }, navIdent, analysisType || 'Sqlverktøy'));
+        }, navIdent, analysisType || 'Sqlverktoy'));
 
         const stats = job.metadata.statistics;
         const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);
@@ -3219,7 +3218,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
             query: historyQuery,
             location: 'europe-north1',
             params: params
-        }, navIdent, 'Diagnoseverktøy'));
+        }, navIdent, 'Diagnoseverktoy'));
 
         // Get NAV ident from authenticated user for audit logging
 
@@ -3227,7 +3226,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
             query: lastEventQuery,
             location: 'europe-north1',
             params: params
-        }, navIdent, 'Diagnoseverktøy'));
+        }, navIdent, 'Diagnoseverktoy'));
 
         const [historyRows] = await historyJob.getQueryResults();
         const [lastEventRows] = await lastEventJob.getQueryResults();
@@ -3252,7 +3251,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent, 'Diagnoseverktøy'));
+            }, navIdent, 'Diagnoseverktoy'));
 
             // Get NAV ident from authenticated user for audit logging
 
@@ -3261,7 +3260,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent, 'Diagnoseverktøy'));
+            }, navIdent, 'Diagnoseverktoy'));
 
             const historyStats = dryRunHistoryJob.metadata.statistics;
             const lastEventStats = dryRunLastEventJob.metadata.statistics;

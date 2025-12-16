@@ -967,6 +967,7 @@ const SQLPreview = ({
                 containerStyle="none"
                 showSqlCode={true}
                 showEditButton={true}
+                showCost={true}
               />
             </div>
 
