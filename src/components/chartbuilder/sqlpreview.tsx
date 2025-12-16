@@ -120,7 +120,7 @@ const SQLPreview = ({
     if (hasMetabaseDateFilter && dateRange.from && dateRange.to) {
       const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
       const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
-      const replacement = `AND created_at BETWEEN ${fromSql} AND ${toSql}`;
+      const replacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
       processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, replacement);
     }
 
