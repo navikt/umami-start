@@ -1207,6 +1207,14 @@ const ChartsPage = () => {
         sql += '  ON base_query.event_id = ed_view.website_event_id\n';
         sql += '  AND base_query.website_id = ed_view.website_id\n';
         sql += '  AND base_query.created_at = ed_view.created_at\n';
+
+        // OPTIMIZATION: Add explicit date filters for partition pruning on the joined table
+        filters
+          .filter(f => f.column === 'created_at' && (!f.interactive || !f.metabaseParam) && f.value)
+          .forEach(f => {
+            sql += `  AND ed_view.created_at ${f.operator} ${f.value}\n`;
+          });
+
         sql += 'LEFT JOIN UNNEST(ed_view.event_parameters) AS event_data\n';
 
         // Add additional UNNEST joins for unique param aggregation BEFORE the WHERE clause

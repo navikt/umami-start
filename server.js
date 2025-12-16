@@ -684,6 +684,8 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
                 ON e.event_id = d.website_event_id
                 AND e.website_id = d.website_id
                 AND e.created_at = d.created_at
+                AND d.website_id = @websiteId
+                AND d.created_at BETWEEN @startDate AND @endDate
             CROSS JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
