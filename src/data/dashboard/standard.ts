@@ -107,6 +107,64 @@ LIMIT 1000
 `
     },
     {
+      title: "Aktiviteter",
+      type: "title",
+      width: '100'
+    },
+    {
+      title: "Besøk gruppert på hendelser",
+      type: "table",
+      width: '50',
+      sql: `WITH base_query AS (
+  SELECT
+    \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+  WHERE \`team-researchops-prod-01d6.umami.public_website_event\`.website_id = '{{website_id}}'
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.url_path = '/'
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN TIMESTAMP('2025-11-16') AND TIMESTAMP('2025-12-16T23:59:59')
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.event_type IN (1, 2)
+)
+
+SELECT
+  base_query.event_name,
+  COUNT(DISTINCT base_query.session_id) as Unike_besokende
+FROM base_query
+GROUP BY
+  base_query.event_name
+ORDER BY Unike_besokende DESC
+LIMIT 1000
+`
+    },
+    {
+      title: "Hvor besøkende går videre",
+      type: "table",
+      width: '50',
+      sql: `WITH base_query AS (
+  SELECT
+    \`team-researchops-prod-01d6.umami.public_website_event\`.session_id,
+    \`team-researchops-prod-01d6.umami.public_website_event\`.url_path,
+    \`team-researchops-prod-01d6.umami.public_website_event\`.created_at,
+    LEAD(\`team-researchops-prod-01d6.umami.public_website_event\`.url_path) OVER (
+      PARTITION BY \`team-researchops-prod-01d6.umami.public_website_event\`.session_id 
+      ORDER BY \`team-researchops-prod-01d6.umami.public_website_event\`.created_at
+    ) AS next_page
+  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+  WHERE \`team-researchops-prod-01d6.umami.public_website_event\`.website_id = '{{website_id}}'
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.event_type = 1
+  [[AND {{created_at}} ]]
+)
+
+SELECT
+  COALESCE(next_page, '(Forlot siden)') AS Neste_side,
+  COUNT(DISTINCT session_id) as Unike_besokende
+FROM base_query
+WHERE url_path = [[ {{url_sti}} --]] '/'
+GROUP BY
+  next_page
+ORDER BY Unike_besokende DESC
+LIMIT 1000
+`
+    },
+    {
       title: "Geografi og språk",
       type: "title",
       width: '100'
