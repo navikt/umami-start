@@ -706,30 +706,54 @@ const ChartsPage = () => {
         , 1) as ${quotedAlias}`;
       case 'andel':
         if (column && websiteId) {
-          // Build subquery filters for all interactive filters, preserving order
+          // Build subquery filters for the denominator (Total Universe)
           let subqueryFilters = '';
 
-          // Handle date filter first
-          const dateFilter = filters.find(f => f.column === 'created_at' && f.interactive === true);
-          if (dateFilter) {
+          // 1. Handle Date Filters (Critical for performance - prevents full table scan)
+          const interactiveDateFilter = filters.find(f => f.column === 'created_at' && f.interactive === true);
+          if (interactiveDateFilter) {
             subqueryFilters += '\n  [[AND {{created_at}} ]]';
+          } else {
+            // Add standard date filters using the existing helper
+            // This ensures the subquery respects the selected date range
+            subqueryFilters += getDateFilterConditions();
           }
 
-          // Always add URL path filter if there's any URL path filter (interactive or not)
+          // 2. Handle URL Path Filter
+          // Note: Including url_path in the denominator restricts the "Universe" to this specific page.
+          // This creates a "Proportion of visits to this page" vs "Proportion of total site traffic".
+          // Preserving existing behavior but adding support for static values.
           const urlPathFilter = filters.find(f => f.column === 'url_path');
           if (urlPathFilter) {
-            subqueryFilters += `\n  AND url_path = [[ {{url_sti}} --]] '/'`;
+            if (urlPathFilter.interactive === true && urlPathFilter.metabaseParam === true) {
+              subqueryFilters += `\n  AND url_path = [[ {{url_sti}} --]] '/'`;
+            } else if (urlPathFilter.value) {
+              subqueryFilters += `\n  AND url_path = '${urlPathFilter.value.replace(/'/g, "''")}'`;
+            }
           }
 
-          // Handle all other interactive filters (except date and url_path which are handled above)
-          filters
-            .filter(f => f.interactive === true && f.metabaseParam === true && f.column !== 'created_at' && f.column !== 'url_path')
-            .forEach(filter => {
-              if (filter.value) {
-                const paramName = filter.value.replace(/[{}]/g, '').trim();
-                subqueryFilters += `\n  AND ${filter.column} = {{${paramName}}}`;
-              }
-            });
+          // 3. Handle all other filters
+          filters.forEach(filter => {
+            // Skip already handled columns
+            if (filter.column === 'created_at' || filter.column === 'url_path') return;
+
+            // Skip param_ filters as they require UNNEST which isn't in the subquery
+            if (filter.column.startsWith('param_')) return;
+
+            // Skip session columns for now as subquery doesn't join session table (to avoid complexity/errors)
+            // Ideally we should join public_session here too if filtering by browser/etc.
+            if (isSessionColumn(filter.column)) return;
+
+            if (filter.interactive === true && filter.metabaseParam === true && filter.value) {
+              const paramName = filter.value.replace(/[{}]/g, '').trim();
+              subqueryFilters += `\n  AND ${filter.column} = {{${paramName}}}`;
+            } else if (filter.value) {
+              // Handle static values
+              const needsQuotes = isNaN(Number(filter.value));
+              const val = needsQuotes ? `'${filter.value.replace(/'/g, "''")}'` : filter.value;
+              subqueryFilters += `\n  AND ${filter.column} ${filter.operator || '='} ${val}`;
+            }
+          });
 
           if (column === 'session_id') {
             return `ROUND(
