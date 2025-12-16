@@ -437,21 +437,29 @@ const ResultsDisplay = ({
 
         {/* Error Display */}
         {error && (
-          <Alert variant="error" className="mt-3">
-            <div className="text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-              <div>
-                <p className="font-medium">Feil ved kjøring</p>
-                <p className="mt-1">{error}</p>
-              </div>
-              {lastAction && (
-                <div className="flex-shrink-0">
-                  <Button size="small" variant="primary" onClick={handleRetry}>
-                    Prøv igjen
-                  </Button>
+          <>
+            <Alert variant="error" className="mt-3">
+              <div className="text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                  <p className="font-medium">Feil ved kjøring</p>
+                  <p className="mt-1">{error}</p>
                 </div>
-              )}
-            </div>
-          </Alert>
+                {lastAction && (
+                  <div className="flex-shrink-0">
+                    <Button size="small" variant="primary" onClick={handleRetry}>
+                      Prøv igjen
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Alert>
+            {/* SQL Code Display - shown on error for debugging */}
+            {showSqlCode && sql && (
+              <div className="mt-3">
+                <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
+              </div>
+            )}
+          </>
         )}
 
         {/* Results Display */}
