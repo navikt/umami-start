@@ -8,6 +8,8 @@ import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
+import { normalizeUrlToPath } from '../lib/utils';
+
 
 const Retention = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -53,41 +55,6 @@ const Retention = () => {
     };
 
     // Helper function to normalize URL input - extracts path from full URLs
-    const normalizeUrlToPath = (input: string): string => {
-        if (!input.trim()) return '';
-
-        let trimmed = input.trim();
-
-        try {
-            // Check if input looks like a full URL (contains protocol)
-            if (trimmed.includes('://')) {
-                const url = new URL(trimmed);
-                return url.pathname;
-            }
-
-            // Handle cases like "/nav.no/arbeid" - remove leading slash if it looks like a domain
-            if (trimmed.startsWith('/') && trimmed.includes('.')) {
-                const withoutLeadingSlash = trimmed.substring(1);
-                // Check if removing the slash reveals a domain pattern
-                if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
-                    trimmed = withoutLeadingSlash;
-                }
-            }
-
-            // Check if input looks like a domain without protocol
-            // e.g., "nav.no/arbeid" or "www.nav.no/arbeid"
-            // Pattern: contains a dot, doesn't start with /, and has a path separator
-            if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
-                // Prepend protocol and try to parse
-                const url = new URL('https://' + trimmed);
-                return url.pathname;
-            }
-        } catch (e) {
-            // If URL parsing fails, treat as path
-        }
-
-        return trimmed;
-    };
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
@@ -260,6 +227,7 @@ const Retention = () => {
                         description="F.eks. / for forsiden"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
+                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
                     />
 
                     <PeriodPicker

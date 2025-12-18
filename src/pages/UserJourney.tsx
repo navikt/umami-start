@@ -9,6 +9,8 @@ import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import UmamiJourneyView from '../components/UmamiJourneyView';
 import { Website } from '../types/chart';
+import { normalizeUrlToPath } from '../lib/utils';
+
 
 const UserJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -64,41 +66,6 @@ const UserJourney = () => {
         }
     };
 
-    const normalizeUrlToPath = (input: string): string => {
-        if (!input.trim()) return '/';
-
-        let trimmed = input.trim();
-
-        try {
-            // Check if input looks like a full URL (contains protocol)
-            if (trimmed.includes('://')) {
-                const url = new URL(trimmed);
-                return url.pathname;
-            }
-
-            // Handle cases like "/nav.no/arbeid" - remove leading slash if it looks like a domain
-            if (trimmed.startsWith('/') && trimmed.includes('.')) {
-                const withoutLeadingSlash = trimmed.substring(1);
-                // Check if removing the slash reveals a domain pattern
-                if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
-                    trimmed = withoutLeadingSlash;
-                }
-            }
-
-            // Check if input looks like a domain without protocol
-            // e.g., "nav.no/arbeid" or "www.nav.no/arbeid"
-            // Pattern: contains a dot, doesn't start with /, and has a path separator
-            if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
-                // Prepend protocol and try to parse
-                const url = new URL('https://' + trimmed);
-                return url.pathname;
-            }
-        } catch (e) {
-            // If URL parsing fails, treat as path
-        }
-
-        return trimmed;
-    };
 
     const downloadCSV = () => {
         if (!rawData || !rawData.links || rawData.links.length === 0) return;
@@ -336,6 +303,7 @@ const UserJourney = () => {
                         description="F.eks. / for forsiden"
                         value={startUrl}
                         onChange={(e) => setStartUrl(e.target.value)}
+                        onBlur={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}
                     />
 
                     <PeriodPicker

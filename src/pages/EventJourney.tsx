@@ -6,6 +6,8 @@ import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
+import { normalizeUrlToPath } from '../lib/utils';
+
 
 const EventJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -171,6 +173,7 @@ const EventJourney = () => {
                         description="Hvilken side vil du analysere?"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
+                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
                     />
 
                     <PeriodPicker

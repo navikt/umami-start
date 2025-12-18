@@ -7,6 +7,8 @@ import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
 import { Website } from '../types/chart';
+import { normalizeUrlToPath } from '../lib/utils';
+
 
 const UserComposition = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -214,6 +216,7 @@ const UserComposition = () => {
                         description="F.eks. / for forsiden"
                         value={pagePath}
                         onChange={(e) => setPagePath(e.target.value)}
+                        onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
                     />
 
                     <PeriodPicker
