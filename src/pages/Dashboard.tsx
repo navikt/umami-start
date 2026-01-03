@@ -11,6 +11,7 @@ const Dashboard = () => {
     const [searchParams] = useSearchParams();
     const websiteId = searchParams.get("websiteId");
     const path = searchParams.get("path");
+    const pathOperator = searchParams.get("pathOperator");
     const dashboardId = searchParams.get("dashboard");
 
     const dashboard = getDashboard(dashboardId);
@@ -20,13 +21,13 @@ const Dashboard = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<any>(null);
 
     // UI/Temp State
-    const [tempPathOperator, setTempPathOperator] = useState("equals");
+    const [tempPathOperator, setTempPathOperator] = useState(pathOperator || "equals");
     const [tempUrlPath, setTempUrlPath] = useState<string>(path || "");
     const [tempDateRange, setTempDateRange] = useState("this-month");
 
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
-        pathOperator: "equals",
+        pathOperator: pathOperator || "equals",
         urlFilters: path ? [path] : [],
         dateRange: "this-month",
         metricType: 'visitors' as 'visitors' | 'pageviews' // Keeping for type compatibility, though unused UI
@@ -111,15 +112,26 @@ const Dashboard = () => {
     }, [websiteId, activeFilters, dashboard.charts]);
 
     const handleUpdate = () => {
-        // Update URL with selected website ID
+        // Update URL with selected website ID and filters
         if (selectedWebsite) {
             setActiveWebsite(selectedWebsite); // Explicitly update active website
             const url = new URL(window.location.href);
             url.searchParams.set('websiteId', selectedWebsite.id);
-            if (activeFilters.urlFilters !== (tempUrlPath ? [tempUrlPath] : [])) {
-                if (tempUrlPath) url.searchParams.set('path', tempUrlPath);
-                else url.searchParams.delete('path');
+
+            // Update path filter in URL
+            if (tempUrlPath) {
+                url.searchParams.set('path', tempUrlPath);
+            } else {
+                url.searchParams.delete('path');
             }
+
+            // Update pathOperator in URL (only if not default "equals")
+            if (tempPathOperator && tempPathOperator !== "equals") {
+                url.searchParams.set('pathOperator', tempPathOperator);
+            } else {
+                url.searchParams.delete('pathOperator');
+            }
+
             window.history.pushState({}, '', url.toString());
         }
 
