@@ -92,11 +92,17 @@ function buildCombinedSessionQuery(
     // Build URL filter
     let urlCondition = "= '/'";
     if (filters.urlFilters.length > 0) {
-        const val = filters.urlFilters[0];
         if (filters.pathOperator === 'starts-with') {
-            urlCondition = `LIKE '${val}%'`;
+            // starts-with only uses the first value
+            urlCondition = `LIKE '${filters.urlFilters[0]}%'`;
         } else {
-            urlCondition = `= '${val}'`;
+            // equals operator - support multiple values with IN clause
+            if (filters.urlFilters.length === 1) {
+                urlCondition = `= '${filters.urlFilters[0]}'`;
+            } else {
+                const quotedPaths = filters.urlFilters.map(p => `'${p}'`).join(', ');
+                urlCondition = `IN (${quotedPaths})`;
+            }
         }
     }
 

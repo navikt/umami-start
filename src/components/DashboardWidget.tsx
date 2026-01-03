@@ -96,7 +96,6 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 // So I need to replace the WHOLE sequence `[[ {{url_sti}} --]] '/'` with the active value.
 
                 if (filters.urlFilters.length > 0) {
-                    const val = filters.urlFilters[0];
                     const operator = filters.pathOperator || 'equals';
 
                     // Regex to capture the assignment operator (=) and the template block
@@ -104,9 +103,18 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                     const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
 
                     if (operator === 'starts-with') {
+                        // starts-with only uses the first value
+                        const val = filters.urlFilters[0];
                         processedSql = processedSql.replace(assignmentRegex, `LIKE '${val}%'`);
                     } else {
-                        processedSql = processedSql.replace(assignmentRegex, `='${val}'`);
+                        // equals operator - support multiple values with IN clause
+                        if (filters.urlFilters.length === 1) {
+                            processedSql = processedSql.replace(assignmentRegex, `= '${filters.urlFilters[0]}'`);
+                        } else {
+                            // Multiple values: use IN clause
+                            const quotedPaths = filters.urlFilters.map(p => `'${p}'`).join(', ');
+                            processedSql = processedSql.replace(assignmentRegex, `IN (${quotedPaths})`);
+                        }
                     }
                 } else {
                     // If no filters, replace just the `[[...]]` part with empty string? 
