@@ -4,11 +4,11 @@ import '../../../tailwind.css';
 
 const Footer = () => {
     return (
-        <div className="bg-deepblue-800 w-full pb-10">
+        <div className="!bg-[#003453] w-full pb-10">
             <footer
                 id="aksel-footer"
                 data-theme="dark"
-                className="flex pt-3 z-10 items-center w-6/6 max-w-[77rem] m-auto justify-between toc-ignore text-text-on-inverted bg-deepblue-800 relative flex justify-center"
+                className="flex pt-3 z-10 items-center w-6/6 max-w-[77rem] m-auto justify-between toc-ignore text-text-on-inverted !bg-[#003453] relative flex justify-center"
             >
                 <div className="relative z-10 mx-auto grid w-full max-w-screen-2xl gap-12 px-4 pb-16 pt-12 md:grid-cols-2 md:px-6 lg:grid-cols-2 xl:grid-cols-4 xl:gap-6">
                     <LogoBlock />
@@ -93,7 +93,7 @@ function FooterLink({ children, href }) {
     return (
         <li>
             <Link
-                className="text-white hover:text-white focus:shadow-focus focus:text-text-default flex w-fit items-center gap-1 underline hover:no-underline focus:bg-blue-100 focus:shadow-blue-100"
+                className="!text-white hover:!text-white focus:shadow-focus focus:text-text-default flex w-fit items-center gap-1 underline hover:no-underline focus:bg-blue-100 focus:shadow-blue-100"
                 href={href}
             >
                 {children}

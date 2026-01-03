@@ -27,6 +27,7 @@
     "@navikt/ds-css": "^7.36.0",
     "@navikt/ds-react": "^7.36.0",
     "@navikt/ds-tailwind": "^7.36.0",
+    "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
     "@types/prismjs": "^1.26.5",
     "@types/react": "^19.2.7",

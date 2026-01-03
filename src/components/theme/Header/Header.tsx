@@ -22,7 +22,7 @@ export default function Header() {
   }, []);
 
   const linkButton =
-    "flex no-underline items-center bg-transparent hover:underline hover:bg-transparent navds-button navds-button--primary navds-button--medium  text-white hover:text-white";
+    "flex !no-underline items-center !bg-transparent hover:!underline hover:!bg-transparent navds-button navds-button--primary navds-button--medium  !text-white hover:!text-white";
   return (
     <div style={{ background: "rgba(19,17,54)" }}>
       <header className="flex py-1 z-10 items-center max-w-[76.5rem] m-auto justify-between">

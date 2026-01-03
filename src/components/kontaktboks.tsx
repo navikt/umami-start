@@ -1,10 +1,10 @@
-import { List, Link, Heading } from "@navikt/ds-react";
+import { List, Link, Heading, VStack } from "@navikt/ds-react";
 
 export default function Kontaktboks() {
     return (
-        <>
+        <VStack gap="2">
             <Heading as="h3" size="medium">Ønsker du noen å sparre med?</Heading>
-            <List as="ul" className="pt-2">
+            <List as="ul">
                 <List.Item>
                     <strong>Slack:</strong> Bli med i kanalen <Link
                         href={"https://nav-it.slack.com/archives/C070BPKR830"} target={"_blank"}>#produktanalyse</Link> og <Link
@@ -16,6 +16,6 @@ export default function Kontaktboks() {
                         1:1 eller workshop</Link>.
                 </List.Item>
             </List>
-        </>
+        </VStack>
     );
 }

@@ -6,6 +6,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        deepblue: {
+          500: '#0067c5', // Check exact value, assumed action blue
+          800: 'rgb(0, 52, 83)',
+          900: '#191d26',
+        },
+      },
       gridTemplateColumns: {
         '20': 'repeat(20, minmax(0, 1fr))',
       },
