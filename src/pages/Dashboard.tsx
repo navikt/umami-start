@@ -1,4 +1,4 @@
-import { Alert, Select, Button, TextField, ReadMore, Label, UNSAFE_Combobox } from "@navikt/ds-react";
+import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "../components/DashboardLayout";
@@ -25,7 +25,6 @@ const Dashboard = () => {
     // UI/Temp State
     const [tempPathOperator, setTempPathOperator] = useState(pathOperator || "equals");
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialPaths);
-    const [tempSinglePath, setTempSinglePath] = useState<string>(initialPaths[0] || ""); // For starts-with mode
     const [tempDateRange, setTempDateRange] = useState("this-month");
 
     // Active filters used for fetching data
@@ -115,11 +114,6 @@ const Dashboard = () => {
     }, [websiteId, activeFilters, dashboard.charts]);
 
     const handleUpdate = () => {
-        // Determine which paths to use based on operator
-        const pathsToUse = tempPathOperator === "starts-with"
-            ? (tempSinglePath ? [tempSinglePath] : [])
-            : tempUrlPaths;
-
         // Update URL with selected website ID and filters
         if (selectedWebsite) {
             setActiveWebsite(selectedWebsite); // Explicitly update active website
@@ -128,7 +122,7 @@ const Dashboard = () => {
 
             // Update path filter in URL (support multiple paths)
             url.searchParams.delete('path');
-            pathsToUse.forEach(p => {
+            tempUrlPaths.forEach(p => {
                 if (p) url.searchParams.append('path', p);
             });
 
@@ -144,7 +138,7 @@ const Dashboard = () => {
 
         setActiveFilters({
             pathOperator: tempPathOperator,
-            urlFilters: pathsToUse,
+            urlFilters: tempUrlPaths,
             dateRange: tempDateRange,
             metricType: 'visitors'
         });
@@ -154,13 +148,9 @@ const Dashboard = () => {
     const arraysEqual = (a: string[], b: string[]) =>
         a.length === b.length && a.every((v, i) => v === b[i]);
 
-    const currentTempPaths = tempPathOperator === "starts-with"
-        ? (tempSinglePath ? [tempSinglePath] : [])
-        : tempUrlPaths;
-
     const hasChanges =
         tempDateRange !== activeFilters.dateRange ||
-        !arraysEqual(currentTempPaths, activeFilters.urlFilters) ||
+        !arraysEqual(tempUrlPaths, activeFilters.urlFilters) ||
         tempPathOperator !== activeFilters.pathOperator ||
         (selectedWebsite && selectedWebsite.id !== websiteId);
 
@@ -182,51 +172,30 @@ const Dashboard = () => {
                     <select
                         className="text-sm bg-white border border-gray-300 rounded text-[#0067c5] font-medium cursor-pointer focus:outline-none py-1 px-2"
                         value={tempPathOperator}
-                        onChange={(e) => {
-                            const newOp = e.target.value;
-                            setTempPathOperator(newOp);
-                            // Sync values when switching operators
-                            if (newOp === "starts-with" && tempUrlPaths.length > 0) {
-                                setTempSinglePath(tempUrlPaths[0]);
-                            } else if (newOp === "equals" && tempSinglePath) {
-                                setTempUrlPaths([tempSinglePath]);
-                            }
-                        }}
+                        onChange={(e) => setTempPathOperator(e.target.value)}
                     >
                         <option value="equals">er lik</option>
                         <option value="starts-with">starter med</option>
                     </select>
                 </div>
-                {tempPathOperator === "starts-with" ? (
-                    <TextField
-                        id="url-filter"
-                        label="URL-sti"
-                        hideLabel
-                        size="small"
-                        value={tempSinglePath}
-                        onChange={(e) => setTempSinglePath(e.target.value)}
-                        placeholder="/eksempel"
-                    />
-                ) : (
-                    <UNSAFE_Combobox
-                        id="url-filter"
-                        label="URL-stier"
-                        hideLabel
-                        size="small"
-                        isMultiSelect
-                        allowNewValues
-                        options={tempUrlPaths.map(p => ({ label: p, value: p }))}
-                        selectedOptions={tempUrlPaths}
-                        onToggleSelected={(option, isSelected) => {
-                            if (isSelected) {
-                                setTempUrlPaths(prev => [...prev, option]);
-                            } else {
-                                setTempUrlPaths(prev => prev.filter(p => p !== option));
-                            }
-                        }}
-                        placeholder="Skriv og trykk enter"
-                    />
-                )}
+                <UNSAFE_Combobox
+                    id="url-filter"
+                    label="URL-stier"
+                    hideLabel
+                    size="small"
+                    isMultiSelect
+                    allowNewValues
+                    options={tempUrlPaths.map(p => ({ label: p, value: p }))}
+                    selectedOptions={tempUrlPaths}
+                    onToggleSelected={(option, isSelected) => {
+                        if (isSelected) {
+                            setTempUrlPaths(prev => [...prev, option]);
+                        } else {
+                            setTempUrlPaths(prev => prev.filter(p => p !== option));
+                        }
+                    }}
+                    placeholder="Skriv og trykk enter"
+                />
             </div>
 
             <div className="w-full sm:w-auto min-w-[200px]">

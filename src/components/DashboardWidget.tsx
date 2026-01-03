@@ -98,16 +98,28 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 if (filters.urlFilters.length > 0) {
                     const operator = filters.pathOperator || 'equals';
 
-                    // Regex to capture the assignment operator (=) and the template block
-                    // Matches: "= [[ {{url_sti}} --]] 'default'"
-                    const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
+                    // Regex to capture the context around the template block
+                    // We need to handle both "url_path = [[ {{url_sti}} --]] '/'" patterns
+                    // For multiple values with starts-with, we need OR conditions
+                    // For multiple values with equals, we use IN clause
 
                     if (operator === 'starts-with') {
-                        // starts-with only uses the first value
-                        const val = filters.urlFilters[0];
-                        processedSql = processedSql.replace(assignmentRegex, `LIKE '${val}%'`);
+                        if (filters.urlFilters.length === 1) {
+                            // Single value: simple LIKE
+                            const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
+                            processedSql = processedSql.replace(assignmentRegex, `LIKE '${filters.urlFilters[0]}%'`);
+                        } else {
+                            // Multiple values: need to replace "url_path = [[ ... ]] '/'" with "(url_path LIKE 'x%' OR url_path LIKE 'y%')"
+                            // First, identify the column name before the = sign
+                            const multiLikeRegex = /(\S+)\s*=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
+                            processedSql = processedSql.replace(multiLikeRegex, (_match, column) => {
+                                const likeConditions = filters.urlFilters.map(p => `${column} LIKE '${p}%'`).join(' OR ');
+                                return `(${likeConditions})`;
+                            });
+                        }
                     } else {
                         // equals operator - support multiple values with IN clause
+                        const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
                         if (filters.urlFilters.length === 1) {
                             processedSql = processedSql.replace(assignmentRegex, `= '${filters.urlFilters[0]}'`);
                         } else {

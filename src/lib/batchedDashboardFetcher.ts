@@ -89,21 +89,28 @@ function buildCombinedSessionQuery(
     const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
     const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
 
-    // Build URL filter
-    let urlCondition = "= '/'";
+    // Build URL filter - returns either a simple condition or a complex OR expression
+    let urlFilterClause: string;
     if (filters.urlFilters.length > 0) {
         if (filters.pathOperator === 'starts-with') {
-            // starts-with only uses the first value
-            urlCondition = `LIKE '${filters.urlFilters[0]}%'`;
+            // starts-with - support multiple values with OR conditions
+            if (filters.urlFilters.length === 1) {
+                urlFilterClause = `AND ${tableName}.url_path LIKE '${filters.urlFilters[0]}%'`;
+            } else {
+                const likeConditions = filters.urlFilters.map(p => `${tableName}.url_path LIKE '${p}%'`).join(' OR ');
+                urlFilterClause = `AND (${likeConditions})`;
+            }
         } else {
             // equals operator - support multiple values with IN clause
             if (filters.urlFilters.length === 1) {
-                urlCondition = `= '${filters.urlFilters[0]}'`;
+                urlFilterClause = `AND ${tableName}.url_path = '${filters.urlFilters[0]}'`;
             } else {
                 const quotedPaths = filters.urlFilters.map(p => `'${p}'`).join(', ');
-                urlCondition = `IN (${quotedPaths})`;
+                urlFilterClause = `AND ${tableName}.url_path IN (${quotedPaths})`;
             }
         }
+    } else {
+        urlFilterClause = `AND ${tableName}.url_path = '/'`;
     }
 
     // Single scan query that fetches distinct sessions with all needed fields
@@ -117,7 +124,7 @@ WITH base_query AS (
     ON ${tableName}.session_id = ${sessionTable}.session_id
   WHERE ${tableName}.website_id = '${websiteId}'
   AND ${tableName}.event_type = 1
-  AND ${tableName}.url_path ${urlCondition}
+  ${urlFilterClause}
   AND ${tableName}.created_at BETWEEN ${fromSql} AND ${toSql}
 )
 
