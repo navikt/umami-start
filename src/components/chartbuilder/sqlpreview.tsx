@@ -992,6 +992,7 @@ const SQLPreview = ({
                 <div>
                   {!copied ? (
                     <Button
+                      size="small"
                       variant="secondary"
                       onClick={handleCopy}
                       icon={<Copy size={18} />}
