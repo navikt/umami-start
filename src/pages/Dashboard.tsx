@@ -427,11 +427,7 @@ const Dashboard = () => {
             filters={filters}
         >
             {isResolvingDomain ? (
-                <div className="p-8 col-span-full">
-                    <Alert variant="info">
-                        Slår opp nettside for domenet "{domainFromUrl}"...
-                    </Alert>
-                </div>
+                <></>
             ) : domainResolutionError ? (
                 <div className="p-8 col-span-full">
                     <Alert variant="error">
