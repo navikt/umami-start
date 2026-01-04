@@ -2,7 +2,7 @@ import { DashboardConfig } from './types';
 
 export const standardDashboard: DashboardConfig = {
   title: "Webstatistikk",
-  description: "Et standarddashboard med vanlige trafikktall.",
+  description: "Standarddashboard med trafikktall.",
   charts: [
     {
       title: "Siteimprove",
