@@ -18,6 +18,8 @@ interface DashboardWidgetProps {
         dateRange: string;
         pathOperator: string;
         metricType: 'visitors' | 'pageviews';
+        customStartDate?: Date;
+        customEndDate?: Date;
     };
     onDataLoaded?: (stats: { id: string; gb: number; title: string }) => void;
     // Pre-fetched data from batched query (optional - if provided, skip individual fetch)
@@ -145,7 +147,10 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 let startDate: Date;
                 let endDate = now;
 
-                if (filters.dateRange === 'this-month') {
+                if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
+                    startDate = filters.customStartDate;
+                    endDate = filters.customEndDate;
+                } else if (filters.dateRange === 'this-month') {
                     startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
                 } else if (filters.dateRange === 'last-month') {
                     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);

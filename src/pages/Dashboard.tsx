@@ -1,11 +1,12 @@
-import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox } from "@navikt/ds-react";
+import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { getDashboard } from "../data/dashboard";
 import { DashboardWidget } from "../components/DashboardWidget";
 import DashboardWebsitePicker from "../components/DashboardWebsitePicker";
 import { fetchDashboardDataBatched, isBatchableChart } from "../lib/batchedDashboardFetcher";
+import { format } from "date-fns";
 
 const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -34,11 +35,19 @@ const Dashboard = () => {
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialPaths);
     const [tempDateRange, setTempDateRange] = useState("this-month");
 
+    // Custom date state
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+    const dateModalRef = useRef<HTMLDialogElement>(null);
+
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
         pathOperator: pathOperator || "equals",
         urlFilters: initialPaths,
         dateRange: "this-month",
+        customStartDate: undefined as Date | undefined,
+        customEndDate: undefined as Date | undefined,
         metricType: 'visitors' as 'visitors' | 'pageviews' // Keeping for type compatibility, though unused UI
     });
 
@@ -128,6 +137,8 @@ const Dashboard = () => {
                 pathOperator: pathOperator || "equals",
                 urlFilters: initialPaths,
                 dateRange: "this-month",
+                customStartDate: undefined,
+                customEndDate: undefined,
                 metricType: 'visitors'
             });
             setHasAutoAppliedFilters(true);
@@ -231,6 +242,8 @@ const Dashboard = () => {
             pathOperator: tempPathOperator,
             urlFilters: tempUrlPaths,
             dateRange: tempDateRange,
+            customStartDate: tempDateRange === 'custom' ? customStartDate : undefined,
+            customEndDate: tempDateRange === 'custom' ? customEndDate : undefined,
             metricType: 'visitors'
         });
     };
@@ -239,11 +252,22 @@ const Dashboard = () => {
     const arraysEqual = (a: string[], b: string[]) =>
         a.length === b.length && a.every((v, i) => v === b[i]);
 
+    // Helper to compare dates (handles undefined)
+    const datesEqual = (a: Date | undefined, b: Date | undefined) => {
+        if (!a && !b) return true;
+        if (!a || !b) return false;
+        return a.getTime() === b.getTime();
+    };
+
     const hasChanges =
         tempDateRange !== activeFilters.dateRange ||
         !arraysEqual(tempUrlPaths, activeFilters.urlFilters) ||
         tempPathOperator !== activeFilters.pathOperator ||
-        (selectedWebsite && selectedWebsite.id !== websiteId);
+        (selectedWebsite && selectedWebsite.id !== websiteId) ||
+        (tempDateRange === 'custom' && (
+            !datesEqual(customStartDate, activeFilters.customStartDate) ||
+            !datesEqual(customEndDate, activeFilters.customEndDate)
+        ));
 
     const filters = (
         <>
@@ -294,10 +318,32 @@ const Dashboard = () => {
                     label="Datoperiode"
                     size="small"
                     value={tempDateRange}
-                    onChange={(e) => setTempDateRange(e.target.value)}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === 'custom') {
+                            setIsDateModalOpen(true);
+                        } else if (value === 'custom-edit') {
+                            // Clear dates so user can start fresh
+                            setCustomStartDate(undefined);
+                            setCustomEndDate(undefined);
+                            setIsDateModalOpen(true);
+                        } else {
+                            setTempDateRange(value);
+                        }
+                    }}
                 >
                     <option value="this-month">Denne måneden</option>
                     <option value="last-month">Forrige måned</option>
+                    {tempDateRange === 'custom' && customStartDate && customEndDate ? (
+                        <>
+                            <option value="custom">
+                                {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                            </option>
+                            <option value="custom-edit">Endre datoer</option>
+                        </>
+                    ) : (
+                        <option value="custom">Egendefinert</option>
+                    )}
                 </Select>
             </div>
 
@@ -306,6 +352,60 @@ const Dashboard = () => {
                     Oppdater
                 </Button>
             </div>
+
+            {/* Custom Date Modal */}
+            <Modal
+                ref={dateModalRef}
+                open={isDateModalOpen}
+                onClose={() => setIsDateModalOpen(false)}
+                header={{ heading: "Velg datoperiode", closeButton: true }}
+            >
+                <Modal.Body>
+                    <div className="flex flex-col gap-4">
+                        <DatePicker
+                            mode="range"
+                            selected={{ from: customStartDate, to: customEndDate }}
+                            onSelect={(range) => {
+                                if (range) {
+                                    setCustomStartDate(range.from);
+                                    setCustomEndDate(range.to);
+                                }
+                            }}
+                        >
+                            <div className="flex flex-col gap-2">
+                                <DatePicker.Input
+                                    id="custom-start-date"
+                                    label="Fra dato"
+                                    size="small"
+                                    value={customStartDate ? format(customStartDate, 'dd.MM.yyyy') : ''}
+                                />
+                                <DatePicker.Input
+                                    id="custom-end-date"
+                                    label="Til dato"
+                                    size="small"
+                                    value={customEndDate ? format(customEndDate, 'dd.MM.yyyy') : ''}
+                                />
+                            </div>
+                        </DatePicker>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        onClick={() => {
+                            if (customStartDate && customEndDate) {
+                                setTempDateRange('custom');
+                                setIsDateModalOpen(false);
+                            }
+                        }}
+                        disabled={!customStartDate || !customEndDate}
+                    >
+                        Bruk datoer
+                    </Button>
+                    <Button variant="secondary" onClick={() => setIsDateModalOpen(false)}>
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </>
     );
 
