@@ -50,6 +50,12 @@ const Dashboard = () => {
     // Track if batching is complete
     const [batchingComplete, setBatchingComplete] = useState(false);
 
+    // Helper function matching metadashboard.tsx logic
+    const normalizeDomain = (domain: string) => {
+        if (domain === "www.nav.no") return domain;
+        return domain.replace(/^www\./, "");
+    };
+
     // Resolve domain to websiteId for external app compatibility
     useEffect(() => {
         const resolveDomainToWebsiteId = async () => {
@@ -63,18 +69,32 @@ const Dashboard = () => {
                 // Fetch websites list
                 const response = await fetch('/api/bigquery/websites');
                 const data = await response.json();
-                const websites = data.data || [];
+                const websitesData = data.data || [];
 
-                // Normalize domain for matching (handle www. prefix)
-                const normalizedDomain = domainFromUrl.replace(/^www\./, '');
+                // Filter for prod websites - same team IDs as metadashboard.tsx
+                const relevantTeams = [
+                    'aa113c34-e213-4ed6-a4f0-0aea8a503e6b',
+                    'bceb3300-a2fb-4f73-8cec-7e3673072b30'
+                ];
+                const prodWebsites = websitesData.filter((website: any) =>
+                    relevantTeams.includes(website.teamId)
+                );
 
-                // Find matching website
-                const matchedWebsite = websites.find((w: any) => {
-                    const websiteDomain = (w.domain || '').replace(/^www\./, '');
-                    return websiteDomain === normalizedDomain ||
-                        normalizedDomain === websiteDomain ||
-                        domainFromUrl === w.domain;
-                });
+                // Filter out exactly "nav.no" domain
+                const filteredWebsites = prodWebsites.filter((item: any) => item.domain !== "nav.no");
+
+                // Normalize input domain for matching (handle nav.no -> www.nav.no)
+                let inputDomain = domainFromUrl;
+                if (inputDomain === "nav.no") {
+                    inputDomain = "www.nav.no";
+                }
+                const normalizedInputDomain = normalizeDomain(inputDomain);
+
+                // Find matching website using same logic as metadashboard.tsx
+                const matchedWebsite = filteredWebsites.find((item: any) =>
+                    normalizeDomain(item.domain) === normalizedInputDomain ||
+                    normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
+                );
 
                 if (matchedWebsite) {
                     // Update URL to use websiteId instead of domain (cleaner URLs)
