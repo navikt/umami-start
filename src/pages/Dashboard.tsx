@@ -8,8 +8,10 @@ import DashboardWebsitePicker from "../components/DashboardWebsitePicker";
 import { fetchDashboardDataBatched, isBatchableChart } from "../lib/batchedDashboardFetcher";
 
 const Dashboard = () => {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const websiteId = searchParams.get("websiteId");
+    // Support domain-based lookups for external apps
+    const domainFromUrl = searchParams.get("domain");
     // Support multiple paths from URL (comma-separated or multiple params)
     const pathsFromUrl = searchParams.getAll("path");
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl : [];
@@ -18,6 +20,11 @@ const Dashboard = () => {
 
     const dashboard = getDashboard(dashboardId);
 
+    // Track if we're resolving a domain to websiteId
+    const [isResolvingDomain, setIsResolvingDomain] = useState(false);
+    const [domainResolutionError, setDomainResolutionError] = useState<string | null>(null);
+    // Track if initial filters have been auto-applied (for external links)
+    const [hasAutoAppliedFilters, setHasAutoAppliedFilters] = useState(false);
 
     // Website Picker State
     const [selectedWebsite, setSelectedWebsite] = useState<any>(null);
@@ -42,6 +49,70 @@ const Dashboard = () => {
     const [batchedData, setBatchedData] = useState<Map<string, any[]>>(new Map());
     // Track if batching is complete
     const [batchingComplete, setBatchingComplete] = useState(false);
+
+    // Resolve domain to websiteId for external app compatibility
+    useEffect(() => {
+        const resolveDomainToWebsiteId = async () => {
+            // Skip if we already have a websiteId or no domain provided
+            if (websiteId || !domainFromUrl) return;
+
+            setIsResolvingDomain(true);
+            setDomainResolutionError(null);
+
+            try {
+                // Fetch websites list
+                const response = await fetch('/api/bigquery/websites');
+                const data = await response.json();
+                const websites = data.data || [];
+
+                // Normalize domain for matching (handle www. prefix)
+                const normalizedDomain = domainFromUrl.replace(/^www\./, '');
+
+                // Find matching website
+                const matchedWebsite = websites.find((w: any) => {
+                    const websiteDomain = (w.domain || '').replace(/^www\./, '');
+                    return websiteDomain === normalizedDomain ||
+                        normalizedDomain === websiteDomain ||
+                        domainFromUrl === w.domain;
+                });
+
+                if (matchedWebsite) {
+                    // Update URL to use websiteId instead of domain (cleaner URLs)
+                    const newParams = new URLSearchParams(searchParams);
+                    newParams.set('websiteId', matchedWebsite.id);
+                    newParams.delete('domain'); // Remove domain since we now have websiteId
+                    setSearchParams(newParams, { replace: true });
+
+                    // Set the website
+                    setSelectedWebsite(matchedWebsite);
+                    setActiveWebsite(matchedWebsite);
+                } else {
+                    setDomainResolutionError(`Fant ingen nettside for domenet "${domainFromUrl}"`);
+                }
+            } catch (error) {
+                console.error('Error resolving domain to websiteId:', error);
+                setDomainResolutionError('Kunne ikke slå opp domenet');
+            } finally {
+                setIsResolvingDomain(false);
+            }
+        };
+
+        resolveDomainToWebsiteId();
+    }, [domainFromUrl, websiteId, searchParams, setSearchParams]);
+
+    // Auto-apply filters when coming from an external link with paths
+    useEffect(() => {
+        if (!hasAutoAppliedFilters && selectedWebsite && initialPaths.length > 0) {
+            // Auto-apply filters without requiring user to click "Oppdater"
+            setActiveFilters({
+                pathOperator: pathOperator || "equals",
+                urlFilters: initialPaths,
+                dateRange: "this-month",
+                metricType: 'visitors'
+            });
+            setHasAutoAppliedFilters(true);
+        }
+    }, [selectedWebsite, initialPaths, pathOperator, hasAutoAppliedFilters]);
 
     // SYNC: Compute batchable chart IDs immediately (not in effect) so widgets know on first render
     const batchableChartIds = useMemo(() => {
@@ -235,7 +306,19 @@ const Dashboard = () => {
             description={dashboard.description}
             filters={filters}
         >
-            {!websiteId ? (
+            {isResolvingDomain ? (
+                <div className="p-8 col-span-full">
+                    <Alert variant="info">
+                        Slår opp nettside for domenet "{domainFromUrl}"...
+                    </Alert>
+                </div>
+            ) : domainResolutionError ? (
+                <div className="p-8 col-span-full">
+                    <Alert variant="error">
+                        {domainResolutionError}
+                    </Alert>
+                </div>
+            ) : !websiteId ? (
                 <div className="p-8 col-span-full">
                     <Alert variant="info">
                         Velg en nettside fra menyen for å se dashboardet.
