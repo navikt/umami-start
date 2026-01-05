@@ -17,6 +17,7 @@ const Dashboard = () => {
     const pathsFromUrl = searchParams.getAll("path");
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl : [];
     const pathOperator = searchParams.get("pathOperator");
+    const metricTypeFromUrl = searchParams.get("metricType") as 'visitors' | 'pageviews' | null;
     const dashboardId = searchParams.get("dashboard");
 
     const dashboard = getDashboard(dashboardId);
@@ -34,6 +35,7 @@ const Dashboard = () => {
     const [tempPathOperator, setTempPathOperator] = useState(pathOperator || "equals");
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialPaths);
     const [tempDateRange, setTempDateRange] = useState("this-month");
+    const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews'>(metricTypeFromUrl || 'visitors');
 
     // Custom date state
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
@@ -48,7 +50,7 @@ const Dashboard = () => {
         dateRange: "this-month",
         customStartDate: undefined as Date | undefined,
         customEndDate: undefined as Date | undefined,
-        metricType: 'visitors' as 'visitors' | 'pageviews' // Keeping for type compatibility, though unused UI
+        metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews'
     });
 
     // Active website state to ensure widget only updates on "Oppdater"
@@ -139,11 +141,11 @@ const Dashboard = () => {
                 dateRange: "this-month",
                 customStartDate: undefined,
                 customEndDate: undefined,
-                metricType: 'visitors'
+                metricType: metricTypeFromUrl || 'visitors'
             });
             setHasAutoAppliedFilters(true);
         }
-    }, [selectedWebsite, initialPaths, pathOperator, hasAutoAppliedFilters]);
+    }, [selectedWebsite, initialPaths, pathOperator, hasAutoAppliedFilters, metricTypeFromUrl]);
 
     // SYNC: Compute batchable chart IDs immediately (not in effect) so widgets know on first render
     const batchableChartIds = useMemo(() => {
@@ -235,6 +237,13 @@ const Dashboard = () => {
                 url.searchParams.delete('pathOperator');
             }
 
+            // Update metricType in URL (only if not default "visitors")
+            if (tempMetricType && tempMetricType !== "visitors") {
+                url.searchParams.set('metricType', tempMetricType);
+            } else {
+                url.searchParams.delete('metricType');
+            }
+
             window.history.pushState({}, '', url.toString());
         }
 
@@ -244,7 +253,7 @@ const Dashboard = () => {
             dateRange: tempDateRange,
             customStartDate: tempDateRange === 'custom' ? customStartDate : undefined,
             customEndDate: tempDateRange === 'custom' ? customEndDate : undefined,
-            metricType: 'visitors'
+            metricType: tempMetricType
         });
     };
 
@@ -263,6 +272,7 @@ const Dashboard = () => {
         tempDateRange !== activeFilters.dateRange ||
         !arraysEqual(tempUrlPaths, activeFilters.urlFilters) ||
         tempPathOperator !== activeFilters.pathOperator ||
+        tempMetricType !== activeFilters.metricType ||
         (selectedWebsite && selectedWebsite.id !== websiteId) ||
         (tempDateRange === 'custom' && (
             !datesEqual(customStartDate, activeFilters.customStartDate) ||
@@ -344,6 +354,18 @@ const Dashboard = () => {
                     ) : (
                         <option value="custom">Egendefinert</option>
                     )}
+                </Select>
+            </div>
+
+            <div className="w-full sm:w-auto min-w-[150px]">
+                <Select
+                    label="Visning"
+                    size="small"
+                    value={tempMetricType}
+                    onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews')}
+                >
+                    <option value="visitors">Unike besøkende</option>
+                    <option value="pageviews">Sidevisninger</option>
                 </Select>
             </div>
 

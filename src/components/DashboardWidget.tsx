@@ -167,6 +167,18 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 // Replace the block
                 processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, dateReplacement);
 
+                // 4. Handle metric type (visitors vs pageviews)
+                // If pageviews, replace COUNT(DISTINCT xxx.session_id) with COUNT(*)
+                if (filters.metricType === 'pageviews') {
+                    // Replace COUNT(DISTINCT base_query.session_id) as Unike_besokende with COUNT(*) as Sidevisninger
+                    processedSql = processedSql.replace(
+                        /COUNT\s*\(\s*DISTINCT\s+[a-zA-Z_\.]+\.session_id\s*\)\s+as\s+Unike_besokende/gi,
+                        'COUNT(*) as Sidevisninger'
+                    );
+                    // Also replace any standalone references to Unike_besokende (e.g., in ORDER BY)
+                    processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Sidevisninger');
+                }
+
 
                 const response = await fetch('/api/bigquery', {
                     method: 'POST',

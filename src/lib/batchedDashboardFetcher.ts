@@ -118,7 +118,11 @@ function buildCombinedSessionQuery(
         urlFilterClause = `AND ${tableName}.url_path = '/'`;
     }
 
-    // Single scan query that fetches distinct sessions with all needed fields
+    // For visitors: use DISTINCT to get unique sessions
+    // For pageviews: don't use DISTINCT so we can count all events
+    const useDistinct = filters.metricType !== 'pageviews';
+
+    // Single scan query
     return `
 WITH base_query AS (
   SELECT
@@ -133,7 +137,7 @@ WITH base_query AS (
   AND ${tableName}.created_at BETWEEN ${fromSql} AND ${toSql}
 )
 
-SELECT DISTINCT
+SELECT${useDistinct ? ' DISTINCT' : ''}
   session_id,
   ${fields.join(',\n  ')}
 FROM base_query
@@ -143,32 +147,59 @@ LIMIT 100000
 
 /**
  * Aggregates raw session data for a specific field (client-side)
+ * Supports both unique visitors (COUNT DISTINCT session_id) and pageviews (COUNT *)
  */
-function aggregateByField(rawData: any[], field: string): any[] {
-    const counts = new Map<string, Set<string>>();
+function aggregateByField(rawData: any[], field: string, metricType: 'visitors' | 'pageviews'): any[] {
+    if (metricType === 'pageviews') {
+        // COUNT(*) - count total rows (events) per field value
+        const counts = new Map<string, number>();
 
-    for (const row of rawData) {
-        const key = row[field] || 'Ukjent';
-        if (!counts.has(key)) {
-            counts.set(key, new Set());
+        for (const row of rawData) {
+            const key = row[field] || 'Ukjent';
+            counts.set(key, (counts.get(key) || 0) + 1);
         }
-        counts.get(key)!.add(row.session_id);
+
+        // Convert to sorted array
+        const result = Array.from(counts.entries())
+            .map(([value, count]) => ({
+                [field]: value,
+                Sidevisninger: count
+            }))
+            .sort((a, b) => b.Sidevisninger - a.Sidevisninger);
+
+        // Apply device filter if needed (device NOT LIKE '%x%')
+        if (field === 'device') {
+            return result.filter(row => !String(row.device).includes('x'));
+        }
+
+        return result.slice(0, 1000); // Match original LIMIT
+    } else {
+        // COUNT(DISTINCT session_id) - count unique sessions per field value
+        const counts = new Map<string, Set<string>>();
+
+        for (const row of rawData) {
+            const key = row[field] || 'Ukjent';
+            if (!counts.has(key)) {
+                counts.set(key, new Set());
+            }
+            counts.get(key)!.add(row.session_id);
+        }
+
+        // Convert to sorted array
+        const result = Array.from(counts.entries())
+            .map(([value, sessions]) => ({
+                [field]: value,
+                Unike_besokende: sessions.size
+            }))
+            .sort((a, b) => b.Unike_besokende - a.Unike_besokende);
+
+        // Apply device filter if needed (device NOT LIKE '%x%')
+        if (field === 'device') {
+            return result.filter(row => !String(row.device).includes('x'));
+        }
+
+        return result.slice(0, 1000); // Match original LIMIT
     }
-
-    // Convert to sorted array
-    const result = Array.from(counts.entries())
-        .map(([value, sessions]) => ({
-            [field]: value,
-            Unike_besokende: sessions.size
-        }))
-        .sort((a, b) => b.Unike_besokende - a.Unike_besokende);
-
-    // Apply device filter if needed (device NOT LIKE '%x%')
-    if (field === 'device') {
-        return result.filter(row => !String(row.device).includes('x'));
-    }
-
-    return result.slice(0, 1000); // Match original LIMIT
 }
 
 /**
@@ -235,7 +266,7 @@ export async function fetchDashboardDataBatched(
             for (const chart of sessionCharts) {
                 const field = getSessionField(chart);
                 if (field) {
-                    const aggregated = aggregateByField(rawData, field);
+                    const aggregated = aggregateByField(rawData, field, filters.metricType);
                     chartResults.set(chart.id!, aggregated);
                     chartBytes.set(chart.id!, bytesPerChart);
                 }
