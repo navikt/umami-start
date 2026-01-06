@@ -19,7 +19,7 @@ function Personvern() {
                             Personvern og sikkerhet
                         </Heading>
                         <p className="mb-4 leading-normal">
-                            Innblikk er en nettside NAV Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan NAV behandler personopplysninger, kan du lese mer i <Link href="https://www.nav.no/no/nav-og-samfunn/om-nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">NAVs generelle personvernerklæring.</Link>
+                            Start Umami er en nettside NAV Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan NAV behandler personopplysninger, kan du lese mer i <Link href="https://www.nav.no/no/nav-og-samfunn/om-nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">NAVs generelle personvernerklæring.</Link>
                         </p>
                     </section>
 
@@ -31,7 +31,7 @@ function Personvern() {
                             Start Umami sender din Nav-ident sammen med alle spørringer som kjøres. Dette gjør at vi kan logge hvem som har kjørt hvilke spørringer, og er en del av vår sikkerhetsrutine for å beskytte data og oppfylle etterlevelseskrav.
                         </p>
                         <p className="leading-normal">
-                            Loggene brukes kun til statistikk og sikkerhetsformål.
+                            Loggene brukes kun til statistikk, avik og sikkerhetsformål. Eksmepelvi i forbindelse med avik, for å se hvem som har gjort hvilke spørringer.
                         </p>
                     </section>
 
@@ -69,7 +69,7 @@ function Personvern() {
                                 Umami
                             </Heading>
                             <p className="mb-4 leading-normal">
-                                Umami brukes til statistikk og analyse av hvordan nav.no brukes. Unami bruker ikke informasjonskapsler, men henter inn opplysninger om nettleseren din for å lage en unik ID. Denne ID-en brukes for å skille deg fra andre brukere. For å hindre identifisering, bruker vi en egenutviklet proxy som vasker bort deler av IP-adressen din før dataene sendes til verktøyet.
+                                Umami brukes til statistikk og analyse av hvordan startumami.ansatt.nav.no brukes. Unami bruker ikke informasjonskapsler, men henter inn opplysninger om nettleseren din for å lage en unik ID. Denne ID-en brukes for å skille deg fra andre brukere. For å hindre identifisering, bruker vi en egenutviklet proxy som vasker bort deler av IP-adressen din før dataene sendes til verktøyet.
                             </p>
                         </section>
 
