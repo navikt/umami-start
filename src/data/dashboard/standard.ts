@@ -119,9 +119,10 @@ LIMIT 1000
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
   WHERE \`team-researchops-prod-01d6.umami.public_website_event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami.public_website_event\`.url_path = '/'
-  AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN TIMESTAMP('2025-11-16') AND TIMESTAMP('2025-12-16T23:59:59')
-  AND \`team-researchops-prod-01d6.umami.public_website_event\`.event_type IN (1, 2)
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.url_path = [[ {{url_sti}} --]] '/'
+  [[AND {{created_at}} ]]
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.event_type = 2
+  AND \`team-researchops-prod-01d6.umami.public_website_event\`.event_name IS NOT NULL
 )
 
 SELECT
