@@ -17,7 +17,7 @@ const Dashboard = () => {
     const pathsFromUrl = searchParams.getAll("path");
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl : [];
     const pathOperator = searchParams.get("pathOperator");
-    const metricTypeFromUrl = searchParams.get("metricType") as 'visitors' | 'pageviews' | null;
+    const metricTypeFromUrl = searchParams.get("metricType") as 'visitors' | 'pageviews' | 'proportion' | null;
     const dashboardId = searchParams.get("dashboard");
 
     const dashboard = getDashboard(dashboardId);
@@ -35,7 +35,7 @@ const Dashboard = () => {
     const [tempPathOperator, setTempPathOperator] = useState(pathOperator || "equals");
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialPaths);
     const [tempDateRange, setTempDateRange] = useState("this-month");
-    const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews'>(metricTypeFromUrl || 'visitors');
+    const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews' | 'proportion'>(metricTypeFromUrl || 'visitors');
 
     // Custom date state
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
@@ -50,7 +50,7 @@ const Dashboard = () => {
         dateRange: "this-month",
         customStartDate: undefined as Date | undefined,
         customEndDate: undefined as Date | undefined,
-        metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews'
+        metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion'
     });
 
     // Active website state to ensure widget only updates on "Oppdater"
@@ -362,10 +362,11 @@ const Dashboard = () => {
                     label="Visning"
                     size="small"
                     value={tempMetricType}
-                    onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews')}
+                    onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews' | 'proportion')}
                 >
                     <option value="visitors">Unike besøkende</option>
                     <option value="pageviews">Sidevisninger</option>
+                    <option value="proportion">Andel (%)</option>
                 </Select>
             </div>
 

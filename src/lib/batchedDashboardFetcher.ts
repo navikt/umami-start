@@ -16,7 +16,7 @@ interface Filters {
     urlFilters: string[];
     dateRange: string;
     pathOperator: string;
-    metricType: 'visitors' | 'pageviews';
+    metricType: 'visitors' | 'pageviews' | 'proportion';
     customStartDate?: Date;
     customEndDate?: Date;
 }
@@ -120,6 +120,7 @@ function buildCombinedSessionQuery(
 
     // For visitors: use DISTINCT to get unique sessions
     // For pageviews: don't use DISTINCT so we can count all events
+    // For proportion: use DISTINCT since we're calculating percentage of unique visitors
     const useDistinct = filters.metricType !== 'pageviews';
 
     // Single scan query
@@ -144,12 +145,12 @@ FROM base_query
 LIMIT 100000
   `.trim();
 }
-
 /**
  * Aggregates raw session data for a specific field (client-side)
- * Supports both unique visitors (COUNT DISTINCT session_id) and pageviews (COUNT *)
+ * Supports unique visitors (COUNT DISTINCT session_id), pageviews (COUNT *), and proportion (%)
+ * For proportion mode, totalSiteVisitors should be provided to calculate percentage against all site visitors
  */
-function aggregateByField(rawData: any[], field: string, metricType: 'visitors' | 'pageviews'): any[] {
+function aggregateByField(rawData: any[], field: string, metricType: 'visitors' | 'pageviews' | 'proportion', totalSiteVisitors?: number): any[] {
     if (metricType === 'pageviews') {
         // COUNT(*) - count total rows (events) per field value
         const counts = new Map<string, number>();
@@ -170,6 +171,44 @@ function aggregateByField(rawData: any[], field: string, metricType: 'visitors' 
         // Apply device filter if needed (device NOT LIKE '%x%')
         if (field === 'device') {
             return result.filter(row => !String(row.device).includes('x'));
+        }
+
+        return result.slice(0, 1000); // Match original LIMIT
+    } else if (metricType === 'proportion') {
+        // Proportion - percentage of unique visitors per field value
+        const counts = new Map<string, Set<string>>();
+        const allSessions = new Set<string>();
+
+        for (const row of rawData) {
+            const key = row[field] || 'Ukjent';
+            if (!counts.has(key)) {
+                counts.set(key, new Set());
+            }
+            counts.get(key)!.add(row.session_id);
+            allSessions.add(row.session_id);
+        }
+
+        // Use totalSiteVisitors if provided (for correct proportion against all site visitors)
+        // Otherwise fall back to counted sessions from filtered data
+        const totalSessions = totalSiteVisitors ?? allSessions.size;
+
+        // Build array with raw values for sorting, then map to final format
+        const sortedEntries = Array.from(counts.entries())
+            .map(([value, sessions]) => ({
+                value,
+                rawPercent: totalSessions > 0 ? (sessions.size / totalSessions) * 100 : 0
+            }))
+            .sort((a, b) => b.rawPercent - a.rawPercent);
+
+        // Convert to final format with only Andel column
+        const result = sortedEntries.map(entry => ({
+            [field]: entry.value,
+            Andel: entry.rawPercent.toFixed(1) + '%'
+        }));
+
+        // Apply device filter if needed (device NOT LIKE '%x%')
+        if (field === 'device') {
+            return result.filter(row => !String(row[field]).includes('x'));
         }
 
         return result.slice(0, 1000); // Match original LIMIT
@@ -262,11 +301,59 @@ export async function fetchDashboardDataBatched(
             // Distribute bytes evenly among batched charts
             const bytesPerChart = batchBytes / sessionCharts.length;
 
+            // For proportion mode, fetch total site visitors (without URL filter)
+            let totalSiteVisitors: number | undefined;
+            if (filters.metricType === 'proportion') {
+                const now = new Date();
+                let startDate: Date;
+                let endDate = now;
+
+                if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
+                    startDate = filters.customStartDate;
+                    endDate = filters.customEndDate;
+                } else if (filters.dateRange === 'this-month') {
+                    startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+                } else if (filters.dateRange === 'last-month') {
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+                } else {
+                    startDate = subDays(now, 30);
+                }
+
+                const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
+                const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
+
+                const totalVisitorsSql = `
+                    SELECT COUNT(DISTINCT session_id) as total
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    WHERE website_id = '${websiteId}'
+                    AND event_type = 1
+                    AND created_at BETWEEN ${fromSql} AND ${toSql}
+                `;
+
+                try {
+                    const totalResponse = await fetch('/api/bigquery', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: totalVisitorsSql }),
+                    });
+                    if (totalResponse.ok) {
+                        const totalResult = await totalResponse.json();
+                        if (totalResult.data?.[0]?.total) {
+                            totalSiteVisitors = Number(totalResult.data[0].total);
+                            console.log(`[QueryBatcher] Total site visitors for proportion: ${totalSiteVisitors}`);
+                        }
+                    }
+                } catch (e) {
+                    console.error('[QueryBatcher] Failed to fetch total site visitors:', e);
+                }
+            }
+
             // Aggregate raw data for each chart's field (client-side)
             for (const chart of sessionCharts) {
                 const field = getSessionField(chart);
                 if (field) {
-                    const aggregated = aggregateByField(rawData, field, filters.metricType);
+                    const aggregated = aggregateByField(rawData, field, filters.metricType, totalSiteVisitors);
                     chartResults.set(chart.id!, aggregated);
                     chartBytes.set(chart.id!, bytesPerChart);
                 }
