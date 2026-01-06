@@ -18,7 +18,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     children
 }) => {
     return (
-        <div className="py-8 max-w-[76.5rem] mx-auto px-4 w-full">
+        <div className="py-8 max-w-[76.5rem] mx-auto w-full">
             <div className="mb-8">
                 <div className="flex flex-col gap-1">
                     <Heading level="1" size="xlarge">
