@@ -17,8 +17,11 @@ const Dashboard = () => {
     const pathsFromUrl = searchParams.getAll("path");
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl : [];
     const pathOperator = searchParams.get("pathOperator");
-    const metricTypeFromUrl = searchParams.get("metricType") as 'visitors' | 'pageviews' | 'proportion' | null;
-    const dashboardId = searchParams.get("dashboard");
+    // Support both old 'metricType' and new 'metrikk' params
+    const metricTypeFromUrl = (searchParams.get("metrikk") || searchParams.get("metricType")) as 'visitors' | 'pageviews' | 'proportion' | null;
+    // Support 'periode' param for date range
+    const dateRangeFromUrl = searchParams.get("periode");
+    const dashboardId = searchParams.get("visning");
 
     const dashboard = getDashboard(dashboardId);
 
@@ -31,10 +34,52 @@ const Dashboard = () => {
     // Website Picker State
     const [selectedWebsite, setSelectedWebsite] = useState<any>(null);
 
+    // Initialize custom filter values from URL params (translating slug to value)
+    const getInitialCustomFilterValues = (): Record<string, string> => {
+        const values: Record<string, string> = {};
+        dashboard.customFilters?.forEach(filter => {
+            if (filter.urlParam) {
+                const urlSlug = searchParams.get(filter.urlParam);
+                if (urlSlug) {
+                    // Find option by slug or by value (for backwards compatibility)
+                    const option = filter.options.find(opt =>
+                        opt.slug === urlSlug || opt.value === urlSlug
+                    );
+                    // Store the value (not slug) for filtering
+                    values[filter.id] = option?.value || urlSlug;
+                }
+            }
+        });
+        return values;
+    };
+
+    // Custom filter state: keyed by filter id
+    const [customFilterValues, setCustomFilterValues] = useState<Record<string, string>>(getInitialCustomFilterValues);
+
+    // Determine default path operator from dashboard config or URL
+    const defaultPathOperator = dashboard.defaultFilterValues?.pathOperator || pathOperator || "equals";
+
+    // Get initial URL paths: first check custom filter URL params, then fall back to path params
+    const getInitialUrlPaths = (): string[] => {
+        // Check if any custom filter has a URL param that maps to urlPath
+        const initialCustomValues = getInitialCustomFilterValues();
+        for (const filter of dashboard.customFilters || []) {
+            if (filter.appliesTo === 'urlPath' && filter.urlParam) {
+                const value = initialCustomValues[filter.id];
+                if (value) {
+                    return [value];
+                }
+            }
+        }
+        return initialPaths;
+    };
+
+    const initialUrlPathsFromCustomFilter = getInitialUrlPaths();
+
     // UI/Temp State
-    const [tempPathOperator, setTempPathOperator] = useState(pathOperator || "equals");
-    const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialPaths);
-    const [tempDateRange, setTempDateRange] = useState("this-month");
+    const [tempPathOperator, setTempPathOperator] = useState(defaultPathOperator);
+    const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialUrlPathsFromCustomFilter);
+    const [tempDateRange, setTempDateRange] = useState(dateRangeFromUrl || "this-month");
     const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews' | 'proportion'>(metricTypeFromUrl || 'visitors');
 
     // Custom date state
@@ -45,9 +90,9 @@ const Dashboard = () => {
 
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
-        pathOperator: pathOperator || "equals",
-        urlFilters: initialPaths,
-        dateRange: "this-month",
+        pathOperator: defaultPathOperator,
+        urlFilters: initialUrlPathsFromCustomFilter,
+        dateRange: dateRangeFromUrl || "this-month",
         customStartDate: undefined as Date | undefined,
         customEndDate: undefined as Date | undefined,
         metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion'
@@ -60,6 +105,9 @@ const Dashboard = () => {
     const [batchedData, setBatchedData] = useState<Map<string, any[]>>(new Map());
     // Track if batching is complete
     const [batchingComplete, setBatchingComplete] = useState(false);
+
+    // Check for hidden filters and use effective websiteId
+    const effectiveWebsiteId = websiteId || dashboard.defaultFilterValues?.websiteId;
 
     // Helper function matching metadashboard.tsx logic
     const normalizeDomain = (domain: string) => {
@@ -166,12 +214,12 @@ const Dashboard = () => {
     useEffect(() => {
         setBatchingComplete(false);
         setBatchedData(new Map());
-    }, [websiteId, activeFilters]);
+    }, [effectiveWebsiteId, activeFilters]);
 
     // Fetch batched session data when filters/websiteId change
     useEffect(() => {
         const fetchBatchedData = async () => {
-            if (!websiteId) {
+            if (!effectiveWebsiteId) {
                 setBatchingComplete(true);
                 return;
             }
@@ -189,7 +237,7 @@ const Dashboard = () => {
             try {
                 const result = await fetchDashboardDataBatched(
                     dashboard.charts,
-                    websiteId,
+                    effectiveWebsiteId,
                     activeFilters
                 );
 
@@ -215,13 +263,14 @@ const Dashboard = () => {
         };
 
         fetchBatchedData();
-    }, [websiteId, activeFilters, dashboard.charts]);
+    }, [effectiveWebsiteId, activeFilters, dashboard.charts]);
 
     const handleUpdate = () => {
-        // Update URL with selected website ID and filters
-        if (selectedWebsite) {
+        const url = new URL(window.location.href);
+
+        // Update URL with selected website ID and filters (only if website filter is visible)
+        if (!dashboard.hiddenFilters?.website && selectedWebsite) {
             setActiveWebsite(selectedWebsite); // Explicitly update active website
-            const url = new URL(window.location.href);
             url.searchParams.set('websiteId', selectedWebsite.id);
 
             // Update path filter in URL (support multiple paths)
@@ -236,16 +285,23 @@ const Dashboard = () => {
             } else {
                 url.searchParams.delete('pathOperator');
             }
-
-            // Update metricType in URL (only if not default "visitors")
-            if (tempMetricType && tempMetricType !== "visitors") {
-                url.searchParams.set('metricType', tempMetricType);
-            } else {
-                url.searchParams.delete('metricType');
-            }
-
-            window.history.pushState({}, '', url.toString());
         }
+
+        // Always update dateRange in URL (if not default)
+        if (tempDateRange !== 'this-month') {
+            url.searchParams.set('periode', tempDateRange);
+        } else {
+            url.searchParams.delete('periode');
+        }
+
+        // Always update metricType in URL (if not default)
+        if (tempMetricType && tempMetricType !== "visitors") {
+            url.searchParams.set('metrikk', tempMetricType);
+        } else {
+            url.searchParams.delete('metrikk');
+        }
+
+        window.history.pushState({}, '', url.toString());
 
         setActiveFilters({
             pathOperator: tempPathOperator,
@@ -255,6 +311,40 @@ const Dashboard = () => {
             customEndDate: tempDateRange === 'custom' ? customEndDate : undefined,
             metricType: tempMetricType
         });
+    };
+
+    // Handle custom filter selection (e.g., Nav fylkeskontor)
+    const handleCustomFilterChange = (filterId: string, value: string) => {
+        setCustomFilterValues(prev => ({ ...prev, [filterId]: value }));
+
+        // Find the filter definition to determine how to apply it
+        const filterDef = dashboard.customFilters?.find(f => f.id === filterId);
+        if (filterDef) {
+            // Update URL with slug (for clean URLs) or value as fallback
+            if (filterDef.urlParam) {
+                const url = new URL(window.location.href);
+                if (value) {
+                    // Find the option to get its slug
+                    const option = filterDef.options.find(opt => opt.value === value);
+                    const urlValue = option?.slug || value;
+                    url.searchParams.set(filterDef.urlParam, urlValue);
+                } else {
+                    url.searchParams.delete(filterDef.urlParam);
+                }
+                window.history.pushState({}, '', url.toString());
+            }
+
+            // Apply to URL path filter if configured
+            if (filterDef.appliesTo === 'urlPath') {
+                // If value is empty, clear the path; otherwise set it
+                if (value) {
+                    setTempUrlPaths([value]);
+                    setTempPathOperator(filterDef.pathOperator);
+                } else {
+                    setTempUrlPaths([]);
+                }
+            }
+        }
     };
 
     // Helper to compare arrays
@@ -273,102 +363,154 @@ const Dashboard = () => {
         !arraysEqual(tempUrlPaths, activeFilters.urlFilters) ||
         tempPathOperator !== activeFilters.pathOperator ||
         tempMetricType !== activeFilters.metricType ||
-        (selectedWebsite && selectedWebsite.id !== websiteId) ||
+        (!dashboard.hiddenFilters?.website && selectedWebsite && selectedWebsite.id !== websiteId) ||
         (tempDateRange === 'custom' && (
             !datesEqual(customStartDate, activeFilters.customStartDate) ||
             !datesEqual(customEndDate, activeFilters.customEndDate)
         ));
 
+    // Check if all required custom filters are satisfied
+    const requiredFiltersAreSatisfied = useMemo(() => {
+        if (!dashboard.customFilters) return true;
+
+        const requiredFilters = dashboard.customFilters.filter(f => f.required);
+        if (requiredFilters.length === 0) return true;
+
+        // Check if all required filters have values in activeFilters
+        // For urlPath filters, check if there's a path selected
+        return requiredFilters.every(filter => {
+            if (filter.appliesTo === 'urlPath') {
+                return activeFilters.urlFilters.length > 0;
+            }
+            return !!customFilterValues[filter.id];
+        });
+    }, [dashboard.customFilters, activeFilters.urlFilters, customFilterValues]);
+
     const filters = (
         <>
-            <div className="w-full sm:w-[200px]">
-                <DashboardWebsitePicker
-                    selectedWebsite={selectedWebsite}
-                    onWebsiteChange={setSelectedWebsite}
-                    variant="minimal"
-                    size="small"
-                    disableUrlUpdate
-                />
-            </div>
-
-            <div className="w-full sm:w-[300px]">
-                <div className="flex items-center gap-2 mb-1">
-                    <Label size="small" htmlFor="url-filter">URL-sti</Label>
-                    <select
-                        className="text-sm bg-white border border-gray-300 rounded text-[#0067c5] font-medium cursor-pointer focus:outline-none py-1 px-2"
-                        value={tempPathOperator}
-                        onChange={(e) => setTempPathOperator(e.target.value)}
-                    >
-                        <option value="equals">er lik</option>
-                        <option value="starts-with">starter med</option>
-                    </select>
+            {/* Website picker - only show if not hidden */}
+            {!dashboard.hiddenFilters?.website && (
+                <div className="w-full sm:w-[200px]">
+                    <DashboardWebsitePicker
+                        selectedWebsite={selectedWebsite}
+                        onWebsiteChange={setSelectedWebsite}
+                        variant="minimal"
+                        size="small"
+                        disableUrlUpdate
+                    />
                 </div>
-                <UNSAFE_Combobox
-                    id="url-filter"
-                    label="URL-stier"
-                    hideLabel
-                    size="small"
-                    isMultiSelect
-                    allowNewValues
-                    options={tempUrlPaths.map(p => ({ label: p, value: p }))}
-                    selectedOptions={tempUrlPaths}
-                    onToggleSelected={(option, isSelected) => {
-                        if (isSelected) {
-                            setTempUrlPaths(prev => [...prev, option]);
-                        } else {
-                            setTempUrlPaths(prev => prev.filter(p => p !== option));
-                        }
-                    }}
-                    placeholder="Skriv og trykk enter"
-                />
-            </div>
+            )}
 
-            <div className="w-full sm:w-auto min-w-[200px]">
-                <Select
-                    label="Datoperiode"
-                    size="small"
-                    value={tempDateRange}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === 'custom') {
-                            setIsDateModalOpen(true);
-                        } else if (value === 'custom-edit') {
-                            // Clear dates so user can start fresh
-                            setCustomStartDate(undefined);
-                            setCustomEndDate(undefined);
-                            setIsDateModalOpen(true);
-                        } else {
-                            setTempDateRange(value);
-                        }
-                    }}
-                >
-                    <option value="this-month">Denne måneden</option>
-                    <option value="last-month">Forrige måned</option>
-                    {tempDateRange === 'custom' && customStartDate && customEndDate ? (
-                        <>
-                            <option value="custom">
-                                {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
-                            </option>
-                            <option value="custom-edit">Endre datoer</option>
-                        </>
-                    ) : (
-                        <option value="custom">Egendefinert</option>
-                    )}
-                </Select>
-            </div>
+            {/* URL-sti filter - only show if not hidden */}
+            {!dashboard.hiddenFilters?.urlPath && (
+                <div className="w-full sm:w-[300px]">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Label size="small" htmlFor="url-filter">URL-sti</Label>
+                        <select
+                            className="text-sm bg-white border border-gray-300 rounded text-[#0067c5] font-medium cursor-pointer focus:outline-none py-1 px-2"
+                            value={tempPathOperator}
+                            onChange={(e) => setTempPathOperator(e.target.value)}
+                        >
+                            <option value="equals">er lik</option>
+                            <option value="starts-with">starter med</option>
+                        </select>
+                    </div>
+                    <UNSAFE_Combobox
+                        id="url-filter"
+                        label="URL-stier"
+                        hideLabel
+                        size="small"
+                        isMultiSelect
+                        allowNewValues
+                        options={tempUrlPaths.map(p => ({ label: p, value: p }))}
+                        selectedOptions={tempUrlPaths}
+                        onToggleSelected={(option, isSelected) => {
+                            if (isSelected) {
+                                setTempUrlPaths(prev => [...prev, option]);
+                            } else {
+                                setTempUrlPaths(prev => prev.filter(p => p !== option));
+                            }
+                        }}
+                        placeholder="Skriv og trykk enter"
+                    />
+                </div>
+            )}
 
-            <div className="w-full sm:w-auto min-w-[150px]">
-                <Select
-                    label="Visning"
-                    size="small"
-                    value={tempMetricType}
-                    onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews' | 'proportion')}
-                >
-                    <option value="visitors">Unike besøkende</option>
-                    <option value="pageviews">Sidevisninger</option>
-                    <option value="proportion">Andel (%)</option>
-                </Select>
-            </div>
+            {/* Custom filters (e.g., Nav kontor) */}
+            {dashboard.customFilters?.map(filter => (
+                <div key={filter.id} className="w-full sm:w-auto min-w-[200px]">
+                    <Select
+                        label={filter.label}
+                        size="small"
+                        value={customFilterValues[filter.id] || ''}
+                        onChange={(e) => handleCustomFilterChange(filter.id, e.target.value)}
+                    >
+                        <option value="">Velg {filter.label.toLowerCase()}</option>
+                        {filter.options.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </Select>
+                </div>
+            ))}
+
+            {/* Date range filter - only show if not hidden */}
+            {!dashboard.hiddenFilters?.dateRange && (
+                <div className="w-full sm:w-auto min-w-[200px]">
+                    <Select
+                        label="Datoperiode"
+                        size="small"
+                        value={tempDateRange}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === 'custom') {
+                                setIsDateModalOpen(true);
+                            } else if (value === 'custom-edit') {
+                                // Clear dates so user can start fresh
+                                setCustomStartDate(undefined);
+                                setCustomEndDate(undefined);
+                                setIsDateModalOpen(true);
+                            } else {
+                                setTempDateRange(value);
+                            }
+                        }}
+                    >
+                        <option value="this-month">Denne måneden</option>
+                        <option value="last-month">Forrige måned</option>
+                        {tempDateRange === 'custom' && customStartDate && customEndDate ? (
+                            <>
+                                <option value="custom">
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                </option>
+                                <option value="custom-edit">Endre datoer</option>
+                            </>
+                        ) : (
+                            <option value="custom">Egendefinert</option>
+                        )}
+                    </Select>
+                </div>
+            )}
+
+            {/* Metric type filter - only show if not hidden */}
+            {!dashboard.hiddenFilters?.metricType && (
+                <div className="w-full sm:w-auto min-w-[150px]">
+                    <Select
+                        label="Visning"
+                        size="small"
+                        value={tempMetricType}
+                        onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews' | 'proportion')}
+                    >
+                        {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('visitors')) && (
+                            <option value="visitors">Unike besøkende</option>
+                        )}
+                        {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('pageviews')) && (
+                            <option value="pageviews">Sidevisninger</option>
+                        )}
+                        {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('proportion')) && (
+                            <option value="proportion">Andel (%)</option>
+                        )}
+                    </Select>
+                </div>
+            )}
 
             <div className="flex items-end pb-[2px]">
                 <Button onClick={handleUpdate} size="small" disabled={!hasChanges}>
@@ -457,10 +599,16 @@ const Dashboard = () => {
                         {domainResolutionError}
                     </Alert>
                 </div>
-            ) : !websiteId ? (
+            ) : !effectiveWebsiteId ? (
                 <div className="p-8 col-span-full">
                     <Alert variant="info">
                         Velg en nettside fra menyen for å se dashboardet.
+                    </Alert>
+                </div>
+            ) : !requiredFiltersAreSatisfied ? (
+                <div className="w-fit">
+                    <Alert variant="info">
+                        {dashboard.customFilterRequiredMessage || "Velg nødvendige filtre for å vise data."}
                     </Alert>
                 </div>
             ) : (
@@ -469,7 +617,7 @@ const Dashboard = () => {
                         <DashboardWidget
                             key={chart.id}
                             chart={chart}
-                            websiteId={websiteId}
+                            websiteId={effectiveWebsiteId}
                             filters={activeFilters}
                             onDataLoaded={handleDataLoaded}
                             selectedWebsite={activeWebsite}

@@ -1,0 +1,62 @@
+[
+    {
+        "region": "Agder",
+        "link": "https://www.nav.no/no/lokalt/agder",
+        "path": "/no/lokalt/agder"
+    },
+    {
+        "region": "Innlandet",
+        "link": "https://www.nav.no/no/lokalt/innlandet",
+        "path": "/no/lokalt/innlandet"
+    },
+    {
+        "region": "Møre og Romsdal",
+        "link": "https://www.nav.no/no/lokalt/more-og-romsdal",
+        "path": "/no/lokalt/more-og-romsdal"
+    },
+    {
+        "region": "Nordland",
+        "link": "https://www.nav.no/no/lokalt/nordland",
+        "path": "/no/lokalt/nordland"
+    },
+    {
+        "region": "Oslo",
+        "link": "https://www.nav.no/no/lokalt/oslo",
+        "path": "/no/lokalt/oslo"
+    },
+    {
+        "region": "Rogaland",
+        "link": "https://www.nav.no/no/lokalt/rogaland",
+        "path": "/no/lokalt/rogaland"
+    },
+    {
+        "region": "Troms og Finnmark",
+        "link": "https://www.nav.no/no/lokalt/troms-og-finnmark",
+        "path": "/no/lokalt/troms-og-finnmark"
+    },
+    {
+        "region": "Trøndelag",
+        "link": "https://www.nav.no/no/lokalt/trondelag",
+        "path": "/no/lokalt/trondelag"
+    },
+    {
+        "region": "Vestfold og Telemark",
+        "link": "https://www.nav.no/no/lokalt/vestfold-og-telemark",
+        "path": "/no/lokalt/vestfold-og-telemark"
+    },
+    {
+        "region": "Vestland",
+        "link": "https://www.nav.no/no/lokalt/vestland",
+        "path": "/no/lokalt/vestland"
+    },
+    {
+        "region": "Vest-Viken",
+        "link": "https://www.nav.no/no/lokalt/vest-viken",
+        "path": "/no/lokalt/vest-viken"
+    },
+    {
+        "region": "Øst-Viken",
+        "link": "https://www.nav.no/no/lokalt/ost-viken",
+        "path": "/no/lokalt/ost-viken"
+    }
+]
