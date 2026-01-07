@@ -585,6 +585,21 @@ const Dashboard = () => {
 
     const totalGb = Object.values(stats).reduce((acc, curr) => acc + curr.gb, 0);
 
+    // Get the siteimprove group ID based on the currently active URL path filter
+    const getSiteimproveGroupId = useMemo(() => {
+        // Find any custom filter that has siteimprove_groupid in options
+        for (const filter of dashboard.customFilters || []) {
+            if (filter.appliesTo === 'urlPath' && activeFilters.urlFilters.length > 0) {
+                const selectedPath = activeFilters.urlFilters[0];
+                const option = filter.options.find(opt => opt.value === selectedPath);
+                if (option?.siteimprove_groupid) {
+                    return option.siteimprove_groupid;
+                }
+            }
+        }
+        return undefined;
+    }, [dashboard.customFilters, activeFilters.urlFilters]);
+
     return (
         <DashboardLayout
             title={dashboard.title}
@@ -623,6 +638,7 @@ const Dashboard = () => {
                             selectedWebsite={activeWebsite}
                             prefetchedData={chart.id ? batchedData.get(chart.id) : undefined}
                             shouldWaitForBatch={chart.id ? batchableChartIds.has(chart.id) && !batchingComplete : false}
+                            siteimproveGroupId={getSiteimproveGroupId}
                         />
                     ))}
 

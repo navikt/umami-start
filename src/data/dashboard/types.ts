@@ -8,6 +8,8 @@ export interface SavedChart {
     config?: any; // ChartConfig | null
     filters?: any[]; // Filter[]
     isStandardWidget?: boolean;
+    // Siteimprove specific config
+    siteimprove_id?: string; // Site ID for Siteimprove (overrides team lookup)
 }
 
 // Configuration for which standard filters should be hidden
@@ -23,8 +25,8 @@ export interface CustomFilterDefinition {
     id: string;
     label: string;
     type: 'select';
-    // Options with optional slug for clean URLs
-    options: { label: string; value: string; slug?: string }[];
+    // Options with optional slug for clean URLs and siteimprove_groupid
+    options: { label: string; value: string; slug?: string; siteimprove_groupid?: string }[];
     // When selected, how should we apply the filter?
     // For now, supporting path-based filtering
     appliesTo: 'urlPath';

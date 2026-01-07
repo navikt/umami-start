@@ -7,6 +7,8 @@ import { getBaseUrl } from '../lib/environment';
 import { translateValue } from '../lib/translations';
 // @ts-ignore
 import SiteScores from './SiteScores';
+// @ts-ignore
+import SiteGroupScores from './SiteGroupScores';
 import teamsData from '../data/teamsData.json';
 
 interface DashboardWidgetProps {
@@ -26,9 +28,11 @@ interface DashboardWidgetProps {
     prefetchedData?: any[];
     // If true, this chart is being batch-loaded and should wait instead of fetching individually
     shouldWaitForBatch?: boolean;
+    // Siteimprove group ID for group-level scoring (from custom filter selection)
+    siteimproveGroupId?: string;
 }
 
-export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch }: DashboardWidgetProps) => {
+export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId }: DashboardWidgetProps) => {
     // Initialize loading=true if we're a batchable widget (so we wait for batch data)
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
@@ -278,6 +282,24 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     const colClass = `col-span-full ${SPAN_CLASSES[span] || 'md:col-span-10'}`;
 
     if (chart.type === 'siteimprove') {
+        const baseUrl = getBaseUrl({
+            localUrl: "https://reops-proxy.intern.nav.no",
+            prodUrl: "https://reops-proxy.ansatt.nav.no",
+        });
+
+        // If chart has siteimprove_id, use group-level scoring
+        if (chart.siteimprove_id) {
+            return (
+                <SiteGroupScores
+                    className={colClass}
+                    siteId={chart.siteimprove_id}
+                    groupId={siteimproveGroupId}
+                    baseUrl={baseUrl}
+                />
+            );
+        }
+
+        // Otherwise, use page-level scoring (original behavior)
         if (!selectedWebsite) return null;
 
         let team = null;
@@ -319,11 +341,6 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         // Ensure path starts with slash if not empty
         const safePath = path.startsWith('/') ? path : `/${path}`;
         const fullUrl = `${team.teamDomain}${safePath}`;
-
-        const baseUrl = getBaseUrl({
-            localUrl: "https://reops-proxy.intern.nav.no",
-            prodUrl: "https://reops-proxy.ansatt.nav.no",
-        });
 
         return (
             <SiteScores

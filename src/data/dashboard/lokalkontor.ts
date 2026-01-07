@@ -36,7 +36,9 @@ export const lokalkontorDashboard: DashboardConfig = {
         label: kontor.region,
         value: kontor.path,
         // Extract slug from path (e.g., "/no/lokalt/oslo" -> "oslo")
-        slug: kontor.path.split('/').pop()
+        slug: kontor.path.split('/').pop(),
+        // Siteimprove group ID for group-level scoring
+        siteimprove_groupid: kontor.siteimprove_groupid
       }))
     }
   ],
@@ -45,7 +47,8 @@ export const lokalkontorDashboard: DashboardConfig = {
     {
       title: "Siteimprove",
       type: "siteimprove",
-      width: '100'
+      width: '100',
+      siteimprove_id: '21766831756'
     },
     {
       title: "Besøk over tid",
