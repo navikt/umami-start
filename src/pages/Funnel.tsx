@@ -59,6 +59,8 @@ const Funnel = () => {
     const [funnelSql, setFunnelSql] = useState<string | null>(null);
     const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [metabaseCopySuccess, setMetabaseCopySuccess] = useState<boolean>(false);
+    const [timingMetabaseCopySuccess, setTimingMetabaseCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [modalSql, setModalSql] = useState<string | null>(null);
 
@@ -111,6 +113,256 @@ const Funnel = () => {
         }
     };
 
+    // Generate Metabase-compatible SQL for funnel visualization
+    // Uses Metabase field filters for dynamic date selection
+    const generateMetabaseFunnelSql = (): string => {
+        if (!funnelData || funnelData.length === 0 || !selectedWebsite) return '';
+
+        // Get the normalized steps from the current configuration
+        const normalizedSteps = steps.map(s => {
+            if (s.type === 'url') {
+                return { ...s, value: normalizeUrlToPath(s.value) };
+            }
+            return s;
+        }).filter(s => s.value.trim() !== '');
+
+        if (normalizedSteps.length < 2) return '';
+
+        // Determine which event types we need
+        const neededEventTypes = new Set<number>();
+        normalizedSteps.forEach(step => {
+            if (step.type === 'url') neededEventTypes.add(1);
+            if (step.type === 'event') neededEventTypes.add(2);
+        });
+        const eventTypesList = Array.from(neededEventTypes).join(', ');
+
+        // Build the base CTE - using field filter after event_type clause
+        let sql = `-- Traktanalyse for Metabase
+-- Bruk denne SQL-en i Metabase for å lage en traktgraf
+-- Velg "Funnel" som visualiseringstype etter at du har kjørt spørringen
+--
+-- OPPSETT I METABASE:
+-- 1. Klikk på "created_at" variabelen i høyre panel
+-- 2. Sett variabeltype til "Field Filter"
+-- 3. Koble til: umami_views.event → created_at
+-- 4. Velg ønsket periode og kjør spørringen
+
+WITH events_raw AS (
+    SELECT
+        session_id,
+        event_type,
+        CASE
+            WHEN event_type = 1 THEN 
+                COALESCE(NULLIF(RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/'), ''), '/')
+            WHEN event_type = 2 THEN event_name
+            ELSE NULL
+        END as step_value,
+        created_at
+    FROM \`team-researchops-prod-01d6.umami_views.event\`
+    WHERE website_id = '${selectedWebsite.id}'
+      AND event_type IN (${eventTypesList})
+      [[AND {{created_at}}]]
+),
+events AS (
+    SELECT
+        *,
+        LAG(step_value) OVER (PARTITION BY session_id ORDER BY created_at) as prev_step_value
+    FROM events_raw
+),
+`;
+
+        // Generate CTEs for each step (simplified - no url_path tracking needed)
+        const stepCtes = normalizedSteps.map((step, index) => {
+            const stepName = `step${index + 1}`;
+            const prevStepName = `step${index}`;
+            const stepValue = step.value.replace(/'/g, "''");
+
+            if (index === 0) {
+                return `${stepName} AS (
+    SELECT session_id, MIN(created_at) as time${index + 1}
+    FROM events
+    WHERE step_value = '${stepValue}'
+    GROUP BY session_id
+)`;
+            } else {
+                const prevStepValue = normalizedSteps[index - 1].value.replace(/'/g, "''");
+                if (onlyDirectEntry) {
+                    return `${stepName} AS (
+    SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+    FROM events e
+    JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+    WHERE e.step_value = '${stepValue}'
+      AND e.created_at > prev.time${index}
+      AND e.prev_step_value = '${prevStepValue}'
+    GROUP BY e.session_id
+)`;
+                } else {
+                    return `${stepName} AS (
+    SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+    FROM events e
+    JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+    WHERE e.step_value = '${stepValue}'
+      AND e.created_at > prev.time${index}
+    GROUP BY e.session_id
+)`;
+                }
+            }
+        });
+
+        sql += stepCtes.join(',\n');
+
+        // Generate the final SELECT with step_number for ordering
+        // Step labels similar to user's working example
+        const unionSelects = normalizedSteps.map((step, i) => {
+            const stepLabel = `${i + 1}: ${step.value}`.replace(/'/g, "''");
+            return `SELECT ${i + 1} as step_number, '${stepLabel}' as step, (SELECT COUNT(*) FROM step${i + 1}) as count`;
+        });
+
+        sql += `\n${unionSelects.join('\nUNION ALL\n')}`;
+        sql += `\nORDER BY step_number ASC`;
+
+        return sql;
+    };
+
+    // Generate Metabase-compatible SQL for timing funnel
+    const generateMetabaseTimingSql = (): string => {
+        if (!timingData || timingData.length === 0 || !selectedWebsite) return '';
+
+        // Get the normalized steps from the current configuration  
+        const normalizedSteps = steps.map(s => {
+            if (s.type === 'url') {
+                return { ...s, value: normalizeUrlToPath(s.value) };
+            }
+            return s;
+        }).filter(s => s.value.trim() !== '');
+
+        // Only URL-based funnels support timing (no events)
+        const urlSteps = normalizedSteps.filter(s => s.type === 'url');
+        if (urlSteps.length < 2) return '';
+
+        let sql = `-- Tidsbruk-analyse for Metabase
+-- Viser median tid (i sekunder) mellom hvert steg i trakten
+--
+-- OPPSETT I METABASE:
+-- 1. Klikk på "created_at" variabelen i høyre panel
+-- 2. Sett variabeltype til "Field Filter"
+-- 3. Koble til: umami_views.event → created_at
+-- 4. Velg ønsket periode og kjør spørringen
+
+WITH events_raw AS (
+    SELECT 
+        session_id,
+        COALESCE(NULLIF(RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/'), ''), '/') as url_path,
+        created_at
+    FROM \`team-researchops-prod-01d6.umami_views.event\`
+    WHERE website_id = '${selectedWebsite.id}'
+      AND event_type = 1
+      [[AND {{created_at}}]]
+),
+events AS (
+    SELECT 
+        *,
+        LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
+    FROM events_raw
+),
+`;
+
+        // Generate step CTEs
+        const stepCtes = urlSteps.map((step, index) => {
+            const stepName = `step${index + 1}`;
+            const prevStepName = `step${index}`;
+            const urlValue = step.value.replace(/'/g, "''");
+
+            if (index === 0) {
+                return `${stepName} AS (
+    SELECT session_id, MIN(created_at) as time${index + 1}
+    FROM events
+    WHERE url_path = '${urlValue}'
+    GROUP BY session_id
+)`;
+            } else {
+                const prevUrlValue = urlSteps[index - 1].value.replace(/'/g, "''");
+                if (onlyDirectEntry) {
+                    return `${stepName} AS (
+    SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+    FROM events e
+    JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+    WHERE e.url_path = '${urlValue}' 
+      AND e.created_at > prev.time${index}
+      AND e.prev_url_path = '${prevUrlValue}'
+    GROUP BY e.session_id
+)`;
+                } else {
+                    return `${stepName} AS (
+    SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+    FROM events e
+    JOIN ${prevStepName} prev ON e.session_id = prev.session_id
+    WHERE e.url_path = '${urlValue}' 
+      AND e.created_at > prev.time${index}
+    GROUP BY e.session_id
+)`;
+                }
+            }
+        });
+
+        sql += stepCtes.join(',\n');
+
+        // Join all steps and calculate timing
+        const joinClauses = urlSteps.map((_, i) => {
+            if (i === 0) return 'step1';
+            return `LEFT JOIN step${i + 1} ON step1.session_id = step${i + 1}.session_id`;
+        }).join('\n    ');
+
+        const timeColumns = urlSteps.map((_, i) => `step${i + 1}.time${i + 1}`).join(', ');
+
+        sql += `,
+timing_data AS (
+    SELECT 
+        ${timeColumns}
+    FROM ${joinClauses}
+    WHERE step${urlSteps.length}.time${urlSteps.length} IS NOT NULL
+)
+`;
+
+        // Generate timing results with UNION ALL - include step_number for proper ordering
+        const timingSelects = urlSteps.slice(0, -1).map((_step, i) => {
+            const fromStep = i + 1;
+            const toStep = i + 2;
+            const stepLabel = `Steg ${fromStep} → ${toStep}`;
+            return `SELECT ${fromStep} as step_number, '${stepLabel}' as step, 
+       APPROX_QUANTILES(TIMESTAMP_DIFF(time${toStep}, time${fromStep}, SECOND), 100)[OFFSET(50)] as sekunder
+FROM timing_data`;
+        });
+
+        sql += timingSelects.join('\nUNION ALL\n');
+        sql += '\nORDER BY step_number ASC';
+
+        return sql;
+    };
+
+    const copyMetabaseSql = async () => {
+        const sql = generateMetabaseFunnelSql();
+        if (!sql) return;
+        try {
+            await navigator.clipboard.writeText(sql);
+            setMetabaseCopySuccess(true);
+            setTimeout(() => setMetabaseCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy Metabase SQL:', err);
+        }
+    };
+
+    const copyTimingMetabaseSql = async () => {
+        const sql = generateMetabaseTimingSql();
+        if (!sql) return;
+        try {
+            await navigator.clipboard.writeText(sql);
+            setTimingMetabaseCopySuccess(true);
+            setTimeout(() => setTimingMetabaseCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy Metabase timing SQL:', err);
+        }
+    };
 
     const downloadCSV = () => {
         if (!funnelData || funnelData.length === 0) return;
@@ -698,6 +950,14 @@ const Funnel = () => {
                                             Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
                                         </span>
                                     )}
+                                    <Button
+                                        size="small"
+                                        variant="tertiary"
+                                        onClick={copyMetabaseSql}
+                                        icon={metabaseCopySuccess ? <Check size={16} /> : <Code2 size={16} />}
+                                    >
+                                        {metabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
+                                    </Button>
                                     {funnelSql && (
                                         <Button
                                             size="small"
@@ -808,6 +1068,14 @@ const Funnel = () => {
                                                             </span>
                                                         )}
                                                     </div>
+                                                    <Button
+                                                        size="small"
+                                                        variant="tertiary"
+                                                        onClick={copyTimingMetabaseSql}
+                                                        icon={timingMetabaseCopySuccess ? <Check size={16} /> : <Code2 size={16} />}
+                                                    >
+                                                        {timingMetabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
+                                                    </Button>
                                                     {timingSql && (
                                                         <Button
                                                             size="small"
