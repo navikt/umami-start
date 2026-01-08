@@ -1,7 +1,7 @@
 import { DashboardConfig } from './types';
 import navkontorData from '../navkontor.json';
 
-export const lokalkontorDashboard: DashboardConfig = {
+export const fylkeskontorDashboard: DashboardConfig = {
   title: "Webstatistikk for Fylkeskontor",
 
   // Hide the website picker and URL-sti filter (they work behind the scenes)
