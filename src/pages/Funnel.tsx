@@ -868,20 +868,60 @@ FROM timing_data`;
 
                         <Tabs.Panel value="vertical" className="pt-4">
                             <FunnelChart data={funnelData} loading={loading} />
-                            {funnelQueryStats && (
-                                <div className="text-sm text-gray-600 text-right mt-4">
-                                    Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
+                            <div className="flex gap-2 justify-between items-center mt-4">
+                                {funnelQueryStats && (
+                                    <span className="text-sm text-gray-600 mr-auto">
+                                        Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
+                                    </span>
+                                )}
+                                <Button
+                                    size="small"
+                                    variant="tertiary"
+                                    onClick={copyMetabaseSql}
+                                    icon={metabaseCopySuccess ? <Check size={16} /> : <Code2 size={16} />}
+                                >
+                                    {metabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
+                                </Button>
+                                {funnelSql && (
+                                    <Button
+                                        size="small"
+                                        variant="tertiary"
+                                        onClick={() => setModalSql(funnelSql)}
+                                        icon={<Code2 size={16} />}
+                                    >
+                                        Vis SQL
+                                    </Button>
+                                )}
+                            </div>
                         </Tabs.Panel>
 
                         <Tabs.Panel value="horizontal" className="pt-4">
                             <HorizontalFunnelChart data={funnelData} loading={loading} />
-                            {funnelQueryStats && (
-                                <div className="text-sm text-gray-600 text-right mt-4">
-                                    Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
-                                </div>
-                            )}
+                            <div className="flex gap-2 justify-between items-center mt-4">
+                                {funnelQueryStats && (
+                                    <span className="text-sm text-gray-600 mr-auto">
+                                        Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
+                                    </span>
+                                )}
+                                <Button
+                                    size="small"
+                                    variant="tertiary"
+                                    onClick={copyMetabaseSql}
+                                    icon={metabaseCopySuccess ? <Check size={16} /> : <Code2 size={16} />}
+                                >
+                                    {metabaseCopySuccess ? 'Kopiert!' : 'Kopier for Metabase'}
+                                </Button>
+                                {funnelSql && (
+                                    <Button
+                                        size="small"
+                                        variant="tertiary"
+                                        onClick={() => setModalSql(funnelSql)}
+                                        icon={<Code2 size={16} />}
+                                    >
+                                        Vis SQL
+                                    </Button>
+                                )}
+                            </div>
                         </Tabs.Panel>
 
                         <Tabs.Panel value="table" className="pt-4">
