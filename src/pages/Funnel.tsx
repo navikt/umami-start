@@ -122,8 +122,6 @@ const Funnel = () => {
                 const nextItem = funnelData[index + 1];
                 const percentageOfNext = nextItem && item.count > 0 ? Math.round((nextItem.count / item.count) * 100) : null;
                 const dropoffPercentage = percentageOfNext !== null ? 100 - percentageOfNext : null;
-                const dropoffCount = nextItem ? item.count - nextItem.count : null;
-
                 const escapeCSV = (val: any) => {
                     const str = val !== null && val !== undefined ? String(val) : '';
                     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
