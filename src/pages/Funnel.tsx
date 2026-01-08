@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox } from '@navikt/ds-react';
-import { Plus, Trash2, Download, Share2, Check } from 'lucide-react';
+import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
+import { Plus, Trash2, Download, Share2, Check, Code2 } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import FunnelChart from '../components/FunnelChart';
 import HorizontalFunnelChart from '../components/HorizontalFunnelChart';
 import FunnelStats from '../components/FunnelStats';
+import SqlCodeDisplay from '../components/chartbuilder/SqlCodeDisplay';
 import { Website } from '../types/chart';
 
 
@@ -54,9 +55,12 @@ const Funnel = () => {
     const [timingError, setTimingError] = useState<string | null>(null);
     const [showTiming, setShowTiming] = useState<boolean>(false);
     const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
+    const [timingSql, setTimingSql] = useState<string | null>(null);
+    const [funnelSql, setFunnelSql] = useState<string | null>(null);
     const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+    const [modalSql, setModalSql] = useState<string | null>(null);
 
     // Custom events state
     const [availableEvents, setAvailableEvents] = useState<string[]>([]);
@@ -115,9 +119,10 @@ const Funnel = () => {
         const csvRows = [
             headers.join(','),
             ...funnelData.map((item, index) => {
-                const prevItem = index > 0 ? funnelData[index - 1] : null;
-                const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
-                const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
+                const nextItem = funnelData[index + 1];
+                const percentageOfNext = nextItem && item.count > 0 ? Math.round((nextItem.count / item.count) * 100) : null;
+                const dropoffPercentage = percentageOfNext !== null ? 100 - percentageOfNext : null;
+                const dropoffCount = nextItem ? item.count - nextItem.count : null;
 
                 const escapeCSV = (val: any) => {
                     const str = val !== null && val !== undefined ? String(val) : '';
@@ -131,8 +136,8 @@ const Funnel = () => {
                     item.step + 1,
                     escapeCSV(item.url),
                     item.count,
-                    index > 0 ? percentageOfPrev : '-',
-                    index > 0 ? dropoffPercentage : '-'
+                    percentageOfNext !== null ? percentageOfNext : '-',
+                    dropoffPercentage !== null ? dropoffPercentage : '-'
                 ].join(',');
             })
         ];
@@ -230,6 +235,7 @@ const Funnel = () => {
         setLoading(true);
         setError(null);
         setFunnelData([]);
+        setFunnelSql(null);
 
         // Calculate date range based on period
         const now = new Date();
@@ -296,6 +302,7 @@ const Funnel = () => {
                 if (data.queryStats) {
                     setFunnelQueryStats(data.queryStats);
                 }
+                setFunnelSql(data.sql);
 
                 // Update URL with funnel configuration for sharing
                 const newParams = new URLSearchParams(window.location.search);
@@ -332,6 +339,7 @@ const Funnel = () => {
 
         setTimingLoading(true);
         setTimingError(null);
+        setTimingSql(null);
 
         // Calculate date range based on period (same as main funnel query)
         const now = new Date();
@@ -400,9 +408,11 @@ const Funnel = () => {
                 setTimingError(data.error);
                 setTimingData([]);
                 setTimingQueryStats(null);
+                setTimingSql(null);
             } else {
                 setTimingData(data.data);
                 setTimingQueryStats(data.queryStats);
+                setTimingSql(data.sql);
                 setShowTiming(true);
             }
         } catch (err) {
@@ -636,10 +646,10 @@ const Funnel = () => {
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {funnelData.map((item, index) => {
-                                                const prevItem = index > 0 ? funnelData[index - 1] : null;
-                                                const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
-                                                const dropoffCount = prevItem ? prevItem.count - item.count : 0;
-                                                const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
+                                                const nextItem = funnelData[index + 1];
+                                                const percentageOfNext = nextItem && item.count > 0 ? Math.round((nextItem.count / item.count) * 100) : null;
+                                                const dropoffCount = nextItem ? item.count - nextItem.count : null;
+                                                const dropoffPercentage = percentageOfNext !== null ? 100 - percentageOfNext : null;
 
                                                 return (
                                                     <tr key={index} className="hover:bg-gray-50">
@@ -653,12 +663,14 @@ const Funnel = () => {
                                                             {item.count.toLocaleString('nb-NO')}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                            {index > 0 ? (
-                                                                <span className="text-green-600 font-medium">{percentageOfPrev}%</span>
-                                                            ) : '-'}
+                                                            {percentageOfNext !== null ? (
+                                                                <span className="text-green-600 font-medium">{percentageOfNext}%</span>
+                                                            ) : (
+                                                                <span className="text-gray-400">Avgjort</span>
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                            {index > 0 && dropoffCount > 0 ? (
+                                                            {dropoffCount !== null && dropoffCount > 0 ? (
                                                                 <div className="flex flex-col">
                                                                     <span className="text-red-600 font-medium">-{dropoffCount.toLocaleString('nb-NO')}</span>
                                                                     <span className="text-xs text-red-500">({dropoffPercentage}%)</span>
@@ -681,12 +693,23 @@ const Funnel = () => {
                                         Last ned CSV
                                     </Button>
                                     {funnelQueryStats && (
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-600 mr-auto">
                                             Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
                                         </span>
                                     )}
+                                    {funnelSql && (
+                                        <Button
+                                            size="small"
+                                            variant="tertiary"
+                                            onClick={() => setModalSql(funnelSql)}
+                                            icon={<Code2 size={16} />}
+                                        >
+                                            Vis SQL
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
+
 
                             {/* Timing Data Section - Only show for URL-only funnels */}
                             {!steps.some(s => s.type === 'event') && (
@@ -752,16 +775,31 @@ const Funnel = () => {
                                                     </table>
                                                 </div>
                                             </div>
-                                            {timingQueryStats && (
-                                                <div className="text-sm text-gray-600 text-right">
-                                                    Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
+                                            {/* Footer section for timing table */}
+                                            {/* Footer section for timing table */}
+                                            <div className="p-3 bg-gray-50 border border-t-0 rounded-b-lg -mt-3 mb-3 flex justify-between items-center">
+                                                <div>
+                                                    {timingQueryStats && (
+                                                        <span className="text-sm text-gray-600">
+                                                            Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            )}
+                                                {timingSql && (
+                                                    <Button
+                                                        size="small"
+                                                        variant="tertiary"
+                                                        onClick={() => setModalSql(timingSql)}
+                                                        icon={<Code2 size={16} />}
+                                                    >
+                                                        Vis SQL
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </>
                                     )}
                                 </div>
                             )}
-
                         </Tabs.Panel>
                     </Tabs>
                 </>
@@ -772,6 +810,17 @@ const Funnel = () => {
                     Ingen data funnet for denne trakten i valgt periode.
                 </div>
             )}
+
+            <Modal
+                open={!!modalSql}
+                onClose={() => setModalSql(null)}
+                header={{ heading: 'SQL-spørring' }}
+                width={800}
+            >
+                <Modal.Body>
+                    {modalSql && <SqlCodeDisplay sql={modalSql} withoutReadMore showEditButton />}
+                </Modal.Body>
+            </Modal>
         </ChartLayout>
     );
 };

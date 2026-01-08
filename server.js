@@ -126,6 +126,42 @@ function addAuditLogging(queryConfig, navIdent, analysisType = null) {
     return queryConfig;
 }
 
+// Helper query to substitute parameters in SQL string for display
+const substituteQueryParameters = (query, params) => {
+    if (!query || !params) return query;
+
+    let substitutedQuery = query;
+
+    // Sort keys by length (descending) to avoid partial replacement issues
+    // e.g. replacing @url1 instead of @url10
+    const keys = Object.keys(params).sort((a, b) => b.length - a.length);
+
+    keys.forEach(key => {
+        const value = params[key];
+        let stringValue;
+
+        if (typeof value === 'string') {
+            // Check if it's likely a date (ISO) or number-as-string
+            // But generally, strings should be quoted
+            // Escape single quotes
+            stringValue = `'${value.replace(/'/g, "\\'")}'`;
+        } else if (value instanceof Date) {
+            stringValue = `'${value.toISOString()}'`;
+        } else if (value === null || value === undefined) {
+            stringValue = 'NULL';
+        } else {
+            stringValue = String(value);
+        }
+
+        // Replace @key with value, ensuring word boundary
+        // Note: BigQuery params start with @
+        const regex = new RegExp(`@${key}\\b`, 'g');
+        substitutedQuery = substitutedQuery.replace(regex, stringValue);
+    });
+
+    return substitutedQuery;
+};
+
 const buildPath = path.join(path.resolve(__dirname, './dist'))
 
 app.use('/', express.static(buildPath, { index: false }))
@@ -2076,7 +2112,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             count: parseInt(row[`step${index + 1}_count`] || 0)
         }));
 
-        res.json({ data, queryStats });
+        res.json({ data, queryStats, sql: substituteQueryParameters(query, params) });
     } catch (error) {
         console.error('BigQuery funnel error:', error);
         res.status(500).json({
@@ -2425,8 +2461,8 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         // Format timing data for frontend
         const timingData = [];
         for (let i = 0; i < urls.length - 1; i++) {
-            const avgSeconds = row[`avg_seconds_${i}_to_${i + 1}`];
-            const medianSeconds = row[`median_seconds_${i}_to_${i + 1}`];
+            const avgSeconds = row[`avg_seconds_${i + 1}_to_${i + 2}`];
+            const medianSeconds = row[`median_seconds_${i + 1}_to_${i + 2}`];
             timingData.push({
                 fromStep: i,
                 toStep: i + 1,
@@ -2439,6 +2475,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
 
         res.json({
             data: timingData,
+            sql: substituteQueryParameters(query, params),
             queryStats
         });
 
