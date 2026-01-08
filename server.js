@@ -2024,7 +2024,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 WHERE e.step_value = @${paramName}
                   ${typeCheck}
                   AND e.created_at > prev.time${index}
-                  AND e.prev_step_value = @${prevParamName} -- Strict check: Immediate predecessor
+                  AND e.prev_step_value = @${prevParamName}
                   ${eventScopeCheck}
                 GROUP BY e.session_id
             )`;
@@ -2047,8 +2047,11 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         });
 
         query += stepCtes.join(',') + `
-            SELECT 
-                ${steps.map((_, i) => `(SELECT COUNT(*) FROM step${i + 1}) as step${i + 1}_count`).join(',\n                ')}
+            SELECT ${steps.map((_, i) => `
+                ${i} as step, 
+                @stepValue${i} as url, 
+                (SELECT COUNT(*) FROM step${i + 1}) as count`).join('\n            UNION ALL SELECT ')}
+            ORDER BY step
         `;
 
         // Create params object
@@ -2104,12 +2107,11 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             return res.json({ data: [] });
         }
 
-        const row = rows[0];
-        const data = steps.map((step, index) => ({
+        const data = rows.map((row, index) => ({
             step: index,
-            url: step.value,
-            type: step.type,
-            count: parseInt(row[`step${index + 1}_count`] || 0)
+            url: steps[index].value, // Fallback to input steps if needed, but row.url should match
+            type: steps[index].type,
+            count: parseInt(row.count || 0)
         }));
 
         res.json({ data, queryStats, sql: substituteQueryParameters(query, params) });
@@ -2198,7 +2200,8 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                 AND created_at BETWEEN @startDate AND @endDate
-                AND event_type = 1 -- Pageview
+                AND created_at BETWEEN @startDate AND @endDate
+                AND event_type = 1
                 ${urlFilter}
             )
             ${unionParts}
@@ -2305,7 +2308,8 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
-                  AND event_type = 1 -- Pageview
+                  AND created_at BETWEEN @startDate AND @endDate
+                  AND event_type = 1
             ),
             events AS (
                 SELECT 
@@ -2339,7 +2343,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
                 WHERE e.url_path = @url${index} 
                   AND e.created_at > prev.time${index}
-                  AND e.prev_url_path = @url${index - 1} -- Strict check: Immediate predecessor
+                  AND e.prev_url_path = @url${index - 1}
                 GROUP BY e.session_id
             )`;
                 } else {
@@ -2373,13 +2377,6 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         }).filter(Boolean).join(',\n                    ');
 
         // Then calculate both average and median for each time difference
-        const aggregateSelects = urls.map((_, i) => {
-            if (i === 0) return null;
-            return `
-                AVG(diff_${i}_to_${i + 1}) as avg_seconds_${i}_to_${i + 1},
-                APPROX_QUANTILES(diff_${i}_to_${i + 1}, 2)[OFFSET(1)] as median_seconds_${i}_to_${i + 1}`;
-        }).filter(Boolean);
-
         query += stepCtes.join(',') + `,
             timing_data AS (
                 SELECT
@@ -2395,9 +2392,16 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             return `time${i} IS NOT NULL AND time${i + 1} IS NOT NULL`;
         }).filter(Boolean).join(' AND ')}
             )
-            SELECT 
-                ${aggregateSelects.join(',\n                ')}
+            SELECT
+                ${urls.slice(0, urls.length - 1).map((_, i) => `
+                    ${i} as step,
+                    @url${i} as from_url,
+                    @url${i + 1} as to_url,
+                    AVG(diff_${i + 1}_to_${i + 2}) as avg_seconds,
+                    APPROX_QUANTILES(diff_${i + 1}_to_${i + 2}, 2)[OFFSET(1)] as median_seconds
+                `).join('\n                FROM time_diffs UNION ALL SELECT ')}
             FROM time_diffs
+            ORDER BY step
         `;
 
         console.log('[Funnel Timing] Generated SQL query:', query);
@@ -2437,7 +2441,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 estimatedCostUSD: estimatedCostUSD
             };
 
-            console.log(`[Funnel Timing] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+            console.log(`[Funnel Timing] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD} `);
         } catch (dryRunError) {
             console.log('[Funnel Timing] Dry run failed:', dryRunError.message);
         }
@@ -2456,22 +2460,14 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             return res.json({ data: [], queryStats });
         }
 
-        const row = rows[0];
-
-        // Format timing data for frontend
-        const timingData = [];
-        for (let i = 0; i < urls.length - 1; i++) {
-            const avgSeconds = row[`avg_seconds_${i + 1}_to_${i + 2}`];
-            const medianSeconds = row[`median_seconds_${i + 1}_to_${i + 2}`];
-            timingData.push({
-                fromStep: i,
-                toStep: i + 1,
-                fromUrl: urls[i],
-                toUrl: urls[i + 1],
-                avgSeconds: avgSeconds ? Math.round(parseFloat(avgSeconds)) : null,
-                medianSeconds: medianSeconds ? Math.round(parseFloat(medianSeconds)) : null
-            });
-        }
+        const timingData = rows.map((row) => ({
+            fromStep: row.step,
+            toStep: row.step + 1,
+            fromUrl: row.from_url,
+            toUrl: row.to_url,
+            avgSeconds: row.avg_seconds ? Math.round(parseFloat(row.avg_seconds)) : null,
+            medianSeconds: row.median_seconds ? Math.round(parseFloat(row.median_seconds)) : null
+        }));
 
         res.json({
             data: timingData,
@@ -2512,22 +2508,22 @@ app.post('/api/bigquery/retention', async (req, res) => {
 
         // Optimized query that normalizes URLs once and avoids expensive EXISTS clauses
         const query = `
-            WITH base AS (
-                -- Pre-normalize URL once (no regex in joins later)
+            WITH base AS(
+    --Pre - normalize URL once(no regex in joins later)
                 SELECT
                     session_id,
-                    DATE(created_at) AS event_date,
-                    created_at,
-                    -- lightweight URL normalization
+    DATE(created_at) AS event_date,
+    created_at,
+    --lightweight URL normalization
                     IFNULL(
-                        NULLIF(
-                            RTRIM(
-                                REGEXP_REPLACE(
-                                    REGEXP_REPLACE(url_path, r'[?#].*', ''), -- strip query/fragments
-                                    r'//+', '/'),                             -- collapse slashes
+        NULLIF(
+            RTRIM(
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(url_path, r'[?#].*', ''), --strip query / fragments
+                                    r'//+', '/'), --collapse slashes
                                 '/'),
-                            ''),
-                        '/') AS url_path_clean
+            ''),
+        '/') AS url_path_clean
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                     AND created_at BETWEEN @startDate AND @endDate
