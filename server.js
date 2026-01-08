@@ -2477,9 +2477,15 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             medianSeconds: row.median_seconds ? Math.round(parseFloat(row.median_seconds)) : null
         }));
 
+        // Create a display version of the SQL without the Total row
+        // Remove the UNION ALL for Total from the query
+        const displaySql = substituteQueryParameters(query, params)
+            .replace(/\s*UNION ALL\s*SELECT\s*-1 as step,\s*'Total' as from_url,\s*'Total' as to_url,\s*ROUND\(AVG\(diff_total\)\) as avg_seconds,\s*APPROX_QUANTILES\(diff_total, 2\)\[OFFSET\(1\)\] as median_seconds\s*FROM time_diffs/gi, '')
+            .replace(/,\s*TIMESTAMP_DIFF\(time\d+, time1, SECOND\) as diff_total/gi, '');
+
         res.json({
             data: timingData,
-            sql: substituteQueryParameters(query, params),
+            sql: displaySql,
             queryStats
         });
 
