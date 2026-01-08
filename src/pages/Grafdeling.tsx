@@ -52,7 +52,7 @@ export default function Grafdeling() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query: queryToExecute }),
+                body: JSON.stringify({ query: queryToExecute, analysisType: 'Grafdeling' }),
             });
 
             const data = await response.json();

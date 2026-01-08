@@ -202,7 +202,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 const response = await fetch('/api/bigquery', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: processedSql }),
+                    body: JSON.stringify({ query: processedSql, analysisType: 'Dashboard' }),
                 });
 
                 if (!response.ok) {

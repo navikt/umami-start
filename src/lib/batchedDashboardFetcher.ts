@@ -285,7 +285,7 @@ export async function fetchDashboardDataBatched(
             const response = await fetch('/api/bigquery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: combinedSql }),
+                body: JSON.stringify({ query: combinedSql, analysisType: 'Dashboard' }),
             });
 
             if (!response.ok) {
@@ -335,7 +335,7 @@ export async function fetchDashboardDataBatched(
                     const totalResponse = await fetch('/api/bigquery', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: totalVisitorsSql }),
+                        body: JSON.stringify({ query: totalVisitorsSql, analysisType: 'Dashboard' }),
                     });
                     if (totalResponse.ok) {
                         const totalResult = await totalResponse.json();
