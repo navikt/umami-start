@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
+import { Button } from '@navikt/ds-react';
+import { Plus, Check, ExternalLink } from 'lucide-react';
 
 interface Node {
     nodeId: string;
@@ -18,6 +20,7 @@ interface UmamiJourneyViewProps {
     isFullscreen?: boolean;
     reverseVisualOrder?: boolean;
     journeyDirection?: string;
+    websiteId?: string;
 }
 
 interface StepData {
@@ -37,9 +40,16 @@ interface ConnectionPath {
     opacity: number;
 }
 
-const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward' }) => {
+interface FunnelStep {
+    nodeId: string;
+    path: string;
+    step: number;
+}
+
+const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward', websiteId }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
+    const [funnelSteps, setFunnelSteps] = useState<FunnelStep[]>([]);
 
     const contentRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -115,7 +125,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
         });
 
         return { stepsData, nodeValues, adjacency, reverseAdjacency };
-    }, [nodes, links]);
+    }, [nodes, links, journeyDirection]); // Added journeyDirection dependency
 
     // Determine connected nodes for highlighting (Recursive)
     const connectedNodeIds = useMemo(() => {
@@ -146,16 +156,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
         }
 
         // Upstream (Backward)
-        // Reset visited for upstream but keep connected set
-        // Actually we want to highlight everything connected, so we can just continue adding to connected set.
-        // But we need to be careful not to re-traverse downstream from upstream nodes if we only want the flow *through* the selected node.
-        // Usually "flow through node" means:
-        // - All ancestors of selected node
-        // - All descendants of selected node
-        // It does NOT typically mean "descendants of ancestors" (siblings).
-
         currentQueue = [selectedNodeIndex];
-        // We use a separate visited set for upstream to avoid loops if graph has cycles (though Sankey is usually DAG, but let's be safe)
         const visitedUpstream = new Set<number>();
         visitedUpstream.add(selectedNodeIndex);
 
@@ -235,7 +236,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
 
         setPaths(newPaths);
 
-    }, [selectedNodeId, nodes, links, stepsData, connectedNodeIds, isFullscreen, reverseVisualOrder]); // Added reverseVisualOrder dependency
+    }, [selectedNodeId, nodes, links, stepsData, connectedNodeIds, isFullscreen, reverseVisualOrder]);
 
     // Handle resize
     useLayoutEffect(() => {
@@ -252,6 +253,43 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
             containerRef.current.scrollLeft = 0;
         }
     }, [reverseVisualOrder, stepsData]);
+
+    const toggleFunnelStep = (e: React.MouseEvent, nodeId: string, path: string, step: number) => {
+        e.stopPropagation(); // Prevent selecting the node for path highlighting
+
+        setFunnelSteps(prev => {
+            const exists = prev.some(s => s.nodeId === nodeId);
+            if (exists) {
+                return prev.filter(s => s.nodeId !== nodeId);
+            } else {
+                return [...prev, { nodeId, path, step }];
+            }
+        });
+    };
+
+    const navigateToFunnel = () => {
+        if (funnelSteps.length < 2 || !websiteId) return;
+
+        // Sort by step index based on direction
+        const sortedSteps = [...funnelSteps].sort((a, b) => {
+            if (journeyDirection === 'backward') {
+                return b.step - a.step; // Descending for backward (2 -> 1 -> 0)
+            }
+            return a.step - b.step; // Ascending for forward (0 -> 1 -> 2)
+        });
+
+        const params = new URLSearchParams();
+        params.set('websiteId', websiteId);
+        params.set('period', 'current_month'); // Default to current month
+        params.set('strict', 'true');
+
+        sortedSteps.forEach(s => {
+            params.append('step', s.path);
+        });
+
+        const url = `/trakt?${params.toString()}`;
+        window.open(url, '_blank');
+    };
 
     if (!stepsData.length) {
         return <div className="p-4 text-gray-500">Ingen data å vise.</div>;
@@ -279,9 +317,9 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                     ))}
                 </svg>
 
-                <div className={`flex gap-8 relative z-20 ${reverseVisualOrder ? 'flex-row-reverse' : ''}`}> {/* Reduced gap from 12 to 8 */}
+                <div className={`flex gap-8 relative z-20 ${reverseVisualOrder ? 'flex-row-reverse' : ''}`}>
                     {stepsData.map((stepData) => (
-                        <div key={stepData.step} className="flex-shrink-0 w-60 flex flex-col gap-4"> {/* Reduced width from 72 (18rem) to 60 (15rem) */}
+                        <div key={stepData.step} className="flex-shrink-0 w-60 flex flex-col gap-4">
                             {/* Step Header */}
                             <div className="flex flex-col items-center mb-2">
                                 <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm">
@@ -293,11 +331,12 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                             </div>
 
                             {/* Step Items */}
-                            <div className="flex flex-col gap-2"> {/* Reduced gap from 3 to 2 */}
+                            <div className="flex flex-col gap-2">
                                 {stepData.items.map((item) => {
                                     const isSelected = selectedNodeId === item.nodeId;
                                     const isConnected = connectedNodeIds.has(item.nodeId);
                                     const isDimmed = selectedNodeId !== null && !isConnected;
+                                    const isFunnelStep = funnelSteps.some(s => s.nodeId === item.nodeId);
 
                                     return (
                                         <div
@@ -308,14 +347,15 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                             }}
                                             onClick={() => setSelectedNodeId(isSelected ? null : item.nodeId)}
                                             className={`
-                                                relative overflow-hidden rounded-md border transition-all duration-200 cursor-pointer
+                                                relative overflow-hidden rounded-md border transition-all duration-200 cursor-pointer group
                                                 ${isSelected ? 'ring-2 ring-blue-600 border-blue-600 shadow-md' : 'border-transparent hover:border-gray-400 shadow-sm'}
-                                                ${isDimmed ? 'opacity-30 grayscale' : 'opacity-100'}
+                                                ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500 bg-gray-900' : ''}
+                                                ${isDimmed && !isFunnelStep ? 'opacity-30 grayscale' : 'opacity-100'}
                                                 text-white
                                             `}
                                             style={{
-                                                minHeight: '40px', // Reduced height slightly
-                                                backgroundColor: 'rgb(19, 17, 54)' // Custom theme color
+                                                minHeight: '40px',
+                                                backgroundColor: 'rgb(19, 17, 54)'
                                             }}
                                         >
                                             {/* Content */}
@@ -328,9 +368,26 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                         {item.name}
                                                     </span>
                                                 </div>
-                                                <span className="text-xs font-mono font-bold whitespace-nowrap">
-                                                    {item.value.toLocaleString('nb-NO')}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-mono font-bold whitespace-nowrap">
+                                                        {item.value.toLocaleString('nb-NO')}
+                                                    </span>
+
+                                                    {/* Funnel Selection Button */}
+                                                    <button
+                                                        onClick={(e) => toggleFunnelStep(e, item.nodeId, item.name, stepData.step)}
+                                                        className={`
+                                                            w-5 h-5 rounded-full flex items-center justify-center transition-all
+                                                            ${isFunnelStep
+                                                                ? 'bg-green-500 text-white opacity-100'
+                                                                : 'bg-white/20 text-white hover:bg-white/40 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                                                            }
+                                                        `}
+                                                        title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
+                                                    >
+                                                        {isFunnelStep ? <Check size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Percentage Bar - Bottom */}
@@ -348,6 +405,36 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                     ))}
                 </div>
             </div>
+
+            {/* Floating Funnel Builder Action Bar */}
+            {funnelSteps.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 border border-gray-700 text-white px-8 py-5 rounded-full shadow-2xl z-50 flex items-center gap-8 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex flex-col">
+                        <span className="font-bold text-xl">{funnelSteps.length} steg valgt</span>
+                        <span className="text-sm text-gray-300">Bygg en traktanalyse fra disse stegene</span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="tertiary"
+                            size="medium"
+                            onClick={() => setFunnelSteps([])}
+                            className="text-white hover:bg-white/10 hover:text-white"
+                        >
+                            Tøm valgte
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="medium"
+                            onClick={navigateToFunnel}
+                            disabled={funnelSteps.length < 2}
+                            icon={<ExternalLink size={20} />}
+                        >
+                            Opprett traktanalyse
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

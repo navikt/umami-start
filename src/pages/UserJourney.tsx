@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Heading } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Heading, InfoCard } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -342,6 +342,14 @@ const UserJourney = () => {
                         <option value={5}>5 steg</option>
                         <option value={6}>6 steg</option>
                         <option value={7}>7 steg</option>
+                        <option value={8}>8 steg</option>
+                        <option value={9}>9 steg</option>
+                        <option value={10}>10 steg</option>
+                        <option value={11}>11 steg</option>
+                        <option value={12}>12 steg</option>
+                        <option value={13}>13 steg</option>
+                        <option value={14}>14 steg</option>
+                        <option value={15}>15 steg</option>
                     </Select>
 
                     <TextField
@@ -450,6 +458,16 @@ const UserJourney = () => {
 
                         <Tabs.Panel value="steps" className="pt-4">
                             <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+                                {!isFullscreen && (
+                                    <InfoCard data-color="info" className="mb-6">
+                                        <InfoCard.Header>
+                                            <InfoCard.Title>Tips</InfoCard.Title>
+                                        </InfoCard.Header>
+                                        <InfoCard.Content>
+                                            Klikk på stegene for å utforske flyt. Legg til steg i en traktanalyse med pluss-ikonet (+).
+                                        </InfoCard.Content>
+                                    </InfoCard>
+                                )}
                                 {isFullscreen && (
                                     <div className="mb-4 flex justify-end">
                                         <Button
@@ -483,6 +501,7 @@ const UserJourney = () => {
                                     isFullscreen={isFullscreen}
                                     reverseVisualOrder={reverseVisualOrder}
                                     journeyDirection={journeyDirection}
+                                    websiteId={selectedWebsite?.id}
                                 />
                                 {queryStats && (
                                     <div className="text-sm text-gray-600 text-right mt-4">
