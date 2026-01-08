@@ -293,6 +293,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 <SiteGroupScores
                     className={colClass}
                     siteId={chart.siteimprove_id}
+                    portalSiteId={chart.siteimprove_portal_id}
                     groupId={siteimproveGroupId}
                     baseUrl={baseUrl}
                 />

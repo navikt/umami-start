@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 const LABEL_MIN_HEIGHT = "2.5rem"; // Ensures all labels take up the same vertical space
 
 /**
- * SiteGroupScores - Displays Siteimprove DCI scores at the group level
+ * SiteGroupScores - Displays Siteimprove DCI scores and QA details at the group level
  * Similar to SiteScores but uses group_id instead of page_id
  */
-const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
+const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) => {
     const [scoreOverview, setScoreOverview] = useState(null);
+    const [qaOverview, setQaOverview] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -16,7 +17,7 @@ const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
     };
 
     // Helper for fetching from the proxy
-    const fetchSiteimproveProxy = async (path) => {
+    const fetchSiteimproveProxy = async (path, optional = false) => {
         const url = `${baseUrl}/siteimprove${path}`;
         console.log("Siteimprove API URL:", url);
         const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
@@ -28,17 +29,36 @@ const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
             console.error("Fetch error:", err);
             throw new Error('Nettverksfeil ved henting av Siteimprove-data');
         }
-        if (!res.ok) throw new Error('API error');
+
+        console.log(`Response status for ${path}:`, res.status);
+
+        if (!res.ok) {
+            if (optional) {
+                console.warn(`Optional endpoint ${path} returned ${res.status}`);
+                return null;
+            }
+            throw new Error(`API error: ${res.status}`);
+        }
+
         try {
-            return await res.json();
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (parseErr) {
+                console.error('JSON parse error. Response text:', text.substring(0, 500));
+                if (optional) return null;
+                throw new Error('Feil ved parsing av JSON-data fra Siteimprove');
+            }
         } catch (err) {
-            throw new Error('Feil ved parsing av JSON-data fra Siteimprove');
+            if (optional) return null;
+            throw err;
         }
     };
 
     useEffect(() => {
         // Clear previous state when dependencies change
         setScoreOverview(null);
+        setQaOverview(null);
         setError(null);
         setLoading(true);
 
@@ -61,6 +81,10 @@ const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
                     `/sites/${siteId}/dci/overview?group_id=${groupId}`
                 );
 
+                console.log('DCI Overview full response:', overviewData);
+                console.log('QA details:', JSON.stringify(overviewData?.qa, null, 2));
+                console.log('A11y details:', JSON.stringify(overviewData?.a11y, null, 2));
+
                 if (
                     overviewData &&
                     overviewData.a11y &&
@@ -70,7 +94,40 @@ const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
                     setScoreOverview(overviewData);
                 } else {
                     setError('Fant ingen data for denne gruppen.');
+                    return;
                 }
+
+                // Fetch broken links for this group
+                const brokenLinksData = await fetchSiteimproveProxy(
+                    `/sites/${siteId}/quality_assurance/links/broken_links?group_id=${groupId}`,
+                    true // optional
+                );
+
+                // Fetch potential misspellings for this group
+                const misspellingsData = await fetchSiteimproveProxy(
+                    `/sites/${siteId}/quality_assurance/spelling/potential_misspellings?group_id=${groupId}`,
+                    true // optional
+                );
+
+                console.log('Broken links data:', brokenLinksData);
+                console.log('Misspellings data:', misspellingsData);
+
+                const newQaOverview = {};
+
+                if (brokenLinksData) {
+                    newQaOverview.broken_links = brokenLinksData.total_items || brokenLinksData.items?.length || 0;
+                    newQaOverview.raw_broken_links = brokenLinksData;
+                }
+
+                if (misspellingsData) {
+                    newQaOverview.potential_misspellings = misspellingsData.total_items || misspellingsData.items?.length || 0;
+                    newQaOverview.raw_misspellings = misspellingsData;
+                }
+
+                if (Object.keys(newQaOverview).length > 0) {
+                    setQaOverview(newQaOverview);
+                }
+
             } catch (error) {
                 console.error('Error fetching group data: ', error);
                 setError('Klarte ikke å hente data fra Siteimprove.');
@@ -112,6 +169,14 @@ const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
         return '#ff9800';
     };
 
+    // Get color for issue counts (inverted - 0 is best)
+    const getIssueColor = (count) => {
+        if (count === 0) return '#4caf50';
+        if (count <= 10) return '#ffeb3b';
+        if (count <= 50) return '#ff9800';
+        return '#f44336';
+    };
+
     // Helper for multi-ring border using box-shadow: black, color, black, white
     const getCircleBoxShadow = (score) => {
         const color = getColor(score);
@@ -123,96 +188,107 @@ const SiteGroupScores = ({ siteId, groupId, baseUrl, className }) => {
         `;
     };
 
+    // Stat card component for QA details
+    const StatCard = ({ label, value, color }) => (
+        <div className="flex flex-col items-center p-3 bg-gray-50 rounded-lg">
+            <span
+                className="text-2xl font-bold"
+                style={{ color: color || '#111' }}
+            >
+                {value}
+            </span>
+            <span className="text-sm text-gray-600 text-center mt-1">{label}</span>
+        </div>
+    );
+
     return (
         <>
             {scoreOverview && (
                 <div className={`p-2 w-full bg-white border border-gray-200 rounded-lg shadow-sm mb-2 ${className || ''}`}>
                     <div className="w-full">
                         <div className="mt-1 bg-white p-2 rounded-lg">
-                            <h2 className="text-lg font-semibold mb-1" style={{ color: '#000000' }}>
-                                Poengsum (av 100) fra Siteimprove
+                            <h2 className="text-lg font-semibold mb-3" style={{ color: '#000000' }}>
+                                Funn fra Siteimprove
                             </h2>
-                            <hr className="my-4 border-t border-gray-300" />
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                                {/* QA */}
-                                <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
-                                    <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
-                                        style={{
-                                            boxShadow: getCircleBoxShadow(scoreOverview.qa.total),
-                                            color: '#111',
-                                        }}
-                                        aria-label={`Kvalitetsikring: ${roundToOneDecimal(scoreOverview.qa.total)}`}
-                                    >
-                                        {roundToOneDecimal(scoreOverview.qa.total)}
-                                    </div>
-                                    <div
-                                        className="ml-4 md:ml-0 mt-0 md:mt-4 font-medium text-base leading-tight text-left md:text-center"
-                                        style={{ minHeight: LABEL_MIN_HEIGHT }}
-                                    >
-                                        {`Kvalitetsikring av innhold`}
-                                    </div>
+
+                            {/* QA Details Section - Funn (Findings) */}
+                            {qaOverview && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Broken Links */}
+                                    {qaOverview.broken_links !== undefined && (
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm h-full">
+                                            <div className="flex items-center gap-3 min-w-[200px]">
+                                                <div
+                                                    className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-base shrink-0 transition-colors"
+                                                    style={{
+                                                        color: (getIssueColor(qaOverview.broken_links) === '#ffeb3b' || getIssueColor(qaOverview.broken_links) === '#ff9800') ? '#1f2937' : '#ffffff',
+                                                        backgroundColor: getIssueColor(qaOverview.broken_links)
+                                                    }}
+                                                >
+                                                    {qaOverview.broken_links}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-base font-semibold text-gray-900">
+                                                        Ødelagte lenker
+                                                    </h3>
+                                                    {qaOverview.broken_links === 0 && (
+                                                        <span className="text-sm text-green-700 font-medium">Ingen — God jobbet!</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {qaOverview.broken_links > 0 && (
+                                                <a
+                                                    href={`https://my2.siteimprove.com/QualityAssurance/${portalSiteId || 1002489}/${groupId}/Links/Pages/1/PageLevel/Asc?pageSize=100`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-2 sm:mt-0 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                >
+                                                    Se rapport <span className="ml-1" aria-hidden="true">→</span>
+                                                </a>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Potential Misspellings */}
+                                    {qaOverview.potential_misspellings !== undefined && (
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm h-full">
+                                            <div className="flex items-center gap-3 min-w-[200px]">
+                                                <div
+                                                    className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-base shrink-0 transition-colors"
+                                                    style={{
+                                                        color: (getIssueColor(qaOverview.potential_misspellings) === '#ffeb3b' || getIssueColor(qaOverview.potential_misspellings) === '#ff9800') ? '#1f2937' : '#ffffff',
+                                                        backgroundColor: getIssueColor(qaOverview.potential_misspellings)
+                                                    }}
+                                                >
+                                                    {qaOverview.potential_misspellings}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-base font-semibold text-gray-900">
+                                                        Mulige stavefeil
+                                                    </h3>
+                                                    {qaOverview.potential_misspellings === 0 && (
+                                                        <span className="text-sm text-green-700 font-medium">Ingen funnet!</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {qaOverview.potential_misspellings > 0 && (
+                                                <a
+                                                    href={`https://my2.siteimprove.com/QualityAssurance/${portalSiteId || 1002489}/${groupId}/Spelling/IndexV2`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-2 sm:mt-0 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                >
+                                                    Se rapport <span className="ml-1" aria-hidden="true">→</span>
+                                                </a>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                                {/* A11y */}
-                                <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
-                                    <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
-                                        style={{
-                                            boxShadow: getCircleBoxShadow(scoreOverview.a11y.total),
-                                            color: '#111',
-                                        }}
-                                        aria-label={`Universell utforming: ${roundToOneDecimal(scoreOverview.a11y.total)}`}
-                                    >
-                                        {roundToOneDecimal(scoreOverview.a11y.total)}
-                                    </div>
-                                    <div
-                                        className="ml-4 md:ml-0 mt-0 md:mt-4 font-medium text-base leading-tight text-left md:text-center"
-                                        style={{ minHeight: LABEL_MIN_HEIGHT }}
-                                    >
-                                        {`Universell utforming`}
-                                    </div>
-                                </div>
-                                {/* SEO */}
-                                <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
-                                    <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
-                                        style={{
-                                            boxShadow: getCircleBoxShadow(scoreOverview.seo.total),
-                                            color: '#111',
-                                        }}
-                                        aria-label={`SEO: ${roundToOneDecimal(scoreOverview.seo.total)}`}
-                                    >
-                                        {roundToOneDecimal(scoreOverview.seo.total)}
-                                    </div>
-                                    <div
-                                        className="ml-4 md:ml-0 mt-0 md:mt-4 font-medium text-base leading-tight text-left md:text-center"
-                                        style={{ minHeight: LABEL_MIN_HEIGHT }}
-                                    >
-                                        {`Søkemotor-optimalisering`}
-                                    </div>
-                                </div>
-                                {/* Total */}
-                                <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
-                                    <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
-                                        style={{
-                                            boxShadow: getCircleBoxShadow(scoreOverview.total),
-                                            color: '#111',
-                                        }}
-                                        aria-label={`Snitt: ${roundToOneDecimal(scoreOverview.total)}`}
-                                    >
-                                        {roundToOneDecimal(scoreOverview.total)}
-                                    </div>
-                                    <div
-                                        className="ml-4 md:ml-0 mt-0 md:mt-4 font-medium text-base leading-tight text-left md:text-center"
-                                        style={{ minHeight: LABEL_MIN_HEIGHT }}
-                                    >
-                                        {`Snitt`}
-                                    </div>
-                                </div>
-                            </div>
-                            <hr className="my-2 border-t border-gray-300" />
-                            <div className="bg-white pl-0 pt-2 ">
+                            )}
+
+                            <div className="bg-white pl-0 mt-4">
                                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                     <a
                                         href="https://jira.adeo.no/plugins/servlet/desk/portal/581/create/2641"

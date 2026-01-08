@@ -48,7 +48,8 @@ export const lokalkontorDashboard: DashboardConfig = {
       title: "Siteimprove",
       type: "siteimprove",
       width: '100',
-      siteimprove_id: '21766831756'
+      siteimprove_id: '21766831756',
+      siteimprove_portal_id: '1002489'
     },
     {
       title: "Besøk over tid",

@@ -10,6 +10,7 @@ export interface SavedChart {
     isStandardWidget?: boolean;
     // Siteimprove specific config
     siteimprove_id?: string; // Site ID for Siteimprove (overrides team lookup)
+    siteimprove_portal_id?: string; // Site ID used in Siteimprove Portal URL (if different)
 }
 
 // Configuration for which standard filters should be hidden
