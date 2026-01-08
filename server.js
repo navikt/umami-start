@@ -2374,7 +2374,8 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         const timeDiffColumns = urls.map((_, i) => {
             if (i === 0) return null;
             return `TIMESTAMP_DIFF(time${i + 1}, time${i}, SECOND) as diff_${i}_to_${i + 1}`;
-        }).filter(Boolean).join(',\n                    ');
+        }).filter(Boolean).join(',\n                    ') + `,
+            TIMESTAMP_DIFF(time${urls.length}, time1, SECOND) as diff_total`;
 
         // Then calculate both average and median for each time difference
         query += stepCtes.join(',') + `,
@@ -2392,14 +2393,21 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             return `time${i} IS NOT NULL AND time${i + 1} IS NOT NULL`;
         }).filter(Boolean).join(' AND ')}
             )
+            ${urls.slice(0, urls.length - 1).map((_, i) => `
             SELECT
-                ${urls.slice(0, urls.length - 1).map((_, i) => `
-                    ${i} as step,
-                    @url${i} as from_url,
-                    @url${i + 1} as to_url,
-                    AVG(diff_${i + 1}_to_${i + 2}) as avg_seconds,
-                    APPROX_QUANTILES(diff_${i + 1}_to_${i + 2}, 2)[OFFSET(1)] as median_seconds
-                `).join('\n                FROM time_diffs UNION ALL SELECT ')}
+                ${i} as step,
+                @url${i} as from_url,
+                @url${i + 1} as to_url,
+                ROUND(AVG(diff_${i + 1}_to_${i + 2})) as avg_seconds,
+                APPROX_QUANTILES(diff_${i + 1}_to_${i + 2}, 2)[OFFSET(1)] as median_seconds
+            FROM time_diffs`).join('\n            UNION ALL')}
+            UNION ALL
+            SELECT
+                -1 as step,
+                'Total' as from_url,
+                'Total' as to_url,
+                ROUND(AVG(diff_total)) as avg_seconds,
+                APPROX_QUANTILES(diff_total, 2)[OFFSET(1)] as median_seconds
             FROM time_diffs
             ORDER BY step
         `;

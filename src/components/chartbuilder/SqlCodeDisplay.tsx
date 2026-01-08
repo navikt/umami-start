@@ -42,20 +42,29 @@ const SqlCodeDisplay = ({ sql, showEditButton = false, withoutReadMore = false }
             {copiedDashboard ? 'Kopiert!' : 'Dashboard'}
           </Button>
         </Tooltip>
-        {showEditButton && (
-          <Button
-            size="xsmall"
-            variant="tertiary"
-            type="button"
-            onClick={() => {
-              const encodedSql = encodeURIComponent(sql);
-              window.open(`/sql?sql=${encodedSql}`, '_blank');
-            }}
-            aria-label="Rediger SQL i BigQuery"
-          >
-            Rediger SQL
-          </Button>
-        )}
+        {showEditButton && (() => {
+          const encodedSql = encodeURIComponent(sql);
+          const urlLength = `/sql?sql=${encodedSql}`.length;
+          const isTooLong = urlLength > 2000;
+
+          return (
+            <Button
+              size="xsmall"
+              variant="tertiary"
+              type="button"
+              onClick={() => {
+                if (isTooLong) {
+                  window.open('/sql', '_blank');
+                } else {
+                  window.open(`/sql?sql=${encodedSql}`, '_blank');
+                }
+              }}
+              aria-label="Åpne redigeringsverktøy"
+            >
+              Åpne redigeringsverktøy
+            </Button>
+          );
+        })()}
       </div>
       <div className="border rounded-md overflow-hidden bg-[#1e1e1e]">
         <Editor

@@ -722,14 +722,19 @@ const Funnel = () => {
                                 </Heading>
 
                                 {!showTiming && (
-                                    <Button
-                                        variant="secondary"
-                                        onClick={fetchTimingData}
-                                        loading={timingLoading}
-                                        disabled={timingLoading}
-                                    >
-                                        Beregn tid per steg
-                                    </Button>
+                                    <div className="space-y-2">
+                                        <Button
+                                            variant="secondary"
+                                            onClick={fetchTimingData}
+                                            loading={timingLoading}
+                                            disabled={timingLoading}
+                                        >
+                                            Beregn tid per steg
+                                        </Button>
+                                        <p className="text-sm text-gray-500">
+                                            Kan ta opptil 30 sekunder.
+                                        </p>
+                                    </div>
                                 )}
 
                                 {timingError && (
@@ -738,68 +743,88 @@ const Funnel = () => {
                                     </Alert>
                                 )}
 
-                                {showTiming && !timingError && timingData.length > 0 && (
-                                    <>
-                                        <div className="border rounded-lg overflow-hidden mb-3">
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full divide-y divide-gray-200">
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnitt</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Median</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="bg-white divide-y divide-gray-200">
-                                                        {timingData.map((timing, index) => (
-                                                            <tr key={index} className="hover:bg-gray-50">
-                                                                <td className="px-6 py-4 text-sm text-gray-900">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">Steg {timing.fromStep + 1}</span>
-                                                                        <span className="text-xs text-gray-500 break-all">{timing.fromUrl}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm text-gray-900">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">Steg {timing.toStep + 1}</span>
-                                                                        <span className="text-xs text-gray-500 break-all">{timing.toUrl}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm font-bold text-blue-600">
-                                                                    {formatDuration(timing.avgSeconds)}
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm font-bold text-green-600">
-                                                                    {formatDuration(timing.medianSeconds)}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                        {/* Footer section for timing table */}
-                                        <div className="p-3 bg-gray-50 border border-t-0 rounded-b-lg -mt-3 mb-3 flex justify-between items-center">
-                                            <div>
-                                                {timingQueryStats && (
-                                                    <span className="text-sm text-gray-600">
-                                                        Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {timingSql && (
-                                                <Button
-                                                    size="small"
-                                                    variant="tertiary"
-                                                    onClick={() => setModalSql(timingSql)}
-                                                    icon={<Code2 size={16} />}
-                                                >
-                                                    Vis SQL
-                                                </Button>
+                                {showTiming && !timingError && timingData.length > 0 && (() => {
+                                    const totalTiming = timingData.find(t => t.fromStep === -1);
+                                    const stepsTiming = timingData.filter(t => t.fromStep !== -1);
+
+                                    return (
+                                        <>
+                                            {totalTiming && (
+                                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                                    <div className="border rounded-lg p-4 bg-blue-50 border-blue-100">
+                                                        <div className="text-sm text-blue-800 font-medium mb-1">Total tid (Gjennomsnitt)</div>
+                                                        <div className="text-2xl font-bold text-blue-900">{formatDuration(totalTiming.avgSeconds)}</div>
+                                                        <div className="text-xs text-blue-600 mt-1">Gjennomsnittlig tid fra første til siste steg for de som fullførte hele trakten.</div>
+                                                    </div>
+                                                    <div className="border rounded-lg p-4 bg-green-50 border-green-100">
+                                                        <div className="text-sm text-green-800 font-medium mb-1">Total tid (Median)</div>
+                                                        <div className="text-2xl font-bold text-green-900">{formatDuration(totalTiming.medianSeconds)}</div>
+                                                        <div className="text-xs text-green-600 mt-1">Median tid fra første til siste steg for de som fullførte hele trakten.</div>
+                                                    </div>
+                                                </div>
                                             )}
-                                        </div>
-                                    </>
-                                )}
+
+                                            <div className="border rounded-lg overflow-hidden mb-3">
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-gray-200">
+                                                        <thead className="bg-gray-100">
+                                                            <tr>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnitt</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Median</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-200">
+                                                            {stepsTiming.map((timing, index) => (
+                                                                <tr key={index} className="hover:bg-gray-50">
+                                                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">Steg {timing.fromStep + 1}</span>
+                                                                            <span className="text-xs text-gray-500 break-all">{timing.fromUrl}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">Steg {timing.toStep + 1}</span>
+                                                                            <span className="text-xs text-gray-500 break-all">{timing.toUrl}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">
+                                                                        {formatDuration(timing.avgSeconds)}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-bold text-green-600">
+                                                                        {formatDuration(timing.medianSeconds)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                {/* Footer inside the table container to match styling */}
+                                                <div className="p-3 bg-gray-50 border-t flex justify-between items-center">
+                                                    <div>
+                                                        {timingQueryStats && (
+                                                            <span className="text-sm text-gray-600">
+                                                                Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {timingSql && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="tertiary"
+                                                            onClick={() => setModalSql(timingSql)}
+                                                            icon={<Code2 size={16} />}
+                                                        >
+                                                            Vis SQL
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </Tabs.Panel>
                         )}
                     </Tabs>
