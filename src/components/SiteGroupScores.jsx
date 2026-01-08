@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { ProgressBar, Link } from '@navikt/ds-react';
+import { ExternalLink } from 'lucide-react';
 
 const LABEL_MIN_HEIGHT = "2.5rem"; // Ensures all labels take up the same vertical space
 
@@ -139,14 +141,37 @@ const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) 
         fetchData();
     }, [siteId, groupId, baseUrl]);
 
+    const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        let interval;
+        if (loading) {
+            setProgress(0);
+            interval = setInterval(() => {
+                setProgress((prev) => {
+                    if (prev >= 90) return prev;
+                    return prev + 2; // +2% every 100ms reaches 90% in 4.5s
+                });
+            }, 100);
+        }
+        return () => clearInterval(interval);
+    }, [loading]);
+
     if (loading) {
         return (
-            <div className={`p-4 w-full bg-white border border-gray-200 rounded-lg shadow-sm ${className || ''}`}>
-                <div className="animate-pulse flex space-x-4">
-                    <div className="flex-1 space-y-4 py-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="space-y-2">
-                            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className={`p-2 w-full bg-white border border-gray-200 rounded-lg shadow-sm mb-2 ${className || ''}`}>
+                <div className="w-full">
+                    <div className="mt-1 bg-white p-2 rounded-lg">
+                        <h2 className="text-lg font-semibold mb-3" style={{ color: '#000000' }}>
+                            Funn fra Siteimprove
+                        </h2>
+                        <div className="py-8">
+                            <div className="w-full max-w-sm">
+                                <ProgressBar value={progress} aria-label="Leter etter forslag til forbedringer" />
+                                <p className="mt-3 text-base text-gray-600">
+                                    Leter etter forslag til forbedringer...
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -238,14 +263,15 @@ const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) 
                                             </div>
 
                                             {qaOverview.broken_links > 0 && (
-                                                <a
+                                                <Link
                                                     href={`https://my2.siteimprove.com/QualityAssurance/${portalSiteId || 1002489}/${groupId}/Links/Pages/1/PageLevel/Asc?pageSize=100`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="mt-2 sm:mt-0 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                    className="mt-2 sm:mt-0 inline-flex items-center text-base font-medium"
                                                 >
-                                                    Se rapport <span className="ml-1" aria-hidden="true">→</span>
-                                                </a>
+                                                    Se rapport
+                                                    <ExternalLink className="ml-1 w-5 h-5" aria-hidden="true" />
+                                                </Link>
                                             )}
                                         </div>
                                     )}
@@ -274,14 +300,15 @@ const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) 
                                             </div>
 
                                             {qaOverview.potential_misspellings > 0 && (
-                                                <a
+                                                <Link
                                                     href={`https://my2.siteimprove.com/QualityAssurance/${portalSiteId || 1002489}/${groupId}/Spelling/IndexV2`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="mt-2 sm:mt-0 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                    className="mt-2 sm:mt-0 inline-flex items-center text-base font-medium"
                                                 >
-                                                    Se rapport <span className="ml-1" aria-hidden="true">→</span>
-                                                </a>
+                                                    Se rapport
+                                                    <ExternalLink className="ml-1 w-5 h-5" aria-hidden="true" />
+                                                </Link>
                                             )}
                                         </div>
                                     )}
