@@ -29,6 +29,7 @@ import Diagnosis from "./pages/Diagnosis.tsx";
 import EventJourney from "./pages/EventJourney.tsx";
 import UserProfile from "./pages/UserProfile.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import DashboardOverview from "./pages/DashboardOverview.tsx";
 
 
 const routes = [
@@ -59,6 +60,7 @@ const routes = [
     { path: "/personvernssjekk", component: <PrivacyCheck /> },
     { path: "/diagnose", component: <Diagnosis /> },
     { path: "/profil", component: <UserProfile /> },
+    { path: "/dashboards", component: <DashboardOverview /> },
     { path: "/dashboard", component: <Dashboard /> }
 ];
 

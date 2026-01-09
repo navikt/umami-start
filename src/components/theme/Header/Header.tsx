@@ -2,7 +2,8 @@ import {
   MenuHamburgerIcon,
   BookIcon,
   ComponentIcon,
-  CogIcon
+  CogIcon,
+  BarChartIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
@@ -42,6 +43,14 @@ export default function Header() {
               <Dropdown.Menu.List>
                 <Dropdown.Menu.List.Item
                   as={Link}
+                  href="/dashboards"
+                  className="no-underline"
+                >
+                  <BarChartIcon aria-hidden fontSize="1.5rem" />
+                  <span className="whitespace-nowrap">Dashboard</span>
+                </Dropdown.Menu.List.Item>
+                <Dropdown.Menu.List.Item
+                  as={Link}
                   href="/oppsett"
                   className="no-underline"
                 >
@@ -73,6 +82,13 @@ export default function Header() {
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center w-full"></div>
             <div className="flex flex-grow">
+              <Link
+                href="/dashboards"
+                className={linkButton}
+              >
+                <BarChartIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Dashboard</span>
+              </Link>
               <Link
                 href="/oppsett"
                 className={linkButton}

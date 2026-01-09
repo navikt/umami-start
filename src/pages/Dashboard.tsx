@@ -615,7 +615,7 @@ const Dashboard = () => {
                     </Alert>
                 </div>
             ) : !effectiveWebsiteId ? (
-                <div className="p-8 col-span-full">
+                <div className="w-fit">
                     <Alert variant="info">
                         Velg en nettside fra menyen for å se dashboardet.
                     </Alert>
