@@ -7,9 +7,8 @@ import {
   Link,
   List,
   CopyButton,
-  Box,
 } from "@navikt/ds-react";
-import { CopyBlock, a11yLight } from "react-code-blocks";
+import SnippetBlock from "./SnippetBlock";
 import {
   getStandardSnippet,
   getNextJsSnippet,
@@ -42,9 +41,9 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
             gap: "0.5rem",
           }}
         >
-          <div>
+          <span>
             <strong>Nettside-ID:</strong> {selectedItem.id}
-          </div>
+          </span>
           <CopyButton
             copyText={selectedItem.id}
             text="Kopier ID"
@@ -57,20 +56,10 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
           <Accordion.Item>
             <Accordion.Header>Umami-sporingskode (standard)</Accordion.Header>
             <Accordion.Content>
-              <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                padding="0"
-              >
-                <CopyBlock
-                  wrapLongLines
-                  theme={a11yLight}
-                  text={getStandardSnippet(selectedItem.id)}
-                  language="html"
-                  showLineNumbers={false}
-                />
-              </Box>
+              <SnippetBlock
+                text={getStandardSnippet(selectedItem.id)}
+                language="html"
+              />
             </Accordion.Content>
           </Accordion.Item>
           <Accordion.Item>
@@ -78,21 +67,12 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
               Umami-sporingskode for Next.js-apper
             </Accordion.Header>
             <Accordion.Content>
-              <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                padding="0"
-                style={{ marginBottom: "15px" }}
-              >
-                <CopyBlock
-                  wrapLongLines
-                  theme={a11yLight}
+              <div style={{ marginBottom: "15px" }}>
+                <SnippetBlock
                   text={getNextJsSnippet(selectedItem.id)}
                   language="jsx"
-                  showLineNumbers={false}
                 />
-              </Box>
+              </div>
               <p style={{ marginBottom: "15px" }}>
                 Benytter next.js sin innebygde import Script from 'next/script';
               </p>
@@ -117,40 +97,22 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
                 <strong>Steg 1:</strong> Installer <code>@unhead/react</code> og
                 sett opp UnheadProvider i hovedkomponenten din (f.eks. App.tsx)
               </p>
-              <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                padding="0"
-                style={{ marginBottom: "15px" }}
-              >
-                <CopyBlock
-                  wrapLongLines
+              <div style={{ marginBottom: "15px" }}>
+                <SnippetBlock
                   text={getReactViteProviderSnippet()}
                   language="jsx"
-                  showLineNumbers={false}
-                  theme={a11yLight}
                 />
-              </Box>
+              </div>
               <p style={{ marginBottom: "10px" }}>
                 <strong>Steg 2:</strong> Legg til sporingskoden med
                 Head-komponenten
               </p>
-              <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                padding="0"
-                style={{ marginBottom: "15px" }}
-              >
-                <CopyBlock
-                  wrapLongLines
+              <div style={{ marginBottom: "15px" }}>
+                <SnippetBlock
                   text={getReactViteHeadSnippet(selectedItem.id)}
                   language="jsx"
-                  showLineNumbers={false}
-                  theme={a11yLight}
                 />
-              </Box>
+              </div>
               <Link
                 target="_blank"
                 href={`https://github.com/navikt/reops-felgen/blob/master/src/App.tsx`}
@@ -164,21 +126,12 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
               Umami-sporingskode for Astro.js-apper
             </Accordion.Header>
             <Accordion.Content>
-              <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                padding="0"
-                style={{ marginBottom: "15px" }}
-              >
-                <CopyBlock
-                  wrapLongLines
-                  theme={a11yLight}
+              <div style={{ marginBottom: "15px" }}>
+                <SnippetBlock
                   text={getAstroSnippet(selectedItem.id)}
                   language="html"
-                  showLineNumbers={false}
                 />
-              </Box>
+              </div>
               <Link
                 target="_blank"
                 href={`https://github.com/navikt/docs/blob/main/src/components/BaseHead.astro`}
@@ -192,20 +145,10 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
               Umami-sporingskode for Google Tag Manager (GTM)
             </Accordion.Header>
             <Accordion.Content>
-              <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                padding="0"
-              >
-                <CopyBlock
-                  wrapLongLines
-                  theme={a11yLight}
-                  text={getGTMSnippet(selectedItem.id)}
-                  language="javascript"
-                  showLineNumbers={false}
-                />
-              </Box>
+              <SnippetBlock
+                text={getGTMSnippet(selectedItem.id)}
+                language="javascript"
+              />
             </Accordion.Content>
           </Accordion.Item>
         </Accordion>

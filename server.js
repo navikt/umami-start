@@ -2263,7 +2263,6 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
 });
 
 
-// Get funnel timing data from BigQuery (average time per step)
 app.post('/api/bigquery/funnel-timing', async (req, res) => {
     try {
         const { websiteId, steps, startDate, endDate, onlyDirectEntry = true } = req.body;
@@ -2298,140 +2297,150 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         END
             `;
 
-        // 1. Base events CTE with LAG for strict mode
-        let query = `
-            WITH events_raw AS(
+        // Optimized Query using ARRAY_AGG and UDF to avoid self-joins
+        const query = `
+            CREATE TEMP FUNCTION match_funnel(
+                hits ARRAY<STRUCT<url STRING, ts TIMESTAMP>>, 
+                steps ARRAY<STRING>, 
+                strict BOOL
+            )
+            RETURNS ARRAY<STRUCT<step INT64, from_url STRING, to_url STRING, diff INT64>>
+            LANGUAGE js AS """
+                if (!hits || !steps || steps.length < 2) return [];
+                
+                var currentStepIdx = 0;
+                var stepTimes = [];
+                var lastHitIndex = -1;
+                var result = [];
+                
+                // 1. Find the first occurrence of the START URL
+                for (var i = 0; i < hits.length; i++) {
+                    if (hits[i].url === steps[0]) {
+                        stepTimes.push(hits[i].ts);
+                        lastHitIndex = i;
+                        currentStepIdx = 1;
+                        break;
+                    }
+                }
+                
+                // If start not found, return empty
+                if (currentStepIdx === 0) return [];
+                
+                // 2. Find subsequent steps
+                for (var s = 1; s < steps.length; s++) {
+                    var targetUrl = steps[s];
+                    var stepFound = false;
+                    
+                    if (strict) {
+                        // STRICT MODE: Must be the IMMEDIATE next event
+                        if (lastHitIndex + 1 < hits.length && hits[lastHitIndex + 1].url === targetUrl) {
+                            stepTimes.push(hits[lastHitIndex + 1].ts);
+                            lastHitIndex++;
+                            stepFound = true;
+                        }
+                    } else {
+                        // LOOSE MODE: Search forward for the next occurrence
+                        for (var i = lastHitIndex + 1; i < hits.length; i++) {
+                            if (hits[i].url === targetUrl) {
+                                stepTimes.push(hits[i].ts);
+                                lastHitIndex = i;
+                                stepFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If any step in the chain is broken, stop recording timings
+                    // (We only want completed sub-sequences? Or do we want partials? 
+                    // The standard funnel calculation typically tracks drop-off.
+                    // But for TIMING, we only care about transitions that actually happened.)
+                    if (!stepFound) break; 
+                }
+                
+                // Calculate diffs between found steps
+                // stepTimes contains [T0, T1, T2...] for steps 0, 1, 2...
+                // We produce pairs (0->1, 1->2, etc.)
+                for (var i = 0; i < stepTimes.length - 1; i++) {
+                    var t1 = new Date(stepTimes[i]);
+                    var t2 = new Date(stepTimes[i+1]);
+                    var diffSeconds = (t2 - t1) / 1000;
+                    
+                    result.push({
+                        step: i,
+                        from_url: steps[i],
+                        to_url: steps[i+1],
+                        diff: Math.round(diffSeconds)
+                    });
+                }
+                
+                return result;
+            """;
+
+            WITH events AS (
                 SELECT 
                     session_id,
-                ${normalizeUrlSql} as url_path,
-                created_at
+                    ${normalizeUrlSql} as url_path,
+                    created_at
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
-                  AND created_at BETWEEN @startDate AND @endDate
                   AND event_type = 1
+                  -- Optimization: Filter to only relevant URLs early
+                  -- Note: For strict mode, we might need context, but if we strictly just check the sequence of *funnel pages*,
+                  -- filtering is fine IF strictness ignores non-funnel pages. 
+                  -- standard strict funnel: A -> B (direct). 
+                  -- If user does A -> Random -> B. Strict funnel fails.
+                  -- If we filter out Random, we see A -> B. Strict funnel passes. 
+                  -- THIS IS A SEMANTIC DIFFERENCE.
+                  -- However, usually for "Funnel Analysis" we care about the specific flow defined.
+                  -- But strictly speaking, "Direct Entry" means "referrer = prev_step".
+                  -- To be safe and fast, we won't filter 'events' by URL for now to preserve strict semantics strictly.
+                  -- But to survive the "Resources Exceeded", filtering is the main cure.
+                  -- Let's Compromise: If Loose Mode, we filter. If Strict Mode, we don't (or we accept the loose-on-noise behavior).
+                  -- Given the error, we MUST optimize. 
+                  -- Let's try WITHOUT the URL filter first, relying on ARRAY_AGG efficiency.
+                  -- If that fails, we can add the filter.
             ),
-            events AS (
+            sessions AS (
                 SELECT 
-                    *,
-                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
-                FROM events_raw
-            ),
-        `;
-
-        // 2. Generate CTEs for each step with timing
-        const stepCtes = urls.map((url, index) => {
-            const stepName = `step${index + 1}`;
-            const prevStepName = `step${index}`;
-
-            if (index === 0) {
-                // Step 1: Always any visit to the first URL
-                return `
-            ${stepName} AS (
-                SELECT session_id, MIN(created_at) as time${index + 1}
+                    session_id,
+                    ARRAY_AGG(STRUCT(url_path as url, created_at as ts) ORDER BY created_at) as hits
                 FROM events
-                WHERE url_path = @url${index}
                 GROUP BY session_id
-            )`;
-            } else {
-                if (onlyDirectEntry) {
-                    // Strict mode: Current URL must be visited immediately after Previous URL
-                    return `
-            ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
-                FROM events e
-                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
-                  AND e.created_at > prev.time${index}
-                  AND e.prev_url_path = @url${index - 1}
-                GROUP BY e.session_id
-            )`;
-                } else {
-                    // Loose mode: Eventual visit (standard funnel)
-                    return `
-            ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
-                FROM events e
-                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
-                  AND e.created_at > prev.time${index}
-                GROUP BY e.session_id
-            )`;
-                }
-            }
-        });
-
-        // 3. Build the timing query - join all steps and calculate time differences
-        const joinClauses = urls.map((_, i) => {
-            if (i === 0) return 'step1';
-            return `LEFT JOIN step${i + 1} ON step1.session_id = step${i + 1}.session_id`;
-        }).join('\n            ');
-
-        // Create column aliases for the timing_data CTE
-        const timeColumns = urls.map((_, i) => `step${i + 1}.time${i + 1} as time${i + 1}`).join(',\n                    ');
-
-        // First, create a CTE with individual time differences per session
-        const timeDiffColumns = urls.map((_, i) => {
-            if (i === 0) return null;
-            return `TIMESTAMP_DIFF(time${i + 1}, time${i}, SECOND) as diff_${i}_to_${i + 1}`;
-        }).filter(Boolean).join(',\n                    ') + `,
-            TIMESTAMP_DIFF(time${urls.length}, time1, SECOND) as diff_total`;
-
-        // Then calculate both average and median for each time difference
-        query += stepCtes.join(',') + `,
-            timing_data AS (
-                SELECT
-                    ${timeColumns}
-                FROM ${joinClauses}
             ),
-            time_diffs AS (
-                SELECT
-                    ${timeDiffColumns}
-                FROM timing_data
-                WHERE ${urls.map((_, i) => {
-            if (i === 0) return null;
-            return `time${i} IS NOT NULL AND time${i + 1} IS NOT NULL`;
-        }).filter(Boolean).join(' AND ')}
+            timings AS (
+                SELECT 
+                    session_id,
+                    match
+                FROM sessions,
+                UNNEST(match_funnel(hits, @steps, @strict)) as match
             )
-            ${urls.slice(0, urls.length - 1).map((_, i) => `
-            SELECT
-                ${i} as step,
-                @url${i} as from_url,
-                @url${i + 1} as to_url,
-                ROUND(AVG(diff_${i + 1}_to_${i + 2})) as avg_seconds,
-                APPROX_QUANTILES(diff_${i + 1}_to_${i + 2}, 2)[OFFSET(1)] as median_seconds
-            FROM time_diffs`).join('\n            UNION ALL')}
-            UNION ALL
-            SELECT
-                -1 as step,
-                'Total' as from_url,
-                'Total' as to_url,
-                ROUND(AVG(diff_total)) as avg_seconds,
-                APPROX_QUANTILES(diff_total, 2)[OFFSET(1)] as median_seconds
-            FROM time_diffs
+            SELECT 
+                match.step,
+                match.from_url,
+                match.to_url,
+                AVG(match.diff) as avg_seconds,
+                APPROX_QUANTILES(match.diff, 2)[OFFSET(1)] as median_seconds,
+                COUNT(*) as count -- Debug info
+            FROM timings
+            GROUP BY 1, 2, 3
             ORDER BY step
         `;
 
-        console.log('[Funnel Timing] Generated SQL query:', query);
-
+        console.log('[Funnel Timing] Generated SQL query (Optimization: UDF)');
 
         // Create params object
         const params = {
             websiteId,
             startDate,
-            endDate
+            endDate,
+            steps: urls,
+            strict: onlyDirectEntry
         };
-
-        urls.forEach((url, index) => {
-            params[`url${index}`] = url;
-        });
 
         // Get dry run stats
         let queryStats = null;
         try {
-            // Get NAV ident from authenticated user for audit logging
-
-
             const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
@@ -2454,8 +2463,6 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             console.log('[Funnel Timing] Dry run failed:', dryRunError.message);
         }
 
-        // Get NAV ident from authenticated user for audit logging
-
         const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
@@ -2469,23 +2476,17 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
         }
 
         const timingData = rows.map((row) => ({
-            fromStep: row.step,
-            toStep: row.step + 1,
+            fromStep: parseInt(row.step),
+            toStep: parseInt(row.step) + 1,
             fromUrl: row.from_url,
             toUrl: row.to_url,
             avgSeconds: row.avg_seconds ? Math.round(parseFloat(row.avg_seconds)) : null,
             medianSeconds: row.median_seconds ? Math.round(parseFloat(row.median_seconds)) : null
         }));
 
-        // Create a display version of the SQL without the Total row
-        // Remove the UNION ALL for Total from the query
-        const displaySql = substituteQueryParameters(query, params)
-            .replace(/\s*UNION ALL\s*SELECT\s*-1 as step,\s*'Total' as from_url,\s*'Total' as to_url,\s*ROUND\(AVG\(diff_total\)\) as avg_seconds,\s*APPROX_QUANTILES\(diff_total, 2\)\[OFFSET\(1\)\] as median_seconds\s*FROM time_diffs/gi, '')
-            .replace(/,\s*TIMESTAMP_DIFF\(time\d+, time1, SECOND\) as diff_total/gi, '');
-
         res.json({
             data: timingData,
-            sql: displaySql,
+            sql: query, // simplified for display
             queryStats
         });
 

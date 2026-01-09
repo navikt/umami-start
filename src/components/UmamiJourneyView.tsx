@@ -377,15 +377,15 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                     <button
                                                         onClick={(e) => toggleFunnelStep(e, item.nodeId, item.name, stepData.step)}
                                                         className={`
-                                                            w-5 h-5 rounded-full flex items-center justify-center transition-all
+                                                            w-6 h-6 rounded-full flex items-center justify-center transition-all
                                                             ${isFunnelStep
                                                                 ? 'bg-green-500 text-white opacity-100'
-                                                                : 'bg-white/20 text-white hover:bg-white/40 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                                                                : 'bg-white/30 text-white hover:bg-white/50 opacity-100'
                                                             }
                                                         `}
                                                         title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
                                                     >
-                                                        {isFunnelStep ? <Check size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
+                                                        {isFunnelStep ? <Check size={14} strokeWidth={3} /> : <Plus size={14} strokeWidth={3} />}
                                                     </button>
                                                 </div>
                                             </div>
@@ -411,7 +411,12 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                 <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 border border-gray-700 text-white px-8 py-5 rounded-full shadow-2xl z-50 flex items-center gap-8 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex flex-col">
                         <span className="font-bold text-xl">{funnelSteps.length} steg valgt</span>
-                        <span className="text-sm text-gray-300">Bygg en traktanalyse fra disse stegene</span>
+                        <span className="text-sm text-gray-300">
+                            {funnelSteps.length < 2
+                                ? "Du må velge minst to steg for å lage en trakt"
+                                : "Bygg en traktanalyse fra disse stegene"
+                            }
+                        </span>
                     </div>
 
                     <div className="flex items-center gap-4">
