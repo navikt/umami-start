@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Heading, InfoCard } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download, Minimize2, Share2, Check } from 'lucide-react';
+import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import UmamiJourneyView from '../components/UmamiJourneyView';
+import AnalysisActionModal from '../components/AnalysisActionModal';
 import { Website } from '../types/chart';
 import { normalizeUrlToPath } from '../lib/utils';
 
@@ -44,6 +45,7 @@ const UserJourney = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [reverseVisualOrder, setReverseVisualOrder] = useState<boolean>(false); // Default off
+    const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
 
 
     // Auto-submit when URL parameters are present (for shared links)
@@ -502,6 +504,7 @@ const UserJourney = () => {
                                     reverseVisualOrder={reverseVisualOrder}
                                     journeyDirection={journeyDirection}
                                     websiteId={selectedWebsite?.id}
+                                    period={period}
                                 />
                                 {queryStats && (
                                     <div className="text-sm text-gray-600 text-right mt-4">
@@ -538,8 +541,30 @@ const UserJourney = () => {
                                                 return (
                                                     <tr key={idx} className="hover:bg-gray-50">
                                                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{step}</td>
-                                                        <td className="px-4 py-2 text-sm text-gray-900">{targetNode?.name || '-'}</td>
-                                                        <td className="px-4 py-2 text-sm text-gray-900">{sourceNode?.name || '-'}</td>
+                                                        <td className="px-4 py-2 text-sm">
+                                                            {targetNode?.name && selectedWebsite ? (
+                                                                <span
+                                                                    className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                                                    onClick={() => setSelectedTableUrl(targetNode.name)}
+                                                                >
+                                                                    {targetNode.name} <ExternalLink className="h-3 w-3" />
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-900">{targetNode?.name || '-'}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-sm">
+                                                            {sourceNode?.name && selectedWebsite ? (
+                                                                <span
+                                                                    className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                                                    onClick={() => setSelectedTableUrl(sourceNode.name)}
+                                                                >
+                                                                    {sourceNode.name} <ExternalLink className="h-3 w-3" />
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-900">{sourceNode?.name || '-'}</span>
+                                                            )}
+                                                        </td>
                                                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{link.value.toLocaleString('nb-NO')}</td>
                                                     </tr>
                                                 );
@@ -572,6 +597,14 @@ const UserJourney = () => {
                                     </Button>
                                 </div>
                             </div>
+
+                            <AnalysisActionModal
+                                open={!!selectedTableUrl}
+                                onClose={() => setSelectedTableUrl(null)}
+                                urlPath={selectedTableUrl}
+                                websiteId={selectedWebsite?.id}
+                                period={period}
+                            />
                         </Tabs.Panel>
                     </Tabs>
                 </>

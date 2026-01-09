@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
-import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch } from 'lucide-react';
+import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check } from 'lucide-react';
 
 interface AnalysisActionModalProps {
     open: boolean;
@@ -17,6 +17,8 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     websiteId,
     period = 'current_month'
 }) => {
+    const [copySuccess, setCopySuccess] = useState(false);
+
     if (!urlPath || !websiteId) return null;
 
     const openAnalysis = (path: string, paramName: string = 'urlPath') => {
@@ -33,6 +35,16 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
         onClose();
     };
 
+    const copyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(urlPath);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
     return (
         <Modal open={open} onClose={onClose} header={{ heading: 'Hvordan vil du åpne lenken?' }} width="medium">
             <Modal.Body>
@@ -42,14 +54,24 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             <div className="text-sm font-medium text-gray-700">
                                 URL-sti
                             </div>
-                            <Button
-                                size="small"
-                                variant="tertiary"
-                                onClick={openOnWebsite}
-                                icon={<ExternalLink aria-hidden size={18} />}
-                            >
-                                Åpne på nav.no
-                            </Button>
+                            <div className="flex gap-1">
+                                <Button
+                                    size="small"
+                                    variant="tertiary"
+                                    onClick={copyLink}
+                                    icon={copySuccess ? <Check aria-hidden size={18} /> : <Copy aria-hidden size={18} />}
+                                >
+                                    {copySuccess ? 'Kopiert!' : 'Kopier'}
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="tertiary"
+                                    onClick={openOnWebsite}
+                                    icon={<ExternalLink aria-hidden size={18} />}
+                                >
+                                    Åpne på nav.no
+                                </Button>
+                            </div>
                         </div>
                         <div className="text-sm font-mono bg-gray-50 p-3 rounded-md border border-gray-200 break-all text-gray-800">
                             {urlPath}

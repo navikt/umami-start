@@ -2,11 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download, Share2, Check } from 'lucide-react';
+import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import TrafficStats from '../components/TrafficStats';
+import AnalysisActionModal from '../components/AnalysisActionModal';
 import { Website } from '../types/chart';
 import { normalizeUrlToPath } from '../lib/utils';
 
@@ -39,6 +40,7 @@ const TrafficAnalysis = () => {
     const [error, setError] = useState<string | null>(null);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [selectedInternalUrl, setSelectedInternalUrl] = useState<string | null>(null);
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -362,7 +364,7 @@ const TrafficAnalysis = () => {
         return { internalPaths, entrances, exits, referrers, channels };
     }, [flowData]);
 
-    const TrafficTable = ({ title, data }: { title: string; data: { name: string; count: number }[] }) => {
+    const TrafficTable = ({ title, data, onRowClick }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
@@ -378,6 +380,8 @@ const TrafficAnalysis = () => {
 
         const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+        const isClickableRow = (name: string) => name.startsWith('/') && onRowClick;
 
         return (
             <VStack gap="4">
@@ -406,8 +410,20 @@ const TrafficAnalysis = () => {
                         </Table.Header>
                         <Table.Body>
                             {paginatedData.map((row, i) => (
-                                <Table.Row key={i}>
-                                    <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
+                                <Table.Row
+                                    key={i}
+                                    className={isClickableRow(row.name) ? 'cursor-pointer hover:bg-gray-50' : ''}
+                                    onClick={() => isClickableRow(row.name) && onRowClick?.(row.name)}
+                                >
+                                    <Table.DataCell className="truncate max-w-md" title={row.name}>
+                                        {isClickableRow(row.name) ? (
+                                            <span className="text-blue-600 hover:underline flex items-center gap-1">
+                                                {row.name} <ExternalLink className="h-3 w-3" />
+                                            </span>
+                                        ) : (
+                                            row.name
+                                        )}
+                                    </Table.DataCell>
                                     <Table.DataCell align="right">
                                         {submittedMetricType === 'proportion' ? `${(row.count * 100).toFixed(1)}%` : row.count.toLocaleString('nb-NO')}
                                     </Table.DataCell>
@@ -607,15 +623,23 @@ const TrafficAnalysis = () => {
 
                             <Tabs.Panel value="internal" className="pt-4">
                                 <div className="flex flex-col gap-8">
-                                    <TrafficTable title="Sti" data={internalPaths} />
-                                    <TrafficTable title="Innganger" data={entrances} />
-                                    <TrafficTable title="Utganger" data={exits} />
+                                    <TrafficTable title="Sti" data={internalPaths} onRowClick={setSelectedInternalUrl} />
+                                    <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} />
+                                    <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} />
                                     {flowQueryStats && (
                                         <div className="text-sm text-gray-600 text-right">
                                             Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
                                         </div>
                                     )}
                                 </div>
+
+                                <AnalysisActionModal
+                                    open={!!selectedInternalUrl}
+                                    onClose={() => setSelectedInternalUrl(null)}
+                                    urlPath={selectedInternalUrl}
+                                    websiteId={selectedWebsite?.id}
+                                    period={period}
+                                />
                             </Tabs.Panel>
 
                             <Tabs.Panel value="external" className="pt-4">

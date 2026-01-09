@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, Label, BodyShort } from '@navikt/ds-react';
-import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet } from 'lucide-react';
+import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
+import AnalysisActionModal from '../components/AnalysisActionModal';
 import { Website } from '../types/chart';
 import { translateCountry } from '../lib/translations';
 import { normalizeUrlToPath } from '../lib/utils';
@@ -32,6 +33,7 @@ const UserProfiles = () => {
     const [activityLoading, setActivityLoading] = useState<boolean>(false);
     const [activityData, setActivityData] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [selectedActivityUrl, setSelectedActivityUrl] = useState<string | null>(null);
 
     const ROWS_PER_PAGE = 50;
 
@@ -482,8 +484,11 @@ const UserProfiles = () => {
                                                         {item.title || item.url}
                                                     </p>
                                                     {item.url && (
-                                                        <code className="text-sm text-gray-500 mt-1 block bg-gray-50 p-1.5 rounded w-fit">
-                                                            {item.url}
+                                                        <code
+                                                            className="text-sm text-blue-600 hover:underline cursor-pointer mt-1 bg-gray-50 p-1.5 rounded w-fit flex items-center gap-1"
+                                                            onClick={() => setSelectedActivityUrl(item.url)}
+                                                        >
+                                                            {item.url} <ExternalLink className="h-3 w-3" />
                                                         </code>
                                                     )}
                                                 </div>
@@ -496,6 +501,14 @@ const UserProfiles = () => {
                     )}
                 </Modal.Body>
             </Modal>
+
+            <AnalysisActionModal
+                open={!!selectedActivityUrl}
+                onClose={() => setSelectedActivityUrl(null)}
+                urlPath={selectedActivityUrl}
+                websiteId={selectedWebsite?.id}
+                period={period}
+            />
         </ChartLayout>
     );
 };
