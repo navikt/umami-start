@@ -2002,17 +2002,31 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             if (index === 0) {
                 // Step 1: Always any visit/event matching the first step
                 // We also store the URL path for potential use in subsequent steps
+
+                // Check for wildcard
+                const isWildcard = step.value.includes('*');
+                const operator = isWildcard ? 'LIKE' : '=';
+
                 return `
             ${stepName} AS (
                 SELECT session_id, MIN(created_at) as time${index + 1},
                        MIN(url_path_normalized) as url_path${index + 1}
                 FROM events
-                WHERE step_value = @${paramName}
+                WHERE step_value ${operator} @${paramName}
                   ${typeCheck}
                 GROUP BY session_id
             )`;
             } else {
                 const prevParamName = `stepValue${index - 1}`;
+
+                // Check for wildcard in current step
+                const isWildcard = step.value.includes('*');
+                const operator = isWildcard ? 'LIKE' : '=';
+
+                // Check for wildcard in PREVIOUS step (for strict mode check)
+                const isPrevWildcard = steps[index - 1].value.includes('*');
+                const prevOperator = isPrevWildcard ? 'LIKE' : '=';
+
                 if (onlyDirectEntry) {
                     // Strict mode: Current step must be immediately after Previous step
                     return `
@@ -2021,10 +2035,10 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                        MIN(e.url_path_normalized) as url_path${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.step_value = @${paramName}
+                WHERE e.step_value ${operator} @${paramName}
                   ${typeCheck}
                   AND e.created_at > prev.time${index}
-                  AND e.prev_step_value = @${prevParamName}
+                  AND e.prev_step_value ${prevOperator} @${prevParamName}
                   ${eventScopeCheck}
                 GROUP BY e.session_id
             )`;
@@ -2036,7 +2050,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                        MIN(e.url_path_normalized) as url_path${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.step_value = @${paramName}
+                WHERE e.step_value ${operator} @${paramName}
                   ${typeCheck}
                   AND e.created_at > prev.time${index}
                   ${eventScopeCheck}
@@ -2044,6 +2058,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             )`;
                 }
             }
+
         });
 
         query += stepCtes.join(',') + `
@@ -2062,7 +2077,11 @@ app.post('/api/bigquery/funnel', async (req, res) => {
         };
 
         steps.forEach((step, index) => {
-            params[`stepValue${index}`] = step.value;
+            if (step.value.includes('*')) {
+                params[`stepValue${index}`] = step.value.replace(/\*/g, '%');
+            } else {
+                params[`stepValue${index}`] = step.value;
+            }
         });
 
         // Get dry run stats

@@ -186,25 +186,39 @@ events AS (
         const stepCtes = normalizedSteps.map((step, index) => {
             const stepName = `step${index + 1}`;
             const prevStepName = `step${index}`;
-            const stepValue = step.value.replace(/'/g, "''");
+
+            let operator = '=';
+            let value = step.value;
+            if (value.includes('*')) {
+                operator = 'LIKE';
+                value = value.replace(/\*/g, '%');
+            }
+            const stepValue = value.replace(/'/g, "''");
 
             if (index === 0) {
                 return `${stepName} AS (
     SELECT session_id, MIN(created_at) as time${index + 1}
     FROM events
-    WHERE step_value = '${stepValue}'
+    WHERE step_value ${operator} '${stepValue}'
     GROUP BY session_id
 )`;
             } else {
-                const prevStepValue = normalizedSteps[index - 1].value.replace(/'/g, "''");
+                let prevOperator = '=';
+                let prevValue = normalizedSteps[index - 1].value;
+                if (prevValue.includes('*')) {
+                    prevOperator = 'LIKE';
+                    prevValue = prevValue.replace(/\*/g, '%');
+                }
+                const prevStepValue = prevValue.replace(/'/g, "''");
+
                 if (onlyDirectEntry) {
                     return `${stepName} AS (
     SELECT e.session_id, MIN(e.created_at) as time${index + 1}
     FROM events e
     JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-    WHERE e.step_value = '${stepValue}'
+    WHERE e.step_value ${operator} '${stepValue}'
       AND e.created_at > prev.time${index}
-      AND e.prev_step_value = '${prevStepValue}'
+      AND e.prev_step_value ${prevOperator} '${prevStepValue}'
     GROUP BY e.session_id
 )`;
                 } else {
@@ -212,7 +226,7 @@ events AS (
     SELECT e.session_id, MIN(e.created_at) as time${index + 1}
     FROM events e
     JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-    WHERE e.step_value = '${stepValue}'
+    WHERE e.step_value ${operator} '${stepValue}'
       AND e.created_at > prev.time${index}
     GROUP BY e.session_id
 )`;
@@ -282,25 +296,39 @@ events AS (
         const stepCtes = urlSteps.map((step, index) => {
             const stepName = `step${index + 1}`;
             const prevStepName = `step${index}`;
-            const urlValue = step.value.replace(/'/g, "''");
+
+            let operator = '=';
+            let value = step.value;
+            if (value.includes('*')) {
+                operator = 'LIKE';
+                value = value.replace(/\*/g, '%');
+            }
+            const urlValue = value.replace(/'/g, "''");
 
             if (index === 0) {
                 return `${stepName} AS (
     SELECT session_id, MIN(created_at) as time${index + 1}
     FROM events
-    WHERE url_path = '${urlValue}'
+    WHERE url_path ${operator} '${urlValue}'
     GROUP BY session_id
 )`;
             } else {
-                const prevUrlValue = urlSteps[index - 1].value.replace(/'/g, "''");
+                let prevOperator = '=';
+                let prevValue = urlSteps[index - 1].value;
+                if (prevValue.includes('*')) {
+                    prevOperator = 'LIKE';
+                    prevValue = prevValue.replace(/\*/g, '%');
+                }
+                const prevUrlValue = prevValue.replace(/'/g, "''");
+
                 if (onlyDirectEntry) {
                     return `${stepName} AS (
     SELECT e.session_id, MIN(e.created_at) as time${index + 1}
     FROM events e
     JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-    WHERE e.url_path = '${urlValue}' 
+    WHERE e.url_path ${operator} '${urlValue}' 
       AND e.created_at > prev.time${index}
-      AND e.prev_url_path = '${prevUrlValue}'
+      AND e.prev_url_path ${prevOperator} '${prevUrlValue}'
     GROUP BY e.session_id
 )`;
                 } else {
@@ -308,7 +336,7 @@ events AS (
     SELECT e.session_id, MIN(e.created_at) as time${index + 1}
     FROM events e
     JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-    WHERE e.url_path = '${urlValue}' 
+    WHERE e.url_path ${operator} '${urlValue}' 
       AND e.created_at > prev.time${index}
     GROUP BY e.session_id
 )`;
