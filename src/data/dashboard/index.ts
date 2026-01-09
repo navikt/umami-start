@@ -1,5 +1,6 @@
 import { standardDashboard } from './standard';
 import { fylkeskontorDashboard } from './fylkeskontor';
+import { hjelpemiddelsentralDashboard } from './hjelpemiddelsentral';
 import { DashboardConfig } from './types';
 
 export * from './types';
@@ -15,8 +16,7 @@ const ensureIds = (config: DashboardConfig): DashboardConfig => ({
 export const dashboards: Record<string, DashboardConfig> = {
     'standard': ensureIds(standardDashboard),
     'fylkeskontor': ensureIds(fylkeskontorDashboard),
-    // Add other dashboards here, e.g.:
-    // 'performance': performanceDashboard,
+    'hjelpemiddelsentral': ensureIds(hjelpemiddelsentralDashboard),
 };
 
 export const getDashboard = (id?: string | null): DashboardConfig => {

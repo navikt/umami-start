@@ -142,7 +142,9 @@ const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) 
     }, [siteId, groupId, baseUrl]);
 
     const [progress, setProgress] = useState(0);
+    const [timedOut, setTimedOut] = useState(false);
 
+    // Progress bar animation
     useEffect(() => {
         let interval;
         if (loading) {
@@ -155,6 +157,22 @@ const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) 
             }, 100);
         }
         return () => clearInterval(interval);
+    }, [loading]);
+
+    // Timeout after 15 seconds
+    useEffect(() => {
+        let timeout;
+        if (loading) {
+            setTimedOut(false);
+            timeout = setTimeout(() => {
+                if (loading) {
+                    setTimedOut(true);
+                    setLoading(false);
+                    setError('Forespørselen tok for lang tid. Prøv å laste siden på nytt.');
+                }
+            }, 15000); // 15 seconds timeout
+        }
+        return () => clearTimeout(timeout);
     }, [loading]);
 
     if (loading) {
