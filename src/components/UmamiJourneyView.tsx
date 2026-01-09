@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
-import { Button } from '@navikt/ds-react';
-import { Plus, Check, ExternalLink } from 'lucide-react';
+import { Button, Tooltip } from '@navikt/ds-react';
+import { Plus, Check, ExternalLink, Copy } from 'lucide-react';
 
 interface Node {
     nodeId: string;
@@ -48,6 +48,7 @@ interface FunnelStep {
 
 const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward', websiteId }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
     const [funnelSteps, setFunnelSteps] = useState<FunnelStep[]>([]);
 
@@ -360,15 +361,42 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                         >
                                             {/* Content */}
                                             <div className="relative z-10 p-2.5 flex justify-between items-center gap-2">
-                                                <div className="flex items-center gap-2 overflow-hidden">
-                                                    <span className="text-gray-400 flex-shrink-0 text-xs">
+                                                <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0 group/text">
+                                                    <span className="text-gray-400 flex-shrink-0 text-xs mt-0.5 self-start">
                                                         📄
                                                     </span>
-                                                    <span className="font-medium text-xs truncate" title={item.name}>
-                                                        {item.name}
-                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <Tooltip content={item.name} delay={500}>
+                                                            <div className="flex items-start gap-1">
+                                                                <span className="font-medium text-xs leading-tight line-clamp-2 break-words text-left" title={item.name}>
+                                                                    {item.name}
+                                                                </span>
+
+                                                                {/* Copy Button - Visible on hover */}
+                                                                <button
+                                                                    className={`
+                                                                        flex-shrink-0 p-1 rounded-md hover:bg-white/20 transition-all
+                                                                        ${copiedNodeId === item.nodeId ? 'text-green-400 opacity-100' : 'text-gray-400 opacity-0 group-hover/text:opacity-100'}
+                                                                    `}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        navigator.clipboard.writeText(item.name);
+                                                                        setCopiedNodeId(item.nodeId);
+                                                                        setTimeout(() => setCopiedNodeId(null), 2000);
+                                                                    }}
+                                                                    title="Kopier URL"
+                                                                >
+                                                                    {copiedNodeId === item.nodeId ? (
+                                                                        <Check size={12} strokeWidth={3} />
+                                                                    ) : (
+                                                                        <Copy size={12} />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </Tooltip>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-shrink-0 self-start mt-0.5">
                                                     <span className="text-xs font-mono font-bold whitespace-nowrap">
                                                         {item.value.toLocaleString('nb-NO')}
                                                     </span>
