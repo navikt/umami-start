@@ -103,6 +103,17 @@ const Funnel = () => {
         }
     }, [selectedWebsite]);
 
+    // Reset timing data when configuration changes
+    useEffect(() => {
+        if (timingData.length > 0) {
+            setTimingData([]);
+            setShowTiming(false);
+            setTimingQueryStats(null);
+            setTimingError(null);
+            setTimingSql(null);
+        }
+    }, [steps, period, customStartDate, customEndDate, onlyDirectEntry, selectedWebsite]);
+
     const copyShareLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
@@ -1016,7 +1027,7 @@ FROM timing_data`;
                         {!steps.some(s => s.type === 'event') && (
                             <Tabs.Panel value="timing" className="pt-4">
                                 <Heading level="3" size="small" className="mb-3">
-                                    Gjennomsnittlig tid per steg
+                                    Tid per steg og for hele trakten
                                 </Heading>
 
                                 {!showTiming && (
@@ -1027,7 +1038,7 @@ FROM timing_data`;
                                             loading={timingLoading}
                                             disabled={timingLoading}
                                         >
-                                            Beregn tid per steg
+                                            Beregn tidsbruk
                                         </Button>
                                         <p className="text-sm text-gray-500">
                                             Kan ta opptil 30 sekunder.
@@ -1052,12 +1063,12 @@ FROM timing_data`;
                                                     <div className="border rounded-lg p-4 bg-blue-50 border-blue-100">
                                                         <div className="text-sm text-blue-800 font-medium mb-1">Total tid (Gjennomsnitt)</div>
                                                         <div className="text-2xl font-bold text-blue-900">{formatDuration(totalTiming.avgSeconds)}</div>
-                                                        <div className="text-xs text-blue-600 mt-1">Gjennomsnittlig tid fra første til siste steg for de som fullførte hele trakten.</div>
+                                                        <div className="text-xs text-blue-600 mt-1">Gjennomsnittlig tid fra første til siste steg.</div>
                                                     </div>
                                                     <div className="border rounded-lg p-4 bg-green-50 border-green-100">
                                                         <div className="text-sm text-green-800 font-medium mb-1">Total tid (Median)</div>
                                                         <div className="text-2xl font-bold text-green-900">{formatDuration(totalTiming.medianSeconds)}</div>
-                                                        <div className="text-xs text-green-600 mt-1">Median tid fra første til siste steg for de som fullførte hele trakten.</div>
+                                                        <div className="text-xs text-green-600 mt-1">Median tid fra første til siste steg.</div>
                                                     </div>
                                                 </div>
                                             )}

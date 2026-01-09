@@ -2372,6 +2372,20 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                         diff: Math.round(diffSeconds)
                     });
                 }
+
+                // Add total time if full funnel completed
+                if (stepTimes.length === steps.length) {
+                    var tStart = new Date(stepTimes[0]);
+                    var tEnd = new Date(stepTimes[stepTimes.length - 1]);
+                    var totalDiffSeconds = (tEnd - tStart) / 1000;
+                    
+                    result.push({
+                        step: -1, 
+                        from_url: "Total",
+                        to_url: "Total",
+                        diff: Math.round(totalDiffSeconds)
+                    });
+                }
                 
                 return result;
             """;
