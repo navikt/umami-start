@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Button } from '@navikt/ds-react';
-import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp } from 'lucide-react';
+import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch } from 'lucide-react';
 
 interface AnalysisActionModalProps {
     open: boolean;
@@ -40,7 +40,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                     <div>
                         <div className="flex justify-between items-center mb-2">
                             <div className="text-sm font-medium text-gray-700">
-                                Valgt side:
+                                URL-sti
                             </div>
                             <Button
                                 size="small"
@@ -73,26 +73,34 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             </Button>
                         </div>
 
-                        {/* Column 2: Brukerreiser & Brukere */}
+                        {/* Column 2: Brukere & lojalitet */}
                         <div className="flex flex-col gap-2">
                             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                                Brukerreiser
+                                Brukere & lojalitet
                             </div>
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
+                                Brukersammensetning
+                            </Button>
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerprofiler', 'pagePath')} icon={<UserSearch aria-hidden />} className="justify-start">
+                                Brukerprofiler
+                            </Button>
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerlojalitet', 'urlPath')} icon={<Repeat aria-hidden />} className="justify-start">
+                                Brukerlojalitet
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Bottom row: Brukerreiser - 2 items side by side */}
+                    <div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                            Brukerreiser
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
                                 Sideflyt
                             </Button>
                             <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
                                 Hendelsesflyt
-                            </Button>
-
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 mt-2">
-                                Brukere
-                            </div>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
-                                Brukersammensetning
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukerlojalitet', 'urlPath')} icon={<Repeat aria-hidden />} className="justify-start">
-                                Brukerlojalitet
                             </Button>
                         </div>
                     </div>

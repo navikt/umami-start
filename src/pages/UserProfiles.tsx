@@ -7,6 +7,8 @@ import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
 import { translateCountry } from '../lib/translations';
+import { normalizeUrlToPath } from '../lib/utils';
+import { TextField } from '@navikt/ds-react';
 
 const UserProfiles = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -16,6 +18,7 @@ const UserProfiles = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('pagePath') || '');
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [users, setUsers] = useState<any[]>([]);
     const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -34,9 +37,22 @@ const UserProfiles = () => {
 
     useEffect(() => {
         if (selectedWebsite) {
-            fetchUsers();
+            handleSearchClick(); // Trigger fetch when website/period changes
         }
     }, [selectedWebsite, period, page]);
+
+    // Handle "Enter" key in search fields
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            setPage(1);
+            fetchUsers();
+        }
+    };
+
+    const handleSearchClick = () => {
+        setPage(1);
+        fetchUsers();
+    };
 
     const getDateRange = () => {
         const now = new Date();
@@ -81,18 +97,23 @@ const UserProfiles = () => {
 
         const { startDate, endDate } = getDateRange();
 
+        const payload = {
+            websiteId: selectedWebsite.id,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            query: searchQuery,
+            urlPath: pagePath ? normalizeUrlToPath(pagePath) : undefined,
+            limit: ROWS_PER_PAGE,
+            offset: (page - 1) * ROWS_PER_PAGE
+        };
+
+        console.log('Fetching users with payload:', payload);
+
         try {
             const response = await fetch('/api/bigquery/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    websiteId: selectedWebsite.id,
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                    query: searchQuery,
-                    limit: ROWS_PER_PAGE,
-                    offset: (page - 1) * ROWS_PER_PAGE
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) throw new Error('Kunne ikke hente brukere');
@@ -217,15 +238,28 @@ const UserProfiles = () => {
                             hideLabel={true}
                             variant="simple"
                             onChange={handleSearch}
-                            onSearchClick={fetchUsers}
+                            onKeyDown={handleKeyDown} // Trigger search on Enter
+                            value={searchQuery} // Bind value
                         />
+
+                        <div className="mt-4">
+                            <TextField
+                                size="small"
+                                label="Besøkt URL (valgfritt)"
+                                description="Filtrer på brukere som har besøkt denne siden"
+                                value={pagePath}
+                                onChange={(e) => setPagePath(e.target.value)}
+                                onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
+                                onKeyDown={handleKeyDown}
+                            />
+                        </div>
+
                         <Button
-                            size="small"
-                            variant="secondary"
-                            className="mt-2 w-full"
-                            onClick={fetchUsers}
+                            className="w-full mt-4"
+                            onClick={handleSearchClick}
+                            disabled={!selectedWebsite}
                         >
-                            Søk
+                            Vis brukerprofiler
                         </Button>
                     </div>
                 </>
@@ -272,6 +306,7 @@ const UserProfiles = () => {
                                     <Table.HeaderCell>Land</Table.HeaderCell>
                                     <Table.HeaderCell>Enhet</Table.HeaderCell>
                                     <Table.HeaderCell>Nettleser</Table.HeaderCell>
+                                    <Table.HeaderCell>Handling</Table.HeaderCell>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -295,6 +330,18 @@ const UserProfiles = () => {
                                             </div>
                                         </Table.DataCell>
                                         <Table.DataCell>{user.browser || '-'}</Table.DataCell>
+                                        <Table.DataCell>
+                                            <Button
+                                                size="small"
+                                                variant="tertiary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRowClick(user);
+                                                }}
+                                            >
+                                                Vis profil
+                                            </Button>
+                                        </Table.DataCell>
                                     </Table.Row>
                                 ))}
                             </Table.Body>

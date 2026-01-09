@@ -3143,7 +3143,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 // Get user sessions (User Profiles)
 app.post('/api/bigquery/users', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0 } = req.body;
+        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, urlPath } = req.body;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -3166,24 +3166,60 @@ app.post('/api/bigquery/users', async (req, res) => {
             params.searchQuery = `%${searchQuery}%`;
         }
 
+        console.log('[User Profiles] Request:', { websiteId, urlPath, searchQuery });
+
+        let urlFilterCTE = '';
+        let urlFilterJoin = '';
+        if (urlPath) {
+            // Add URL path parameters
+            params.urlPath = urlPath;
+            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+            params.urlPathQuery = urlPath + '?%';
+
+            // CTE to find sessions that visited the specified URL
+            urlFilterCTE = `
+                matching_sessions AS (
+                    SELECT DISTINCT session_id
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    WHERE website_id = @websiteId
+                    AND created_at BETWEEN @startDate AND @endDate
+                    AND (
+                        url_path = @urlPath
+                        OR url_path = @urlPathSlash
+                        OR url_path LIKE @urlPathQuery
+                    )
+                ),
+            `;
+            urlFilterJoin = `INNER JOIN matching_sessions ms ON session.session_id = ms.session_id`;
+
+            console.log('[User Profiles] URL filter active:', { urlPath, urlFilterCTE: 'CTE defined', urlFilterJoin });
+        }
+
         const query = `
-            SELECT
-                session_id,
-                MAX(created_at) as last_seen,
-                MIN(created_at) as first_seen,
-                ANY_VALUE(country) as country,
-                ANY_VALUE(device) as device,
-                ANY_VALUE(os) as os,
-                ANY_VALUE(browser) as browser,
-                COUNT(*) as event_count
-            FROM \`team-researchops-prod-01d6.umami_views.session\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            ${searchFilter}
-            GROUP BY session_id
+            WITH ${urlFilterCTE}
+            session_data AS (
+                SELECT
+                    session.session_id,
+                    MAX(session.created_at) as last_seen,
+                    MIN(session.created_at) as first_seen,
+                    ANY_VALUE(session.country) as country,
+                    ANY_VALUE(session.device) as device,
+                    ANY_VALUE(session.os) as os,
+                    ANY_VALUE(session.browser) as browser,
+                    COUNT(*) as event_count
+                FROM \`team-researchops-prod-01d6.umami_views.session\` as session
+                ${urlFilterJoin}
+                WHERE session.website_id = @websiteId
+                AND session.created_at BETWEEN @startDate AND @endDate
+                ${searchFilter}
+                GROUP BY session.session_id
+            )
+            SELECT * FROM session_data
             ORDER BY last_seen DESC
             LIMIT @limit OFFSET @offset
         `;
+
+        console.log('[User Profiles] Query:', query.substring(0, 500) + '...');
 
         // Get NAV ident from authenticated user for audit logging
 
@@ -3198,11 +3234,16 @@ app.post('/api/bigquery/users', async (req, res) => {
 
         // Get total count for pagination
         const countQuery = `
-            SELECT COUNT(DISTINCT session_id) as total
-            FROM \`team-researchops-prod-01d6.umami_views.session\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            ${searchFilter}
+            WITH ${urlFilterCTE}
+            filtered_sessions AS (
+                SELECT DISTINCT session.session_id
+                FROM \`team-researchops-prod-01d6.umami_views.session\` as session
+                ${urlFilterJoin}
+                WHERE session.website_id = @websiteId
+                AND session.created_at BETWEEN @startDate AND @endDate
+                ${searchFilter}
+            )
+            SELECT COUNT(*) as total FROM filtered_sessions
         `;
 
 

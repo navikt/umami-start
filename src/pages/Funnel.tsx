@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
-import { Plus, Trash2, Download, Share2, Check, Code2 } from 'lucide-react';
+import { Plus, Trash2, Download, Share2, Check, Code2, ExternalLink } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
@@ -9,6 +9,7 @@ import FunnelChart from '../components/FunnelChart';
 import HorizontalFunnelChart from '../components/HorizontalFunnelChart';
 import FunnelStats from '../components/FunnelStats';
 import SqlCodeDisplay from '../components/chartbuilder/SqlCodeDisplay';
+import AnalysisActionModal from '../components/AnalysisActionModal';
 import { Website } from '../types/chart';
 
 
@@ -63,6 +64,7 @@ const Funnel = () => {
     const [timingMetabaseCopySuccess, setTimingMetabaseCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [modalSql, setModalSql] = useState<string | null>(null);
+    const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
 
     // Custom events state
     const [availableEvents, setAvailableEvents] = useState<string[]>([]);
@@ -940,7 +942,12 @@ FROM timing_data`;
                         </Tabs.Panel>
 
                         <Tabs.Panel value="horizontal" className="pt-4">
-                            <HorizontalFunnelChart data={funnelData} loading={loading} />
+                            <HorizontalFunnelChart
+                                data={funnelData}
+                                loading={loading}
+                                websiteId={selectedWebsite?.id}
+                                period={period}
+                            />
                             <div className="flex gap-2 justify-between items-center mt-4">
                                 {funnelQueryStats && (
                                     <span className="text-sm text-gray-600 mr-auto">
@@ -993,8 +1000,17 @@ FROM timing_data`;
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                                             Steg {item.step + 1}
                                                         </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-500 break-all">
-                                                            {item.url}
+                                                        <td className="px-6 py-4 text-sm break-all">
+                                                            {item.url && selectedWebsite ? (
+                                                                <span
+                                                                    className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                                                    onClick={() => setSelectedTableUrl(item.url)}
+                                                                >
+                                                                    {item.url} <ExternalLink className="h-3 w-3" />
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-500">{item.url}</span>
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
                                                             {item.count.toLocaleString('nb-NO')}
@@ -1054,6 +1070,14 @@ FROM timing_data`;
                                     )}
                                 </div>
                             </div>
+
+                            <AnalysisActionModal
+                                open={!!selectedTableUrl}
+                                onClose={() => setSelectedTableUrl(null)}
+                                urlPath={selectedTableUrl}
+                                websiteId={selectedWebsite?.id}
+                                period={period}
+                            />
                         </Tabs.Panel>
 
                         {/* Timing Data Tab */}
