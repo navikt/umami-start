@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ExternalLink, BarChart2, Globe, Activity, Search, Users } from 'lucide-react';
-import { Modal, Button } from '@navikt/ds-react';
+import { ExternalLink } from 'lucide-react';
+import AnalysisActionModal from './AnalysisActionModal';
 
 interface FunnelStep {
     step: number;
@@ -35,23 +35,6 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
         if (!websiteId) return;
         e.stopPropagation();
         setSelectedUrl(urlPath);
-    };
-
-    const openAnalysis = (path: string, paramName: string = 'urlPath') => {
-        if (!selectedUrl || !websiteId) return;
-        const encodedPath = encodeURIComponent(selectedUrl);
-        const targetPeriod = period || 'current_month';
-        const url = `${path}?websiteId=${websiteId}&period=${targetPeriod}&${paramName}=${encodedPath}`;
-        window.open(url, '_blank');
-        setSelectedUrl(null);
-    };
-
-    const openOnWebsite = () => {
-        if (!selectedUrl) return;
-        // Assuming nav.no for now, but in a real app this might need to be dynamic based on the website
-        const url = `https://www.nav.no${selectedUrl}`;
-        window.open(url, '_blank');
-        setSelectedUrl(null);
     };
 
     return (
@@ -144,40 +127,13 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                 })}
             </div>
 
-            <Modal open={!!selectedUrl} onClose={() => setSelectedUrl(null)} header={{ heading: 'Hva vil du gjøre?' }}>
-                <Modal.Body>
-                    <div className="p-2 pb-4 flex flex-col gap-6 text-left">
-                        <div>
-                            <div className="text-sm font-medium text-gray-700 mb-2">
-                                Valgt side:
-                            </div>
-                            <div className="text-sm font-mono bg-gray-50 p-3 rounded-md border border-gray-200 break-all text-gray-800">
-                                {selectedUrl}
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 gap-3">
-                            <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
-                                Se i trafikkanalyse
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
-                                Hendelsesflyt-analyse
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/utforsk-hendelser', 'pagePath')} icon={<Search aria-hidden />} className="justify-start">
-                                Hendelse-utforsker
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
-                                Brukersammensetning
-                            </Button>
-
-                            <div className="h-px bg-gray-200 my-1"></div>
-
-                            <Button variant="tertiary" onClick={openOnWebsite} icon={<Globe aria-hidden />} className="justify-start">
-                                Åpne siden på nav.no
-                            </Button>
-                        </div>
-                    </div>
-                </Modal.Body>
-            </Modal>
+            <AnalysisActionModal
+                open={!!selectedUrl}
+                onClose={() => setSelectedUrl(null)}
+                urlPath={selectedUrl}
+                websiteId={websiteId}
+                period={period}
+            />
         </>
     );
 };
