@@ -46,7 +46,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     };
 
     return (
-        <Modal open={open} onClose={onClose} header={{ heading: 'Hvordan vil du åpne lenken?' }} width="medium">
+        <Modal open={open} onClose={onClose} header={{ heading: 'Hva vil du gjøre med lenken?' }} width="medium">
             <Modal.Body>
                 <div className="p-2 pb-4 flex flex-col gap-6 text-left">
                     <div>

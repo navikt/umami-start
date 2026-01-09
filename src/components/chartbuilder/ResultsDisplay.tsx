@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton } from '@navikt/ds-react';
-import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
+import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../lib/translations';
 import SqlCodeDisplay from './SqlCodeDisplay';
 import ShareModal from './ShareModal';
+import AnalysisActionModal from '../AnalysisActionModal';
 import { encode } from '@toon-format/toon';
 
 interface ResultsDisplayProps {
@@ -27,6 +28,9 @@ interface ResultsDisplayProps {
   hiddenTabs?: string[];
   containerStyle?: 'green' | 'white' | 'none';
   showCost?: boolean;
+  // Optional props for AnalysisActionModal
+  websiteId?: string;
+  period?: string;
 }
 
 const ResultsDisplay = ({
@@ -48,6 +52,8 @@ const ResultsDisplay = ({
   hiddenTabs: propHiddenTabs = [],
   containerStyle = 'green',
   showCost = false,
+  websiteId,
+  period,
 }: ResultsDisplayProps) => {
   // Read initial tab from URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -66,6 +72,12 @@ const ResultsDisplay = ({
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
   const [rowLimit] = useState<number>(5000); // Limit rows for performance
   const [showAllRows, setShowAllRows] = useState<boolean>(false);
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+
+  // Helper to check if a value is a clickable URL path
+  const isClickablePath = (val: any): boolean => {
+    return typeof val === 'string' && val.startsWith('/') && val !== '/' && websiteId !== undefined;
+  };
 
   // Get hidden tabs from URL or props
   const hiddenTabs = (() => {
@@ -230,24 +242,36 @@ const ResultsDisplay = ({
                   {keys.map((key, cellIdx: number) => {
                     const value = row[key];
                     const translatedValue = translateValue(key, value);
+                    const clickable = isClickablePath(value);
+
+                    // Format the display value
+                    const displayValue = typeof translatedValue === 'number'
+                      ? translatedValue.toLocaleString('nb-NO')
+                      : translatedValue !== null && translatedValue !== undefined
+                        ? (typeof translatedValue === 'object'
+                          ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
+                            ? translatedValue.toISOString()
+                            : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
+                              ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
+                                ? new Date(translatedValue.value).toISOString()
+                                : String(translatedValue.value))
+                              : JSON.stringify(translatedValue)))
+                          : String(translatedValue))
+                        : '-';
+
                     return (
                       <td
                         key={cellIdx}
-                        className="px-4 py-2 whitespace-nowrap text-sm text-gray-900"
+                        className={`px-4 py-2 whitespace-nowrap text-sm ${clickable ? 'cursor-pointer' : 'text-gray-900'}`}
+                        onClick={clickable ? () => setSelectedUrl(value) : undefined}
                       >
-                        {typeof translatedValue === 'number'
-                          ? translatedValue.toLocaleString('nb-NO')
-                          : translatedValue !== null && translatedValue !== undefined
-                            ? (typeof translatedValue === 'object'
-                              ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
-                                ? translatedValue.toISOString()
-                                : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
-                                  ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
-                                    ? new Date(translatedValue.value).toISOString()
-                                    : String(translatedValue.value))
-                                  : JSON.stringify(translatedValue)))
-                              : String(translatedValue))
-                            : '-'}
+                        {clickable ? (
+                          <span className="text-blue-600 hover:underline flex items-center gap-1">
+                            {displayValue} <ExternalLink className="h-3 w-3" />
+                          </span>
+                        ) : (
+                          displayValue
+                        )}
                       </td>
                     );
                   })}
@@ -258,7 +282,7 @@ const ResultsDisplay = ({
         </table>
       </>
     );
-  }, [processedTableData, activeSearchQuery, result, sortColumn, sortDirection, handleSort]);
+  }, [processedTableData, activeSearchQuery, result, sortColumn, sortDirection, handleSort, isClickablePath, setSelectedUrl]);
 
   // Helper functions to generate content
   const getCSVContent = () => {
@@ -1043,6 +1067,15 @@ const ResultsDisplay = ({
           />
         )
       }
+
+      {/* Analysis Action Modal */}
+      <AnalysisActionModal
+        open={!!selectedUrl}
+        onClose={() => setSelectedUrl(null)}
+        urlPath={selectedUrl}
+        websiteId={websiteId}
+        period={period}
+      />
     </div >
   );
 };

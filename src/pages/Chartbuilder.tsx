@@ -1628,6 +1628,7 @@ const ChartsPage = () => {
           onResetAll={resetAll}
           availableEvents={availableEvents}
           isEventsLoading={isEventsLoading}
+          websiteId={config.website?.id}
         />
       </div>
     </ChartLayout >

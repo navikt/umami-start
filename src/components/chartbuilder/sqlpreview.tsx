@@ -18,6 +18,7 @@ interface SQLPreviewProps {
   onResetAll?: () => void; // Add new prop for reset functionality
   availableEvents?: string[];
   isEventsLoading?: boolean;
+  websiteId?: string; // Optional for AnalysisActionModal
 }
 
 const API_TIMEOUT_MS = 60000; // timeout
@@ -41,7 +42,8 @@ const SQLPreview = ({
   groupByFields = [],
   onResetAll,
   availableEvents = [],
-  isEventsLoading = false
+  isEventsLoading = false,
+  websiteId
 }: SQLPreviewProps) => {
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -968,6 +970,7 @@ const SQLPreview = ({
                 showSqlCode={true}
                 showEditButton={true}
                 showCost={true}
+                websiteId={websiteId}
               />
             </div>
 

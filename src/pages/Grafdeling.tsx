@@ -11,6 +11,15 @@ export default function Grafdeling() {
     const [description, setDescription] = useState<string>('');
     const [queryStats, setQueryStats] = useState<any>(null);
 
+    // Extract websiteId from SQL query
+    const extractWebsiteId = (sql: string): string | undefined => {
+        // Match patterns like: website_id = 'uuid' or website_id='uuid'
+        const match = sql.match(/website_id\s*=\s*['"]([0-9a-f-]{36})['"]/i);
+        return match?.[1];
+    };
+
+    const websiteId = extractWebsiteId(query);
+
     // Check for SQL in URL params on mount and auto-execute
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -449,6 +458,7 @@ export default function Grafdeling() {
                     showEditButton={true}
                     hiddenTabs={result && result.data && result.data.length > 12 ? ['barchart', 'piechart'] : []}
                     containerStyle="white"
+                    websiteId={websiteId}
                 />
             )}
         </div>

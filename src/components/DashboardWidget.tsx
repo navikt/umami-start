@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Loader, Alert, Table, Pagination } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
+import { ExternalLink } from 'lucide-react';
 import { SavedChart } from '../data/dashboard/types';
 import { format, subDays } from 'date-fns';
 import { getBaseUrl } from '../lib/environment';
 import { translateValue } from '../lib/translations';
+import AnalysisActionModal from './AnalysisActionModal';
 // @ts-ignore
 import SiteScores from './SiteScores';
 // @ts-ignore
@@ -33,13 +35,19 @@ interface DashboardWidgetProps {
 }
 
 export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId }: DashboardWidgetProps) => {
-    // Initialize loading=true if we're a batchable widget (so we wait for batch data)
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     // Track if individual fetch has been done to prevent repeat fetches
     const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
+    // State for AnalysisActionModal
+    const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+
+    // Helper to check if a value is a clickable URL path
+    const isClickablePath = (val: any): boolean => {
+        return typeof val === 'string' && val.startsWith('/') && val !== '/';
+    };
 
     // If prefetchedData is available, use it directly instead of fetching
     useEffect(() => {
@@ -430,9 +438,21 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                                                 const displayVal = typeof translatedVal === 'number'
                                                     ? translatedVal.toLocaleString('nb-NO')
                                                     : String(translatedVal);
+                                                const clickable = isClickablePath(val);
                                                 return (
-                                                    <Table.DataCell key={j} className="whitespace-nowrap" title={String(val)}>
-                                                        {displayVal}
+                                                    <Table.DataCell
+                                                        key={j}
+                                                        className={`whitespace-nowrap ${clickable ? 'cursor-pointer' : ''}`}
+                                                        title={String(val)}
+                                                        onClick={clickable ? () => setSelectedUrl(val) : undefined}
+                                                    >
+                                                        {clickable ? (
+                                                            <span className="text-blue-600 hover:underline flex items-center gap-1">
+                                                                {displayVal} <ExternalLink className="h-3 w-3" />
+                                                            </span>
+                                                        ) : (
+                                                            displayVal
+                                                        )}
                                                     </Table.DataCell>
                                                 );
                                             })}
@@ -461,14 +481,24 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     };
 
     return (
-        <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${colClass}`}>
-            <div className="flex flex-col mb-6">
-                <h2 className="text-xl font-semibold">{chart.title}</h2>
-                {chart.description && (
-                    <p className="text-gray-600 text-sm mt-1">{chart.description}</p>
-                )}
+        <>
+            <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${colClass}`}>
+                <div className="flex flex-col mb-6">
+                    <h2 className="text-xl font-semibold">{chart.title}</h2>
+                    {chart.description && (
+                        <p className="text-gray-600 text-sm mt-1">{chart.description}</p>
+                    )}
+                </div>
+                {renderContent()}
             </div>
-            {renderContent()}
-        </div>
+
+            <AnalysisActionModal
+                open={!!selectedUrl}
+                onClose={() => setSelectedUrl(null)}
+                urlPath={selectedUrl}
+                websiteId={websiteId}
+                period={filters.dateRange}
+            />
+        </>
     );
 };
