@@ -906,7 +906,12 @@ FROM timing_data`;
                         </Tabs.List>
 
                         <Tabs.Panel value="vertical" className="pt-4">
-                            <FunnelChart data={funnelData} loading={loading} />
+                            <FunnelChart
+                                data={funnelData}
+                                loading={loading}
+                                websiteId={selectedWebsite?.id}
+                                period={period}
+                            />
                             <div className="flex gap-2 justify-between items-center mt-4">
                                 {funnelQueryStats && (
                                     <span className="text-sm text-gray-600 mr-auto">
