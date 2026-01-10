@@ -498,6 +498,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 urlPath={selectedUrl}
                 websiteId={websiteId}
                 period={filters.dateRange}
+                domain={selectedWebsite?.domain}
             />
         </>
     );

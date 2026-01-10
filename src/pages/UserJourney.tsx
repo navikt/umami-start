@@ -505,6 +505,7 @@ const UserJourney = () => {
                                     journeyDirection={journeyDirection}
                                     websiteId={selectedWebsite?.id}
                                     period={period}
+                                    domain={selectedWebsite?.domain}
                                 />
                                 {queryStats && (
                                     <div className="text-sm text-gray-600 text-right mt-4">
@@ -604,6 +605,7 @@ const UserJourney = () => {
                                 urlPath={selectedTableUrl}
                                 websiteId={selectedWebsite?.id}
                                 period={period}
+                                domain={selectedWebsite?.domain}
                             />
                         </Tabs.Panel>
                     </Tabs>

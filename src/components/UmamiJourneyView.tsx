@@ -23,6 +23,7 @@ interface UmamiJourneyViewProps {
     journeyDirection?: string;
     websiteId?: string;
     period?: string;
+    domain?: string;
 }
 
 interface StepData {
@@ -48,7 +49,7 @@ interface FunnelStep {
     step: number;
 }
 
-const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward', websiteId, period = 'current_month' }) => {
+const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward', websiteId, period = 'current_month', domain }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
@@ -472,6 +473,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                 urlPath={selectedUrl}
                 websiteId={websiteId}
                 period={period}
+                domain={domain}
             />
         </>
     );

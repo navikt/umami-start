@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check } from 'lucide-react';
 
@@ -8,6 +8,7 @@ interface AnalysisActionModalProps {
     urlPath: string | null;
     websiteId?: string;
     period?: string;
+    domain?: string;
 }
 
 const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
@@ -15,9 +16,55 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     onClose,
     urlPath,
     websiteId,
-    period = 'current_month'
+    period = 'current_month',
+    domain: propDomain
 }) => {
     const [copySuccess, setCopySuccess] = useState(false);
+    const [domain, setDomain] = useState<string>(propDomain || 'nav.no');
+
+    useEffect(() => {
+        if (propDomain) {
+            setDomain(propDomain);
+            return;
+        }
+
+        const findDomain = async () => {
+            if (!websiteId) return;
+
+            // 1. Try to find in localStorage cache (shared with WebsitePicker)
+            try {
+                const cached = localStorage.getItem('umami_websites_cache');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && parsed.data) {
+                        const website = parsed.data.find((w: any) => w.id === websiteId);
+                        if (website && website.domain) {
+                            setDomain(website.domain);
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to read from cache', e);
+            }
+
+            // 2. Fetch if not found
+            try {
+                const response = await fetch('/api/bigquery/websites');
+                const result = await response.json();
+                if (result && result.data) {
+                    const website = result.data.find((w: any) => w.id === websiteId);
+                    if (website && website.domain) {
+                        setDomain(website.domain);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch websites', e);
+            }
+        };
+
+        findDomain();
+    }, [websiteId, propDomain]);
 
     if (!urlPath || !websiteId) return null;
 
@@ -29,8 +76,8 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     };
 
     const openOnWebsite = () => {
-        // Assuming nav.no for now
-        const url = `https://www.nav.no${urlPath}`;
+        const protocol = domain.includes('http') ? '' : 'https://';
+        const url = `${protocol}${domain}${urlPath}`;
         window.open(url, '_blank');
         onClose();
     };
@@ -69,7 +116,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                     onClick={openOnWebsite}
                                     icon={<ExternalLink aria-hidden size={18} />}
                                 >
-                                    Åpne på nav.no
+                                    Åpne på {domain}
                                 </Button>
                             </div>
                         </div>
