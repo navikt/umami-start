@@ -97,11 +97,11 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
             <Modal.Body>
                 <div className="p-2 pb-4 flex flex-col gap-6 text-left">
                     <div>
-                        <div className="flex justify-between items-center mb-2">
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                             <div className="text-sm font-medium text-gray-700">
                                 URL-sti
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 self-end sm:self-auto">
                                 <Button
                                     size="small"
                                     variant="tertiary"
@@ -116,7 +116,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                     onClick={openOnWebsite}
                                     icon={<ExternalLink aria-hidden size={18} />}
                                 >
-                                    Åpne på {domain}
+                                    Åpne siden
                                 </Button>
                             </div>
                         </div>
