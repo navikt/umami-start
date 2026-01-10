@@ -117,7 +117,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                             Brukerreiser
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
                                 Sideflyt
                             </Button>
