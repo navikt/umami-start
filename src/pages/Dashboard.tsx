@@ -610,19 +610,19 @@ const Dashboard = () => {
                 <></>
             ) : domainResolutionError ? (
                 <div className="p-8 col-span-full">
-                    <Alert variant="error">
+                    <Alert variant="error" size="small">
                         {domainResolutionError}
                     </Alert>
                 </div>
             ) : !effectiveWebsiteId ? (
                 <div className="w-fit">
-                    <Alert variant="info">
-                        Velg en nettside fra menyen for å se dashboardet.
+                    <Alert variant="info" size="small">
+                        Legg til URL-sti og trykk Oppdater for å vise statistikk.
                     </Alert>
                 </div>
             ) : !requiredFiltersAreSatisfied ? (
                 <div className="w-fit">
-                    <Alert variant="info">
+                    <Alert variant="info" size="small">
                         {dashboard.customFilterRequiredMessage || "Velg nødvendige filtre for å vise data."}
                     </Alert>
                 </div>
