@@ -372,7 +372,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                         <div className="flex-1 min-w-0">
                                                             <Tooltip content={item.name} delay={500}>
                                                                 <div className="flex items-start gap-1">
-                                                                    <span className="font-medium text-xs leading-tight line-clamp-2 group-hover:line-clamp-none break-words text-left transition-all duration-200" title={item.name}>
+                                                                    <span className="font-medium text-xs leading-tight line-clamp-3 group-hover:line-clamp-none break-words text-left transition-all duration-200" title={item.name}>
                                                                         {item.name}
                                                                     </span>
 
