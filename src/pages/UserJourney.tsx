@@ -201,8 +201,9 @@ const UserJourney = () => {
                 endDate.setHours(23, 59, 59, 999);
             }
         } else {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+            // Default to current month
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
         }
 
         try {

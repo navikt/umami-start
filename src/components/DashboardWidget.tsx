@@ -162,9 +162,9 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
                     startDate = filters.customStartDate;
                     endDate = filters.customEndDate;
-                } else if (filters.dateRange === 'this-month') {
+                } else if (filters.dateRange === 'current_month') {
                     startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                } else if (filters.dateRange === 'last-month') {
+                } else if (filters.dateRange === 'last_month') {
                     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
                     endDate = new Date(now.getFullYear(), now.getMonth(), 0);
                 } else {

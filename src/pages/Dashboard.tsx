@@ -20,7 +20,13 @@ const Dashboard = () => {
     // Support both old 'metricType' and new 'metrikk' params
     const metricTypeFromUrl = (searchParams.get("metrikk") || searchParams.get("metricType")) as 'visitors' | 'pageviews' | 'proportion' | null;
     // Support 'periode' param for date range
-    const dateRangeFromUrl = searchParams.get("periode");
+    // Support 'periode' param for date range
+    const rawDateRangeFromUrl = searchParams.get("periode");
+    // Normalize legacy URL params to match PeriodPicker values (underscore instead of hyphen)
+    const dateRangeFromUrl = rawDateRangeFromUrl === 'this-month' ? 'current_month'
+        : rawDateRangeFromUrl === 'last-month' ? 'last_month'
+            : rawDateRangeFromUrl;
+
     const dashboardId = searchParams.get("visning");
 
     const dashboard = getDashboard(dashboardId);
@@ -79,7 +85,7 @@ const Dashboard = () => {
     // UI/Temp State
     const [tempPathOperator, setTempPathOperator] = useState(defaultPathOperator);
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialUrlPathsFromCustomFilter);
-    const [tempDateRange, setTempDateRange] = useState(dateRangeFromUrl || "this-month");
+    const [tempDateRange, setTempDateRange] = useState(dateRangeFromUrl || "current_month");
     const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews' | 'proportion'>(metricTypeFromUrl || 'visitors');
 
     // Custom date state
@@ -92,7 +98,7 @@ const Dashboard = () => {
     const [activeFilters, setActiveFilters] = useState({
         pathOperator: defaultPathOperator,
         urlFilters: initialUrlPathsFromCustomFilter,
-        dateRange: dateRangeFromUrl || "this-month",
+        dateRange: dateRangeFromUrl || "current_month",
         customStartDate: undefined as Date | undefined,
         customEndDate: undefined as Date | undefined,
         metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion'
@@ -186,7 +192,7 @@ const Dashboard = () => {
             setActiveFilters({
                 pathOperator: pathOperator || "equals",
                 urlFilters: initialPaths,
-                dateRange: "this-month",
+                dateRange: "current_month",
                 customStartDate: undefined,
                 customEndDate: undefined,
                 metricType: metricTypeFromUrl || 'visitors'
@@ -288,7 +294,7 @@ const Dashboard = () => {
         }
 
         // Always update dateRange in URL (if not default)
-        if (tempDateRange !== 'this-month') {
+        if (tempDateRange !== 'current_month') {
             url.searchParams.set('periode', tempDateRange);
         } else {
             url.searchParams.delete('periode');
@@ -474,8 +480,8 @@ const Dashboard = () => {
                             }
                         }}
                     >
-                        <option value="this-month">Denne måneden</option>
-                        <option value="last-month">Forrige måned</option>
+                        <option value="current_month">Denne måneden</option>
+                        <option value="last_month">Forrige måned</option>
                         {tempDateRange === 'custom' && customStartDate && customEndDate ? (
                             <>
                                 <option value="custom">
