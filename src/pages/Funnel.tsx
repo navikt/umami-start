@@ -65,6 +65,7 @@ const Funnel = () => {
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [modalSql, setModalSql] = useState<string | null>(null);
     const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
+    const [selectedTimingUrl, setSelectedTimingUrl] = useState<string | null>(null);
 
     // Custom events state
     const [availableEvents, setAvailableEvents] = useState<string[]>([]);
@@ -999,37 +1000,36 @@ FROM timing_data`;
 
                                                 return (
                                                     <tr key={index} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-base font-medium text-gray-900">
                                                             Steg {item.step + 1}
                                                         </td>
-                                                        <td className="px-6 py-4 text-sm break-all">
+                                                        <td className="px-6 py-4 text-base break-all">
                                                             {item.url && selectedWebsite ? (
                                                                 <span
                                                                     className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
                                                                     onClick={() => setSelectedTableUrl(item.url)}
                                                                 >
-                                                                    {item.url} <ExternalLink className="h-3 w-3" />
+                                                                    {item.url} <ExternalLink className="h-4 w-4" />
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-gray-500">{item.url}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-base text-gray-900 font-bold">
                                                             {item.count.toLocaleString('nb-NO')}
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-base">
                                                             {percentageOfNext !== null ? (
-                                                                <span className="text-green-600 font-medium">{percentageOfNext}%</span>
+                                                                <span className="text-green-700 font-medium">{percentageOfNext}%</span>
                                                             ) : (
-                                                                <span className="text-gray-400">Avgjort</span>
+                                                                <span className="text-gray-600 font-medium">Fullført ✓</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-base">
                                                             {dropoffCount !== null && dropoffCount > 0 ? (
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-red-600 font-medium">-{dropoffCount.toLocaleString('nb-NO')}</span>
-                                                                    <span className="text-xs text-red-500">({dropoffPercentage}%)</span>
-                                                                </div>
+                                                                <span className="text-red-700 font-medium">
+                                                                    {dropoffPercentage}% <span className="font-normal">(-{dropoffCount.toLocaleString('nb-NO')})</span>
+                                                                </span>
                                                             ) : '-'}
                                                         </td>
                                                     </tr>
@@ -1146,22 +1146,40 @@ FROM timing_data`;
                                                         <tbody className="bg-white divide-y divide-gray-200">
                                                             {stepsTiming.map((timing, index) => (
                                                                 <tr key={index} className="hover:bg-gray-50">
-                                                                    <td className="px-6 py-4 text-sm text-gray-900">
-                                                                        <div className="flex flex-col">
+                                                                    <td className="px-6 py-4 text-base text-gray-900">
+                                                                        <div className="flex flex-col gap-0.5">
                                                                             <span className="font-medium">Steg {timing.fromStep + 1}</span>
-                                                                            <span className="text-xs text-gray-500 break-all">{timing.fromUrl}</span>
+                                                                            {timing.fromUrl && selectedWebsite ? (
+                                                                                <span
+                                                                                    className="text-base text-blue-600 hover:underline cursor-pointer break-all flex items-center gap-1"
+                                                                                    onClick={() => setSelectedTimingUrl(timing.fromUrl)}
+                                                                                >
+                                                                                    {timing.fromUrl} <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-base text-gray-500 break-all">{timing.fromUrl}</span>
+                                                                            )}
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-sm text-gray-900">
-                                                                        <div className="flex flex-col">
+                                                                    <td className="px-6 py-4 text-base text-gray-900">
+                                                                        <div className="flex flex-col gap-0.5">
                                                                             <span className="font-medium">Steg {timing.toStep + 1}</span>
-                                                                            <span className="text-xs text-gray-500 break-all">{timing.toUrl}</span>
+                                                                            {timing.toUrl && selectedWebsite ? (
+                                                                                <span
+                                                                                    className="text-base text-blue-600 hover:underline cursor-pointer break-all flex items-center gap-1"
+                                                                                    onClick={() => setSelectedTimingUrl(timing.toUrl)}
+                                                                                >
+                                                                                    {timing.toUrl} <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-base text-gray-500 break-all">{timing.toUrl}</span>
+                                                                            )}
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">
+                                                                    <td className="px-6 py-4 text-lg font-bold text-blue-700">
                                                                         {formatDuration(timing.avgSeconds)}
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-sm font-bold text-green-600">
+                                                                    <td className="px-6 py-4 text-lg font-bold text-green-700">
                                                                         {formatDuration(timing.medianSeconds)}
                                                                     </td>
                                                                 </tr>
@@ -1201,6 +1219,14 @@ FROM timing_data`;
                                         </>
                                     );
                                 })()}
+
+                                <AnalysisActionModal
+                                    open={!!selectedTimingUrl}
+                                    onClose={() => setSelectedTimingUrl(null)}
+                                    urlPath={selectedTimingUrl}
+                                    websiteId={selectedWebsite?.id}
+                                    period={period}
+                                />
                             </Tabs.Panel>
                         )}
                     </Tabs>

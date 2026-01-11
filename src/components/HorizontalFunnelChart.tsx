@@ -36,6 +36,8 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
         setSelectedUrl(urlPath);
     };
 
+    const maxCount = Math.max(...data.map(d => d.count));
+
     return (
         <>
             <div className="w-full overflow-x-auto py-8 px-4">
@@ -47,36 +49,39 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                         const dropoffCount = prevItem ? prevItem.count - item.count : 0;
                         const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
 
+                        // Calculate total conversion (% of users from first step)
+                        const firstStepCount = data[0]?.count || 1;
+                        const totalConversionPercent = Math.round((item.count / firstStepCount) * 100);
+
                         return (
                             <div key={item.step} className="flex flex-row items-start">
                                 {/* Connector and Drop-off visualization */}
                                 {index > 0 && (
-                                    <div className="flex flex-col items-center justify-start w-32 pt-16 relative mx-1">
+                                    <div className="flex flex-col items-center justify-start w-28 pt-16 relative mx-1">
                                         {/* Horizontal Flow Line */}
-                                        <div className="h-2 w-full bg-blue-100 absolute top-[4.5rem] left-0 right-0 -z-10 rounded-full">
+                                        <div className="h-2 w-full bg-gray-200 absolute top-[4.5rem] left-0 right-0 -z-10 rounded-full">
                                             <div
-                                                className="h-full bg-blue-500 rounded-full opacity-20"
+                                                className="h-full bg-green-400 rounded-full"
                                                 style={{ width: `${percentageOfPrev}%` }}
                                             ></div>
                                         </div>
 
                                         {/* Conversion Stats (Gikk videre) */}
-                                        <div className="bg-white border border-blue-100 rounded-lg px-2 py-1 z-10 mb-2 flex flex-col items-center shadow-sm min-w-[90px]">
-                                            <span className="text-sm font-bold text-blue-900">{percentageOfPrev}%</span>
-                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Videre</span>
+                                        <div className="bg-green-50 border border-green-200 rounded-lg px-2 py-1.5 z-10 mb-2 flex flex-col items-center shadow-sm min-w-[90px]">
+                                            <span className="text-base font-bold text-green-700">{percentageOfPrev}%</span>
+                                            <span className="text-[11px] font-medium text-green-700">gikk videre</span>
                                         </div>
 
                                         {/* Drop-off Branch */}
                                         {dropoffCount > 0 && (
                                             <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-4 duration-500">
                                                 {/* Vertical line down */}
-                                                <div className="h-8 w-0.5 bg-red-100 mb-1"></div>
+                                                <div className="h-6 w-0.5 bg-red-200 mb-1"></div>
 
-                                                {/* Drop-off Stats */}
-                                                <div className="bg-red-50 border border-red-100 rounded-md p-2 flex flex-col items-center shadow-sm min-w-[90px]">
-                                                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Falt fra</span>
-                                                    <span className="text-sm font-bold text-red-700">-{dropoffCount.toLocaleString('nb-NO')}</span>
-                                                    <span className="text-[10px] text-red-500">({dropoffPercentage}%)</span>
+                                                {/* Drop-off Stats - Percentage first, consistent with vertical */}
+                                                <div className="bg-red-50 border border-red-200 rounded-md px-2 py-1.5 flex flex-col items-center shadow-sm min-w-[90px]">
+                                                    <span className="text-base font-bold text-red-700">{dropoffPercentage}%</span>
+                                                    <span className="text-[11px] font-medium text-red-700">falt fra (-{dropoffCount.toLocaleString('nb-NO')})</span>
                                                 </div>
                                             </div>
                                         )}
@@ -89,15 +94,23 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                                     style={{
                                         backgroundColor: themeColor,
                                         color: 'white',
-                                        width: '200px',
+                                        width: `${Math.max(140, 200 * (item.count / maxCount))}px`,
                                         minHeight: '140px'
                                     }}
                                 >
-                                    <div className="text-[10px] font-bold opacity-80 uppercase tracking-wider mb-2">
+                                    <div className="text-[11px] font-bold opacity-80 uppercase tracking-wider mb-1">
                                         Steg {item.step + 1}
                                     </div>
-                                    <div className="text-2xl font-bold mb-2">
-                                        {item.count.toLocaleString('nb-NO')}
+                                    <div className="flex items-baseline gap-1.5 mb-1">
+                                        <span className="text-2xl font-bold">
+                                            {item.count.toLocaleString('nb-NO')}
+                                        </span>
+                                        <span
+                                            className="text-sm font-medium opacity-75"
+                                            title="Prosent av alle som startet i trakten"
+                                        >
+                                            ({totalConversionPercent}%)
+                                        </span>
                                     </div>
                                     <div className="w-full border-t border-white/10 my-2"></div>
                                     {item.url && websiteId ? (
