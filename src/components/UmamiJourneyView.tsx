@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
-import { Button, Tooltip } from '@navikt/ds-react';
-import { Plus, Check, ExternalLink } from 'lucide-react';
+import { Button, Tooltip, Loader } from '@navikt/ds-react';
+import { Plus, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import AnalysisActionModal from './AnalysisActionModal';
 
 interface Node {
@@ -24,6 +24,8 @@ interface UmamiJourneyViewProps {
     websiteId?: string;
     period?: string;
     domain?: string;
+    onLoadMore?: (increment: number) => void;
+    isLoadingMore?: boolean;
 }
 
 interface StepData {
@@ -38,6 +40,8 @@ interface StepData {
     totalValue: number;
 }
 
+
+
 interface ConnectionPath {
     d: string;
     opacity: number;
@@ -49,7 +53,7 @@ interface FunnelStep {
     step: number;
 }
 
-const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward', websiteId, period = 'current_month', domain }) => {
+const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFullscreen = false, reverseVisualOrder = false, journeyDirection = 'forward', websiteId, period = 'current_month', domain, onLoadMore, isLoadingMore }) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
     const [paths, setPaths] = useState<ConnectionPath[]>([]);
@@ -256,7 +260,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
         } else if (!reverseVisualOrder && containerRef.current) {
             containerRef.current.scrollLeft = 0;
         }
-    }, [reverseVisualOrder, stepsData]);
+    }, [reverseVisualOrder]); // Removed stepsData dependency to prevent scroll reset on load more
 
     const toggleFunnelStep = (e: React.MouseEvent, nodeId: string, path: string, step: number) => {
         e.stopPropagation(); // Prevent selecting the node for path highlighting
@@ -428,6 +432,40 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                 </div>
                             </div>
                         ))}
+
+                        {/* Load More Button */}
+                        {onLoadMore && (
+                            <div className="flex-shrink-0 w-40 flex flex-col">
+                                <button
+                                    onClick={() => !isLoadingMore && onLoadMore(2)}
+                                    disabled={isLoadingMore}
+                                    className={`
+                                        group flex flex-col items-center justify-center gap-3
+                                        w-full h-[300px] mt-14 rounded-lg border-2 border-dashed border-gray-400
+                                        hover:border-blue-600 hover:bg-blue-50 transition-all duration-200
+                                        text-gray-600 hover:text-blue-700
+                                        ${isLoadingMore ? 'opacity-70 cursor-wait' : 'cursor-pointer'}
+                                    `}
+                                >
+                                    {isLoadingMore ? (
+                                        <>
+                                            <Loader size="medium" />
+                                            <span className="text-sm font-medium">Laster mer...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors shadow-sm border border-gray-200">
+                                                <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform text-gray-700 group-hover:text-blue-700" />
+                                            </div>
+                                            <div className="flex flex-col items-center">
+                                                <span className="font-bold text-base">Last inn mer</span>
+                                                <span className="text-xs text-gray-500">Vis 2 steg til</span>
+                                            </div>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 

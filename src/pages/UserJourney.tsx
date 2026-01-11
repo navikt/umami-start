@@ -24,7 +24,7 @@ const UserJourney = () => {
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
     const [steps, setSteps] = useState<number>(() => {
         const stepsParam = searchParams.get('steps');
-        return stepsParam ? parseInt(stepsParam) : 5;
+        return stepsParam ? parseInt(stepsParam) : 7;
     });
     const [limit, setLimit] = useState<number>(() => {
         const limitParam = searchParams.get('limit');
@@ -37,6 +37,7 @@ const UserJourney = () => {
     const [data, setData] = useState<IChartProps | null>(null);
     const [rawData, setRawData] = useState<{ nodes: any[], links: any[] } | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    const [isUpdating, setIsUpdating] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('steps');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -159,13 +160,18 @@ const UserJourney = () => {
         URL.revokeObjectURL(url);
     };
 
-    const fetchData = async () => {
+    const fetchData = async (preserveData = false, customSteps?: number) => {
         if (!selectedWebsite) return;
 
-        setLoading(true);
+        if (preserveData) {
+            setIsUpdating(true);
+        } else {
+            setLoading(true);
+            setData(null);
+            setRawData(null);
+        }
+
         setError(null);
-        setData(null);
-        setRawData(null);
 
         // Normalize the URL behind the scenes before sending to API
         const normalizedStartUrl = normalizeUrlToPath(startUrl);
@@ -206,8 +212,10 @@ const UserJourney = () => {
             endDate = now;
         }
 
+        const stepsToFetch = customSteps || steps;
+
         try {
-            console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl: normalizedStartUrl, steps, limit });
+            console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl: normalizedStartUrl, steps: stepsToFetch, limit });
             const response = await fetch('/api/bigquery/journeys', {
                 method: 'POST',
                 headers: {
@@ -218,7 +226,7 @@ const UserJourney = () => {
                     startUrl: normalizedStartUrl,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
-                    steps,
+                    steps: stepsToFetch,
                     limit,
                     direction: journeyDirection,
                 }),
@@ -266,7 +274,7 @@ const UserJourney = () => {
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
-            newParams.set('steps', steps.toString());
+            newParams.set('steps', stepsToFetch.toString());
             newParams.set('limit', limit.toString());
             newParams.set('direction', journeyDirection);
             if (normalizedStartUrl) {
@@ -284,7 +292,14 @@ const UserJourney = () => {
             setError('Kunne ikke laste brukerreiser. Prøv igjen senere.');
         } finally {
             setLoading(false);
+            setIsUpdating(false);
         }
+    };
+
+    const handleLoadMore = (increment: number) => {
+        const newSteps = steps + increment;
+        setSteps(newSteps);
+        fetchData(true, newSteps);
     };
 
     return (
@@ -373,7 +388,7 @@ const UserJourney = () => {
                     />
 
                     <Button
-                        onClick={fetchData}
+                        onClick={() => fetchData()}
                         disabled={!selectedWebsite || loading}
                         loading={loading}
                     >
@@ -507,6 +522,8 @@ const UserJourney = () => {
                                     websiteId={selectedWebsite?.id}
                                     period={period}
                                     domain={selectedWebsite?.domain}
+                                    onLoadMore={handleLoadMore}
+                                    isLoadingMore={isUpdating}
                                 />
                                 {queryStats && (
                                     <div className="text-sm text-gray-600 text-right mt-4">
