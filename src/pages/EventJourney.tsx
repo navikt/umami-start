@@ -692,12 +692,6 @@ const EventJourney = () => {
                     )}
                 </>
             )}
-
-            {!loading && data.length === 0 && !error && (
-                <div className="text-center text-gray-500 mt-12">
-                    Ingen reiser funnet for valgt periode og innstillinger.
-                </div>
-            )}
         </ChartLayout>
     );
 };
