@@ -29,6 +29,9 @@ const chartGroups = [
     }
 ];
 
+// These URL params are shared across analysis pages and should be preserved when navigating
+const SHARED_PARAMS = ['urlPath', 'period', 'startDate', 'endDate'];
+
 const ChartLayout: React.FC<ChartLayoutProps> = ({
     title,
     description,
@@ -44,7 +47,21 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
         const selectedId = event.target.value;
         const page = analyticsPages.find(p => p.id === selectedId);
         if (page) {
-            navigate(page.href);
+            // Read current URL params directly from window.location
+            // (pages use window.history.replaceState which doesn't sync with React Router's useSearchParams)
+            const currentParams = new URLSearchParams(window.location.search);
+            const preservedParams = new URLSearchParams();
+
+            SHARED_PARAMS.forEach(param => {
+                const value = currentParams.get(param);
+                if (value) {
+                    preservedParams.set(param, value);
+                }
+            });
+
+            const queryString = preservedParams.toString();
+            const targetUrl = queryString ? `${page.href}?${queryString}` : page.href;
+            navigate(targetUrl);
         }
     };
 
