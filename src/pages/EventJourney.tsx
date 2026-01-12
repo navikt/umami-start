@@ -135,8 +135,8 @@ const EventJourney = () => {
     };
 
     // Filter state
-    type DecoratorFilter = 'all' | 'hide' | 'only';
-    const [decoratorFilter, setDecoratorFilter] = useState<DecoratorFilter>('all');
+    type FilterType = 'all' | 'hide_decorator' | 'only_decorator' | 'with_content' | 'with_exit';
+    const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
     // Filter data client-side
     const filteredData = data.filter(journey => {
@@ -148,30 +148,58 @@ const EventJourney = () => {
             }
         }
 
-        // Decorator filter logic
-        if (decoratorFilter !== 'all') {
-            const hasDecoratorStep = journey.path.some(step => {
+        // Advanced filter logic
+        if (activeFilter !== 'all') {
+            let hasDecoratorStep = false;
+            let hasContentStep = false;
+            let hasExitStep = false;
+
+            // Single pass to check for all properties
+            for (const step of journey.path) {
                 const parts = step.split(': ');
                 const eventName = parts[0];
-                if (isDecoratorEvent(eventName)) return true; // If eventName itself is a decorator event
 
-                // Check details
+                // Check Decorator
+                if (isDecoratorEvent(eventName)) {
+                    hasDecoratorStep = true;
+                }
+
                 const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
                 const details = rawDetails.split('||').filter(Boolean);
-                return details.some(d => {
-                    // Robust split for key: value
+
+                for (const d of details) {
                     const splitIndex = d.indexOf(':');
-                    if (splitIndex === -1) return false;
+                    if (splitIndex === -1) continue;
 
                     const k = d.substring(0, splitIndex).trim();
                     const v = d.substring(splitIndex + 1).trim();
+                    const kLower = k.toLowerCase();
 
-                    return k === 'kategori' && v && isDecoratorEvent(v);
-                });
-            });
+                    // Check Decorator (via category)
+                    if (k === 'kategori' && v && isDecoratorEvent(v)) {
+                        hasDecoratorStep = true;
+                    }
 
-            if (decoratorFilter === 'hide' && hasDecoratorStep) return false;
-            if (decoratorFilter === 'only' && !hasDecoratorStep) return false;
+                    // Check Content
+                    if (kLower === 'lenkegruppe' && v.toLowerCase() === 'innhold') {
+                        hasContentStep = true;
+                    }
+
+                    // Check Exit
+                    if (kLower === 'destinasjon' && v) {
+                        hasExitStep = true;
+                    }
+                }
+            }
+
+            if (activeFilter === 'hide_decorator' && hasDecoratorStep) return false;
+            if (activeFilter === 'only_decorator' && !hasDecoratorStep) return false;
+
+            if (activeFilter === 'with_content' && !hasContentStep) return false;
+            if (activeFilter === 'without_content' && hasContentStep) return false;
+
+            if (activeFilter === 'with_exit' && !hasExitStep) return false;
+            if (activeFilter === 'without_exit' && hasExitStep) return false;
         }
 
         return true;
@@ -312,13 +340,15 @@ const EventJourney = () => {
                                 <Select
                                     label="Visning"
                                     size="small"
-                                    value={decoratorFilter}
-                                    onChange={(e) => setDecoratorFilter(e.target.value as DecoratorFilter)}
-                                    className="w-40"
+                                    value={activeFilter}
+                                    onChange={(e) => setActiveFilter(e.target.value as FilterType)}
+                                    className="w-48"
                                 >
                                     <option value="all">Alle reiser</option>
-                                    <option value="hide">Utenfor dekoratøren</option>
-                                    <option value="only">Innenfor dekoratøren</option>
+                                    <option value="hide_decorator">Utenfor dekoratøren</option>
+                                    <option value="only_decorator">Innenfor dekoratøren</option>
+                                    <option value="with_content">Med innholdsmeny</option>
+                                    <option value="with_exit">Med utgang</option>
                                 </Select>
                             )}
                             <TextField
@@ -379,13 +409,25 @@ const EventJourney = () => {
                                                 const category = detailMap['kategori'];
                                                 const isDecorator = isDecoratorEvent(eventName) || (category && isDecoratorEvent(category));
 
+                                                // Check for Content (Lenkegruppe: Innhold)
+                                                const lenkegruppe = detailMap['lenkegruppe'];
+                                                const isContent = lenkegruppe && lenkegruppe.toLowerCase() === 'innhold';
+
+                                                // Check for Exit/Navigation (Has Destination)
+                                                const destinasjon = detailMap['destinasjon'];
+                                                const isExit = !!destinasjon;
+
                                                 return (
                                                     <div key={stepIdx} className="flex items-center flex-shrink-0">
                                                         <div className="flex flex-col items-center group relative">
                                                             <button
                                                                 className={`border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDecorator
                                                                     ? 'bg-white border-purple-300 hover:border-purple-400 border-l-4 border-l-purple-400'
-                                                                    : 'bg-white hover:border-blue-300'
+                                                                    : isContent
+                                                                        ? 'bg-white border-green-300 hover:border-green-400 border-l-4 border-l-green-400'
+                                                                        : isExit
+                                                                            ? 'bg-white border-orange-300 hover:border-orange-400 border-l-4 border-l-orange-400'
+                                                                            : 'bg-white hover:border-blue-300'
                                                                     }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
                                                             >
@@ -394,11 +436,25 @@ const EventJourney = () => {
                                                                         {category && isDecoratorEvent(category) ? category : 'Dekoratør'}
                                                                     </div>
                                                                 )}
+                                                                {isContent && (
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-green-50 border border-green-100 text-[10px] uppercase tracking-wider font-bold text-green-700 mb-2 truncate max-w-full" title="Innholdsmeny">
+                                                                        Innholdsmeny
+                                                                    </div>
+                                                                )}
+                                                                {isExit && !isContent && !isDecorator && (
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-orange-50 border border-orange-100 text-[10px] uppercase tracking-wider font-bold text-orange-700 mb-2 truncate max-w-full" title="Utgang">
+                                                                        Utgang
+                                                                    </div>
+                                                                )}
                                                                 <div className="font-semibold text-gray-900 text-sm mb-1 truncate" title={cardTitle}>
                                                                     {cardTitle}
                                                                 </div>
                                                                 {cardSubtitle && (
-                                                                    <div className={`text-xs rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' : 'text-blue-800 bg-blue-50'}`} title={cardSubtitle}>
+                                                                    <div className={`text-xs rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' :
+                                                                        isContent ? 'text-green-900 bg-green-50 border border-green-100' :
+                                                                            isExit ? 'text-orange-900 bg-orange-50 border border-orange-100' :
+                                                                                'text-blue-800 bg-blue-50'
+                                                                        }`} title={cardSubtitle}>
                                                                         {cardSubtitle}
                                                                     </div>
                                                                 )}
