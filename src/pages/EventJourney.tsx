@@ -196,10 +196,8 @@ const EventJourney = () => {
             if (activeFilter === 'only_decorator' && !hasDecoratorStep) return false;
 
             if (activeFilter === 'with_content' && !hasContentStep) return false;
-            if (activeFilter === 'without_content' && hasContentStep) return false;
 
             if (activeFilter === 'with_exit' && !hasExitStep) return false;
-            if (activeFilter === 'without_exit' && hasExitStep) return false;
         }
 
         return true;
@@ -218,6 +216,63 @@ const EventJourney = () => {
     };
 
     const showDecoratorFilter = selectedWebsite?.name.toLowerCase().includes('nav.no');
+
+    // Loop detection: finds repeating sequences and groups them
+    type GroupedStep = { type: 'single'; step: string; originalIndex: number } | { type: 'loop'; pattern: string[]; count: number; startIndex: number };
+
+    const detectLoops = (path: string[]): GroupedStep[] => {
+        const result: GroupedStep[] = [];
+        let i = 0;
+        let originalIdx = 0;
+
+        while (i < path.length) {
+            let bestMatch: { len: number; count: number } | null = null;
+
+            // Try pattern lengths from 1 to 3
+            for (let len = 1; len <= 3; len++) {
+                if (i + len * 2 > path.length) continue;
+
+                const pattern = path.slice(i, i + len);
+                let count = 1;
+                let nextIdx = i + len;
+
+                while (nextIdx + len <= path.length) {
+                    const nextChunk = path.slice(nextIdx, nextIdx + len);
+                    const matches = nextChunk.every((val, k) => val === pattern[k]);
+                    if (matches) {
+                        count++;
+                        nextIdx += len;
+                    } else {
+                        break;
+                    }
+                }
+
+                if (count > 1) {
+                    // Prefer longer patterns that cover more ground
+                    if (!bestMatch || (len * count > bestMatch.len * bestMatch.count)) {
+                        bestMatch = { len, count };
+                    }
+                }
+            }
+
+            if (bestMatch) {
+                result.push({
+                    type: 'loop',
+                    pattern: path.slice(i, i + bestMatch.len),
+                    count: bestMatch.count,
+                    startIndex: originalIdx
+                });
+                i += bestMatch.len * bestMatch.count;
+                originalIdx += bestMatch.len * bestMatch.count;
+            } else {
+                result.push({ type: 'single', step: path[i], originalIndex: originalIdx });
+                i++;
+                originalIdx++;
+            }
+        }
+
+        return result;
+    };
 
     return (
         <ChartLayout
@@ -381,53 +436,89 @@ const EventJourney = () => {
                                             <span>({((journey.count / data.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1)}% av totalt)</span>
                                         </div>
                                         <div className="flex items-start overflow-x-auto pb-6 pt-2 px-1">
-                                            {journey.path.map((step, stepIdx) => {
-                                                // Parse step: "EventName: Key: Value||Key2: Value2"
-                                                const parts = step.split(': ');
-                                                const eventName = parts[0];
-                                                const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
-                                                const details = rawDetails.split('||').filter(Boolean);
+                                            {detectLoops(journey.path).map((group, groupIdx, groups) => {
+                                                // Helper to render a single step card
+                                                const renderStepCard = (step: string, stepNumber: number, isCompact: boolean = false) => {
+                                                    const parts = step.split(': ');
+                                                    const eventName = parts[0];
+                                                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                                                    const details = rawDetails.split('||').filter(Boolean);
 
-                                                // Find a nice title for the card from details
-                                                let cardTitle = eventName;
-                                                let cardSubtitle = '';
+                                                    let cardTitle = eventName;
+                                                    let cardSubtitle = '';
 
-                                                // Extract useful info for preview
-                                                const detailMap: Record<string, string> = {};
-                                                details.forEach(d => {
-                                                    const [k, v] = d.split(': ');
-                                                    if (k && v) detailMap[k] = v;
-                                                });
+                                                    const detailMap: Record<string, string> = {};
+                                                    details.forEach(d => {
+                                                        const [k, v] = d.split(': ');
+                                                        if (k && v) detailMap[k] = v;
+                                                    });
 
-                                                // Priority for subtitle
-                                                if (detailMap['destinasjon']) cardSubtitle = detailMap['destinasjon'];
-                                                else if (detailMap['lenketekst']) cardSubtitle = detailMap['lenketekst'];
-                                                else if (detailMap['tittel']) cardSubtitle = detailMap['tittel'];
-                                                else if (detailMap['label']) cardSubtitle = detailMap['label'];
-                                                else if (detailMap['url']) cardSubtitle = detailMap['url'];
+                                                    if (detailMap['destinasjon']) cardSubtitle = detailMap['destinasjon'];
+                                                    else if (detailMap['lenketekst']) cardSubtitle = detailMap['lenketekst'];
+                                                    else if (detailMap['tittel']) cardSubtitle = detailMap['tittel'];
+                                                    else if (detailMap['label']) cardSubtitle = detailMap['label'];
+                                                    else if (detailMap['url']) cardSubtitle = detailMap['url'];
 
-                                                const category = detailMap['kategori'];
-                                                const isDecorator = isDecoratorEvent(eventName) || (category && isDecoratorEvent(category));
+                                                    const category = detailMap['kategori'];
+                                                    const isDecorator = isDecoratorEvent(eventName) || (category && isDecoratorEvent(category));
+                                                    const lenkegruppe = detailMap['lenkegruppe'];
+                                                    const isContent = lenkegruppe && lenkegruppe.toLowerCase() === 'innhold';
 
-                                                // Check for Content (Lenkegruppe: Innhold)
-                                                const lenkegruppe = detailMap['lenkegruppe'];
-                                                const isContent = lenkegruppe && lenkegruppe.toLowerCase() === 'innhold';
+                                                    // Nuanced navigation type detection
+                                                    const destinasjon = detailMap['destinasjon'];
+                                                    let navType: 'none' | 'internal' | 'external' = 'none';
+                                                    if (destinasjon) {
+                                                        // Check if it's an external URL (starts with http and not nav.no domain)
+                                                        if (destinasjon.startsWith('http://') || destinasjon.startsWith('https://')) {
+                                                            // External if not nav.no
+                                                            const isNavDomain = destinasjon.includes('nav.no');
+                                                            navType = isNavDomain ? 'internal' : 'external';
+                                                        } else if (destinasjon.startsWith('/')) {
+                                                            // Relative path = internal navigation
+                                                            navType = 'internal';
+                                                        } else if (destinasjon.startsWith('#')) {
+                                                            // Anchor = internal (already covered by isContent usually)
+                                                            navType = 'none'; // Let isContent handle it
+                                                        } else {
+                                                            // Other patterns - treat as internal
+                                                            navType = 'internal';
+                                                        }
+                                                    }
 
-                                                // Check for Exit/Navigation (Has Destination)
-                                                const destinasjon = detailMap['destinasjon'];
-                                                const isExit = !!destinasjon;
+                                                    const isInternalNav = navType === 'internal';
+                                                    const isExternalExit = navType === 'external';
 
-                                                return (
-                                                    <div key={stepIdx} className="flex items-center flex-shrink-0">
+                                                    if (isCompact) {
+                                                        // Compact version for inside loops
+                                                        return (
+                                                            <div
+                                                                className={`border rounded shadow-sm p-2 min-w-[120px] max-w-[150px] bg-white text-left text-xs cursor-pointer hover:shadow-md transition-shadow ${isDecorator ? 'border-purple-300 border-l-4 border-l-purple-400' :
+                                                                    isContent ? 'border-green-300 border-l-4 border-l-green-400' :
+                                                                        isExternalExit ? 'border-red-300 border-l-4 border-l-red-400' :
+                                                                            isInternalNav ? 'border-orange-300 border-l-4 border-l-orange-400' :
+                                                                                'border-gray-200'
+                                                                    }`}
+                                                                onClick={() => setSelectedStepDetails({ title: eventName, details })}
+                                                            >
+                                                                <div className="font-semibold truncate text-gray-900">{cardTitle}</div>
+                                                                {cardSubtitle && <div className="text-gray-500 truncate text-[10px]">{cardSubtitle}</div>}
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    // Full version
+                                                    return (
                                                         <div className="flex flex-col items-center group relative">
                                                             <button
                                                                 className={`border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDecorator
                                                                     ? 'bg-white border-purple-300 hover:border-purple-400 border-l-4 border-l-purple-400'
                                                                     : isContent
                                                                         ? 'bg-white border-green-300 hover:border-green-400 border-l-4 border-l-green-400'
-                                                                        : isExit
-                                                                            ? 'bg-white border-orange-300 hover:border-orange-400 border-l-4 border-l-orange-400'
-                                                                            : 'bg-white hover:border-blue-300'
+                                                                        : isExternalExit
+                                                                            ? 'bg-white border-red-300 hover:border-red-400 border-l-4 border-l-red-400'
+                                                                            : isInternalNav
+                                                                                ? 'bg-white border-orange-300 hover:border-orange-400 border-l-4 border-l-orange-400'
+                                                                                : 'bg-white hover:border-blue-300'
                                                                     }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
                                                             >
@@ -441,8 +532,13 @@ const EventJourney = () => {
                                                                         Innholdsmeny
                                                                     </div>
                                                                 )}
-                                                                {isExit && !isContent && !isDecorator && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-orange-50 border border-orange-100 text-[10px] uppercase tracking-wider font-bold text-orange-700 mb-2 truncate max-w-full" title="Utgang">
+                                                                {isInternalNav && !isContent && !isDecorator && (
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-orange-50 border border-orange-100 text-[10px] uppercase tracking-wider font-bold text-orange-700 mb-2 truncate max-w-full" title="Intern navigering">
+                                                                        Intern
+                                                                    </div>
+                                                                )}
+                                                                {isExternalExit && !isContent && !isDecorator && (
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-red-50 border border-red-100 text-[10px] uppercase tracking-wider font-bold text-red-700 mb-2 truncate max-w-full" title="Ekstern utgang">
                                                                         Utgang
                                                                     </div>
                                                                 )}
@@ -452,8 +548,9 @@ const EventJourney = () => {
                                                                 {cardSubtitle && (
                                                                     <div className={`text-xs rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' :
                                                                         isContent ? 'text-green-900 bg-green-50 border border-green-100' :
-                                                                            isExit ? 'text-orange-900 bg-orange-50 border border-orange-100' :
-                                                                                'text-blue-800 bg-blue-50'
+                                                                            isExternalExit ? 'text-red-900 bg-red-50 border border-red-100' :
+                                                                                isInternalNav ? 'text-orange-900 bg-orange-50 border border-orange-100' :
+                                                                                    'text-blue-800 bg-blue-50'
                                                                         }`} title={cardSubtitle}>
                                                                         {cardSubtitle}
                                                                     </div>
@@ -462,16 +559,45 @@ const EventJourney = () => {
                                                                     Klikk for {details.length} detaljer
                                                                 </div>
                                                             </button>
-                                                            {/* Step number badge - positioned to not be cut off */}
                                                             <div className="absolute -top-2 -right-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm z-10">
-                                                                {stepIdx + 1}
+                                                                {stepNumber}
                                                             </div>
                                                         </div>
-                                                        {stepIdx < journey.path.length - 1 && (
-                                                            <div className="w-8 h-px bg-gray-300 mx-2"></div>
-                                                        )}
-                                                    </div>
-                                                );
+                                                    );
+                                                };
+
+                                                if (group.type === 'single') {
+                                                    return (
+                                                        <div key={groupIdx} className="flex items-center flex-shrink-0">
+                                                            {renderStepCard(group.step, group.originalIndex + 1)}
+                                                            {groupIdx < groups.length - 1 && (
+                                                                <div className="w-8 h-px bg-gray-300 mx-2"></div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                } else {
+                                                    // Loop group
+                                                    return (
+                                                        <div key={groupIdx} className="flex items-center flex-shrink-0">
+                                                            <div className="relative border-2 border-dashed border-blue-300 rounded-xl p-3 bg-blue-50/30">
+                                                                <div className="absolute -top-3 left-3 bg-white px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-200 rounded-full shadow-sm flex items-center gap-1 z-20">
+                                                                    <span className="text-base leading-none">↻</span> {group.count}×
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    {group.pattern.map((step, pIdx) => (
+                                                                        <div key={pIdx} className="flex items-center">
+                                                                            {pIdx > 0 && <div className="w-4 h-px bg-blue-300 mx-1"></div>}
+                                                                            {renderStepCard(step, group.startIndex + pIdx + 1, true)}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            {groupIdx < groups.length - 1 && (
+                                                                <div className="w-8 h-px bg-gray-300 mx-2"></div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
                                             })}
                                         </div>
                                     </div>
