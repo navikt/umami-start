@@ -24,7 +24,7 @@ const Footer = () => {
 function LogoBlock() {
     return (
         <div>
-            <div className="mt-4 text-2xl whitespace-nowrap flex items-center" aria-label="Start Umami" role="img">
+            <div className="text-2xl whitespace-nowrap flex items-center" aria-label="Start Umami" role="img">
                 <svg
                     width="1em"
                     height="1em"
