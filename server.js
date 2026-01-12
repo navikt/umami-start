@@ -3554,8 +3554,8 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                     -- We exclude variable properties like scrollPos, screen, etc. to ensure meaningful grouping
                     STRING_AGG(
                         CASE 
-                            WHEN p.data_key IN ('lenketekst', 'tittel', 'label', 'tekst', 'url', 'href', 'komponent', 'seksjon', 'lenkegruppe', 'destinasjon', 'målgruppe', 'innholdstype') THEN 
-                                CONCAT(p.data_key, ': ', REPLACE(p.string_value, '||', ' '))
+                            WHEN LOWER(p.data_key) IN ('lenketekst', 'tittel', 'label', 'tekst', 'url', 'href', 'komponent', 'seksjon', 'lenkegruppe', 'destinasjon', 'målgruppe', 'innholdstype', 'kategori', 'category') THEN 
+                                CONCAT(p.data_key, ': ', REPLACE(COALESCE(p.string_value, CAST(p.number_value AS STRING), CAST(p.date_value AS STRING)), '||', ' '))
                             ELSE NULL 
                         END, 
                         '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key

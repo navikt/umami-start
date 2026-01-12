@@ -30,3 +30,7 @@ export const normalizeUrlToPath = (input: string): string => {
   }
   return trimmed;
 };
+
+export const isDecoratorEvent = (eventName: string): boolean => {
+  return eventName.startsWith('dekorator-');
+};

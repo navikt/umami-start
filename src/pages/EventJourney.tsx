@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
 import { Website } from '../types/chart';
-import { normalizeUrlToPath } from '../lib/utils';
+import { normalizeUrlToPath, isDecoratorEvent } from '../lib/utils';
 
 
 const EventJourney = () => {
@@ -134,12 +134,47 @@ const EventJourney = () => {
         }
     };
 
+    // Filter state
+    type DecoratorFilter = 'all' | 'hide' | 'only';
+    const [decoratorFilter, setDecoratorFilter] = useState<DecoratorFilter>('all');
+
     // Filter data client-side
     const filteredData = data.filter(journey => {
-        if (!filterText) return true;
-        const lowerFilter = filterText.toLowerCase();
-        // Check if any step in the path contains the filter text
-        return journey.path.some(step => step.toLowerCase().includes(lowerFilter));
+        // First filter by text
+        if (filterText) {
+            const lowerFilter = filterText.toLowerCase();
+            if (!journey.path.some(step => step.toLowerCase().includes(lowerFilter))) {
+                return false;
+            }
+        }
+
+        // Decorator filter logic
+        if (decoratorFilter !== 'all') {
+            const hasDecoratorStep = journey.path.some(step => {
+                const parts = step.split(': ');
+                const eventName = parts[0];
+                if (isDecoratorEvent(eventName)) return true; // If eventName itself is a decorator event
+
+                // Check details
+                const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                const details = rawDetails.split('||').filter(Boolean);
+                return details.some(d => {
+                    // Robust split for key: value
+                    const splitIndex = d.indexOf(':');
+                    if (splitIndex === -1) return false;
+
+                    const k = d.substring(0, splitIndex).trim();
+                    const v = d.substring(splitIndex + 1).trim();
+
+                    return k === 'kategori' && v && isDecoratorEvent(v);
+                });
+            });
+
+            if (decoratorFilter === 'hide' && hasDecoratorStep) return false;
+            if (decoratorFilter === 'only' && !hasDecoratorStep) return false;
+        }
+
+        return true;
     });
 
     const formatNumber = (num: number) => num.toLocaleString('nb-NO');
@@ -153,6 +188,8 @@ const EventJourney = () => {
         if (!filteredData.length) return 0;
         return Math.max(...filteredData.map(d => d.path.length));
     };
+
+    const showDecoratorFilter = selectedWebsite?.name.toLowerCase().includes('nav.no');
 
     return (
         <ChartLayout
@@ -268,17 +305,30 @@ const EventJourney = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-end mb-4">
+                    <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
                         <Heading level="2" size="medium">Hendelsesflyt</Heading>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-end gap-3">
+                            {showDecoratorFilter && (
+                                <Select
+                                    label="Visning"
+                                    size="small"
+                                    value={decoratorFilter}
+                                    onChange={(e) => setDecoratorFilter(e.target.value as DecoratorFilter)}
+                                    className="w-40"
+                                >
+                                    <option value="all">Alle reiser</option>
+                                    <option value="hide">Utenfor dekoratøren</option>
+                                    <option value="only">Innenfor dekoratøren</option>
+                                </Select>
+                            )}
                             <TextField
                                 label="Søk i reiser"
                                 hideLabel
-                                placeholder="Filtrer reiser..."
+                                placeholder="Søk..."
                                 size="small"
                                 value={filterText}
                                 onChange={(e) => setFilterText(e.target.value)}
-                                className="w-64"
+                                className="w-48"
                             />
                             <Button
                                 size="small"
@@ -286,7 +336,7 @@ const EventJourney = () => {
                                 icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
                                 onClick={copyShareLink}
                             >
-                                {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                                {copySuccess ? 'Kopiert!' : 'Del'}
                             </Button>
                         </div>
                     </div>
@@ -326,18 +376,29 @@ const EventJourney = () => {
                                                 else if (detailMap['label']) cardSubtitle = detailMap['label'];
                                                 else if (detailMap['url']) cardSubtitle = detailMap['url'];
 
+                                                const category = detailMap['kategori'];
+                                                const isDecorator = isDecoratorEvent(eventName) || (category && isDecoratorEvent(category));
+
                                                 return (
                                                     <div key={stepIdx} className="flex items-center flex-shrink-0">
                                                         <div className="flex flex-col items-center group relative">
                                                             <button
-                                                                className="bg-white border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md hover:border-blue-300 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                className={`border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDecorator
+                                                                    ? 'bg-white border-purple-300 hover:border-purple-400 border-l-4 border-l-purple-400'
+                                                                    : 'bg-white hover:border-blue-300'
+                                                                    }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
                                                             >
-                                                                <div className="font-semibold text-gray-800 text-sm mb-1 truncate" title={cardTitle}>
+                                                                {isDecorator && (
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-purple-50 border border-purple-100 text-[10px] uppercase tracking-wider font-bold text-purple-700 mb-2 truncate max-w-full" title={category || 'Dekoratør'}>
+                                                                        {category && isDecoratorEvent(category) ? category : 'Dekoratør'}
+                                                                    </div>
+                                                                )}
+                                                                <div className="font-semibold text-gray-900 text-sm mb-1 truncate" title={cardTitle}>
                                                                     {cardTitle}
                                                                 </div>
                                                                 {cardSubtitle && (
-                                                                    <div className="text-xs text-blue-800 bg-blue-50 rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1" title={cardSubtitle}>
+                                                                    <div className={`text-xs rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' : 'text-blue-800 bg-blue-50'}`} title={cardSubtitle}>
                                                                         {cardSubtitle}
                                                                     </div>
                                                                 )}
