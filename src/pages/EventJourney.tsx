@@ -494,8 +494,8 @@ const EventJourney = () => {
                                                             <div
                                                                 className={`border rounded shadow-sm p-2 min-w-[120px] max-w-[150px] bg-white text-left text-xs cursor-pointer hover:shadow-md transition-shadow ${isDecorator ? 'border-purple-300 border-l-4 border-l-purple-400' :
                                                                     isContent ? 'border-green-300 border-l-4 border-l-green-400' :
-                                                                        isExternalExit ? 'border-red-300 border-l-4 border-l-red-400' :
-                                                                            isInternalNav ? 'border-orange-300 border-l-4 border-l-orange-400' :
+                                                                        isExternalExit ? 'border-amber-400 border-l-4 border-l-amber-500' :
+                                                                            isInternalNav ? 'border-amber-400 border-l-4 border-l-amber-500' :
                                                                                 'border-gray-200'
                                                                     }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
@@ -515,9 +515,9 @@ const EventJourney = () => {
                                                                     : isContent
                                                                         ? 'bg-white border-green-300 hover:border-green-400 border-l-4 border-l-green-400'
                                                                         : isExternalExit
-                                                                            ? 'bg-white border-red-300 hover:border-red-400 border-l-4 border-l-red-400'
+                                                                            ? 'bg-white border-amber-400 hover:border-amber-500 border-l-4 border-l-amber-500'
                                                                             : isInternalNav
-                                                                                ? 'bg-white border-orange-300 hover:border-orange-400 border-l-4 border-l-orange-400'
+                                                                                ? 'bg-white border-amber-400 hover:border-amber-500 border-l-4 border-l-amber-500'
                                                                                 : 'bg-white hover:border-blue-300'
                                                                     }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
@@ -533,13 +533,13 @@ const EventJourney = () => {
                                                                     </div>
                                                                 )}
                                                                 {isInternalNav && !isContent && !isDecorator && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-orange-50 border border-orange-100 text-[10px] uppercase tracking-wider font-bold text-orange-700 mb-2 truncate max-w-full" title="Intern navigering">
-                                                                        Intern
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-[10px] uppercase tracking-wider font-bold text-amber-800 mb-2 truncate max-w-full" title="Utgang til annen side på nav.no">
+                                                                        Utgang intern
                                                                     </div>
                                                                 )}
                                                                 {isExternalExit && !isContent && !isDecorator && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-red-50 border border-red-100 text-[10px] uppercase tracking-wider font-bold text-red-700 mb-2 truncate max-w-full" title="Ekstern utgang">
-                                                                        Utgang
+                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-[10px] uppercase tracking-wider font-bold text-amber-800 mb-2 truncate max-w-full" title="Utgang til ekstern nettside">
+                                                                        Utgang ekstern
                                                                     </div>
                                                                 )}
                                                                 <div className="font-semibold text-gray-900 text-sm mb-1 truncate" title={cardTitle}>
@@ -548,8 +548,8 @@ const EventJourney = () => {
                                                                 {cardSubtitle && (
                                                                     <div className={`text-xs rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' :
                                                                         isContent ? 'text-green-900 bg-green-50 border border-green-100' :
-                                                                            isExternalExit ? 'text-red-900 bg-red-50 border border-red-100' :
-                                                                                isInternalNav ? 'text-orange-900 bg-orange-50 border border-orange-100' :
+                                                                            isExternalExit ? 'text-amber-900 bg-amber-100 border border-amber-200' :
+                                                                                isInternalNav ? 'text-amber-900 bg-amber-100 border border-amber-200' :
                                                                                     'text-blue-800 bg-blue-50'
                                                                         }`} title={cardSubtitle}>
                                                                         {cardSubtitle}
