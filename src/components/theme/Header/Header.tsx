@@ -28,7 +28,7 @@ export default function Header() {
     <div style={{ background: "rgba(19,17,54)" }}>
       <header className="flex py-1 z-10 items-center max-w-[76.5rem] m-auto justify-between">
         <div className="flex items-stretch">
-          <Link className={linkButton} href="/">
+          <Link className={linkButton} href="/" aria-label="Start Umami">
             <svg
               width="1em"
               height="1em"

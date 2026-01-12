@@ -24,7 +24,26 @@ const Footer = () => {
 function LogoBlock() {
     return (
         <div>
-            <span className="mt-4 text-2xl whitespace-nowrap">Start Umami</span>
+            <div className="mt-4 text-2xl whitespace-nowrap flex items-center" aria-label="Start Umami" role="img">
+                <svg
+                    width="1em"
+                    height="1em"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-2xl mr-1"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M5 4L19 12L5 20V4Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+                <span>Umami</span>
+            </div>
             <p className="mt-3 leading-normal">&copy; {new Date().getFullYear()} Nav</p>
             <p className="leading-normal">Arbeids- og velferdsetaten</p>
         </div>
