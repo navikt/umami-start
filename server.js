@@ -3576,8 +3576,8 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
             DedupedEvents AS (
                 SELECT 
                     *,
-                    LAG(event_name) OVER (PARTITION BY session_id ORDER BY created_at) as prev_event_name,
-                    LAG(props_str) OVER (PARTITION BY session_id ORDER BY created_at) as prev_props_str
+                    LAG(event_name) OVER (PARTITION BY session_id ORDER BY TIMESTAMP_TRUNC(created_at, SECOND), CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str) as prev_event_name,
+                    LAG(props_str) OVER (PARTITION BY session_id ORDER BY TIMESTAMP_TRUNC(created_at, SECOND), CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str) as prev_props_str
                 FROM EventProps
             ),
             CleanedEvents AS (
@@ -3597,7 +3597,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                     -- Create an array of "EventName (props)" ordered by time
                     ARRAY_AGG(
                         IF(props_str IS NOT NULL, CONCAT(event_name, ': ', props_str), event_name)
-                        ORDER BY created_at
+                        ORDER BY TIMESTAMP_TRUNC(created_at, SECOND), CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str
                     ) as path,
                     -- Also aggregate raw event names for filtering
                     ARRAY_AGG(event_name) as event_names
