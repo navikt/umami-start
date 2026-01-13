@@ -3648,6 +3648,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                 FROM TargetVisits t
                 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` later
                     ON t.session_id = later.session_id
+                    AND later.created_at BETWEEN @startDate AND @endDate
                     AND later.created_at > t.visit_time
                     AND later.event_name IS NULL
             )
@@ -3688,8 +3689,20 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
             console.log('[Event Journeys] Dry run failed:', dryRunError.message);
         }
 
-        const [journeyRows] = await bigquery.query(addAuditLogging({ query, params }, navIdent, 'Hendelsesflyt'));
-        const [statsRows] = await bigquery.query(addAuditLogging({ query: statsQuery, params }, navIdent, 'Hendelsesflyt'));
+
+        const [journeyJob] = await bigquery.createQueryJob(addAuditLogging({
+            query,
+            location: 'europe-north1',
+            params
+        }, navIdent, 'Hendelsesflyt'));
+        const [journeyRows] = await journeyJob.getQueryResults();
+
+        const [statsJob] = await bigquery.createQueryJob(addAuditLogging({
+            query: statsQuery,
+            location: 'europe-north1',
+            params
+        }, navIdent, 'Hendelsesflyt'));
+        const [statsRows] = await statsJob.getQueryResults();
         const journeyStats = statsRows[0] || {};
 
         const journeys = journeyRows.map(row => ({
@@ -3704,7 +3717,10 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('BigQuery event journeys error:', error);
+        console.error('[Event Journeys] ERROR:', error.message);
+        if (error.errors) {
+            console.error('[Event Journeys] BigQuery errors:', JSON.stringify(error.errors, null, 2));
+        }
         res.status(500).json({
             error: error.message || 'Failed to fetch event journeys'
         });
