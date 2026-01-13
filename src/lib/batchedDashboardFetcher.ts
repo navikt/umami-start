@@ -136,6 +136,7 @@ WITH base_query AS (
   AND ${tableName}.event_type = 1
   ${urlFilterClause}
   AND ${tableName}.created_at BETWEEN ${fromSql} AND ${toSql}
+  AND ${sessionTable}.created_at BETWEEN ${fromSql} AND ${toSql}
 )
 
 SELECT${useDistinct ? ' DISTINCT' : ''}
