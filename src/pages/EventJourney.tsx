@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select } from '@navikt/ds-react';
-import { Share2, Check } from 'lucide-react';
+import { Share2, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
 import PeriodPicker from '../components/PeriodPicker';
@@ -32,6 +32,63 @@ const EventJourney = () => {
 
     // Modal state
     const [selectedStepDetails, setSelectedStepDetails] = useState<{ title: string, details: string[] } | null>(null);
+
+    // Funnel building state
+    const [funnelSteps, setFunnelSteps] = useState<{ value: string; stepIndex: number; details?: string[] }[]>([]);
+
+    const toggleFunnelStep = (e: React.MouseEvent, value: string, stepIndex: number, details: string[]) => {
+        e.stopPropagation();
+        setFunnelSteps(prev => {
+            const exists = prev.some(s => s.value === value && s.stepIndex === stepIndex);
+            if (exists) {
+                return prev.filter(s => !(s.value === value && s.stepIndex === stepIndex));
+            } else {
+                return [...prev, { value, stepIndex, details }];
+            }
+        });
+    };
+
+    const navigateToFunnel = () => {
+        if (!selectedWebsite) return;
+
+        // Sort by step index
+        const sortedSteps = [...funnelSteps].sort((a, b) => a.stepIndex - b.stepIndex);
+
+        const params = new URLSearchParams();
+        params.set('websiteId', selectedWebsite.id);
+        params.set('period', 'current_month');
+        params.set('strict', 'true');
+
+        // Step 1: The current URL path
+        params.append('step', urlPath);
+
+        // Subsequent steps: The selected events
+        sortedSteps.forEach(s => {
+            // scope to current-path since we are in EventJourney context
+            let stepStr = `event:${s.value}|current-path`;
+
+            // Add params if any
+            if (s.details && s.details.length > 0) {
+                s.details.forEach(detail => {
+                    const [key, ...values] = detail.split(': ');
+                    const value = values.join(': ');
+
+                    // Filter out some keys if needed, or include all relevant ones
+                    // Common keys to include: text, url, destinasjon, label
+                    const relevantKeys = ['text', 'url', 'destinasjon', 'label', 'tittel', 'lenketekst', 'tekst'];
+                    if (relevantKeys.includes(key.toLowerCase()) || key === 'Tekst') {
+                        // Encode param in URL
+                        stepStr += `|param:${key}=${value}`;
+                    }
+                });
+            }
+
+            params.append('step', stepStr);
+        });
+
+        const url = `/trakt?${params.toString()}`;
+        window.open(url, '_blank');
+    };
 
 
     // Auto-submit when URL parameters are present (for shared links)
@@ -435,7 +492,7 @@ const EventJourney = () => {
                                             <span className="font-semibold text-gray-900 mr-2">{journey.count} sesjoner</span>
                                             <span>({((journey.count / data.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1)}% av totalt)</span>
                                         </div>
-                                        <div className="flex items-start overflow-x-auto pb-6 pt-2 px-1">
+                                        <div className="flex items-start overflow-x-auto pb-6 pt-6 pl-4 pr-1">
                                             {detectLoops(journey.path).map((group, groupIdx, groups) => {
                                                 // Helper to render a single step card
                                                 const renderStepCard = (step: string, stepNumber: number, isCompact: boolean = false) => {
@@ -492,9 +549,11 @@ const EventJourney = () => {
 
                                                     if (isCompact) {
                                                         // Compact version for inside loops
+                                                        const isFunnelStep = funnelSteps.some(s => s.value === eventName && s.stepIndex === stepNumber - 1);
+
                                                         return (
                                                             <div
-                                                                className={`border rounded shadow-sm p-2 min-w-[120px] max-w-[150px] bg-white text-left text-xs cursor-pointer hover:shadow-md transition-shadow ${isDecorator ? 'border-purple-300 border-l-4 border-l-purple-400' :
+                                                                className={`border rounded shadow-sm p-2 min-w-[120px] max-w-[150px] bg-white text-left text-xs cursor-pointer hover:shadow-md transition-shadow relative group ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500' : ''} ${isDecorator ? 'border-purple-300 border-l-4 border-l-purple-400' :
                                                                     isContent ? 'border-green-300 border-l-4 border-l-green-400' :
                                                                         isExternalExit ? 'border-amber-400 border-l-4 border-l-amber-500' :
                                                                             isInternalNav ? 'border-amber-400 border-l-4 border-l-amber-500' :
@@ -502,17 +561,83 @@ const EventJourney = () => {
                                                                     }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
                                                             >
-                                                                <div className="font-semibold truncate text-gray-900">{cardTitle}</div>
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="font-semibold truncate text-gray-900 pr-4">{cardTitle}</div>
+                                                                    <button
+                                                                        onClick={(e) => toggleFunnelStep(e, eventName, stepNumber - 1, details)}
+                                                                        className={`
+                                                                            absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-all
+                                                                            ${isFunnelStep
+                                                                                ? 'bg-green-500 text-white'
+                                                                                : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600 opacity-0 group-hover:opacity-100'
+                                                                            }
+                                                                        `}
+                                                                        title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
+                                                                    >
+                                                                        {isFunnelStep ? <Check size={10} strokeWidth={3} /> : <Plus size={10} strokeWidth={3} />}
+                                                                    </button>
+                                                                </div>
                                                                 {cardSubtitle && <div className="text-gray-500 truncate text-[10px]">{cardSubtitle}</div>}
                                                             </div>
                                                         );
                                                     }
 
                                                     // Full version
+                                                    const isFunnelStep = funnelSteps.some(s => {
+                                                        if (s.value !== eventName || s.stepIndex !== stepNumber - 1) return false;
+
+                                                        // If selected step has details, we must match them
+                                                        if (s.details && s.details.length > 0) {
+                                                            const parseDetails = (dArr: string[]) => {
+                                                                const map: Record<string, string> = {};
+                                                                dArr.forEach(d => {
+                                                                    // Handle both ": " and ":" separator for robustness
+                                                                    const parts = d.split(':');
+                                                                    if (parts.length >= 2) {
+                                                                        const k = parts[0].trim();
+                                                                        const v = parts.slice(1).join(':').trim();
+                                                                        if (k && v) map[k] = v;
+                                                                    }
+                                                                });
+                                                                return map;
+                                                            };
+
+                                                            const selectedParams = parseDetails(s.details);
+                                                            const currentParams = parseDetails(details);
+
+                                                            const relevantKeys = [
+                                                                'text', 'url', 'destinasjon', 'label', 'tittel', 'lenketekst', 'tekst', 'Tekst',
+                                                                'referrer', 'kilde', 'source', 'medium', 'campaign', 'content'
+                                                            ];
+
+                                                            // Find keys in the SELECTED step that are "relevant" (visible/important)
+                                                            let usefulKeys = Object.keys(selectedParams).filter(k => relevantKeys.includes(k) || relevantKeys.includes(k.toLowerCase()));
+
+                                                            // If we found NO relevant keys, but we DO have details, likely we should match strictly on specific common keys or just ALL keys 
+                                                            // to avoid "wildcard" matching a specific event against everything else.
+                                                            // However, matching ALL keys might be too strict if there are IDs etc.
+                                                            // For now, if no generic relevant keys are found, effectively treat it as a "generic" match (return true) UNLESS 
+                                                            // we want to enforce stricter matching. Given the user's complaint, we should trigger on *any* key diff if we can't identify the important one.
+
+                                                            if (usefulKeys.length === 0 && Object.keys(selectedParams).length > 0) {
+                                                                // Fallback: match on ALL keys available in the selected param to be safe
+                                                                usefulKeys = Object.keys(selectedParams);
+                                                            }
+
+                                                            if (usefulKeys.length === 0) return true; // Truly no params
+
+                                                            return usefulKeys.every(k => selectedParams[k] === currentParams[k]);
+                                                        }
+
+                                                        return true;
+                                                    });
+
                                                     return (
                                                         <div className="flex flex-col items-center group relative">
-                                                            <button
-                                                                className={`border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDecorator
+                                                            <div
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                className={`border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 relative cursor-pointer ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500' : ''} ${isDecorator
                                                                     ? 'bg-white border-purple-300 hover:border-purple-400 border-l-4 border-l-purple-400'
                                                                     : isContent
                                                                         ? 'bg-white border-green-300 hover:border-green-400 border-l-4 border-l-green-400'
@@ -523,28 +648,54 @@ const EventJourney = () => {
                                                                                 : 'bg-white hover:border-blue-300'
                                                                     }`}
                                                                 onClick={() => setSelectedStepDetails({ title: eventName, details })}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                                        setSelectedStepDetails({ title: eventName, details });
+                                                                    }
+                                                                }}
                                                             >
-                                                                {isDecorator && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-purple-50 border border-purple-100 text-[10px] uppercase tracking-wider font-bold text-purple-700 mb-2 truncate max-w-full" title={category || 'Dekoratør'}>
-                                                                        {category && isDecoratorEvent(category) ? category : 'Dekoratør'}
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <div className="flex-1 min-w-0 pr-6">
+                                                                        {isDecorator && (
+                                                                            <div className="inline-block px-1.5 py-0.5 rounded-sm bg-purple-50 border border-purple-100 text-[10px] uppercase tracking-wider font-bold text-purple-700 mb-1 truncate max-w-full" title={category || 'Dekoratør'}>
+                                                                                {category && isDecoratorEvent(category) ? category : 'Dekoratør'}
+                                                                            </div>
+                                                                        )}
+                                                                        {isContent && (
+                                                                            <div className="inline-block px-1.5 py-0.5 rounded-sm bg-green-50 border border-green-100 text-[10px] uppercase tracking-wider font-bold text-green-700 mb-1 truncate max-w-full" title="Innholdsmeny">
+                                                                                Innholdsmeny
+                                                                            </div>
+                                                                        )}
+                                                                        {isInternalNav && !isContent && !isDecorator && (
+                                                                            <div className="inline-block px-1.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-[10px] uppercase tracking-wider font-bold text-amber-800 mb-1 truncate max-w-full" title="Utgang til annen side på nav.no">
+                                                                                Utgang intern
+                                                                            </div>
+                                                                        )}
+                                                                        {isExternalExit && !isContent && !isDecorator && (
+                                                                            <div className="inline-block px-1.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-[10px] uppercase tracking-wider font-bold text-amber-800 mb-1 truncate max-w-full" title="Utgang til ekstern nettside">
+                                                                                Utgang ekstern
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                                {isContent && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-green-50 border border-green-100 text-[10px] uppercase tracking-wider font-bold text-green-700 mb-2 truncate max-w-full" title="Innholdsmeny">
-                                                                        Innholdsmeny
+
+                                                                    <div className="absolute top-2 right-2">
+                                                                        <button
+                                                                            onClick={(e) => toggleFunnelStep(e, eventName, stepNumber - 1, details)}
+                                                                            className={`
+                                                                                w-6 h-6 rounded-full flex items-center justify-center transition-all z-20
+                                                                                ${isFunnelStep
+                                                                                    ? 'bg-green-500 text-white shadow-sm'
+                                                                                    : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'
+                                                                                }
+                                                                            `}
+                                                                            title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
+                                                                        >
+                                                                            {isFunnelStep ? <Check size={14} strokeWidth={3} /> : <Plus size={14} strokeWidth={3} />}
+                                                                        </button>
                                                                     </div>
-                                                                )}
-                                                                {isInternalNav && !isContent && !isDecorator && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-[10px] uppercase tracking-wider font-bold text-amber-800 mb-2 truncate max-w-full" title="Utgang til annen side på nav.no">
-                                                                        Utgang intern
-                                                                    </div>
-                                                                )}
-                                                                {isExternalExit && !isContent && !isDecorator && (
-                                                                    <div className="inline-block px-1.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-[10px] uppercase tracking-wider font-bold text-amber-800 mb-2 truncate max-w-full" title="Utgang til ekstern nettside">
-                                                                        Utgang ekstern
-                                                                    </div>
-                                                                )}
-                                                                <div className="font-semibold text-gray-900 text-sm mb-1 truncate" title={cardTitle}>
+                                                                </div>
+
+                                                                <div className="font-semibold text-gray-900 text-sm mb-1 truncate pr-2" title={cardTitle}>
                                                                     {cardTitle}
                                                                 </div>
                                                                 {cardSubtitle && (
@@ -560,8 +711,8 @@ const EventJourney = () => {
                                                                 <div className="text-[10px] text-gray-400 mt-1">
                                                                     Klikk for {details.length} detaljer
                                                                 </div>
-                                                            </button>
-                                                            <div className="absolute -top-2 -right-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm z-10">
+                                                            </div>
+                                                            <div className="absolute -top-2 -left-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm z-10">
                                                                 {stepNumber}
                                                             </div>
                                                         </div>
@@ -690,6 +841,38 @@ const EventJourney = () => {
                     {dryRunStats && dryRunStats.totalBytesProcessedGB && (
                         <div className="text-sm text-gray-600 text-right mt-4">
                             Data prosessert: {Math.round(parseFloat(dryRunStats.totalBytesProcessedGB))} GB
+                        </div>
+                    )}
+
+                    {/* Floating Funnel Builder Action Bar */}
+                    {funnelSteps.length > 0 && (
+                        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 border border-gray-700 text-white px-8 py-5 rounded-full shadow-2xl z-50 flex items-center gap-8 animate-in fade-in slide-in-from-bottom-4">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-xl">{funnelSteps.length} hendelser valgt</span>
+                                <span className="text-sm text-gray-300">
+                                    Startpunkt settes automatisk til {urlPath}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    variant="tertiary"
+                                    size="medium"
+                                    onClick={() => setFunnelSteps([])}
+                                    className="text-white hover:bg-white/10 hover:text-white"
+                                    icon={<Trash2 size={16} />}
+                                >
+                                    Tøm
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    size="medium"
+                                    onClick={navigateToFunnel}
+                                    icon={<ExternalLink size={20} />}
+                                >
+                                    Opprett traktanalyse
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </>

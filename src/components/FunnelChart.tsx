@@ -8,6 +8,7 @@ interface FunnelStep {
     url?: string;
     dropoff?: number;
     conversionRate?: number;
+    params?: { key: string; value: string; operator: 'equals' | 'contains' }[];
 }
 
 interface FunnelChartProps {
@@ -135,6 +136,17 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                                         <span>{item.url}</span>
                                         {isClickable && <ExternalLink size={12} className="inline-block flex-shrink-0" />}
                                     </div>
+
+                                    {/* Params Display */}
+                                    {item.params && item.params.length > 0 && (
+                                        <div className="mt-1 flex flex-col items-center gap-1 max-w-full shrink-0">
+                                            {item.params.map((p, i) => (
+                                                <div key={i} className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-medium text-white/90 whitespace-nowrap max-w-full truncate" title={`${p.key} = ${p.value}`}>
+                                                    {p.key} = {p.value}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

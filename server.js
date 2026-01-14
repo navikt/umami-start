@@ -1959,6 +1959,8 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             WITH events_raw AS (
                 SELECT
                     session_id,
+                    event_id,
+                    website_id,
                     event_type,
                     CASE
                         WHEN event_type = 1 THEN ${normalizeUrlSql}
@@ -1999,22 +2001,54 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 ? `AND e.url_path_normalized = prev.url_path${index}`
                 : '';
 
+            // Check for event parameters (filters)
+            // Expect step.params to be an array of { key, value, operator }
+            let paramFilters = '';
+            if (step.type === 'event' && step.params && Array.isArray(step.params) && step.params.length > 0) {
+                const conditions = step.params.map((p, pIdx) => {
+                    const pKeyName = `step${index}_pKey${pIdx}`;
+                    const pValName = `step${index}_pVal${pIdx}`;
+
+                    // We'll handle the parameter injection later when building the params object,
+                    // but we need to remember to do it.
+
+                    const operator = p.operator === 'contains' ? 'LIKE' : '=';
+
+                    return `EXISTS (
+                        SELECT 1
+                        FROM \`team-researchops-prod-01d6.umami_views.event_data\` d_${index}_${pIdx}
+                        CROSS JOIN UNNEST(d_${index}_${pIdx}.event_parameters) p_${index}_${pIdx}
+                        WHERE d_${index}_${pIdx}.website_event_id = e.event_id
+                          AND d_${index}_${pIdx}.website_id = e.website_id
+                          AND d_${index}_${pIdx}.created_at = e.created_at
+                          AND p_${index}_${pIdx}.data_key = @${pKeyName}
+                          AND p_${index}_${pIdx}.string_value ${operator} @${pValName}
+                    )`;
+                });
+
+                if (conditions.length > 0) {
+                    paramFilters = 'AND ' + conditions.join(' AND ');
+                }
+            }
+
             if (index === 0) {
                 // Step 1: Always any visit/event matching the first step
                 // We also store the URL path for potential use in subsequent steps
 
-                // Check for wildcard
+                // Check for whiteboard
                 const isWildcard = step.value.includes('*');
                 const operator = isWildcard ? 'LIKE' : '=';
 
                 return `
             ${stepName} AS (
                 SELECT session_id, MIN(created_at) as time${index + 1},
-                       MIN(url_path_normalized) as url_path${index + 1}
-                FROM events
+                       MIN(url_path_normalized) as url_path${index + 1},
+                       e.event_id as event_id${index + 1} -- Keep distinct
+                FROM events e
                 WHERE step_value ${operator} @${paramName}
                   ${typeCheck}
-                GROUP BY session_id
+                  ${paramFilters}
+                GROUP BY session_id, e.event_id
             )`;
             } else {
                 const prevParamName = `stepValue${index - 1}`;
@@ -2032,7 +2066,8 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                     return `
             ${stepName} AS (
                 SELECT e.session_id, MIN(e.created_at) as time${index + 1},
-                       MIN(e.url_path_normalized) as url_path${index + 1}
+                       MIN(e.url_path_normalized) as url_path${index + 1},
+                       e.event_id as event_id${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
                 WHERE e.step_value ${operator} @${paramName}
@@ -2040,21 +2075,24 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                   AND e.created_at > prev.time${index}
                   AND e.prev_step_value ${prevOperator} @${prevParamName}
                   ${eventScopeCheck}
-                GROUP BY e.session_id
+                  ${paramFilters}
+                GROUP BY e.session_id, e.event_id
             )`;
                 } else {
                     // Loose mode: Eventual follow-up
                     return `
             ${stepName} AS (
                 SELECT e.session_id, MIN(e.created_at) as time${index + 1},
-                       MIN(e.url_path_normalized) as url_path${index + 1}
+                       MIN(e.url_path_normalized) as url_path${index + 1},
+                       e.event_id as event_id${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
                 WHERE e.step_value ${operator} @${paramName}
                   ${typeCheck}
                   AND e.created_at > prev.time${index}
                   ${eventScopeCheck}
-                GROUP BY e.session_id
+                  ${paramFilters}
+                GROUP BY e.session_id, e.event_id
             )`;
                 }
             }
@@ -2065,7 +2103,7 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             SELECT ${steps.map((_, i) => `
                 ${i} as step, 
                 @stepValue${i} as url, 
-                (SELECT COUNT(*) FROM step${i + 1}) as count`).join('\n            UNION ALL SELECT ')}
+                (SELECT COUNT(DISTINCT session_id) FROM step${i + 1}) as count`).join('\n            UNION ALL SELECT ')}
             ORDER BY step
         `;
 
@@ -2081,6 +2119,19 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 params[`stepValue${index}`] = step.value.replace(/\*/g, '%');
             } else {
                 params[`stepValue${index}`] = step.value;
+            }
+
+            // Add params for filters
+            if (step.type === 'event' && step.params && Array.isArray(step.params)) {
+                step.params.forEach((p, pIdx) => {
+                    params[`step${index}_pKey${pIdx}`] = p.key;
+
+                    if (p.operator === 'contains') {
+                        params[`step${index}_pVal${pIdx}`] = `%${p.value}%`;
+                    } else {
+                        params[`step${index}_pVal${pIdx}`] = p.value;
+                    }
+                });
             }
         });
 
