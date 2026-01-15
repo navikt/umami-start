@@ -238,9 +238,7 @@ const TaksonomiPage = () => {
               Type-definisjoner for analytics-hendelser
             </Heading>
             <BodyLong spacing>
-              For å sikre enhetlig sporing på tvers av team har det blitt laget en npm-pakke med ferdig definerte
-              hendelsestyper. Med denne får du TypeScript-støtte som gir autofullføring av hendelsesnavn
-              og properties, slik at du unngår skrivefeil og sikrer konsistente data.
+              En npm-pakke basert på Navs felles taksonomi som sikrer enhetlig sporing på tvers av team.
             </BodyLong>
 
             <Box
@@ -256,13 +254,17 @@ const TaksonomiPage = () => {
                 </Link>
               </Heading>
               <BodyLong className="mb-3">
-                Pakken inneholder:
+                Pakken gir:
               </BodyLong>
-              <List as="ul" className="mb-6">
-                <List.Item>Hendelsesnavn og typer for alle støttede events</List.Item>
-                <List.Item>TypeScript-typer for properties som gir autofullføring</List.Item>
-                <List.Item>Integrasjon med nav-dekoratøren</List.Item>
+              <List as="ul" className="mb-4">
+                <List.Item><strong>Standardiserte hendelsenavn</strong> - Følger naturlige språkkonvensjoner (f.eks. "skjema åpnet")</List.Item>
+                <List.Item><strong>Type-sikkerhet</strong> - Forhindrer skrivefeil og sikrer korrekte properties</List.Item>
+                <List.Item><strong>Gjenbrukbarhet</strong> - Team kan dele hendelsesdefinisjoner på tvers av tjenester</List.Item>
+                <List.Item><strong>Personvernoverensstemmelse</strong> - Kun godkjente, ikke-sensitive properties</List.Item>
               </List>
+              <BodyLong className="mb-6">
+                Navngivningen følger <Link href="https://aksel.nav.no/" target="_blank">Aksel</Link>, Navs designsystem, for å spore komponentbruk.
+              </BodyLong>
               <BodyLong className="mb-2">
                 <strong>Installer pakken:</strong>
               </BodyLong>
@@ -293,7 +295,8 @@ analytics(Events.NAVIGERE, properties);`}
 
             <BodyLong spacing>
               Se <Link href="https://github.com/navikt/analytics-types" target="_blank">GitHub-repoet</Link> for
-              komplett dokumentasjon og full oversikt over alle støttede events og attributter.
+              komplett dokumentasjon over alle støttede events og attributter, og <Link href="https://github.com/navikt/analytics-types/blob/main/CONTRIBUTING.md" target="_blank">bidragsguiden</Link> hvis
+              du vil legge til nye hendelser.
             </BodyLong>
           </section>
 
