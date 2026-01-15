@@ -25,7 +25,7 @@ interface DashboardWidgetProps {
         customStartDate?: Date;
         customEndDate?: Date;
     };
-    onDataLoaded?: (stats: { id: string; gb: number; title: string }) => void;
+    onDataLoaded?: (stats: { id: string; gb: number; title: string; totalCount?: number }) => void;
     // Pre-fetched data from batched query (optional - if provided, skip individual fetch)
     prefetchedData?: any[];
     // If true, this chart is being batch-loaded and should wait instead of fetching individually
@@ -219,14 +219,29 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 }
 
                 const result = await response.json();
-                setData(result.data || []);
+                const resultData = result.data || [];
+                setData(resultData);
+
+                // Calculate total count for "low number" nudge (sum of the metric column)
+                let totalCount = 0;
+                if (resultData.length > 0) {
+                    const keys = Object.keys(resultData[0]);
+                    if (keys.length >= 2) {
+                        const metricKey = keys[1];
+                        totalCount = resultData.reduce((acc: number, row: any) => {
+                            const val = parseFloat(String(row[metricKey]));
+                            return isNaN(val) ? acc : acc + (val || 0);
+                        }, 0);
+                    }
+                }
 
                 if (result.queryStats && onDataLoaded) {
                     const gb = result.queryStats.totalBytesProcessed ? (result.queryStats.totalBytesProcessed / (1024 ** 3)) : 0;
                     onDataLoaded({
                         id: chart.id || '',
                         gb: gb,
-                        title: chart.title
+                        title: chart.title,
+                        totalCount: totalCount
                     });
                 }
 

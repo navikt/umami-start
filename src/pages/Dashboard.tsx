@@ -112,6 +112,8 @@ const Dashboard = () => {
     const [batchedData, setBatchedData] = useState<Map<string, any[]>>(new Map());
     // Track if batching is complete
     const [batchingComplete, setBatchingComplete] = useState(false);
+    // Track if low number nudge has been dismissed
+    const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
     // Check for hidden filters and use effective websiteId
     const effectiveWebsiteId = websiteId || dashboard.defaultFilterValues?.websiteId;
@@ -253,11 +255,24 @@ const Dashboard = () => {
                 // Report stats for batched charts
                 for (const [chartId, bytes] of result.chartBytes) {
                     const chart = dashboard.charts.find(c => c.id === chartId);
-                    if (chart) {
+                    const chartData = result.chartResults.get(chartId);
+                    if (chart && chartData) {
                         const gb = bytes / (1024 ** 3);
+                        // Calculate total count for batched chart
+                        let chartCount = 0;
+                        if (chartData.length > 0) {
+                            const keys = Object.keys(chartData[0]);
+                            if (keys.length >= 2) {
+                                const metricKey = keys[1];
+                                chartCount = chartData.reduce((acc: number, row: any) => {
+                                    const val = parseFloat(String(row[metricKey]));
+                                    return isNaN(val) ? acc : acc + (val || 0);
+                                }, 0);
+                            }
+                        }
                         setStats(prev => ({
                             ...prev,
-                            [chartId]: { gb, title: chart.title }
+                            [chartId]: { gb, title: chart.title, count: chartCount }
                         }));
                     }
                 }
@@ -272,8 +287,9 @@ const Dashboard = () => {
         fetchBatchedData();
     }, [effectiveWebsiteId, activeFilters, dashboard.charts]);
 
-    const handleUpdate = () => {
+    const handleUpdate = (overridePathOperator?: string) => {
         const url = new URL(window.location.href);
+        const effectivePathOperator = overridePathOperator || tempPathOperator;
 
         // Update URL with selected website ID and filters (only if website filter is visible)
         if (!dashboard.hiddenFilters?.website && selectedWebsite) {
@@ -287,8 +303,8 @@ const Dashboard = () => {
             });
 
             // Update pathOperator in URL (only if not default "equals")
-            if (tempPathOperator && tempPathOperator !== "equals") {
-                url.searchParams.set('pathOperator', tempPathOperator);
+            if (effectivePathOperator && effectivePathOperator !== "equals") {
+                url.searchParams.set('pathOperator', effectivePathOperator);
             } else {
                 url.searchParams.delete('pathOperator');
             }
@@ -311,7 +327,7 @@ const Dashboard = () => {
         setSearchParams(url.searchParams);
 
         setActiveFilters({
-            pathOperator: tempPathOperator,
+            pathOperator: effectivePathOperator,
             urlFilters: tempUrlPaths,
             dateRange: tempDateRange,
             customStartDate: tempDateRange === 'custom' ? customStartDate : undefined,
@@ -521,7 +537,7 @@ const Dashboard = () => {
             )}
 
             <div className="flex items-end pb-[2px]">
-                <Button onClick={handleUpdate} size="small" disabled={!hasChanges}>
+                <Button onClick={() => handleUpdate()} size="small" disabled={!hasChanges}>
                     Oppdater
                 </Button>
             </div>
@@ -582,16 +598,31 @@ const Dashboard = () => {
         </>
     );
 
-    const [stats, setStats] = useState<Record<string, { gb: number, title: string }>>({});
+    const [stats, setStats] = useState<Record<string, { gb: number, title: string, count?: number }>>({});
 
-    const handleDataLoaded = (data: { id: string; gb: number; title: string }) => {
+    const handleDataLoaded = (data: { id: string; gb: number; title: string, totalCount?: number }) => {
         setStats(prev => ({
             ...prev,
-            [data.id]: { gb: data.gb, title: data.title }
+            [data.id]: { gb: data.gb, title: data.title, count: data.totalCount }
         }));
     };
 
     const totalGb = Object.values(stats).reduce((acc, curr) => acc + curr.gb, 0);
+
+    // Get "low results" nudge visibility
+    const showLowNumberNudge = useMemo(() => {
+        // Only suggest starts-with if we're currently using equals and have exactly one path
+        if (activeFilters.pathOperator !== 'equals' || activeFilters.urlFilters.length !== 1) return false;
+        // Don't nudge if it's already the root path
+        if (activeFilters.urlFilters[0] === '/') return false;
+
+        const counts = Object.values(stats).map(s => s.count).filter(c => c !== undefined) as number[];
+        if (counts.length === 0) return false;
+
+        // If the maximum count across all metric charts is between 1 and 10
+        const maxCount = Math.max(...counts);
+        return maxCount > 0 && maxCount < 10;
+    }, [stats, activeFilters.pathOperator, activeFilters.urlFilters]);
 
     // Get the siteimprove group ID based on the currently active URL path filter
     const getSiteimproveGroupId = useMemo(() => {
@@ -636,6 +667,34 @@ const Dashboard = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
+                    {showLowNumberNudge && !nudgeDismissed && (
+                        <div className="col-span-full">
+                            <p className="text-sm bg-blue-50 text-gray-700 px-4 py-2 rounded-md inline-flex items-center gap-3">
+                                <span>
+                                    <strong>Få treff?</strong>{' '}
+                                    <button
+                                        type="button"
+                                        className="text-blue-700 underline hover:no-underline font-medium"
+                                        onClick={() => {
+                                            setTempPathOperator('starts-with');
+                                            handleUpdate('starts-with');
+                                        }}
+                                    >
+                                        Prøv «URL-sti starter med»
+                                    </button>
+                                    {' '}for å inkludere undersider.
+                                </span>
+                                <button
+                                    type="button"
+                                    className="text-gray-500 hover:text-gray-700 text-lg leading-none"
+                                    onClick={() => setNudgeDismissed(true)}
+                                    aria-label="Lukk"
+                                >
+                                    ×
+                                </button>
+                            </p>
+                        </div>
+                    )}
                     {dashboard.charts.map((chart) => (
                         <DashboardWidget
                             key={chart.id}
