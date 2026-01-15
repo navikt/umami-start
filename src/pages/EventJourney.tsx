@@ -408,18 +408,29 @@ const EventJourney = () => {
 
                 // Check if pattern contains duplicates (consecutive steps with same tekst but different event names)
                 const patternSteps = path.slice(i, i + bestMatch.len);
-                const getTekstFromStep = (step: string): string => {
+                const getEventName = (step: string): string => step.split(': ')[0];
+
+                const getSubtitleFromStep = (step: string): string => {
                     const parts = step.split(': ');
                     const eventName = parts[0];
                     const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
                     const details = rawDetails.split('||').filter(Boolean);
+
+                    const map: Record<string, string> = {};
                     for (const d of details) {
                         const [k, v] = d.split(': ');
-                        if (k === 'tekst' || k === 'lenketekst') return v || '';
+                        if (k && v) map[k] = v;
                     }
+
+                    if (map['destinasjon']) return map['destinasjon'];
+                    if (map['lenketekst']) return map['lenketekst'];
+                    if (map['tekst']) return map['tekst'];
+                    if (map['Tekst']) return map['Tekst'];
+                    if (map['tittel']) return map['tittel'];
+                    if (map['label']) return map['label'];
+                    if (map['url']) return map['url'];
                     return '';
                 };
-                const getEventName = (step: string): string => step.split(': ')[0];
 
                 // Helper to check if event names indicate opposing actions (open/close)
                 const isOpposingAction = (name1: string, name2: string): boolean => {
@@ -434,30 +445,14 @@ const EventJourney = () => {
                     return (isOpen(n1) && isClose(n2)) || (isClose(n1) && isOpen(n2));
                 };
 
-                const getDestinasjonFromStep = (step: string): string | undefined => {
-                    const parts = step.split(': ');
-                    const eventName = parts[0];
-                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
-                    const details = rawDetails.split('||').filter(Boolean);
-                    for (const d of details) {
-                        const [k, v] = d.split(': ');
-                        if (k === 'destinasjon') return v || '';
-                    }
-                    return undefined;
-                };
-
                 let hasDuplicateInPattern = false;
                 for (let p = 0; p < patternSteps.length - 1; p++) {
-                    const currTekst = getTekstFromStep(patternSteps[p]);
-                    const nextTekst = getTekstFromStep(patternSteps[p + 1]);
+                    const currSub = getSubtitleFromStep(patternSteps[p]);
+                    const nextSub = getSubtitleFromStep(patternSteps[p + 1]);
                     const currEvent = getEventName(patternSteps[p]);
                     const nextEvent = getEventName(patternSteps[p + 1]);
 
-                    const currDest = getDestinasjonFromStep(patternSteps[p]);
-                    const nextDest = getDestinasjonFromStep(patternSteps[p + 1]);
-                    const differentDest = (currDest && nextDest && currDest !== nextDest);
-
-                    if (currTekst && currTekst === nextTekst && currEvent !== nextEvent && !isOpposingAction(currEvent, nextEvent) && !differentDest) {
+                    if (currSub && currSub === nextSub && currEvent !== nextEvent && !isOpposingAction(currEvent, nextEvent)) {
                         hasDuplicateInPattern = true;
                         break;
                     }
@@ -477,31 +472,7 @@ const EventJourney = () => {
                 originalIdx += bestMatch.len * bestMatch.count;
             } else {
                 // Check for potential duplicate (same tekst, different event name as next step)
-                const getTekstFromStep = (step: string): string => {
-                    const parts = step.split(': ');
-                    const eventName = parts[0];
-                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
-                    const details = rawDetails.split('||').filter(Boolean);
-                    for (const d of details) {
-                        const [k, v] = d.split(': ');
-                        if (k === 'tekst' || k === 'lenketekst') return v || '';
-                    }
-                    return '';
-                };
-
                 const getEventName = (step: string): string => step.split(': ')[0];
-
-                const getDestinasjonFromStep = (step: string): string | undefined => {
-                    const parts = step.split(': ');
-                    const eventName = parts[0];
-                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
-                    const details = rawDetails.split('||').filter(Boolean);
-                    for (const d of details) {
-                        const [k, v] = d.split(': ');
-                        if (k === 'destinasjon') return v || '';
-                    }
-                    return undefined;
-                };
 
                 // Look ahead to collect consecutive duplicates
                 const getSubtitleFromStep = (step: string): string => {
@@ -526,7 +497,6 @@ const EventJourney = () => {
                     return '';
                 };
 
-                const currentTekst = getTekstFromStep(path[i]);
                 const currentEventName = getEventName(path[i]);
 
                 // Helper to check if event names indicate opposing actions (open/close)
