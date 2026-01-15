@@ -307,7 +307,7 @@ const Dashboard = () => {
             url.searchParams.delete('metrikk');
         }
 
-        window.history.pushState({}, '', url.toString());
+        setSearchParams(url.searchParams);
 
         setActiveFilters({
             pathOperator: tempPathOperator,
@@ -337,7 +337,7 @@ const Dashboard = () => {
                 } else {
                     url.searchParams.delete(filterDef.urlParam);
                 }
-                window.history.pushState({}, '', url.toString());
+                setSearchParams(url.searchParams);
             }
 
             // Apply to URL path filter if configured
