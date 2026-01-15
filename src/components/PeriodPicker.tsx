@@ -10,6 +10,8 @@ interface PeriodPickerProps {
     endDate: Date | undefined;
     onEndDateChange: (date: Date | undefined) => void;
     showToday?: boolean;
+    lastMonthLabel?: string;
+    currentMonthLabel?: string;
 }
 
 export const PeriodPicker = ({
@@ -19,7 +21,9 @@ export const PeriodPicker = ({
     onStartDateChange,
     endDate,
     onEndDateChange,
-    showToday = false
+    showToday = false,
+    lastMonthLabel = 'Forrige måned',
+    currentMonthLabel = 'Denne måneden'
 }: PeriodPickerProps) => {
     const [fromInputValue, setFromInputValue] = useState<string>('');
     const [toInputValue, setToInputValue] = useState<string>('');
@@ -50,8 +54,8 @@ export const PeriodPicker = ({
                 size="small"
             >
                 {showToday && <Radio value="today">I dag</Radio>}
-                <Radio value="current_month">Denne måneden</Radio>
-                <Radio value="last_month">Forrige måned</Radio>
+                <Radio value="current_month">{currentMonthLabel}</Radio>
+                <Radio value="last_month">{lastMonthLabel}</Radio>
                 <Radio value="custom">Egendefinert</Radio>
             </RadioGroup>
 

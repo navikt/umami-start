@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Switch, Heading } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Heading, BodyShort } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
@@ -17,13 +17,10 @@ const Retention = () => {
 
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'last_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [businessDaysOnly, setBusinessDaysOnly] = useState<boolean>(() => {
-        const param = searchParams.get('businessDaysOnly');
-        return param === 'true';
-    });
+
     const [retentionData, setRetentionData] = useState<any[]>([]);
     const [chartData, setChartData] = useState<ILineChartProps | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -37,7 +34,7 @@ const Retention = () => {
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
         // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath') || searchParams.has('businessDaysOnly');
+        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath');
         if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
             fetchData();
@@ -116,7 +113,6 @@ const Retention = () => {
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                     urlPath: normalizedUrl,
-                    businessDaysOnly
                 }),
             });
 
@@ -162,7 +158,6 @@ const Retention = () => {
                 // Update URL with configuration for sharing
                 const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
-                newParams.set('businessDaysOnly', String(businessDaysOnly));
                 if (normalizedUrl) {
                     newParams.set('urlPath', normalizedUrl);
                 } else {
@@ -208,6 +203,89 @@ const Retention = () => {
         URL.revokeObjectURL(url);
     };
 
+    // Calculate retention stats
+    const retentionStats = useMemo(() => {
+        if (!retentionData || retentionData.length === 0) return null;
+
+        const returningData = retentionData.filter((item: any) => item.day > 0);
+        if (returningData.length === 0) return null;
+
+        const day0Data = retentionData.find((item: any) => item.day === 0);
+        const baseline = day0Data?.returning_users || Math.max(...retentionData.map((item: any) => item.returning_users));
+
+
+
+
+
+
+        // Find Day 1 and Day 7 data for specific loyalty checkpoints
+        const day1 = retentionData.find((item: any) => item.day === 1);
+        const day7 = retentionData.find((item: any) => item.day === 7);
+        // Fallback to last day if Day 7 isn't available but we have data (e.g. short ranges)
+        const lastDay = returningData[returningData.length - 1];
+
+        return {
+            baseline,
+            day1,
+            day7,
+            lastDay
+        };
+    }, [retentionData]);
+
+    const isCurrentMonthData = useMemo(() => {
+        if (period === 'current_month') return true;
+        if (period === 'custom' && customEndDate) {
+            const now = new Date();
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+            return isToday;
+        }
+        return false;
+    }, [period, customEndDate]);
+
+    const RetentionStats = () => {
+        if (!retentionStats) return null;
+
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="text-sm text-gray-900 font-medium mb-1">Totalt antall brukere</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                        {retentionStats.baseline.toLocaleString('nb-NO')}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                        Unike brukere (Dag 0)
+                    </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="text-sm text-gray-900 font-medium mb-1">Kom tilbake etter 1 dag</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                        {retentionStats.day1 ? ((retentionStats.day1.returning_users / retentionStats.baseline) * 100).toFixed(1) : 0}%
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                        {retentionStats.day1 ? retentionStats.day1.returning_users.toLocaleString('nb-NO') : 0} unike brukere
+                    </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="text-sm text-gray-900 font-medium mb-1">
+                        {retentionStats.day7 ? 'Kom tilbake etter 1 uke' : `Kom tilbake etter ${retentionStats.lastDay?.day || 0} dager`}
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                        {retentionStats.day7
+                            ? ((retentionStats.day7.returning_users / retentionStats.baseline) * 100).toFixed(1)
+                            : (retentionStats.lastDay ? ((retentionStats.lastDay.returning_users / retentionStats.baseline) * 100).toFixed(1) : 0)}%
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                        {retentionStats.day7
+                            ? retentionStats.day7.returning_users.toLocaleString('nb-NO')
+                            : (retentionStats.lastDay ? retentionStats.lastDay.returning_users.toLocaleString('nb-NO') : 0)} unike brukere
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <ChartLayout
             title="Brukerlojalitet"
@@ -237,15 +315,11 @@ const Retention = () => {
                         onStartDateChange={setCustomStartDate}
                         endDate={customEndDate}
                         onEndDateChange={setCustomEndDate}
+                        currentMonthLabel="Denne måneden (ufullstendige data)"
+                        lastMonthLabel="Forrige måned (anbefalt)"
                     />
 
-                    <Switch
-                        size="small"
-                        checked={businessDaysOnly}
-                        onChange={(e) => setBusinessDaysOnly(e.target.checked)}
-                    >
-                        Vis kun virkedager
-                    </Switch>
+
 
                     <Button
                         onClick={fetchData}
@@ -283,6 +357,32 @@ const Retention = () => {
                             {copySuccess ? 'Kopiert!' : 'Del analyse'}
                         </Button>
                     </div>
+
+                    {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && (
+                        <Alert variant="warning" className="mb-4">
+                            <Heading spacing size="small" level="3">
+                                Ufullstendige data for inneværende måned
+                            </Heading>
+                            <BodyShort spacing>
+                                Med Umami får brukere ny anonym ID ved starten av hver måned.
+                                Det gjør at tall for inneværende måned kan være ufullstendige.
+                                For mest pålitelige tall anbefales det å se på en fullført måned.
+                            </BodyShort>
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={() => setPeriod('last_month')}
+                                className="mt-2"
+                            >
+                                Bytt til forrige måned
+                            </Button>
+                        </Alert>
+                    )}
+
+
+
+                    <RetentionStats />
+
                     <Tabs value={activeTab} onChange={setActiveTab}>
                         <Tabs.List>
                             <Tabs.Tab value="chart" label="Linjediagram" />
