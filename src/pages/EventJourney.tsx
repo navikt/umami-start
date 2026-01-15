@@ -13,8 +13,8 @@ const EventJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
 
-    // Initialize state from URL params
-    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '/');
+    // Initialize state from URL params - check both urlPath and pagePath for compatibility
+    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
@@ -619,6 +619,12 @@ const EventJourney = () => {
                 </Alert>
             )}
 
+            {!urlPath && !loading && data.length === 0 && (
+                <Alert variant="info" className="mb-4">
+                    Skriv inn en URL-sti for å analysere hendelsesflyt på en spesifikk side.
+                </Alert>
+            )}
+
             {loading && (
                 <div className="flex justify-center items-center h-full">
                     <Loader size="xlarge" title="Laster hendelsesreiser..." />
@@ -977,8 +983,8 @@ const EventJourney = () => {
                                                                         {cardSubtitle && <div className={cardLabel ? "opacity-90 italic text-[11px] leading-tight" : ""}>{cardSubtitle}</div>}
                                                                     </div>
                                                                 )}
-                                                                <div className="text-[10px] text-gray-400 mt-1">
-                                                                    Klikk for {details.length} detaljer
+                                                                <div className="text-[11px] text-blue-600 font-medium mt-1 hover:underline cursor-pointer">
+                                                                    Vis {details.length} detaljer
                                                                 </div>
                                                             </div>
                                                             <div className="absolute -top-2 -left-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm z-10">

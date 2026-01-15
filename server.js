@@ -3602,13 +3602,12 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                     e.session_id,
                     e.event_name,
                     e.created_at,
-                    -- Aggregate ONLY functional properties into a string for grouping
-                    -- We exclude variable properties like scrollPos, screen, etc. to ensure meaningful grouping
+                    -- Aggregate ALL properties into a string for grouping
+                    -- Exclude variable properties like scrollPos, screen that don't provide meaningful info
                     STRING_AGG(
                         CASE 
-                            WHEN LOWER(p.data_key) IN ('lenketekst', 'tittel', 'label', 'tekst', 'url', 'href', 'komponent', 'seksjon', 'lenkegruppe', 'destinasjon', 'målgruppe', 'innholdstype', 'kategori', 'category') THEN 
-                                CONCAT(p.data_key, ': ', REPLACE(COALESCE(p.string_value, CAST(p.number_value AS STRING), CAST(p.date_value AS STRING)), '||', ' '))
-                            ELSE NULL 
+                            WHEN LOWER(p.data_key) IN ('scrollpos', 'screen', 'screenwidth', 'screenheight', 'viewport', 'timestamp', 'time', 'scrolldepth') THEN NULL
+                            ELSE CONCAT(p.data_key, ': ', REPLACE(COALESCE(p.string_value, CAST(p.number_value AS STRING), CAST(p.date_value AS STRING)), '||', ' '))
                         END, 
                         '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key
                     ) as props_str

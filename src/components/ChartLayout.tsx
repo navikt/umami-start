@@ -30,7 +30,7 @@ const chartGroups = [
 ];
 
 // These URL params are shared across analysis pages and should be preserved when navigating
-const SHARED_PARAMS = ['urlPath', 'period', 'startDate', 'endDate'];
+const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate'];
 
 const ChartLayout: React.FC<ChartLayoutProps> = ({
     title,
