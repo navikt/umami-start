@@ -761,6 +761,7 @@ const EventJourney = () => {
 
                                                     let cardTitle = eventName;
                                                     let cardSubtitle = '';
+                                                    let cardLabel = '';
 
                                                     const detailMap: Record<string, string> = {};
                                                     details.forEach(d => {
@@ -768,13 +769,17 @@ const EventJourney = () => {
                                                         if (k && v) detailMap[k] = v;
                                                     });
 
-                                                    if (detailMap['destinasjon']) cardSubtitle = detailMap['destinasjon'];
-                                                    else if (detailMap['lenketekst']) cardSubtitle = detailMap['lenketekst'];
-                                                    else if (detailMap['tekst']) cardSubtitle = detailMap['tekst'];
-                                                    else if (detailMap['Tekst']) cardSubtitle = detailMap['Tekst'];
-                                                    else if (detailMap['tittel']) cardSubtitle = detailMap['tittel'];
-                                                    else if (detailMap['label']) cardSubtitle = detailMap['label'];
-                                                    else if (detailMap['url']) cardSubtitle = detailMap['url'];
+                                                    const labelCandidate = detailMap['lenketekst'] || detailMap['tekst'] || detailMap['Tekst'] || detailMap['tittel'] || detailMap['label'];
+
+                                                    if (detailMap['destinasjon']) {
+                                                        cardSubtitle = detailMap['destinasjon'];
+                                                        // If we have both a destination and a label, use label as primary info
+                                                        if (labelCandidate && labelCandidate !== cardSubtitle) {
+                                                            cardLabel = labelCandidate;
+                                                        }
+                                                    } else {
+                                                        cardSubtitle = labelCandidate || detailMap['url'] || '';
+                                                    }
 
                                                     const category = detailMap['kategori'];
                                                     const isDecorator = isDecoratorEvent(eventName) || (category && isDecoratorEvent(category));
@@ -835,7 +840,12 @@ const EventJourney = () => {
                                                                         {isFunnelStep ? <Check size={10} strokeWidth={3} /> : <Plus size={10} strokeWidth={3} />}
                                                                     </button>
                                                                 </div>
-                                                                {cardSubtitle && <div className="text-gray-500 truncate text-[10px]">{cardSubtitle}</div>}
+                                                                {(cardLabel || cardSubtitle) && (
+                                                                    <div className="mt-1 flex flex-col min-w-0">
+                                                                        {cardLabel && <div className="text-[10px] font-bold text-gray-800 truncate leading-tight">{cardLabel}</div>}
+                                                                        {cardSubtitle && <div className="text-gray-500 truncate text-[9px] italic leading-tight">{cardSubtitle}</div>}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     }
@@ -956,14 +966,15 @@ const EventJourney = () => {
                                                                 <div className="font-semibold text-gray-900 text-sm mb-1 truncate pr-2" title={cardTitle}>
                                                                     {cardTitle}
                                                                 </div>
-                                                                {cardSubtitle && (
-                                                                    <div className={`text-xs rounded px-1.5 py-0.5 break-words line-clamp-2 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' :
+                                                                {(cardLabel || cardSubtitle) && (
+                                                                    <div className={`text-xs rounded px-2 py-1.5 break-words line-clamp-3 mb-1 ${isDecorator ? 'text-purple-900 bg-purple-50 border border-purple-100' :
                                                                         isContent ? 'text-green-900 bg-green-50 border border-green-100' :
                                                                             isExternalExit ? 'text-amber-900 bg-amber-100 border border-amber-200' :
                                                                                 isInternalNav ? 'text-amber-900 bg-amber-100 border border-amber-200' :
-                                                                                    'text-blue-800 bg-blue-50'
-                                                                        }`} title={cardSubtitle}>
-                                                                        {cardSubtitle}
+                                                                                    'text-blue-800 bg-blue-50 border border-blue-100'
+                                                                        }`}>
+                                                                        {cardLabel && <div className="font-bold mb-0.5">{cardLabel}</div>}
+                                                                        {cardSubtitle && <div className={cardLabel ? "opacity-90 italic text-[11px] leading-tight" : ""}>{cardSubtitle}</div>}
                                                                     </div>
                                                                 )}
                                                                 <div className="text-[10px] text-gray-400 mt-1">

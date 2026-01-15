@@ -2179,8 +2179,9 @@ app.post('/api/bigquery/funnel', async (req, res) => {
 
         const data = rows.map((row, index) => ({
             step: index,
-            url: steps[index].value, // Fallback to input steps if needed, but row.url should match
+            url: steps[index].value,
             type: steps[index].type,
+            params: steps[index].params,
             count: parseInt(row.count || 0)
         }));
 

@@ -1153,16 +1153,42 @@ FROM timing_data`;
                                                                 Steg {item.step + 1}
                                                             </td>
                                                             <td className="px-6 py-4 text-base break-all">
-                                                                {item.url && selectedWebsite ? (
-                                                                    <span
-                                                                        className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                                                                        onClick={() => setSelectedTableUrl(item.url)}
-                                                                    >
-                                                                        {item.url} <ExternalLink className="h-4 w-4" />
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-gray-500">{item.url}</span>
-                                                                )}
+                                                                {(() => {
+                                                                    const step = steps[index];
+                                                                    if (step?.type === 'event') {
+                                                                        const lenketekst = step.params?.find(p => p.key.toLowerCase() === 'lenketekst')?.value;
+                                                                        const destinasjon = step.params?.find(p => p.key === 'destinasjon' || p.key === 'url')?.value;
+                                                                        const tekst = step.params?.find(p => p.key.toLowerCase() === 'tekst')?.value;
+
+                                                                        return (
+                                                                            <div className="flex flex-col gap-1">
+                                                                                <div className="font-semibold text-gray-700">{step.value}</div>
+                                                                                {(lenketekst || tekst) && (
+                                                                                    <div className="text-sm font-medium text-gray-900">
+                                                                                        {lenketekst || tekst}
+                                                                                    </div>
+                                                                                )}
+                                                                                {destinasjon && (
+                                                                                    <div className="text-xs text-gray-500 break-all bg-gray-50 px-1 py-0.5 rounded border border-gray-100 italic">
+                                                                                        {destinasjon}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    if (item.url && selectedWebsite) {
+                                                                        return (
+                                                                            <span
+                                                                                className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                                                                onClick={() => setSelectedTableUrl(item.url)}
+                                                                            >
+                                                                                {item.url} <ExternalLink className="h-4 w-4" />
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    return <span className="text-gray-500">{item.url}</span>;
+                                                                })()}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-base text-gray-900 font-bold">
                                                                 {item.count.toLocaleString('nb-NO')}

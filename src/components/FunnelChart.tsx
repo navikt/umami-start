@@ -127,26 +127,44 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                                         </span>
                                     </div>
 
-                                    {/* URL Display */}
-                                    <div
-                                        className={`text-sm opacity-90 max-w-full px-2 font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:underline hover:opacity-100' : ''}`}
-                                        title={item.url}
-                                        onClick={(e) => isClickable && item.url ? handleUrlClick(e, item.url) : undefined}
-                                    >
-                                        <span>{item.url}</span>
-                                        {isClickable && <ExternalLink size={12} className="inline-block flex-shrink-0" />}
-                                    </div>
+                                    {/* URL / Step Value Display */}
+                                    {(() => {
+                                        const labelCandidate = item.params?.find(p => ['lenketekst', 'tekst', 'label', 'tittel'].includes(p.key.toLowerCase()))?.value;
+                                        const destCandidate = item.params?.find(p => p.key === 'destinasjon' || p.key === 'url')?.value;
 
-                                    {/* Params Display */}
-                                    {item.params && item.params.length > 0 && (
-                                        <div className="mt-1 flex flex-col items-center gap-1 max-w-full shrink-0">
-                                            {item.params.map((p, i) => (
-                                                <div key={i} className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-medium text-white/90 whitespace-nowrap max-w-full truncate" title={`${p.key} = ${p.value}`}>
-                                                    {p.key} = {p.value}
+                                        return (
+                                            <div className="flex flex-col items-center gap-1 w-full mt-1">
+                                                {labelCandidate && (
+                                                    <div className="text-xs font-bold text-white mb-0.5 px-2 text-center line-clamp-2">
+                                                        {labelCandidate}
+                                                    </div>
+                                                )}
+
+                                                <div
+                                                    className={`text-[11px] bg-white/10 border border-white/20 rounded px-2 py-0.5 opacity-90 max-w-full font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:bg-white/20 hover:opacity-100 transition-colors' : ''}`}
+                                                    title={item.url}
+                                                    onClick={(e) => isClickable && item.url ? handleUrlClick(e, item.url) : undefined}
+                                                >
+                                                    <span className="truncate max-w-[150px]">{destCandidate || item.url}</span>
+                                                    {isClickable && <ExternalLink size={10} className="inline-block flex-shrink-0" />}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+
+                                                {/* Other Params */}
+                                                {item.params && item.params.length > 0 && (
+                                                    <div className="mt-1 flex flex-wrap justify-center gap-1 max-w-full">
+                                                        {item.params
+                                                            .filter(p => !['lenketekst', 'tekst', 'label', 'tittel', 'destinasjon', 'url'].includes(p.key.toLowerCase()))
+                                                            .map((p, i) => (
+                                                                <div key={i} className="bg-white/5 border border-white/10 px-1 py-0.5 rounded text-[9px] font-medium text-white/70 whitespace-nowrap max-w-full truncate" title={`${p.key} = ${p.value}`}>
+                                                                    {p.key}: {p.value}
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>

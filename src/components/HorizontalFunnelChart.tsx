@@ -8,6 +8,7 @@ interface FunnelStep {
     url?: string;
     dropoff?: number;
     conversionRate?: number;
+    params?: { key: string; value: string; operator: 'equals' | 'contains' }[];
 }
 
 interface FunnelChartProps {
@@ -40,8 +41,8 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
 
     return (
         <>
-            <div className="w-full overflow-x-auto py-8 px-4">
-                <div className="flex flex-row items-start justify-center min-w-max mx-auto space-x-0">
+            <div className="w-full overflow-x-auto py-8 px-4 text-center">
+                <div className="inline-flex flex-row items-start justify-center min-w-max mx-auto space-x-0">
                     {data.map((item, index) => {
                         const prevItem = index > 0 ? data[index - 1] : null;
                         const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
@@ -94,38 +95,47 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                                     style={{
                                         backgroundColor: themeColor,
                                         color: 'white',
-                                        width: `${Math.max(140, 200 * (item.count / maxCount))}px`,
+                                        width: `${Math.max(160, 220 * (item.count / maxCount))}px`,
                                         minHeight: '140px'
                                     }}
                                 >
-                                    <div className="text-[11px] font-bold opacity-80 uppercase tracking-wider mb-1">
-                                        Steg {item.step + 1}
-                                    </div>
-                                    <div className="flex items-baseline gap-1.5 mb-1">
-                                        <span className="text-2xl font-bold">
-                                            {item.count.toLocaleString('nb-NO')}
-                                        </span>
-                                        <span
-                                            className="text-sm font-medium opacity-75"
-                                            title="Prosent av alle som startet i trakten"
-                                        >
-                                            ({totalConversionPercent}%)
-                                        </span>
-                                    </div>
-                                    <div className="w-full border-t border-white/10 my-2"></div>
-                                    {item.url && websiteId ? (
-                                        <div
-                                            className="text-xs opacity-90 text-center break-words w-full px-1 font-medium leading-snug cursor-pointer hover:underline flex items-center justify-center gap-1"
-                                            title={item.url}
-                                            onClick={(e) => handleUrlClick(e, item.url!)}
-                                        >
-                                            {item.url} <ExternalLink className="h-3 w-3 opacity-70" />
-                                        </div>
-                                    ) : (
-                                        <div className="text-xs opacity-90 text-center break-words w-full px-1 font-medium leading-snug" title={item.url}>
-                                            {item.url}
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const labelCandidate = item.params?.find(p => ['lenketekst', 'tekst', 'label', 'tittel'].includes(p.key.toLowerCase()))?.value;
+                                        const destCandidate = item.params?.find(p => p.key === 'destinasjon' || p.key === 'url')?.value;
+                                        const isClickable = websiteId && item.url && item.url.startsWith('/');
+
+                                        return (
+                                            <div className="flex flex-col items-center gap-1 w-full px-1">
+                                                <div className="text-[11px] font-bold opacity-80 uppercase tracking-wider mb-1">
+                                                    Steg {item.step + 1}
+                                                </div>
+
+                                                <div className="flex items-baseline gap-2 mb-2">
+                                                    <span className="text-xl font-bold">
+                                                        {item.count.toLocaleString('nb-NO')}
+                                                    </span>
+                                                    <span className="text-xs font-medium opacity-75">
+                                                        ({totalConversionPercent}%)
+                                                    </span>
+                                                </div>
+
+                                                {labelCandidate && (
+                                                    <div className="text-[11px] font-bold text-white mb-0.5 px-2 text-center line-clamp-2 leading-tight">
+                                                        {labelCandidate}
+                                                    </div>
+                                                )}
+
+                                                <div
+                                                    className={`text-[10px] bg-white/10 border border-white/20 rounded px-1.5 py-0.5 opacity-90 max-w-full font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:bg-white/20 hover:opacity-100 transition-colors' : ''}`}
+                                                    title={item.url}
+                                                    onClick={(e) => isClickable && item.url ? handleUrlClick(e, item.url) : undefined}
+                                                >
+                                                    <span className="truncate max-w-[120px]">{destCandidate || item.url}</span>
+                                                    {isClickable && <ExternalLink size={10} className="inline-block flex-shrink-0" />}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         );
