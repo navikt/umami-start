@@ -200,81 +200,96 @@ const EventJourney = () => {
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
     // Filter data client-side
-    const filteredData = data
-        // First, filter out excluded event types from each journey's path
-        .map(journey => ({
-            ...journey,
-            path: journey.path.filter(step => {
-                const eventName = step.split(': ')[0];
-                return !excludedEventTypes.includes(eventName);
-            })
-        }))
-        // Remove journeys with empty paths after filtering
-        .filter(journey => journey.path.length > 0)
-        // Then apply other filters
-        .filter(journey => {
-            // First filter by text
-            if (filterText) {
-                const lowerFilter = filterText.toLowerCase();
-                if (!journey.path.some(step => step.toLowerCase().includes(lowerFilter))) {
-                    return false;
-                }
+    // Filter and aggregate data client-side
+    const filteredData = (() => {
+        // Step 1: Filter out excluded event types from each journey's path
+        const processed = data
+            .map(journey => ({
+                ...journey,
+                path: journey.path.filter(step => {
+                    const eventName = step.split(': ')[0];
+                    return !excludedEventTypes.includes(eventName);
+                })
+            }))
+            .filter(journey => journey.path.length > 0);
+
+        // Step 2: Re-aggregate journeys with identical paths after filtering
+        const aggregatedMap = new Map<string, { path: string[], count: number }>();
+        processed.forEach(journey => {
+            const pathKey = JSON.stringify(journey.path);
+            const existing = aggregatedMap.get(pathKey);
+            if (existing) {
+                existing.count += journey.count;
+            } else {
+                aggregatedMap.set(pathKey, { path: journey.path, count: journey.count });
             }
+        });
 
-            // Advanced filter logic
-            if (activeFilter !== 'all') {
-                let hasDecoratorStep = false;
-                let hasContentStep = false;
-                let hasExitStep = false;
-
-                // Single pass to check for all properties
-                for (const step of journey.path) {
-                    const parts = step.split(': ');
-                    const eventName = parts[0];
-
-                    // Check Decorator
-                    if (isDecoratorEvent(eventName)) {
-                        hasDecoratorStep = true;
+        // Step 3: Apply other filters (text search and advanced filters)
+        return Array.from(aggregatedMap.values())
+            .filter(journey => {
+                // First filter by text
+                if (filterText) {
+                    const lowerFilter = filterText.toLowerCase();
+                    if (!journey.path.some(step => step.toLowerCase().includes(lowerFilter))) {
+                        return false;
                     }
+                }
 
-                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
-                    const details = rawDetails.split('||').filter(Boolean);
+                // Advanced filter logic
+                if (activeFilter !== 'all') {
+                    let hasDecoratorStep = false;
+                    let hasContentStep = false;
+                    let hasExitStep = false;
 
-                    for (const d of details) {
-                        const splitIndex = d.indexOf(':');
-                        if (splitIndex === -1) continue;
+                    // Single pass to check for all properties
+                    for (const step of journey.path) {
+                        const parts = step.split(': ');
+                        const eventName = parts[0];
 
-                        const k = d.substring(0, splitIndex).trim();
-                        const v = d.substring(splitIndex + 1).trim();
-                        const kLower = k.toLowerCase();
-
-                        // Check Decorator (via category)
-                        if (k === 'kategori' && v && isDecoratorEvent(v)) {
+                        // Check Decorator
+                        if (isDecoratorEvent(eventName)) {
                             hasDecoratorStep = true;
                         }
 
-                        // Check Content
-                        if (kLower === 'lenkegruppe' && v.toLowerCase() === 'innhold') {
-                            hasContentStep = true;
-                        }
+                        const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                        const details = rawDetails.split('||').filter(Boolean);
 
-                        // Check Exit
-                        if (kLower === 'destinasjon' && v) {
-                            hasExitStep = true;
+                        for (const d of details) {
+                            const splitIndex = d.indexOf(':');
+                            if (splitIndex === -1) continue;
+
+                            const k = d.substring(0, splitIndex).trim();
+                            const v = d.substring(splitIndex + 1).trim();
+                            const kLower = k.toLowerCase();
+
+                            // Check Decorator (via category)
+                            if (k === 'kategori' && v && isDecoratorEvent(v)) {
+                                hasDecoratorStep = true;
+                            }
+
+                            // Check Content
+                            if (kLower === 'lenkegruppe' && v.toLowerCase() === 'innhold') {
+                                hasContentStep = true;
+                            }
+
+                            // Check Exit
+                            if (kLower === 'destinasjon' && v) {
+                                hasExitStep = true;
+                            }
                         }
                     }
+
+                    if (activeFilter === 'hide_decorator' && hasDecoratorStep) return false;
+                    if (activeFilter === 'only_decorator' && !hasDecoratorStep) return false;
+                    if (activeFilter === 'with_content' && !hasContentStep) return false;
+                    if (activeFilter === 'with_exit' && !hasExitStep) return false;
                 }
 
-                if (activeFilter === 'hide_decorator' && hasDecoratorStep) return false;
-                if (activeFilter === 'only_decorator' && !hasDecoratorStep) return false;
-
-                if (activeFilter === 'with_content' && !hasContentStep) return false;
-
-                if (activeFilter === 'with_exit' && !hasExitStep) return false;
-            }
-
-            return true;
-        });
+                return true;
+            })
+            .sort((a, b) => b.count - a.count); // Re-sort by count after aggregation
+    })();
 
     const formatNumber = (num: number) => num.toLocaleString('nb-NO');
 
