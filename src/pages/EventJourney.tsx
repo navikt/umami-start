@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Share2, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import ChartLayout from '../components/ChartLayout';
 import WebsitePicker from '../components/WebsitePicker';
@@ -32,6 +32,10 @@ const EventJourney = () => {
 
     // Modal state
     const [selectedStepDetails, setSelectedStepDetails] = useState<{ title: string, details: string[] } | null>(null);
+    const [loopVariations, setLoopVariations] = useState<{ title: string; allSteps: string[] } | null>(null);
+
+    // Exclusion filter state
+    const [excludedEventTypes, setExcludedEventTypes] = useState<string[]>([]);
 
     // Funnel building state
     const [funnelSteps, setFunnelSteps] = useState<{ value: string; stepIndex: number; details?: string[] }[]>([]);
@@ -196,71 +200,95 @@ const EventJourney = () => {
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
     // Filter data client-side
-    const filteredData = data.filter(journey => {
-        // First filter by text
-        if (filterText) {
-            const lowerFilter = filterText.toLowerCase();
-            if (!journey.path.some(step => step.toLowerCase().includes(lowerFilter))) {
-                return false;
-            }
-        }
-
-        // Advanced filter logic
-        if (activeFilter !== 'all') {
-            let hasDecoratorStep = false;
-            let hasContentStep = false;
-            let hasExitStep = false;
-
-            // Single pass to check for all properties
-            for (const step of journey.path) {
-                const parts = step.split(': ');
-                const eventName = parts[0];
-
-                // Check Decorator
-                if (isDecoratorEvent(eventName)) {
-                    hasDecoratorStep = true;
+    const filteredData = data
+        // First, filter out excluded event types from each journey's path
+        .map(journey => ({
+            ...journey,
+            path: journey.path.filter(step => {
+                const eventName = step.split(': ')[0];
+                return !excludedEventTypes.includes(eventName);
+            })
+        }))
+        // Remove journeys with empty paths after filtering
+        .filter(journey => journey.path.length > 0)
+        // Then apply other filters
+        .filter(journey => {
+            // First filter by text
+            if (filterText) {
+                const lowerFilter = filterText.toLowerCase();
+                if (!journey.path.some(step => step.toLowerCase().includes(lowerFilter))) {
+                    return false;
                 }
+            }
 
-                const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
-                const details = rawDetails.split('||').filter(Boolean);
+            // Advanced filter logic
+            if (activeFilter !== 'all') {
+                let hasDecoratorStep = false;
+                let hasContentStep = false;
+                let hasExitStep = false;
 
-                for (const d of details) {
-                    const splitIndex = d.indexOf(':');
-                    if (splitIndex === -1) continue;
+                // Single pass to check for all properties
+                for (const step of journey.path) {
+                    const parts = step.split(': ');
+                    const eventName = parts[0];
 
-                    const k = d.substring(0, splitIndex).trim();
-                    const v = d.substring(splitIndex + 1).trim();
-                    const kLower = k.toLowerCase();
-
-                    // Check Decorator (via category)
-                    if (k === 'kategori' && v && isDecoratorEvent(v)) {
+                    // Check Decorator
+                    if (isDecoratorEvent(eventName)) {
                         hasDecoratorStep = true;
                     }
 
-                    // Check Content
-                    if (kLower === 'lenkegruppe' && v.toLowerCase() === 'innhold') {
-                        hasContentStep = true;
-                    }
+                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                    const details = rawDetails.split('||').filter(Boolean);
 
-                    // Check Exit
-                    if (kLower === 'destinasjon' && v) {
-                        hasExitStep = true;
+                    for (const d of details) {
+                        const splitIndex = d.indexOf(':');
+                        if (splitIndex === -1) continue;
+
+                        const k = d.substring(0, splitIndex).trim();
+                        const v = d.substring(splitIndex + 1).trim();
+                        const kLower = k.toLowerCase();
+
+                        // Check Decorator (via category)
+                        if (k === 'kategori' && v && isDecoratorEvent(v)) {
+                            hasDecoratorStep = true;
+                        }
+
+                        // Check Content
+                        if (kLower === 'lenkegruppe' && v.toLowerCase() === 'innhold') {
+                            hasContentStep = true;
+                        }
+
+                        // Check Exit
+                        if (kLower === 'destinasjon' && v) {
+                            hasExitStep = true;
+                        }
                     }
                 }
+
+                if (activeFilter === 'hide_decorator' && hasDecoratorStep) return false;
+                if (activeFilter === 'only_decorator' && !hasDecoratorStep) return false;
+
+                if (activeFilter === 'with_content' && !hasContentStep) return false;
+
+                if (activeFilter === 'with_exit' && !hasExitStep) return false;
             }
 
-            if (activeFilter === 'hide_decorator' && hasDecoratorStep) return false;
-            if (activeFilter === 'only_decorator' && !hasDecoratorStep) return false;
-
-            if (activeFilter === 'with_content' && !hasContentStep) return false;
-
-            if (activeFilter === 'with_exit' && !hasExitStep) return false;
-        }
-
-        return true;
-    });
+            return true;
+        });
 
     const formatNumber = (num: number) => num.toLocaleString('nb-NO');
+
+    // Get unique event types from data for exclusion filter
+    const getUniqueEventTypes = (): string[] => {
+        const eventTypes = new Set<string>();
+        data.forEach(journey => {
+            journey.path.forEach(step => {
+                const eventName = step.split(': ')[0];
+                if (eventName) eventTypes.add(eventName);
+            });
+        });
+        return Array.from(eventTypes).sort();
+    };
 
     const getPercentage = (count: number, total: number) => {
         if (!total) return '0.0%';
@@ -275,7 +303,66 @@ const EventJourney = () => {
     const showDecoratorFilter = selectedWebsite?.name.toLowerCase().includes('nav.no');
 
     // Loop detection: finds repeating sequences and groups them
-    type GroupedStep = { type: 'single'; step: string; originalIndex: number } | { type: 'loop'; pattern: string[]; count: number; startIndex: number };
+    type GroupedStep =
+        | { type: 'single'; step: string; originalIndex: number }
+        | { type: 'loop'; pattern: string[]; count: number; startIndex: number; variations?: string[]; hasExit?: boolean; allSteps?: string[]; hasDuplicateInPattern?: boolean }
+        | { type: 'duplicate'; steps: string[]; startIndex: number };
+
+    // Extract a grouping key from a step for comparison
+    // All properties except destinasjon must match for events to be grouped
+    const getStepGroupingKey = (step: string): string => {
+        const parts = step.split(': ');
+        const eventName = parts[0];
+        const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+        const details = rawDetails.split('||').filter(Boolean);
+
+        const detailMap: Record<string, string> = {};
+        details.forEach(d => {
+            const [k, v] = d.split(': ');
+            if (k && v) detailMap[k] = v;
+        });
+
+        // Include all meaningful properties in the key EXCEPT destinasjon
+        // If these differ, events are NOT considered the same action
+        const identifier = detailMap['lenketekst'] || detailMap['tekst'] || '';
+        const seksjon = detailMap['seksjon'] || '';
+        const lenkegruppe = detailMap['lenkegruppe'] || '';
+        const innholdstype = detailMap['innholdstype'] || '';
+        const malgruppe = detailMap['malgruppe'] || '';
+
+        return `${eventName}::${identifier}::${seksjon}::${lenkegruppe}::${innholdstype}::${malgruppe}`;
+    };
+
+    // Extract all details from a step for variation detection
+    const getStepDetails = (step: string): Record<string, string> => {
+        const parts = step.split(': ');
+        const eventName = parts[0];
+        const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+        const details = rawDetails.split('||').filter(Boolean);
+
+        const detailMap: Record<string, string> = { _eventName: eventName };
+        details.forEach(d => {
+            const [k, v] = d.split(': ');
+            if (k && v) detailMap[k] = v;
+        });
+        return detailMap;
+    };
+
+    // Find if destinasjon varies across a set of steps (only meaningful variation for loops)
+    const findVariations = (steps: string[]): { variations: string[]; hasExit: boolean } => {
+        if (steps.length < 2) return { variations: [], hasExit: false };
+
+        const allDetails = steps.map(getStepDetails);
+
+        // Only check if destinasjon varies - other properties don't matter for loop detection
+        const destinations = new Set(allDetails.map(d => d['destinasjon'] || ''));
+
+        if (destinations.size > 1) {
+            return { variations: ['Destinasjon'], hasExit: true };
+        }
+
+        return { variations: [], hasExit: false };
+    };
 
     const detectLoops = (path: string[]): GroupedStep[] => {
         const result: GroupedStep[] = [];
@@ -290,12 +377,14 @@ const EventJourney = () => {
                 if (i + len * 2 > path.length) continue;
 
                 const pattern = path.slice(i, i + len);
+                const patternKeys = pattern.map(getStepGroupingKey);
                 let count = 1;
                 let nextIdx = i + len;
 
                 while (nextIdx + len <= path.length) {
                     const nextChunk = path.slice(nextIdx, nextIdx + len);
-                    const matches = nextChunk.every((val, k) => val === pattern[k]);
+                    const nextKeys = nextChunk.map(getStepGroupingKey);
+                    const matches = nextKeys.every((key, k) => key === patternKeys[k]);
                     if (matches) {
                         count++;
                         nextIdx += len;
@@ -313,15 +402,182 @@ const EventJourney = () => {
             }
 
             if (bestMatch) {
+                // Collect all steps in the loop to find variations
+                const allStepsInLoop = path.slice(i, i + bestMatch.len * bestMatch.count);
+                const { variations, hasExit } = findVariations(allStepsInLoop);
+
+                // Check if pattern contains duplicates (consecutive steps with same tekst but different event names)
+                const patternSteps = path.slice(i, i + bestMatch.len);
+                const getTekstFromStep = (step: string): string => {
+                    const parts = step.split(': ');
+                    const eventName = parts[0];
+                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                    const details = rawDetails.split('||').filter(Boolean);
+                    for (const d of details) {
+                        const [k, v] = d.split(': ');
+                        if (k === 'tekst' || k === 'lenketekst') return v || '';
+                    }
+                    return '';
+                };
+                const getEventName = (step: string): string => step.split(': ')[0];
+
+                // Helper to check if event names indicate opposing actions (open/close)
+                const isOpposingAction = (name1: string, name2: string): boolean => {
+                    const n1 = name1.toLowerCase();
+                    const n2 = name2.toLowerCase();
+                    const openTerms = ['åpne', 'open', 'expand', 'show', 'vis'];
+                    const closeTerms = ['lukke', 'close', 'collapse', 'hide', 'skjul'];
+
+                    const isOpen = (n: string) => openTerms.some(t => n.includes(t));
+                    const isClose = (n: string) => closeTerms.some(t => n.includes(t));
+
+                    return (isOpen(n1) && isClose(n2)) || (isClose(n1) && isOpen(n2));
+                };
+
+                const getDestinasjonFromStep = (step: string): string | undefined => {
+                    const parts = step.split(': ');
+                    const eventName = parts[0];
+                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                    const details = rawDetails.split('||').filter(Boolean);
+                    for (const d of details) {
+                        const [k, v] = d.split(': ');
+                        if (k === 'destinasjon') return v || '';
+                    }
+                    return undefined;
+                };
+
+                let hasDuplicateInPattern = false;
+                for (let p = 0; p < patternSteps.length - 1; p++) {
+                    const currTekst = getTekstFromStep(patternSteps[p]);
+                    const nextTekst = getTekstFromStep(patternSteps[p + 1]);
+                    const currEvent = getEventName(patternSteps[p]);
+                    const nextEvent = getEventName(patternSteps[p + 1]);
+
+                    const currDest = getDestinasjonFromStep(patternSteps[p]);
+                    const nextDest = getDestinasjonFromStep(patternSteps[p + 1]);
+                    const differentDest = (currDest && nextDest && currDest !== nextDest);
+
+                    if (currTekst && currTekst === nextTekst && currEvent !== nextEvent && !isOpposingAction(currEvent, nextEvent) && !differentDest) {
+                        hasDuplicateInPattern = true;
+                        break;
+                    }
+                }
+
                 result.push({
                     type: 'loop',
-                    pattern: path.slice(i, i + bestMatch.len),
+                    pattern: patternSteps,
                     count: bestMatch.count,
-                    startIndex: originalIdx
+                    startIndex: originalIdx,
+                    variations,
+                    hasExit,
+                    allSteps: allStepsInLoop,
+                    hasDuplicateInPattern
                 });
                 i += bestMatch.len * bestMatch.count;
                 originalIdx += bestMatch.len * bestMatch.count;
             } else {
+                // Check for potential duplicate (same tekst, different event name as next step)
+                const getTekstFromStep = (step: string): string => {
+                    const parts = step.split(': ');
+                    const eventName = parts[0];
+                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                    const details = rawDetails.split('||').filter(Boolean);
+                    for (const d of details) {
+                        const [k, v] = d.split(': ');
+                        if (k === 'tekst' || k === 'lenketekst') return v || '';
+                    }
+                    return '';
+                };
+
+                const getEventName = (step: string): string => step.split(': ')[0];
+
+                const getDestinasjonFromStep = (step: string): string | undefined => {
+                    const parts = step.split(': ');
+                    const eventName = parts[0];
+                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                    const details = rawDetails.split('||').filter(Boolean);
+                    for (const d of details) {
+                        const [k, v] = d.split(': ');
+                        if (k === 'destinasjon') return v || '';
+                    }
+                    return undefined;
+                };
+
+                // Look ahead to collect consecutive duplicates
+                const getSubtitleFromStep = (step: string): string => {
+                    const parts = step.split(': ');
+                    const eventName = parts[0];
+                    const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                    const details = rawDetails.split('||').filter(Boolean);
+
+                    const map: Record<string, string> = {};
+                    for (const d of details) {
+                        const [k, v] = d.split(': ');
+                        if (k && v) map[k] = v;
+                    }
+
+                    if (map['destinasjon']) return map['destinasjon'];
+                    if (map['lenketekst']) return map['lenketekst'];
+                    if (map['tekst']) return map['tekst'];
+                    if (map['Tekst']) return map['Tekst'];
+                    if (map['tittel']) return map['tittel'];
+                    if (map['label']) return map['label'];
+                    if (map['url']) return map['url'];
+                    return '';
+                };
+
+                const currentTekst = getTekstFromStep(path[i]);
+                const currentEventName = getEventName(path[i]);
+
+                // Helper to check if event names indicate opposing actions (open/close)
+                const isOpposingAction = (name1: string, name2: string): boolean => {
+                    const n1 = name1.toLowerCase();
+                    const n2 = name2.toLowerCase();
+                    const openTerms = ['åpne', 'open', 'expand', 'show', 'vis'];
+                    const closeTerms = ['lukke', 'close', 'collapse', 'hide', 'skjul'];
+
+                    const isOpen = (n: string) => openTerms.some(t => n.includes(t));
+                    const isClose = (n: string) => closeTerms.some(t => n.includes(t));
+
+                    return (isOpen(n1) && isClose(n2)) || (isClose(n1) && isOpen(n2));
+                };
+
+                const currentSub = getSubtitleFromStep(path[i]);
+
+                if (currentSub && i + 1 < path.length) {
+                    const nextSub = getSubtitleFromStep(path[i + 1]);
+                    const nextEventName = getEventName(path[i + 1]);
+
+                    if (currentSub === nextSub && currentEventName !== nextEventName && !isOpposingAction(currentEventName, nextEventName)) {
+                        // Found a duplicate pair - collect all consecutive duplicates with same subtitle
+                        const duplicateSteps: string[] = [path[i]];
+                        let j = i + 1;
+                        while (j < path.length) {
+                            const jSub = getSubtitleFromStep(path[j]);
+                            const jEventName = getEventName(path[j]);
+
+                            // Continue if same subtitle and different event name from previous
+                            if (jSub === currentSub && jEventName !== getEventName(path[j - 1]) && !isOpposingAction(getEventName(path[j - 1]), jEventName)) {
+                                duplicateSteps.push(path[j]);
+                                j++;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        if (duplicateSteps.length >= 2) {
+                            result.push({
+                                type: 'duplicate',
+                                steps: duplicateSteps,
+                                startIndex: originalIdx
+                            });
+                            i += duplicateSteps.length;
+                            originalIdx += duplicateSteps.length;
+                            continue;
+                        }
+                    }
+                }
+
                 result.push({ type: 'single', step: path[i], originalIndex: originalIdx });
                 i++;
                 originalIdx++;
@@ -445,8 +701,9 @@ const EventJourney = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
-                        <Heading level="2" size="medium">Hendelsesflyt</Heading>
+
+                    <div className="mb-4">
+                        <Heading level="2" size="medium" className="mb-3">Hendelsesflyt</Heading>
                         <div className="flex flex-wrap items-end gap-3">
                             {showDecoratorFilter && (
                                 <Select
@@ -463,10 +720,26 @@ const EventJourney = () => {
                                     <option value="with_exit">Med utgang</option>
                                 </Select>
                             )}
+                            {getUniqueEventTypes().length > 0 && (
+                                <UNSAFE_Combobox
+                                    label="Skjul hendelser"
+                                    size="small"
+                                    options={getUniqueEventTypes()}
+                                    selectedOptions={excludedEventTypes}
+                                    isMultiSelect
+                                    placeholder="Velg..."
+                                    onToggleSelected={(option, isSelected) => {
+                                        if (isSelected) {
+                                            setExcludedEventTypes([...excludedEventTypes, option]);
+                                        } else {
+                                            setExcludedEventTypes(excludedEventTypes.filter(e => e !== option));
+                                        }
+                                    }}
+                                    className="w-56"
+                                />
+                            )}
                             <TextField
-                                label="Søk i reiser"
-                                hideLabel
-                                placeholder="Søk..."
+                                label="Søk"
                                 size="small"
                                 value={filterText}
                                 onChange={(e) => setFilterText(e.target.value)}
@@ -489,7 +762,7 @@ const EventJourney = () => {
                                 filteredData.map((journey, idx) => (
                                     <div key={idx} className="mb-8 last:mb-0">
                                         <div className="flex items-center text-sm text-gray-500 mb-2">
-                                            <span className="font-semibold text-gray-900 mr-2">{journey.count} sesjoner</span>
+                                            <span className="font-semibold text-gray-900 mr-2">{formatNumber(journey.count)} sesjoner</span>
                                             <span>({((journey.count / data.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1)}% av totalt)</span>
                                         </div>
                                         <div className="flex items-start overflow-x-auto pb-6 pt-6 pl-4 pr-1">
@@ -728,19 +1001,61 @@ const EventJourney = () => {
                                                             )}
                                                         </div>
                                                     );
-                                                } else {
+                                                } else if (group.type === 'loop') {
                                                     // Loop group
+                                                    const borderColor = group.hasExit ? 'border-amber-400' : 'border-blue-300';
+                                                    const bgColor = group.hasExit ? 'bg-amber-50/30' : 'bg-blue-50/30';
+                                                    const badgeBg = group.hasExit ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-white border-blue-200 text-blue-700';
                                                     return (
                                                         <div key={groupIdx} className="flex items-center flex-shrink-0">
-                                                            <div className="relative border-2 border-dashed border-blue-300 rounded-xl p-3 bg-blue-50/30">
-                                                                <div className="absolute -top-3 left-3 bg-white px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-200 rounded-full shadow-sm flex items-center gap-1 z-20">
-                                                                    <span className="text-base leading-none">↻</span> {group.count}×
+                                                            <div className={`relative border-2 border-dashed ${borderColor} rounded-xl p-4 ${bgColor}`}>
+                                                                <div className={`absolute -top-3 left-3 px-2.5 py-1 text-sm font-bold ${badgeBg} border rounded-full shadow-sm flex items-center gap-1 z-20`}>
+                                                                    <span className="text-lg leading-none">↻</span> {group.count}×
+                                                                    {group.variations && group.variations.length > 0 && (
+                                                                        <button
+                                                                            onClick={() => setLoopVariations({
+                                                                                title: group.pattern[0]?.split(': ')[0] || 'Loop',
+                                                                                allSteps: group.allSteps || []
+                                                                            })}
+                                                                            className="ml-1 pl-1.5 border-l border-current opacity-80 hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            · Vis varianter
+                                                                        </button>
+                                                                    )}
                                                                 </div>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    {group.pattern.map((step, pIdx) => (
+                                                                {/* Duplicate indicator for loops containing duplicates */}
+                                                                {group.hasDuplicateInPattern && (
+                                                                    <div className="absolute -top-3 right-3 px-2 py-1 text-xs font-bold bg-orange-100 border border-orange-300 text-orange-800 rounded-full shadow-sm z-20" title="Inneholder mulige duplikate hendelser">
+                                                                        Duplikat?
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex items-center gap-3 mt-2">
+                                                                    {group.pattern.map((step: string, pIdx: number) => (
                                                                         <div key={pIdx} className="flex items-center">
-                                                                            {pIdx > 0 && <div className="w-4 h-px bg-blue-300 mx-1"></div>}
-                                                                            {renderStepCard(step, group.startIndex + pIdx + 1, true)}
+                                                                            {pIdx > 0 && <div className={`w-6 h-px ${group.hasExit ? 'bg-amber-300' : 'bg-blue-300'} mx-1`}></div>}
+                                                                            {renderStepCard(step, group.startIndex + pIdx + 1)}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            {groupIdx < groups.length - 1 && (
+                                                                <div className="w-8 h-px bg-gray-300 mx-2"></div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                } else {
+                                                    // Duplicate group
+                                                    return (
+                                                        <div key={groupIdx} className="flex items-center flex-shrink-0">
+                                                            <div className="relative border-2 border-dashed border-orange-400 rounded-xl p-4 bg-orange-50/30">
+                                                                <div className="absolute -top-3 left-3 px-2.5 py-1 text-sm font-bold bg-orange-100 border border-orange-300 text-orange-800 rounded-full shadow-sm flex items-center gap-1 z-20">
+                                                                    Duplikat?
+                                                                </div>
+                                                                <div className="flex items-center gap-3 mt-2">
+                                                                    {group.steps.map((step: string, pIdx: number) => (
+                                                                        <div key={pIdx} className="flex items-center">
+                                                                            {pIdx > 0 && <div className="w-6 h-px bg-orange-300 mx-1"></div>}
+                                                                            {renderStepCard(step, group.startIndex + pIdx + 1, false)}
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -802,6 +1117,52 @@ const EventJourney = () => {
                         </Modal.Body>
                         <Modal.Footer>
                             <Button type="button" variant="primary" onClick={() => setSelectedStepDetails(null)}>
+                                Lukk
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>
+
+                    {/* Loop Variations Modal */}
+                    <Modal
+                        open={!!loopVariations}
+                        onClose={() => setLoopVariations(null)}
+                        header={{ heading: `Destinasjoner i ${loopVariations?.title || 'loop'}` }}
+                    >
+                        <Modal.Body>
+                            <Table>
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.HeaderCell>#</Table.HeaderCell>
+                                        <Table.HeaderCell>Destinasjon</Table.HeaderCell>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {loopVariations?.allSteps.map((step, idx) => {
+                                        const parts = step.split(': ');
+                                        const eventName = parts[0];
+                                        const rawDetails = parts.length > 1 ? step.substring(eventName.length + 2) : '';
+                                        const details = rawDetails.split('||').filter(Boolean);
+
+                                        const detailMap: Record<string, string> = {};
+                                        details.forEach(d => {
+                                            const [k, ...vals] = d.split(': ');
+                                            if (k) detailMap[k] = vals.join(': ');
+                                        });
+
+                                        const destinasjon = detailMap['destinasjon'] || '(ingen)';
+
+                                        return (
+                                            <Table.Row key={idx}>
+                                                <Table.DataCell className="font-semibold w-12">{idx + 1}</Table.DataCell>
+                                                <Table.DataCell className="break-all">{destinasjon}</Table.DataCell>
+                                            </Table.Row>
+                                        );
+                                    })}
+                                </Table.Body>
+                            </Table>
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button type="button" variant="primary" onClick={() => setLoopVariations(null)}>
                                 Lukk
                             </Button>
                         </Modal.Footer>
