@@ -3,14 +3,13 @@ import {
   VStack,
   Table,
   Box,
-  Alert,
   ReadMore,
   BodyLong,
   List,
   Link,
+  CopyButton,
 } from '@navikt/ds-react';
 import Kontaktboks from '../components/kontaktboks';
-import AkselComponentEvents from '../components/AkselComponentEvents';
 
 const TaksonomiPage = () => {
   return (
@@ -26,8 +25,8 @@ const TaksonomiPage = () => {
       {/* Add quick links */}
       <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8">
         <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
-        <Link href="#aksel-komponenter">
-          Anbefalte hendelsesnavn og detaljer for Aksel-komponenter
+        <Link href="#analytics-types">
+          Type-definisjoner for analytics-hendelser
         </Link>
       </Box>
 
@@ -82,12 +81,12 @@ const TaksonomiPage = () => {
 
             <BodyLong spacing>Eksempler på hendelsesnavn:</BodyLong>
             <List as="ul" className="mb-6">
-              <List.Item><strong>skjema fullført</strong></List.Item>
-              <List.Item><strong>knapp klikket</strong></List.Item>
-              <List.Item><strong>lenke klikket</strong></List.Item>
-              <List.Item><strong>søk gjennomført</strong></List.Item>
-              <List.Item><strong>filter valgt</strong></List.Item>
-              <List.Item><strong>utvidbart panel åpnet</strong></List.Item>
+              <List.Item><strong>navigere</strong> - når bruker klikker på lenker</List.Item>
+              <List.Item><strong>besøk</strong> - når bruker besøker en side</List.Item>
+              <List.Item><strong>filtervalg</strong> - når bruker velger et filter</List.Item>
+              <List.Item><strong>skjema startet</strong> - når bruker starter et skjema</List.Item>
+              <List.Item><strong>skjema fullført</strong> - når bruker fullfører et skjema</List.Item>
+              <List.Item><strong>last ned</strong> - når bruker laster ned en fil</List.Item>
             </List>
 
             <ReadMore header="Se flere hendelsesnavn du kan bruke">
@@ -100,36 +99,52 @@ const TaksonomiPage = () => {
                 </Table.Header>
                 <Table.Body>
                   <Table.Row>
-                    <Table.DataCell>utvidbart panel åpnet</Table.DataCell>
-                    <Table.DataCell>Bruker klikker for å vise innhold i et utvidbart panel</Table.DataCell>
+                    <Table.DataCell>navigere</Table.DataCell>
+                    <Table.DataCell>Bruker klikker på en lenke</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>utvidbart panel lukket</Table.DataCell>
-                    <Table.DataCell>Bruker klikker for å skjule innhold</Table.DataCell>
+                    <Table.DataCell>besøk</Table.DataCell>
+                    <Table.DataCell>Bruker besøker en side</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>dialogboks åpnet</Table.DataCell>
-                    <Table.DataCell>En dialogboks dukker opp</Table.DataCell>
+                    <Table.DataCell>filtervalg</Table.DataCell>
+                    <Table.DataCell>Bruker velger et filter</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>dialogboks lukket</Table.DataCell>
-                    <Table.DataCell>Dialogboksen lukkes</Table.DataCell>
+                    <Table.DataCell>last ned</Table.DataCell>
+                    <Table.DataCell>Bruker laster ned en fil</Table.DataCell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.DataCell>accordion åpnet</Table.DataCell>
+                    <Table.DataCell>Bruker åpner et accordion-element</Table.DataCell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.DataCell>accordion lukket</Table.DataCell>
+                    <Table.DataCell>Bruker lukker et accordion-element</Table.DataCell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.DataCell>modal åpnet</Table.DataCell>
+                    <Table.DataCell>En modal-dialog åpnes</Table.DataCell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.DataCell>modal lukket</Table.DataCell>
+                    <Table.DataCell>Modal-dialogen lukkes</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
                     <Table.DataCell>skjema åpnet</Table.DataCell>
-                    <Table.DataCell>Brukeren starter et skjema</Table.DataCell>
+                    <Table.DataCell>Brukeren åpner et skjema</Table.DataCell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.DataCell>skjema startet</Table.DataCell>
+                    <Table.DataCell>Brukeren begynner å fylle ut skjema</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
                     <Table.DataCell>skjema fullført</Table.DataCell>
                     <Table.DataCell>Skjemaet sendes inn</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>skjemavalidering feilet</Table.DataCell>
+                    <Table.DataCell>skjema validering feilet</Table.DataCell>
                     <Table.DataCell>Skjemaet har valideringsfeil</Table.DataCell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.DataCell>navigasjon klikket</Table.DataCell>
-                    <Table.DataCell>Bruker klikker på navigasjonselement</Table.DataCell>
                   </Table.Row>
                 </Table.Body>
               </Table>
@@ -154,16 +169,13 @@ const TaksonomiPage = () => {
 
             <BodyLong spacing>Vanlige eksempler:</BodyLong>
             <List as="ul" className="mb-6">
-              <List.Item><code>appNavn: "dagpengesoknad"</code> - hvilken løsning hendelsen kommer fra</List.Item>
-              <List.Item><code>skjemaType: "foreldrepenger"</code> - hvilket skjema det gjelder</List.Item>
-              <List.Item><code>tekst: "Send søknad"</code> - teksten på knappen som ble klikket</List.Item>
-              <List.Item><code>valgtSvar: "Ja"</code> - hva brukeren svarte</List.Item>
+              <List.Item><code>lenketekst: "Les mer"</code> - teksten på lenken som ble klikket</List.Item>
+              <List.Item><code>destinasjon: "/side/info"</code> - hvor lenken fører hen</List.Item>
+              <List.Item><code>skjemanavn: "dagpengesoknad"</code> - hvilket skjema det gjelder</List.Item>
+              <List.Item><code>komponentId: "hovedmeny"</code> - unik ID for komponenten</List.Item>
             </List>
 
-            <Alert variant="success" className="mb-6">
-              Ta bare med informasjon som gir verdi når du skal analysere dataene senere.
-              Tenk gjennom hvilke spørsmål du vil kunne svare på med dataene.
-            </Alert>
+
 
             <ReadMore header="Se flere hendelsesdetaljer du kan bruke">
               <Table size="medium">
@@ -176,52 +188,111 @@ const TaksonomiPage = () => {
                 </Table.Header>
                 <Table.Body>
                   <Table.Row>
-                    <Table.DataCell>appNavn</Table.DataCell>
-                    <Table.DataCell>Navn på løsningen</Table.DataCell>
-                    <Table.DataCell>"dagpengesoknad"</Table.DataCell>
+                    <Table.DataCell>lenketekst</Table.DataCell>
+                    <Table.DataCell>Teksten på lenken</Table.DataCell>
+                    <Table.DataCell>"Les mer om dagpenger"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>skjemaType</Table.DataCell>
-                    <Table.DataCell>Type skjema</Table.DataCell>
+                    <Table.DataCell>destinasjon</Table.DataCell>
+                    <Table.DataCell>URL lenken fører til</Table.DataCell>
+                    <Table.DataCell>"/dagpenger/soknad"</Table.DataCell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.DataCell>skjemanavn</Table.DataCell>
+                    <Table.DataCell>Navn på skjemaet</Table.DataCell>
                     <Table.DataCell>"foreldrepenger"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>skjemaSteg</Table.DataCell>
-                    <Table.DataCell>Steg i et skjema</Table.DataCell>
-                    <Table.DataCell>"3"</Table.DataCell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.DataCell>menyValg</Table.DataCell>
-                    <Table.DataCell>Valgt element i menyen</Table.DataCell>
+                    <Table.DataCell>komponentId</Table.DataCell>
+                    <Table.DataCell>Unik ID for komponenten</Table.DataCell>
                     <Table.DataCell>"hovedmeny"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
                     <Table.DataCell>tekst</Table.DataCell>
-                    <Table.DataCell>F.eks. tekst på knappen</Table.DataCell>
+                    <Table.DataCell>Generisk tekst (f.eks. på knapp)</Table.DataCell>
                     <Table.DataCell>"Send inn søknad"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>feilType</Table.DataCell>
-                    <Table.DataCell>Type feil som oppsto</Table.DataCell>
-                    <Table.DataCell>"mangler-fodselsnummer"</Table.DataCell>
+                    <Table.DataCell>kategori</Table.DataCell>
+                    <Table.DataCell>Kategori for filter</Table.DataCell>
+                    <Table.DataCell>"ytelse"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>sidenavn</Table.DataCell>
-                    <Table.DataCell>Navn på siden</Table.DataCell>
-                    <Table.DataCell>"personopplysninger"</Table.DataCell>
+                    <Table.DataCell>filter</Table.DataCell>
+                    <Table.DataCell>Navn på filteret</Table.DataCell>
+                    <Table.DataCell>"dagpenger"</Table.DataCell>
                   </Table.Row>
                   <Table.Row>
-                    <Table.DataCell>valgtSvar</Table.DataCell>
-                    <Table.DataCell>Svaret som ble valgt</Table.DataCell>
-                    <Table.DataCell>"deltid"</Table.DataCell>
+                    <Table.DataCell>kontekst</Table.DataCell>
+                    <Table.DataCell>Ekstra kontekst om hendelsen</Table.DataCell>
+                    <Table.DataCell>"søknadsskjema"</Table.DataCell>
                   </Table.Row>
                 </Table.Body>
               </Table>
             </ReadMore>
           </section>
 
-          {/* Aksel Components Section - now imported from the separate file */}
-          <AkselComponentEvents />
+          {/* Analytics Types Package Section */}
+          <section id="analytics-types">
+            <Heading level="2" size="medium" spacing>
+              Type-definisjoner for analytics-hendelser
+            </Heading>
+            <BodyLong spacing>
+              Type-definisjoner for analytics-hendelser brukt på tvers av Navs digitale tjenester.
+              Logg direkte til Umami, eller via nav-dekoratøren.
+            </BodyLong>
+
+            <Box
+              className="p-6"
+              borderWidth="1"
+              borderRadius="medium"
+              borderColor="border-info"
+              background="surface-info-subtle"
+            >
+              <Heading size="small" level="3" spacing>
+                @navikt/analytics-types
+              </Heading>
+              <BodyLong className="mb-3">
+                Pakken inneholder:
+              </BodyLong>
+              <List as="ul" className="mb-6">
+                <List.Item>Hendelsesnavn og typer for alle støttede events</List.Item>
+                <List.Item>TypeScript-typer for properties</List.Item>
+                <List.Item>Integrasjon med nav-dekoratøren</List.Item>
+              </List>
+              <BodyLong className="mb-3">
+                <strong>Installer pakken:</strong>
+              </BodyLong>
+              <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="bg-gray-50 flex items-center justify-between">
+                <code>npm install @navikt/analytics-types</code>
+                <CopyButton copyText="npm install @navikt/analytics-types" size="small" />
+              </Box>
+            </Box>
+
+            <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-6">
+              <Heading size="xsmall" level="3" spacing>
+                Eksempel på bruk
+              </Heading>
+              <pre className="text-sm whitespace-pre-wrap">
+                {`import { Events, type NavigereProperties } from '@navikt/analytics-types';
+import { getAnalyticsInstance } from '@navikt/nav-dekoratoren-moduler';
+
+const analytics = getAnalyticsInstance('mitt-app-navn');
+
+const properties: NavigereProperties = {
+  lenketekst: 'Les mer',
+  destinasjon: '/side/info'
+};
+
+analytics(Events.NAVIGERE, properties);`}
+              </pre>
+            </Box>
+
+            <BodyLong spacing>
+              Se <Link href="https://github.com/navikt/analytics-types" target="_blank">GitHub-repoet</Link> for
+              komplett dokumentasjon og full oversikt over alle støttede events og attributter.
+            </BodyLong>
+          </section>
 
           {/* Implementation in Umami */}
           <section>
@@ -235,31 +306,24 @@ const TaksonomiPage = () => {
 
             <Box padding="8" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 bg-gray-50">
               <pre className="text-base whitespace-pre-wrap">
-                {`// Når en bruker klikker på en knapp
-function handleKnappKlikk() {
-  umami.track('knapp klikket', {
-    appNavn: 'dagpengesoknad',
-    komponentNavn: 'soknadsskjema',
-    tekst: 'Send inn søknad'
+                {`// Når en bruker klikker på en lenke
+function handleLenkeKlikk() {
+  umami.track('navigere', {
+    lenketekst: 'Les mer om dagpenger',
+    destinasjon: '/dagpenger/soknad',
+    kontekst: 'forsiden'
   });
 }
 
 // Når en bruker fullfører et skjema
 function handleSkjemaSendt() {
   umami.track('skjema fullført', {
-    appNavn: 'dagpengesoknad',
-    komponentNavn: 'soknadsskjema',
-    skjemaId: 'dagpenger',
-    skjemaSteg: '4'
+    skjemanavn: 'dagpengesoknad',
+    kontekst: 'søknadsskjema'
   });
 }`}
               </pre>
             </Box>
-
-            <Alert variant="info">
-              Start enkelt med få hendelser som gir verdi. Bruk norske navn som alle kan
-              forstå, og se Umamis dokumentasjon for tekniske detaljer.
-            </Alert>
           </section>
 
           {/* Verification section */}
