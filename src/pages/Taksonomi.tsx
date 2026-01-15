@@ -15,7 +15,7 @@ const TaksonomiPage = () => {
   return (
     <div className="w-full max-w-[800px] mx-auto">
       <Heading spacing level="1" size="large" className="pt-24 pb-4">
-        Navs taksonomi for produktanalyser
+        Navs taksonomi for produktanalyse
       </Heading>
 
       <BodyLong size="large" className="mb-8 text-gray-600">
