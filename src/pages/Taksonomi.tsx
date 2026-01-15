@@ -26,7 +26,7 @@ const TaksonomiPage = () => {
       <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8">
         <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
         <Link href="#analytics-types">
-          Type-definisjoner for analytics-hendelser
+          Type-definisjoner for analytics-hendelser (@navikt/analytics-types)
         </Link>
       </Box>
 
@@ -238,8 +238,9 @@ const TaksonomiPage = () => {
               Type-definisjoner for analytics-hendelser
             </Heading>
             <BodyLong spacing>
-              Type-definisjoner for analytics-hendelser brukt på tvers av Navs digitale tjenester.
-              Logg direkte til Umami, eller via nav-dekoratøren.
+              For å sikre enhetlig sporing på tvers av team har det blitt laget en npm-pakke med ferdig definerte
+              hendelsestyper. Med denne får du TypeScript-støtte som gir autofullføring av hendelsesnavn
+              og properties, slik at du unngår skrivefeil og sikrer konsistente data.
             </BodyLong>
 
             <Box
@@ -250,21 +251,23 @@ const TaksonomiPage = () => {
               background="surface-info-subtle"
             >
               <Heading size="small" level="3" spacing>
-                @navikt/analytics-types
+                <Link href="https://github.com/navikt/analytics-types" target="_blank" className="text-text-default hover:underline">
+                  @navikt/analytics-types
+                </Link>
               </Heading>
               <BodyLong className="mb-3">
                 Pakken inneholder:
               </BodyLong>
               <List as="ul" className="mb-6">
                 <List.Item>Hendelsesnavn og typer for alle støttede events</List.Item>
-                <List.Item>TypeScript-typer for properties</List.Item>
+                <List.Item>TypeScript-typer for properties som gir autofullføring</List.Item>
                 <List.Item>Integrasjon med nav-dekoratøren</List.Item>
               </List>
-              <BodyLong className="mb-3">
+              <BodyLong className="mb-2">
                 <strong>Installer pakken:</strong>
               </BodyLong>
-              <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="bg-gray-50 flex items-center justify-between">
-                <code>npm install @navikt/analytics-types</code>
+              <Box padding="3" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="bg-gray-50 flex items-center justify-between">
+                <code className="text-sm">npm install @navikt/analytics-types</code>
                 <CopyButton copyText="npm install @navikt/analytics-types" size="small" />
               </Box>
             </Box>
