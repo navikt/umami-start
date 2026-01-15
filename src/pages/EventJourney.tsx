@@ -605,7 +605,7 @@ const EventJourney = () => {
 
                     <Button
                         onClick={fetchData}
-                        disabled={!selectedWebsite || loading}
+                        disabled={!selectedWebsite || loading || !urlPath}
                         loading={loading}
                     >
                         Vis reiser
