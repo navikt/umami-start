@@ -993,16 +993,16 @@ const EventJourney = () => {
                                                     const badgeBg = group.hasExit ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-white border-blue-200 text-blue-700';
                                                     return (
                                                         <div key={groupIdx} className="flex items-center flex-shrink-0">
-                                                            <div className={`relative border-2 border-dashed ${borderColor} rounded-xl p-4 ${bgColor}`}>
-                                                                <div className={`absolute -top-3 left-3 px-2.5 py-1 text-sm font-bold ${badgeBg} border rounded-full shadow-sm flex items-center gap-1 z-20`}>
-                                                                    <span className="text-lg leading-none">↻</span> {group.count}×
+                                                            <div className={`relative border-2 border-dashed ${borderColor} rounded-xl pt-7 pb-4 px-4 ${bgColor} min-w-[200px]`}>
+                                                                <div className={`absolute -top-3 left-3 px-2.5 py-1 text-sm font-bold ${badgeBg} border rounded-full shadow-sm flex items-center gap-1 z-20 whitespace-nowrap`}>
+                                                                    <span className="text-lg leading-none">↻</span> Gjentatt {group.count}×
                                                                     {group.variations && group.variations.length > 0 && (
                                                                         <button
                                                                             onClick={() => setLoopVariations({
                                                                                 title: group.pattern[0]?.split(': ')[0] || 'Loop',
                                                                                 allSteps: group.allSteps || []
                                                                             })}
-                                                                            className="ml-1 pl-1.5 border-l border-current opacity-80 hover:opacity-100 transition-opacity"
+                                                                            className="ml-1 pl-1.5 border-l border-current opacity-80 hover:opacity-100 transition-opacity whitespace-nowrap"
                                                                         >
                                                                             · Vis varianter
                                                                         </button>
@@ -1032,7 +1032,7 @@ const EventJourney = () => {
                                                     // Duplicate group
                                                     return (
                                                         <div key={groupIdx} className="flex items-center flex-shrink-0">
-                                                            <div className="relative border-2 border-dashed border-orange-400 rounded-xl p-4 bg-orange-50/30">
+                                                            <div className="relative border-2 border-dashed border-orange-400 rounded-xl pt-7 pb-4 px-4 bg-orange-50/30 min-w-[150px]">
                                                                 <div className="absolute -top-3 left-3 px-2.5 py-1 text-sm font-bold bg-orange-100 border border-orange-300 text-orange-800 rounded-full shadow-sm flex items-center gap-1 z-20">
                                                                     Duplikat?
                                                                 </div>
