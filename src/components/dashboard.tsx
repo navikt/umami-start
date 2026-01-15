@@ -1,5 +1,6 @@
-import {Search, Alert, BodyShort, Link, ReadMore, List} from "@navikt/ds-react";
+import { Search, Alert, BodyShort, Link, ReadMore, List } from "@navikt/ds-react";
 import { useState, useEffect } from "react";
+import { normalizeUrlToPath } from "../lib/utils";
 
 interface Website {
     id: string;
@@ -30,14 +31,14 @@ function Dashboard() {
             }).then(response => response.json())
         ])
             .then(([data1, data2]) => {
-                const team1Data = data1.data.filter((item: Website) => 
+                const team1Data = data1.data.filter((item: Website) =>
                     item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
                 );
-                const team2Data = data2.data.filter((item: Website) => 
-                    item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
+                const team2Data = data2.data.filter((item: Website) =>
+                    item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' &&
                     item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
                 );
-                
+
                 const combinedData = [...team1Data, ...team2Data];
                 combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
                 setFilteredData(combinedData);
@@ -68,7 +69,7 @@ function Dashboard() {
         try {
             const url = new URL(inputUrl);
             const domain = url.hostname;
-            const path = url.pathname;
+            const path = normalizeUrlToPath(inputUrl);
 
             const [data1, data2] = await Promise.all([
                 fetch(`${baseUrl}/umami/api/teams/aa113c34-e213-4ed6-a4f0-0aea8a503e6b/websites`, {
@@ -84,19 +85,19 @@ function Dashboard() {
                 throw new Error('Invalid data structure received from API');
             }
 
-            const team1Data = data1.data.filter((item: Website) => 
+            const team1Data = data1.data.filter((item: Website) =>
                 item.teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b'
             );
-            const team2Data = data2.data.filter((item: Website) => 
-                item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' && 
+            const team2Data = data2.data.filter((item: Website) =>
+                item.teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30' &&
                 item.id === 'c44a6db3-c974-4316-b433-214f87e80b4d'
             );
-            
+
             const combinedData = [...team1Data, ...team2Data];
             combinedData.sort((a, b) => a.domain.localeCompare(b.domain));
 
             const normalizedInputDomain = normalizeDomain(domain);
-            const matchedWebsite = combinedData.find(item => 
+            const matchedWebsite = combinedData.find(item =>
                 normalizeDomain(item.domain) === normalizedInputDomain ||
                 normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
             );

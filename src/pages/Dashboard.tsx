@@ -7,6 +7,7 @@ import { DashboardWidget } from "../components/DashboardWidget";
 import DashboardWebsitePicker from "../components/DashboardWebsitePicker";
 import { fetchDashboardDataBatched, isBatchableChart } from "../lib/batchedDashboardFetcher";
 import { format } from "date-fns";
+import { normalizeUrlToPath } from "../lib/utils";
 
 const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -73,11 +74,11 @@ const Dashboard = () => {
             if (filter.appliesTo === 'urlPath' && filter.urlParam) {
                 const value = initialCustomValues[filter.id];
                 if (value) {
-                    return [value];
+                    return [normalizeUrlToPath(value)];
                 }
             }
         }
-        return initialPaths;
+        return initialPaths.map(p => normalizeUrlToPath(p));
     };
 
     const initialUrlPathsFromCustomFilter = getInitialUrlPaths();
@@ -158,7 +159,7 @@ const Dashboard = () => {
                 // Find matching website using same logic as metadashboard.tsx
                 const matchedWebsite = filteredWebsites.find((item: any) =>
                     normalizeDomain(item.domain) === normalizedInputDomain ||
-                    normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
+                    normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)} `)
                 );
 
                 if (matchedWebsite) {
@@ -191,7 +192,7 @@ const Dashboard = () => {
             // Auto-apply filters without requiring user to click "Oppdater"
             setActiveFilters({
                 pathOperator: pathOperator || "equals",
-                urlFilters: initialPaths,
+                urlFilters: initialPaths.map(p => normalizeUrlToPath(p)), // Apply normalizeUrlToPath here
                 dateRange: "current_month",
                 customStartDate: undefined,
                 customEndDate: undefined,
@@ -432,7 +433,8 @@ const Dashboard = () => {
                         selectedOptions={tempUrlPaths}
                         onToggleSelected={(option, isSelected) => {
                             if (isSelected) {
-                                setTempUrlPaths(prev => [...prev, option]);
+                                const normalized = normalizeUrlToPath(option);
+                                setTempUrlPaths(prev => [...prev, normalized]);
                             } else {
                                 setTempUrlPaths(prev => prev.filter(p => p !== option));
                             }
@@ -485,7 +487,7 @@ const Dashboard = () => {
                         {tempDateRange === 'custom' && customStartDate && customEndDate ? (
                             <>
                                 <option value="custom">
-                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')} `}
                                 </option>
                                 <option value="custom-edit">Endre datoer</option>
                             </>
