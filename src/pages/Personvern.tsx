@@ -9,29 +9,35 @@ function Personvern() {
             </Heading>
 
             <p className="text-gray-600 mb-8 text-xl leading-relaxed">
-                Slik håndterer vi personvern og sikkerhet på startumami.ansatt.nav.no
+                Slik håndterer vi personvern og sikkerhet på <Link href="https://startumami.ansatt.nav.no" className="text-deepblue-500 underline hover:no-underline">startumami.ansatt.nav.no</Link>
             </p>
 
             <div className="prose max-w-full prose-lg">
                 <VStack gap="12">
                     <section>
                         <Heading level="2" size="medium" spacing>
-                            Personvern og sikkerhet
+                            Hva er Start Umami
                         </Heading>
                         <p className="mb-4 leading-normal">
-                            Start Umami er en nettside NAV Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan NAV behandler personopplysninger, kan du lese mer i <Link href="https://www.nav.no/no/nav-og-samfunn/om-nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">NAVs generelle personvernerklæring.</Link>
+                            Start Umami er en nettside for Nav Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan Nav behandler ansattes personopplysninger, kan du lese mer her: <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">Ansattes personvern</Link>
                         </p>
                     </section>
 
                     <section>
                         <Heading level="2" size="medium" spacing>
-                            Audit logging
+                            Formålet med audit loggingen
                         </Heading>
                         <p className="mb-4 leading-normal">
-                            Start Umami sender din Nav-ident sammen med alle spørringer som kjøres. Dette gjør at vi kan logge hvem som har kjørt hvilke spørringer, og er en del av vår sikkerhetsrutine for å beskytte data og oppfylle etterlevelseskrav.
+                            Når du bruker målingsverktøyet Umami så sender Start Umami din Nav-ident sammen med alle spørringer som kjøres. Dette gjør at vi kan logge hvem som har kjørt hvilke spørringer, og er en del av vår sikkerhetsrutine for å beskytte data innsamlet med målingsverktøyet Umami.
+                        </p>
+                        <p className="mb-4 leading-normal">
+                            Loggene brukes kun til statistikk, avvik og sikkerhetsformål. Eksempelvis i forbindelse med avvik for å se hvem som har gjort hvilke spørringer og har hatt tilgang til eventuelle personopplysninger som er innsamlet ved en feil.
+                        </p>
+                        <p className="mb-4 leading-normal">
+                            Personopplysningene dine deles ikke med andre aktører, men vil kunne deles med den registrerte dersom denne ber om innsyn etter personopplysningloven.
                         </p>
                         <p className="leading-normal">
-                            Loggene brukes kun til statistikk, avik og sikkerhetsformål. Eksmepelvi i forbindelse med avik, for å se hvem som har gjort hvilke spørringer.
+                            Hjemmelen for denne behandlingen er personvernforordningen artikkel 32.
                         </p>
                     </section>
 
@@ -43,7 +49,7 @@ function Personvern() {
 
                         <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4">
                             <p className="mb-4 leading-normal">Informasjonskapsler er små tekstfiler som plasseres på din datamaskin når du laster ned en nettside. Noen av informasjonskapslene er nødvendige for at ulike tjenester på nettsiden vår skal fungere slik vi ønsker.</p>
-                            <p className="mb-4 leading-normal">Vi bruker informasjonskapsler til å forbedre brukeropplevelsen og innholdet. Når du besøker aksel.nav.no, sender nettleseren din opplysninger til NAVs analyseverktøy.</p>
+                            <p className="mb-4 leading-normal">Vi bruker informasjonskapsler til å forbedre brukeropplevelsen og innholdet. Når du besøker aksel.Nav.no, sender nettleseren din opplysninger til Navs analyseverktøy.</p>
                         </Box>
 
                         <section>
@@ -69,10 +75,36 @@ function Personvern() {
                                 Umami
                             </Heading>
                             <p className="mb-4 leading-normal">
-                                Umami brukes til statistikk og analyse av hvordan startumami.ansatt.nav.no brukes. Unami bruker ikke informasjonskapsler, men henter inn opplysninger om nettleseren din for å lage en unik ID. Denne ID-en brukes for å skille deg fra andre brukere. For å hindre identifisering, bruker vi en egenutviklet proxy som vasker bort deler av IP-adressen din før dataene sendes til verktøyet.
+                                Umami brukes til statistikk og analyse av hvordan startumami.ansatt.Nav.no brukes. Unami bruker ikke informasjonskapsler, men henter inn opplysninger om nettleseren din for å lage en unik ID. Denne ID-en brukes for å skille deg fra andre brukere. For å hindre identifisering, bruker vi en egenutviklet proxy som vasker bort deler av IP-adressen din før dataene sendes til verktøyet.
                             </p>
                         </section>
+                    </section>
 
+                    <section>
+                        <Heading level="2" size="medium" spacing>
+                            Dine rettigheter
+                        </Heading>
+                        <p className="mb-4 leading-normal">
+                            Du har blant annet rett til innsyn i hvilke opplysninger vi har lagret om deg. Les mer her om dine rettigheter og hvordan du gjør krav på disse <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">Personvernerklæring for ansatte i Arbeids- og velferdsetaten</Link>.
+                        </p>
+                    </section>
+
+                    <section>
+                        <Heading level="2" size="medium" spacing>
+                            Personvernombudet
+                        </Heading>
+                        <p className="mb-4 leading-normal">
+                            Arbeids- og velferdsetaten har et <Link href="https://www.Nav.no/personvern" className="text-deepblue-500 underline hover:no-underline">personvernombud</Link> som skal ivareta personverninteressene, også til de ansatte. Personvernombudet kan gi råd og veiledning generelt om Navs behandling av personopplysninger og kan hjelpe deg med å ivareta dine personverninteresser.
+                        </p>
+                    </section>
+
+                    <section>
+                        <Heading level="2" size="medium" spacing>
+                            Klage til Datatilsynet
+                        </Heading>
+                        <p className="leading-normal">
+                            Du har rett til å klage til Datatilsynet hvis du ikke er fornøyd med hvordan vi behandler personopplysninger om deg, eller hvis du mener behandlingen er i strid med personvernreglene. Ta først kontakt med vårt personvernombud. Informasjon om hvordan du går frem finner du på nettsidene til <Link href="https://www.datatilsynet.no/" className="text-deepblue-500 underline hover:no-underline">Datatilsynet</Link>.
+                        </p>
                     </section>
 
                     <section>
