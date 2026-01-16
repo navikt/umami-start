@@ -202,14 +202,36 @@ const EventJourney = () => {
     // Filter data client-side
     // Filter and aggregate data client-side
     const filteredData = (() => {
-        // Step 1: Filter out excluded event types from each journey's path
+        // Step 1: Filter out excluded event types from each journey's path and remove scrollPercent
         const processed = data
             .map(journey => ({
                 ...journey,
-                path: journey.path.filter(step => {
-                    const eventName = step.split(': ')[0];
-                    return !excludedEventTypes.includes(eventName);
-                })
+                path: journey.path
+                    .filter(step => {
+                        const eventName = step.split(': ')[0];
+                        return !excludedEventTypes.includes(eventName);
+                    })
+                    .map(step => {
+                        const parts = step.split(': ');
+                        const eventName = parts[0];
+
+                        if (parts.length < 2) return step;
+
+                        const rawDetails = step.substring(eventName.length + 2);
+                        const details = rawDetails.split('||');
+
+                        const filteredDetails = details.filter(d => {
+                            const splitIndex = d.indexOf(':');
+                            if (splitIndex === -1) return true;
+
+                            const key = d.substring(0, splitIndex).trim();
+                            return key !== 'scrollPercent';
+                        });
+
+                        if (filteredDetails.length === 0) return eventName;
+
+                        return `${eventName}: ${filteredDetails.join('||')}`;
+                    })
             }))
             .filter(journey => journey.path.length > 0);
 
