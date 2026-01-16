@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 
 const LABEL_MIN_HEIGHT = "2.5rem"; // Ensures all labels take up the same vertical space
 
 const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) => {
     const [selectedPageId, setSelectedPageId] = useState(null);
     const [scoreOverview, setScoreOverview] = useState(null);
+    const [pageDetails, setPageDetails] = useState(null);
     const [error, setError] = useState(null);
     const [reportLink, setReportLink] = useState(null);
 
@@ -37,6 +39,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
         // Clear previous state when dependencies change
         setSelectedPageId(null);
         setScoreOverview(null);
+        setPageDetails(null);
         setError(null);
         setReportLink(null);
 
@@ -75,12 +78,14 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                         );
                     }
 
-                    const reportsHref = await fetchSiteimproveProxy(
+                    const details = await fetchSiteimproveProxy(
                         `/sites/${siteimproveSelectedDomain}/content/pages/${firstItemId}`
                     );
-                    if (reportsHref._siteimprove?.quality_assurance?.page_report?.href) {
+                    setPageDetails(details);
+
+                    if (details._siteimprove?.quality_assurance?.page_report?.href) {
                         setReportLink(
-                            reportsHref._siteimprove.quality_assurance.page_report.href
+                            details._siteimprove.quality_assurance.page_report.href
                         );
                     }
                 } else {
@@ -120,6 +125,14 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
             0 0 0 7.5px #111,    /* thin black inner */
             0 0 0 11px #fff      /* white background ring */
         `;
+    };
+
+    // Get color for issue counts (inverted - 0 is best)
+    const getIssueColor = (count) => {
+        if (count === 0) return '#4caf50';
+        if (count <= 10) return '#ffeb3b';
+        if (count <= 50) return '#ff9800';
+        return '#f44336';
     };
 
     return (
@@ -211,6 +224,86 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                 </div>
                             </div>
                             <hr className="my-2 border-t border-gray-300" />
+
+                            {pageDetails && pageDetails.summary && pageDetails.summary.quality_assurance && (
+                                <>
+                                    <h2 className="text-lg font-semibold mb-3 mt-4" style={{ color: '#000000' }}>
+                                        Funn fra Siteimprove
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        {/* Broken Links */}
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm h-full">
+                                            <div className="flex items-center gap-3 min-w-[200px]">
+                                                <div
+                                                    className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-base shrink-0 transition-colors"
+                                                    style={{
+                                                        color: (getIssueColor(pageDetails.summary.quality_assurance.broken_links || 0) === '#ffeb3b' || getIssueColor(pageDetails.summary.quality_assurance.broken_links || 0) === '#ff9800') ? '#1f2937' : '#ffffff',
+                                                        backgroundColor: getIssueColor(pageDetails.summary.quality_assurance.broken_links || 0)
+                                                    }}
+                                                >
+                                                    {pageDetails.summary.quality_assurance.broken_links || 0}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-base font-semibold text-gray-900">
+                                                        Ødelagte lenker
+                                                    </h3>
+                                                    {(pageDetails.summary.quality_assurance.broken_links === 0 || !pageDetails.summary.quality_assurance.broken_links) && (
+                                                        <span className="text-sm text-green-700 font-medium">Ingen — God jobbet!</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {reportLink && (pageDetails.summary.quality_assurance.broken_links || 0) > 0 && (
+                                                <a
+                                                    href={reportLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-2 sm:mt-0 inline-flex items-center text-base font-medium text-blue-700 hover:underline"
+                                                >
+                                                    Se rapport
+                                                    <ExternalLink className="ml-1 w-5 h-5" aria-hidden="true" />
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* Potential Misspellings */}
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm h-full">
+                                            <div className="flex items-center gap-3 min-w-[200px]">
+                                                <div
+                                                    className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-base shrink-0 transition-colors"
+                                                    style={{
+                                                        color: (getIssueColor(pageDetails.summary.quality_assurance.potential_misspellings || 0) === '#ffeb3b' || getIssueColor(pageDetails.summary.quality_assurance.potential_misspellings || 0) === '#ff9800') ? '#1f2937' : '#ffffff',
+                                                        backgroundColor: getIssueColor(pageDetails.summary.quality_assurance.potential_misspellings || 0)
+                                                    }}
+                                                >
+                                                    {pageDetails.summary.quality_assurance.potential_misspellings || 0}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-base font-semibold text-gray-900">
+                                                        Mulige stavefeil
+                                                    </h3>
+                                                    {(pageDetails.summary.quality_assurance.potential_misspellings === 0 || !pageDetails.summary.quality_assurance.potential_misspellings) && (
+                                                        <span className="text-sm text-green-700 font-medium">Ingen funnet!</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {reportLink && (pageDetails.summary.quality_assurance.potential_misspellings || 0) > 0 && (
+                                                <a
+                                                    href={reportLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-2 sm:mt-0 inline-flex items-center text-base font-medium text-blue-700 hover:underline"
+                                                >
+                                                    Se rapport
+                                                    <ExternalLink className="ml-1 w-5 h-5" aria-hidden="true" />
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
                             {reportLink && (
                                 <div className="bg-white pl-0 pt-2 ">
                                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
