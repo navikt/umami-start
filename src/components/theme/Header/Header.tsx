@@ -1,6 +1,5 @@
 import {
   MenuHamburgerIcon,
-  BookIcon,
   ComponentIcon,
   CogIcon,
   BarChartIcon
@@ -68,29 +67,19 @@ export default function Header() {
                 </Dropdown.Menu.List.Item>
                 <Dropdown.Menu.List.Item
                   as={Link}
-                  href="/oppsett"
-                  className="no-underline"
-                >
-                  <CogIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Oppsett</span>
-                </Dropdown.Menu.List.Item>
-                <Dropdown.Menu.List.Item
-                  as={Link}
                   href="/taksonomi"
                   className="no-underline"
                 >
                   <ComponentIcon aria-hidden fontSize="1.5rem" />
                   <span className="whitespace-nowrap">Taksonomi</span>
                 </Dropdown.Menu.List.Item>
-              </Dropdown.Menu.List>
-              <Dropdown.Menu.List>
                 <Dropdown.Menu.List.Item
                   as={Link}
-                  href="/komigang"
+                  href="/oppsett"
                   className="no-underline"
                 >
-                  <BookIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Guide</span>
+                  <CogIcon aria-hidden fontSize="1.5rem" />
+                  <span className="whitespace-nowrap">Oppsett</span>
                 </Dropdown.Menu.List.Item>
               </Dropdown.Menu.List>
             </Dropdown.Menu>
@@ -107,13 +96,6 @@ export default function Header() {
                 <span className="whitespace-nowrap">Dashboard</span>
               </Link>
               <Link
-                href="/oppsett"
-                className={linkButton}
-              >
-                <CogIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Oppsett</span>
-              </Link>
-              <Link
                 href="/taksonomi"
                 className={linkButton}
               >
@@ -121,11 +103,11 @@ export default function Header() {
                 <span className="whitespace-nowrap">Taksonomi</span>
               </Link>
               <Link
-                href="/komigang"
+                href="/oppsett"
                 className={linkButton}
               >
-                <BookIcon aria-hidden fontSize="1.5rem" />
-                <span className="whitespace-nowrap">Guide</span>
+                <CogIcon aria-hidden fontSize="1.5rem" />
+                <span className="whitespace-nowrap">Oppsett</span>
               </Link>
             </div>
           </div>
