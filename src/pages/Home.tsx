@@ -177,17 +177,18 @@ function Home() {
                 {/* Grafbygger section */}
                 <div style={{
                     border: '1px solid #ddd',
-                    marginBottom: '60px',
+                    marginTop: '32px',
+                    marginBottom: '40px',
                     padding: '40px',
-                    backgroundColor: 'rgb(230, 242, 255)',
+                    backgroundColor: 'white',
                     borderRadius: '16px',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'flex-start', // Left align
+                    alignItems: 'flex-start',
                     gap: '24px'
                 }}>
                     <div>
-                        <Heading as="h3" size="small" style={{ marginBottom: '12px', color: '#00347d' }}>
+                        <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
                             Lag tilpassede grafer og tabeller
                         </Heading>
                         <p style={{ margin: 0, color: '#444', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
@@ -212,7 +213,7 @@ function Home() {
                 marginBottom: '-60px'
             }}>
                 <Page.Block width="xl" gutters>
-                    <Heading as="h2" size="large" style={{ marginBottom: '24px' }}>
+                    <Heading as="h3" size="medium" style={{ marginBottom: '24px' }}>
                         Få hjelp med Umami
                     </Heading>
 
@@ -228,9 +229,11 @@ function Home() {
                             borderRadius: '8px',
                             border: '1px solid #ccc'
                         }}>
-                            <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
-                                Chat med oss
-                            </Heading>
+                            <Link href="https://nav-it.slack.com/archives/C02UGFS2J4B" target="_blank">
+                                <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
+                                    Chat med ResearchOps
+                                </Heading>
+                            </Link>
                             <p style={{ margin: 0, fontSize: '16px', lineHeight: '1.5' }}>
                                 Bli med i Slack-kanalen{' '}
                                 <Link href="https://nav-it.slack.com/archives/C02UGFS2J4B" target="_blank">
@@ -247,9 +250,11 @@ function Home() {
                             borderRadius: '8px',
                             border: '1px solid #ccc'
                         }}>
-                            <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
-                                Du kan også booke en samtale
-                            </Heading>
+                            <Link href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/" target="_blank">
+                                <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
+                                    Du kan også booke en samtale
+                                </Heading>
+                            </Link>
                             <p style={{ margin: 0, fontSize: '16px', lineHeight: '1.5' }}>
                                 <Link
                                     href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/"
