@@ -2,7 +2,6 @@ import { Heading, Link, Page } from "@navikt/ds-react";
 import { Link as RouterLink } from "react-router-dom";
 import { Buildings3Icon, WheelchairIcon } from "@navikt/aksel-icons";
 import Metadashboard from "../components/metadashboard.tsx";
-import Kontaktboks from "../components/kontaktboks.tsx";
 import { analyticsPages } from "../components/AnalyticsNavigation.tsx";
 
 // Section configuration for the 3-column layout
@@ -202,11 +201,68 @@ function Home() {
                         Gå til Grafbyggeren
                     </Link>
                 </div>
-
-                <div style={{ marginTop: '0px', marginBottom: '80px' }}>
-                    <Kontaktboks />
-                </div>
             </Page.Block>
+
+            {/* Full-width contact section - Home page only */}
+            <div style={{
+                width: '100%',
+                backgroundColor: 'rgb(230, 242, 255)',
+                paddingTop: '60px',
+                paddingBottom: '60px',
+                marginBottom: '-60px'
+            }}>
+                <Page.Block width="xl" gutters>
+                    <Heading as="h2" size="large" style={{ marginBottom: '24px' }}>
+                        Få hjelp med Umami
+                    </Heading>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                        gap: '24px'
+                    }}>
+                        {/* Chat med oss - Slack */}
+                        <div style={{
+                            backgroundColor: 'white',
+                            padding: '32px',
+                            borderRadius: '8px',
+                            border: '1px solid #ccc'
+                        }}>
+                            <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
+                                Chat med oss
+                            </Heading>
+                            <p style={{ margin: 0, fontSize: '16px', lineHeight: '1.5' }}>
+                                Bli med i Slack-kanalen{' '}
+                                <Link href="https://nav-it.slack.com/archives/C02UGFS2J4B" target="_blank">
+                                    #researchops
+                                </Link>
+                                {' '}for å stille spørsmål og få hjelp.
+                            </p>
+                        </div>
+
+                        {/* Book en samtale */}
+                        <div style={{
+                            backgroundColor: 'white',
+                            padding: '32px',
+                            borderRadius: '8px',
+                            border: '1px solid #ccc'
+                        }}>
+                            <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
+                                Du kan også booke en samtale
+                            </Heading>
+                            <p style={{ margin: 0, fontSize: '16px', lineHeight: '1.5' }}>
+                                <Link
+                                    href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/"
+                                    target="_blank"
+                                >
+                                    Book en prat 1:1 eller workshop
+                                </Link>
+                                {' '}med ResearchOps-teamet.
+                            </p>
+                        </div>
+                    </div>
+                </Page.Block>
+            </div>
         </>
     )
 }
