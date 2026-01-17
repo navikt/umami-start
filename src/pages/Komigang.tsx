@@ -14,21 +14,37 @@ function Komigang() {
 
             <Heading spacing={true} as="h3" size="medium"
                 style={{ marginTop: "60px", marginBottom: "30px" }}>Start med å teste Umami i dev-miljø</Heading>
-            <BodyShort style={{ marginTop: "20px" }}>
-                Bruker appen din dekoratøren på nav.no? Da kan det være dere allerede sporer data.
 
-                <List as="ul">
-                    <List.Item>
-                        <Link
-                            href={"https://github.com/navikt/nav-dekoratoren-moduler/blob/main/README.md#getanalyticsinstance"}>Dokumentasjon for sporing til dekoratøren</Link>
-                    </List.Item>
-                    <List.Item>
+            <div className="flex flex-col gap-8">
+                <div>
+                    <Heading size="xsmall" level="4" spacing>
+                        Bruker du dekoratøren?
+                    </Heading>
+                    <BodyShort spacing>
+                        Da kan det være dere allerede sporer data. Dekoratøren initialiserer Umami-script automatisk til "Nav.no - prod" og "Nav.no - dev".
+                    </BodyShort>
+                    <List as="ul" size="small">
+                        <List.Item>
+                            <strong>Cookie-samtykke:</strong> Håndteres automatisk av dekoratøren.
+                        </List.Item>
+                        <List.Item>
+                            <Link href={"https://github.com/navikt/nav-dekoratoren-moduler/blob/main/README.md#getanalyticsinstance"}>
+                                Se dokumentasjon for sporing til dekoratøren
+                            </Link>
+                        </List.Item>
+                    </List>
+                </div>
+
+                <div>
+                    <Heading size="xsmall" level="4" spacing>
+                        Bruker du ikke dekoratøren?
+                    </Heading>
+                    <BodyShort spacing>
                         Kontakt <Link target="_blank" href={"https://nav-it.slack.com/archives/C02UGFS2J4B"}>#ResearchOps på Slack</Link> for å få sporingskode til nettsiden eller appen din.
-                    </List.Item>
-                </List>
-
-            </BodyShort>
-            <BodyShort className="pt-0">
+                    </BodyShort>
+                </div>
+            </div>
+            <BodyShort spacing className="mt-8">
                 For teknisk dokumentasjon, <Link target="_blank" href={`https://umami.is/docs/tracker-configuration`}>se
                     Umami dokumentasjonssiden (engelsk)</Link>.
             </BodyShort>
@@ -87,17 +103,13 @@ function Komigang() {
                 style={{ marginTop: "60px", marginBottom: "30px" }}>Analysere</Heading>
             <List as="ul" title="Her finner du Umami-data">
                 <List.Item>
-                    <strong><Link href={"./"}>Umami Dashboard:</Link></strong> Grunnleggende dashboard med data fra
+                    <strong><Link href={"./"}>Umami Dashboard:</Link></strong> Grunnleggende analyser og dashboard med data fra
                     Umami.
                 </List.Item>
                 <List.Item>
                     <strong><Link
                         href={"https://data.ansatt.nav.no/dataproduct/236d4d8f-7904-47c0-ac2f-9a3e8d06f1ee/Umami"}>Datamarkedsplassen:</Link></strong> Mulighet
                     for å analysere i Metabase, Grafana, Knast og lignende verktøy.
-                </List.Item>
-                <List.Item>
-                    <strong><Link href={"https://github.com/navikt/reops-proxy"}>Umami API:</Link></strong> Mulighet for
-                    å få data i JSON format, og bruke dem i egne apper.
                 </List.Item>
             </List>
 
