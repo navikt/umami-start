@@ -11,7 +11,7 @@ function Oppsett() {
             </Heading>
 
             <BodyShort size="large" className="mb-8 max-w-[800px]">
-                Her finner du guider, utviklerverktøy og sporingskoder for Umami.
+                Her finner du guider, utviklerverktøy og <Link href="#sporingskoder">sporingskoder</Link> for Umami.
             </BodyShort>
 
             {/* Kom i gang CTA */}
@@ -150,7 +150,7 @@ function Oppsett() {
                 ))}
             </div>
 
-            <Heading spacing as="h2" size="medium" className="mt-12 mb-3">
+            <Heading spacing as="h2" size="medium" className="mt-12 mb-3" id="sporingskoder">
                 Sporingskoder
             </Heading>
             <BodyShort className="mb-8">
