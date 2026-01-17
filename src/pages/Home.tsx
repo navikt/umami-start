@@ -1,4 +1,6 @@
 import { Heading, Link, Page } from "@navikt/ds-react";
+import { Link as RouterLink } from "react-router-dom";
+import { Buildings3Icon, WheelchairIcon } from "@navikt/aksel-icons";
 import Metadashboard from "../components/metadashboard.tsx";
 import Kontaktboks from "../components/kontaktboks.tsx";
 import { analyticsPages } from "../components/AnalyticsNavigation.tsx";
@@ -41,7 +43,62 @@ function Home() {
             }}>
                 <Page.Block width="xl" gutters>
                     <Heading spacing={true} as="h2" size="large">Mål brukeradferd med Umami</Heading>
-                    <Metadashboard />
+                    <Metadashboard>
+                        <div style={{ marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <RouterLink
+                                to="/dashboard?visning=fylkeskontor"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    borderRadius: '999px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #ccc',
+                                    color: '#262626',
+                                    textDecoration: 'none',
+                                    fontSize: '14px'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f1f1f1';
+                                    e.currentTarget.style.textDecoration = 'underline';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'white';
+                                    e.currentTarget.style.textDecoration = 'none';
+                                }}
+                            >
+                                <Buildings3Icon aria-hidden />
+                                Nav fylkeskontor
+                            </RouterLink>
+                            <RouterLink
+                                to="/dashboard?visning=hjelpemiddelsentral"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    borderRadius: '999px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #ccc',
+                                    color: '#262626',
+                                    textDecoration: 'none',
+                                    fontSize: '14px'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f1f1f1';
+                                    e.currentTarget.style.textDecoration = 'underline';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'white';
+                                    e.currentTarget.style.textDecoration = 'none';
+                                }}
+                            >
+                                <WheelchairIcon aria-hidden />
+                                Hjelpemiddelsentralene
+                            </RouterLink>
+                        </div>
+                    </Metadashboard>
                 </Page.Block>
             </div>
 

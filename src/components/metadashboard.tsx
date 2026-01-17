@@ -11,7 +11,11 @@ interface Website {
     createdAt: string;
 }
 
-function Metadashboard() {
+interface MetadashboardProps {
+    children?: React.ReactNode;
+}
+
+function Metadashboard({ children }: MetadashboardProps) {
     const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -155,7 +159,8 @@ function Metadashboard() {
                     />
                     {alertVisible && <Alert style={{ marginTop: "20px" }} variant="warning">Denne siden har ikke fått støtte for Umami enda. Fortvil ikke — kontakt Team ResearchOps for å få lagt den til :)</Alert>}
                 </div>
-                <ReadMore style={{ marginTop: "10px" }} header="Hvilke nettsider / apper støttes?" onOpenChange={handleReadMoreToggle}>
+                {children}
+                <ReadMore size="small" style={{ marginTop: "24px" }} header="Hvilke nettsider / apper støttes?" onOpenChange={handleReadMoreToggle}>
                     {isLoading ? (
                         <List as="ul">
                             {[...Array(3)].map((_, index) => (
