@@ -6,7 +6,7 @@ import {
 } from '@navikt/ds-react';
 import Kontaktboks from '../../components/theme/Kontaktboks/Kontaktboks';
 
-const Metabase = () => {
+const MetabaseGuide = () => {
   return (
     <div className="w-full max-w-[800px] mx-auto">
       <Heading spacing level="1" size="large" className="pt-24 pb-4">
@@ -175,4 +175,4 @@ const Metabase = () => {
   );
 };
 
-export default Metabase;
+export default MetabaseGuide;

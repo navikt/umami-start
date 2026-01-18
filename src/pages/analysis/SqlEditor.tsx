@@ -32,7 +32,7 @@ const truncateJSON = (obj: any, maxChars: number = 50000): string => {
     return truncated + `\n\n... (${omittedKB} KB omitted - total size: ${(fullJSON.length / 1024).toFixed(1)} KB)\n\nJSON-utdata er begrenset til ${(maxChars / 1000).toFixed(0)}k tegn for å unngå at nettleseren krasjer.\nBruk tabellvisningen for å se alle resultater.`;
 };
 
-export default function BigQuery() {
+export default function SqlEditor() {
     // State for editor height (for resizable editor)
     const [editorHeight, setEditorHeight] = useState(400);
     // Initialize state with empty string to avoid showing default until we check URL

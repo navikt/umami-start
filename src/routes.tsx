@@ -8,9 +8,9 @@ import Tilgjengelighet from "./pages/legal/Tilgjengelighet.tsx";
 
 import Taksonomi from "./pages/articles/Taksonomi.tsx";
 import Charts from "./pages/analysis/Chartbuilder.tsx";
-import Metabase from "./pages/articles/Metabase.tsx";
+import MetabaseGuide from "./pages/articles/MetabaseGuide.tsx";
 
-import BigQuery from "./pages/analysis/BigQuery.tsx";
+import SqlEditor from "./pages/analysis/SqlEditor.tsx";
 import Grafdeling from "./pages/analysis/Grafdeling.tsx";
 import UserJourney from "./pages/analysis/UserJourney.tsx";
 import Funnel from "./pages/analysis/Funnel.tsx";
@@ -41,9 +41,9 @@ const routes = [
 
     { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> },
-    { path: "/metabase", component: <Metabase /> },
+    { path: "/metabase", component: <MetabaseGuide /> },
 
-    { path: "/sql", component: <BigQuery /> },
+    { path: "/sql", component: <SqlEditor /> },
     { path: "/grafdeling", component: <Grafdeling /> },
     { path: "/brukerreiser", component: <UserJourney /> },
     { path: "/hendelsesreiser", component: <EventJourney /> },
