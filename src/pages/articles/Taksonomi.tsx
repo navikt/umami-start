@@ -18,12 +18,12 @@ const TaksonomiPage = () => {
         Navs taksonomi for produktanalyse
       </Heading>
 
-      <BodyLong size="large" className="mb-8 text-gray-600">
+      <BodyLong size="large" className="mb-8 text-[var(--ax-text-subtle)]">
         En guide til hvordan du navngir hendelser i Umami for å sikre gode analyser.
       </BodyLong>
 
       {/* Add quick links */}
-      <Box className="mb-8 p-6 border border-border-subtle rounded-medium">
+      <Box className="mt-4 mb-8 p-6 border border-[var(--ax-border-subtle)] rounded-medium bg-[var(--ax-bg-neutral-soft)]">
         <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
         <Link href="#analytics-types">
           Type-definisjoner for analytics-hendelser (@navikt/analytics-types)
@@ -34,7 +34,7 @@ const TaksonomiPage = () => {
         <VStack gap="space-12">
           {/* Motivation Section */}
           <section>
-            <Heading level="2" size="medium" spacing className="mt-12">
+            <Heading level="2" size="medium" spacing className="mt-20 mb-8">
               Hvorfor bruke taksonomi?
             </Heading>
             <BodyLong spacing>
@@ -44,7 +44,7 @@ const TaksonomiPage = () => {
             </BodyLong>
 
             <Box
-              className="p-6 border border-border-info rounded-medium bg-surface-info-subtle"
+              className="p-6 border border-[var(--ax-border-info)] rounded-medium bg-[var(--ax-bg-info-soft)]"
             >
               <Heading size="small" level="3">
                 Dette får du med taksonomien
@@ -62,7 +62,7 @@ const TaksonomiPage = () => {
 
           {/* Event Naming Standards */}
           <section>
-            <Heading level="2" size="medium" spacing className="mt-12">
+            <Heading level="2" size="medium" spacing className="mt-20 mb-8">
               Slik navngir du hendelser
             </Heading>
             <BodyLong spacing>
@@ -70,7 +70,7 @@ const TaksonomiPage = () => {
               brukeren gjør. Tenk på hendelsesnavnet som en kort setning.
             </BodyLong>
 
-            <Box className="my-4 p-6 border border-border-subtle rounded-medium">
+            <Box className="my-4 p-6 border border-[var(--ax-border-subtle)] rounded-medium">
               <BodyLong className="font-medium">Enkelt prinsipp:</BodyLong>
               <BodyLong className="italic">Bruk vanlig norsk som alle kan forstå.</BodyLong>
             </Box>
@@ -149,7 +149,7 @@ const TaksonomiPage = () => {
 
           {/* Parameters Section */}
           <section>
-            <Heading level="2" size="medium" spacing className="mt-12">
+            <Heading level="2" size="medium" spacing className="mt-20 mb-8">
               Slik navngir du hendelsesdetaljer
             </Heading>
             <BodyLong spacing>
@@ -157,7 +157,7 @@ const TaksonomiPage = () => {
               Dette gjør det lettere å forstå nøyaktig hva som skjedde og analysere dataene senere.
             </BodyLong>
 
-            <Box className="my-4 p-6 border border-border-subtle rounded-medium">
+            <Box className="my-4 p-6 border border-[var(--ax-border-subtle)] rounded-medium">
               <BodyLong className="font-medium">Navnestruktur:</BodyLong>
               <BodyLong className="italic">Bruk to eller flere ord der første ordet starter med liten bokstav og de neste med stor.</BodyLong>
               <BodyLong className="mt-2">For eksempel: <code>appNavn</code>, <code>skjemaType</code>, <code>tekst</code></BodyLong>
@@ -230,7 +230,7 @@ const TaksonomiPage = () => {
 
           {/* Analytics Types Package Section */}
           <section id="analytics-types">
-            <Heading level="2" size="medium" spacing className="mt-12">
+            <Heading level="2" size="medium" spacing className="mt-20 mb-8">
               Type-definisjoner for analytics-hendelser
             </Heading>
             <BodyLong spacing>
@@ -238,10 +238,10 @@ const TaksonomiPage = () => {
             </BodyLong>
 
             <Box
-              className="p-6 border border-border-info rounded-medium bg-surface-info-subtle"
+              className="p-6 border border-[var(--ax-border-info)] rounded-medium bg-[var(--ax-bg-info-soft)]"
             >
               <Heading size="small" level="3" spacing>
-                <Link href="https://github.com/navikt/analytics-types" target="_blank" className="text-text-default hover:underline">
+                <Link href="https://github.com/navikt/analytics-types" target="_blank" className="text-[var(--ax-text-default)] hover:underline">
                   @navikt/analytics-types
                 </Link>
               </Heading>
@@ -260,13 +260,13 @@ const TaksonomiPage = () => {
               <BodyLong className="mb-2">
                 <strong>Installer pakken:</strong>
               </BodyLong>
-              <Box className="bg-gray-50 flex items-center justify-between p-6 border border-border-subtle rounded-medium">
+              <Box className="bg-[var(--ax-bg-neutral-soft)] flex items-center justify-between p-6 border border-[var(--ax-border-subtle)] rounded-medium">
                 <code className="text-sm">npm install @navikt/analytics-types</code>
                 <CopyButton copyText="npm install @navikt/analytics-types" size="small" />
               </Box>
             </Box>
 
-            <Box className="my-6 p-6 border border-border-subtle rounded-medium">
+            <Box className="my-6 p-6 border border-[var(--ax-border-subtle)] rounded-medium">
               <Heading size="xsmall" level="3" spacing>
                 Eksempel på bruk
               </Heading>
@@ -294,7 +294,7 @@ analytics(Events.NAVIGERE, properties);`}
 
           {/* Implementation in Umami */}
           <section>
-            <Heading level="2" size="medium" spacing className="mt-12">
+            <Heading level="2" size="medium" spacing className="mt-20 mb-8">
               Implementer i koden
             </Heading>
             <BodyLong spacing>
@@ -302,7 +302,7 @@ analytics(Events.NAVIGERE, properties);`}
               Her er et eksempel på hvordan du kan spore hendelser i tråd med taksonomien:
             </BodyLong>
 
-            <Box className="my-4 bg-gray-50 p-6 border border-border-subtle rounded-medium">
+            <Box className="my-4 bg-[var(--ax-bg-neutral-soft)] p-6 border border-[var(--ax-border-subtle)] rounded-medium">
               <pre className="text-base whitespace-pre-wrap">
                 {`// Når en bruker klikker på en lenke
 function handleLenkeKlikk() {
@@ -326,7 +326,7 @@ function handleSkjemaSendt() {
 
           {/* Verification section */}
           <section>
-            <Heading level="2" size="medium" spacing className="mt-12">
+            <Heading level="2" size="medium" spacing className="mt-20 mb-8">
               Test og verifiser
             </Heading>
             <BodyLong spacing>

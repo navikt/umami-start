@@ -8,23 +8,23 @@ function Personvern() {
                 Personvern
             </Heading>
 
-            <p className="text-gray-600 mb-8 text-xl leading-relaxed">
-                Slik håndterer vi personvern og sikkerhet på <Link href="https://startumami.ansatt.nav.no" className="text-deepblue-500 underline hover:no-underline">startumami.ansatt.nav.no</Link>
+            <p className="text-[var(--ax-text-subtle)] mb-8 text-xl leading-relaxed">
+                Slik håndterer vi personvern og sikkerhet på <Link href="https://startumami.ansatt.nav.no" className="underline hover:no-underline">startumami.ansatt.nav.no</Link>
             </p>
 
             <div className="prose max-w-full prose-lg">
                 <VStack gap="space-12">
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Hva er Start Umami
                         </Heading>
                         <p className="mb-4 leading-normal">
-                            Start Umami er en nettside for Nav Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan Nav behandler ansattes personopplysninger, kan du lese mer her: <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">Ansattes personvern</Link>
+                            Start Umami er en nettside for Nav Arbeids- og velferdsdirektoratet. Denne personvernerklæringen er knyttet til behandlingen av personopplysninger på dette nettstedet. For utfyllende informasjon om hvordan Nav behandler ansattes personopplysninger, kan du lese mer her: <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="underline hover:no-underline">Ansattes personvern</Link>
                         </p>
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Formålet med audit loggingen
                         </Heading>
                         <p className="mb-4 leading-normal">
@@ -42,7 +42,7 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Bruk av informasjonskapsler (cookies)
                         </Heading>
                         <p className="mb-4 leading-normal">Når du besøker nettsiden bruker vi informasjonskapsler (cookies).</p>
@@ -81,34 +81,34 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Dine rettigheter
                         </Heading>
                         <p className="mb-4 leading-normal">
-                            Du har blant annet rett til innsyn i hvilke opplysninger vi har lagret om deg. Les mer her om dine rettigheter og hvordan du gjør krav på disse <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="text-deepblue-500 underline hover:no-underline">Personvernerklæring for ansatte i Arbeids- og velferdsetaten</Link>.
+                            Du har blant annet rett til innsyn i hvilke opplysninger vi har lagret om deg. Les mer her om dine rettigheter og hvordan du gjør krav på disse <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="underline hover:no-underline">Personvernerklæring for ansatte i Arbeids- og velferdsetaten</Link>.
                         </p>
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Personvernombudet
                         </Heading>
                         <p className="mb-4 leading-normal">
-                            Arbeids- og velferdsetaten har et <Link href="https://www.Nav.no/personvern" className="text-deepblue-500 underline hover:no-underline">personvernombud</Link> som skal ivareta personverninteressene, også til de ansatte. Personvernombudet kan gi råd og veiledning generelt om Navs behandling av personopplysninger og kan hjelpe deg med å ivareta dine personverninteresser.
+                            Arbeids- og velferdsetaten har et <Link href="https://www.Nav.no/personvern" className="underline hover:no-underline">personvernombud</Link> som skal ivareta personverninteressene, også til de ansatte. Personvernombudet kan gi råd og veiledning generelt om Navs behandling av personopplysninger og kan hjelpe deg med å ivareta dine personverninteresser.
                         </p>
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Klage til Datatilsynet
                         </Heading>
                         <p className="leading-normal">
-                            Du har rett til å klage til Datatilsynet hvis du ikke er fornøyd med hvordan vi behandler personopplysninger om deg, eller hvis du mener behandlingen er i strid med personvernreglene. Ta først kontakt med vårt personvernombud. Informasjon om hvordan du går frem finner du på nettsidene til <Link href="https://www.datatilsynet.no/" className="text-deepblue-500 underline hover:no-underline">Datatilsynet</Link>.
+                            Du har rett til å klage til Datatilsynet hvis du ikke er fornøyd med hvordan vi behandler personopplysninger om deg, eller hvis du mener behandlingen er i strid med personvernreglene. Ta først kontakt med vårt personvernombud. Informasjon om hvordan du går frem finner du på nettsidene til <Link href="https://www.datatilsynet.no/" className="underline hover:no-underline">Datatilsynet</Link>.
                         </p>
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing className="mt-12">
+                        <Heading level="2" size="medium" spacing className="mt-16">
                             Feil, mangler og forbedringsforslag
                         </Heading>
                         <p className="leading-normal">Hvis du opplever problemer eller har forslag til forbedringer hører vi veldig gjerne fra deg! Feil og mangler kan rapporteres til <a className="underline" href="mailto:eilif.johansen@nav.no">eilif.johansen@nav.no</a>, eller <a className="underline" href="https://nav-it.slack.com/archives/C02UGFS2J4B">#researchops</a> på Slack.</p>

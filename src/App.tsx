@@ -1,4 +1,5 @@
-import { Page } from "@navikt/ds-react";
+import { Page, Theme } from "@navikt/ds-react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -42,6 +43,24 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const storedTheme = localStorage.getItem("umami-theme") as "light" | "dark" | null;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return storedTheme || (prefersDark ? "dark" : "light");
+  });
+
+  useEffect(() => {
+    // Listen for theme changes from ThemeButton
+    const handleThemeChange = (event: CustomEvent<"light" | "dark">) => {
+      setTheme(event.detail);
+    };
+
+    window.addEventListener("themeChange", handleThemeChange as EventListener);
+    return () => {
+      window.removeEventListener("themeChange", handleThemeChange as EventListener);
+    };
+  }, []);
+
   useHead({
     script: [
       {
@@ -66,9 +85,9 @@ function App() {
   });
 
   return (
-    <>
+    <Theme theme={theme}>
       <Page>
-        <Header />
+        <Header theme={theme} />
         <Router>
           <PageLayout>
             <Routes>
@@ -81,7 +100,7 @@ function App() {
         </Router>
       </Page>
       <Footer />
-    </>
+    </Theme>
   );
 }
 

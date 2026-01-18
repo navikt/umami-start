@@ -98,7 +98,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                 <div className="p-2 pb-4 flex flex-col gap-6 text-left">
                     <div>
                         <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
-                            <div className="text-sm font-medium text-gray-700">
+                            <div className="text-sm font-medium text-[var(--ax-text-subtle)]">
                                 URL-sti
                             </div>
                             <div className="flex gap-1 self-end sm:self-auto">
@@ -120,7 +120,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                 </Button>
                             </div>
                         </div>
-                        <div className="text-sm font-mono bg-gray-50 p-3 rounded-md border border-gray-200 break-all text-gray-800">
+                        <div className="text-sm font-mono bg-[var(--ax-bg-neutral-soft)] p-3 rounded-md border border-[var(--ax-border-neutral-subtle)] break-all text-[var(--ax-text-default)]">
                             {urlPath}
                         </div>
                     </div>
@@ -128,7 +128,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Column 1: Trafikk & Hendelser */}
                         <div className="flex flex-col gap-2">
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                 Trafikk & Hendelser
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
@@ -144,7 +144,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
 
                         {/* Column 2: Brukere & lojalitet */}
                         <div className="flex flex-col gap-2">
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                 Brukere & lojalitet
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
@@ -161,7 +161,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
 
                     {/* Bottom row: Brukerreiser - 2 items side by side */}
                     <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-2">
                             Brukerreiser
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

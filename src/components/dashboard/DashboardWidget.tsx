@@ -379,8 +379,8 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     if (chart.type === 'title') {
         return (
             <div className={`pt-2 ${colClass}`}>
-                <h2 className="text-2xl font-bold text-gray-800">{chart.title}</h2>
-                {chart.description && <p className="text-gray-600 mt-1">{chart.description}</p>}
+                <h2 className="text-2xl font-bold text-[var(--ax-text-default)]">{chart.title}</h2>
+                {chart.description && <p className="text-[var(--ax-text-subtle)] mt-1">{chart.description}</p>}
             </div>
         );
     }
@@ -388,7 +388,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     const renderContent = () => {
         if (loading) return <div className="flex justify-center p-8"><Loader /></div>;
         if (error) return <Alert variant="error">{error}</Alert>;
-        if (!data || data.length === 0) return <div className="text-gray-500 p-8 text-center">Ingen data funnet</div>;
+        if (!data || data.length === 0) return <div className="text-[var(--ax-text-subtle)] p-8 text-center">Ingen data funnet</div>;
 
         if (chart.type === 'line') {
             const points: ILineChartDataPoint[] = data.map((row: any) => {
@@ -417,6 +417,15 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                             data={{ lineChartData: lines }}
                             yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
                             margins={{ left: 60, right: 20, top: 20, bottom: 40 }}
+                            styles={{
+                                xAxis: { text: { fill: 'var(--ax-text-subtle)' } },
+                                yAxis: { text: { fill: 'var(--ax-text-subtle)' } },
+                            }}
+                            legendProps={{
+                                styles: {
+                                    text: { color: 'var(--ax-text-subtle)' },
+                                },
+                            }}
                         />
                     </ResponsiveContainer>
                 </div>
@@ -497,11 +506,11 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
 
     return (
         <>
-            <div className={`bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[400px] ${colClass}`}>
+            <div className={`bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
                 <div className="flex flex-col mb-6">
                     <h2 className="text-xl font-semibold">{chart.title}</h2>
                     {chart.description && (
-                        <p className="text-gray-600 text-sm mt-1">{chart.description}</p>
+                        <p className="text-[var(--ax-text-subtle)] text-sm mt-1">{chart.description}</p>
                     )}
                 </div>
                 {renderContent()}

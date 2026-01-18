@@ -7,8 +7,13 @@ import {
 import { Button, Dropdown, Link } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
 import '../../../tailwind.css';
+import { ThemeButton } from '../ThemeButton/ThemeButton';
 
-export default function Header() {
+interface HeaderProps {
+  theme: "light" | "dark";
+}
+
+export default function Header({ theme }: HeaderProps) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const handleResize = () => {
@@ -22,11 +27,11 @@ export default function Header() {
   }, []);
 
   const linkButton =
-    "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !text-white hover:!text-white !font-normal";
+    "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " + (theme === "dark" ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]" : "!text-white hover:!text-white");
   return (
-    <div style={{ background: "rgba(19,17,54)" }}>
-      <header className="flex py-1 z-10 items-center max-w-[76.5rem] m-auto justify-between">
-        <div className="flex items-stretch">
+    <div style={{ background: theme === "dark" ? "var(--ax-bg-default)" : "rgba(19,17,54)" }} className="border-b border-[var(--ax-border-neutral-subtle)]">
+      <header className="flex py-1 z-10 items-center max-w-[76.5rem] m-auto justify-between px-4">
+        <div className="flex items-center gap-4">
           <Button as={Link} variant="tertiary" className={linkButton} href="/" aria-label="Start Umami">
             <div className="flex items-center gap-2">
               <svg
@@ -46,7 +51,7 @@ export default function Header() {
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className="text-2xl whitespace-nowrap text-white">
+              <span className={`text-2xl whitespace-nowrap ${theme === "dark" ? "text-[var(--ax-text-default)]" : "text-white"}`}>
                 Umami
               </span>
             </div>
@@ -123,6 +128,7 @@ export default function Header() {
                   <span className="whitespace-nowrap">Oppsett</span>
                 </div>
               </Button>
+              <ThemeButton />
             </div>
           </div>
         )}

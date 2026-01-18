@@ -7,7 +7,7 @@ function Komigang() {
                 Kom i gang: Mål brukeradferd med Umami
             </Heading>
 
-            <p className="text-gray-600 mb-6 text-xl leading-relaxed">
+            <p className="text-[var(--ax-text-subtle)] mb-6 text-xl leading-relaxed">
                 En guide for å komme i gang med måling av brukeratferd i Nav.
             </p>
 

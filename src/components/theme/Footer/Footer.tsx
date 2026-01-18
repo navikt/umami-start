@@ -53,7 +53,7 @@ function LogoBlock() {
 function Snarveier() {
     return (
         <div>
-            <Heading level="2" size="xsmall" className="!text-white">
+            <Heading level="2" size="xsmall" className="!text-white" spacing>
                 Juridisk
             </Heading>
             <BodyShort as="ul" className="mt-3 grid gap-3">
@@ -71,7 +71,7 @@ function Snarveier() {
 function SideLenker() {
     return (
         <div>
-            <Heading level="2" size="xsmall" className="!text-white">
+            <Heading level="2" size="xsmall" className="!text-white" spacing>
                 Erklæringer
             </Heading>
             <BodyShort as="ul" className="mt-3 grid gap-3">
@@ -89,7 +89,7 @@ function SideLenker() {
 function Kontakt() {
     return (
         <div>
-            <Heading level="2" size="xsmall" className="!text-white">
+            <Heading level="2" size="xsmall" className="!text-white" spacing>
                 Finn oss
             </Heading>
             <BodyShort as="ul" className="mt-3 grid gap-3">

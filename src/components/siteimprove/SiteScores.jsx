@@ -138,10 +138,10 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
     return (
         <>
             {scoreOverview && (
-                <div className={`p-2 w-full bg-white border border-gray-200 rounded-lg shadow-sm mb-2 ${className || ''}`}>
+                <div className={`p-2 w-full bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-lg shadow-sm mb-2 ${className || ''}`}>
                     <div className="w-full">
-                        <div className="mt-1 bg-white p-2 rounded-lg">
-                            <h2 className="text-lg font-semibold mb-1" style={{ color: '#000000' }}>
+                        <div className="mt-1 bg-[var(--ax-bg-default)] p-2 rounded-lg">
+                            <h2 className="text-lg font-semibold mb-1 text-[var(--ax-text-default)]">
                                 Poengsum (av 100) fra Siteimprove
                             </h2>
                             <hr className="my-4 border-t border-gray-300" />
@@ -149,7 +149,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                 {/* QA */}
                                 <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
                                     <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
+                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.qa.total),
                                             color: '#111',
@@ -168,7 +168,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                 {/* A11y */}
                                 <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
                                     <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
+                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.a11y.total),
                                             color: '#111',
@@ -187,7 +187,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                 {/* SEO */}
                                 <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
                                     <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
+                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.seo.total),
                                             color: '#111',
@@ -206,7 +206,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                 {/* Total */}
                                 <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
                                     <div
-                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-white"
+                                        className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.total),
                                             color: '#111',
@@ -227,12 +227,12 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
 
                             {pageDetails && pageDetails.summary && pageDetails.summary.quality_assurance && (
                                 <>
-                                    <h2 className="text-lg font-semibold mb-3 mt-4" style={{ color: '#000000' }}>
+                                    <h2 className="text-lg font-semibold mb-3 mt-4 text-[var(--ax-text-default)]">
                                         Funn fra Siteimprove
                                     </h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                         {/* Broken Links */}
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm h-full">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-lg p-4 shadow-sm h-full">
                                             <div className="flex items-center gap-3 min-w-[200px]">
                                                 <div
                                                     className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-base shrink-0 transition-colors"
@@ -244,7 +244,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                                     {pageDetails.summary.quality_assurance.broken_links || 0}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <h3 className="text-base font-semibold text-gray-900">
+                                                    <h3 className="text-base font-semibold text-[var(--ax-text-default)]">
                                                         Ødelagte lenker
                                                     </h3>
                                                     {(pageDetails.summary.quality_assurance.broken_links === 0 || !pageDetails.summary.quality_assurance.broken_links) && (
@@ -267,7 +267,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                         </div>
 
                                         {/* Potential Misspellings */}
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm h-full">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded-lg p-4 shadow-sm h-full">
                                             <div className="flex items-center gap-3 min-w-[200px]">
                                                 <div
                                                     className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-base shrink-0 transition-colors"
@@ -279,7 +279,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                                     {pageDetails.summary.quality_assurance.potential_misspellings || 0}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <h3 className="text-base font-semibold text-gray-900">
+                                                    <h3 className="text-base font-semibold text-[var(--ax-text-default)]">
                                                         Mulige stavefeil
                                                     </h3>
                                                     {(pageDetails.summary.quality_assurance.potential_misspellings === 0 || !pageDetails.summary.quality_assurance.potential_misspellings) && (
@@ -305,7 +305,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                             )}
 
                             {reportLink && (
-                                <div className="bg-white pl-0 pt-2 ">
+                                <div className="bg-[var(--ax-bg-default)] pl-0 pt-2 ">
                                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                         <a
                                             href={reportLink}

@@ -85,16 +85,16 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                 <Heading level="1" size="xlarge" className="mb-2">
                     {title}
                 </Heading>
-                <BodyShort className="text-gray-700">
+                <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
                     {description}
                 </BodyShort>
             </div>
 
-            <div className="rounded-lg shadow-sm border border-gray-200 mb-8 bg-white">
+            <div className="rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)]">
                 <div className="flex flex-col md:flex-row min-h-[600px] relative">
                     {isSidebarOpen && (
                         <>
-                            <div className={`bg-[#fafafa] w-full ${sidebarWidth} p-6 border-b border-gray-200 md:border-0 md:shadow-[inset_-1px_0_0_#e5e7eb]`}>
+                            <div className={`bg-[var(--ax-bg-neutral-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
                                 <div className="space-y-4">
                                     <div className="pb-2">
                                         <Select
@@ -139,7 +139,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                                 title="Minimer filter"
                                 aria-label="Minimer filter"
                             >
-                                <ChevronLeft size={16} className="text-blue-700" aria-hidden />
+                                <ChevronLeft size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
                             </button>
                         </>
                     )}
@@ -147,11 +147,11 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                         /* Expand button on left edge - hidden on mobile */
                         <button
                             onClick={() => setIsSidebarOpen(true)}
-                            className="hidden md:flex absolute top-3 left-0 -translate-x-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10"
+                            className="hidden md:flex absolute top-3 left-0 -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] transition-colors z-10"
                             title="Vis filter"
                             aria-label="Vis filter"
                         >
-                            <ChevronRight size={16} className="text-blue-700" aria-hidden />
+                            <ChevronRight size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
                         </button>
                     )}
                     <div className={`w-full ${isSidebarOpen ? contentWidth : ''} p-6`}>

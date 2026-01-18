@@ -8,7 +8,7 @@ function Accessibility() {
                 Tilgjengelighetserklæring
             </Heading>
 
-            <p className="text-gray-600 mb-8 text-xl leading-relaxed">
+            <p className="text-[var(--ax-text-default)] mb-8 text-xl leading-relaxed">
                 Start Umami skal være tilgjengelig for alle.
             </p>
 

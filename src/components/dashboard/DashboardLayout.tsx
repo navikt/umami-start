@@ -25,20 +25,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         {title}
                     </Heading>
                     {subtitle && (
-                        <Heading level="2" size="medium" className="text-gray-600 font-normal">
+                        <Heading level="2" size="medium" className="text-[var(--ax-text-subtle)] font-normal">
                             {subtitle}
                         </Heading>
                     )}
                 </div>
                 {description && (
-                    <BodyShort size="medium" className="mt-4 text-gray-700 max-w-3xl">
+                    <BodyShort size="medium" className="mt-4 text-[var(--ax-text-subtle)] max-w-3xl">
                         {description}
                     </BodyShort>
                 )}
             </div>
 
             {filters && (
-                <div className="flex flex-wrap items-end gap-4 p-4 mb-8 bg-[#fafafa] rounded-lg border border-gray-200 shadow-sm transition-all">
+                <div className="flex flex-wrap items-end gap-4 p-4 mb-8 bg-[var(--ax-bg-neutral-soft)] rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm transition-all">
                     {filters}
                 </div>
             )}

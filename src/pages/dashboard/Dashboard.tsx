@@ -430,7 +430,7 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 mb-1">
                         <Label size="small" htmlFor="url-filter">URL-sti</Label>
                         <select
-                            className="text-sm bg-white border border-gray-300 rounded text-[#0067c5] font-medium cursor-pointer focus:outline-none py-1 px-2"
+                            className="text-sm bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded text-[var(--ax-text-accent)] font-medium cursor-pointer focus:outline-none py-1 px-2"
                             value={tempPathOperator}
                             onChange={(e) => setTempPathOperator(e.target.value)}
                         >
@@ -669,12 +669,12 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
                     {showLowNumberNudge && !nudgeDismissed && (
                         <div className="col-span-full">
-                            <p className="text-sm bg-blue-50 text-gray-700 px-4 py-2 rounded-md inline-flex items-center gap-3">
+                            <p className="text-sm bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-default)] px-4 py-2 rounded-md inline-flex items-center gap-3">
                                 <span>
                                     <strong>Få treff?</strong>{' '}
                                     <button
                                         type="button"
-                                        className="text-blue-700 underline hover:no-underline font-medium"
+                                        className="text-[var(--ax-text-accent)] underline hover:no-underline font-medium"
                                         onClick={() => {
                                             setTempPathOperator('starts-with');
                                             handleUpdate('starts-with');
@@ -686,7 +686,7 @@ const Dashboard = () => {
                                 </span>
                                 <button
                                     type="button"
-                                    className="text-gray-500 hover:text-gray-700 text-lg leading-none"
+                                    className="text-[var(--ax-text-subtle)] hover:text-[var(--ax-text-default)] text-lg leading-none"
                                     onClick={() => setNudgeDismissed(true)}
                                     aria-label="Lukk"
                                 >
@@ -725,7 +725,7 @@ const Dashboard = () => {
                             <div className="col-span-full mt-5">
                                 <div>
                                     <ReadMore header={`${Math.round(totalGb)} GB prosessert`} size="small">
-                                        <div className="text-sm text-gray-600">
+                                        <div className="text-sm text-[var(--ax-text-subtle)]">
                                             {/* Individual queries */}
                                             {individualChartStats.length > 0 && (
                                                 <ul className="list-disc pl-5 mb-3">

@@ -28,24 +28,24 @@
 .primary-button {
   display: inline-block;
   padding: 14px 32px;
-  background-color: #0067C5;
-  color: white;
+  background-color: var(--ax-bg-accent-strong);
+  color: var(--ax-text-contrast);
   border-radius: 50px;
   text-decoration: none;
   font-weight: 600;
   font-size: 16px;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 103, 197, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .primary-button:hover {
-  background-color: #0056b4;
+  background-color: var(--ax-bg-accent-strong-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 103, 197, 0.3);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .primary-button:focus {
-  outline: 3px solid #0067C5;
+  outline: 3px solid var(--ax-border-accent);
   outline-offset: 3px;
 }
 
@@ -54,7 +54,27 @@
 }
 
 .primary-button:focus-visible {
-  outline: 3px solid #0067C5;
+  outline: 3px solid var(--ax-border-accent);
   outline-offset: 3px;
-  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #0067C5;
+  box-shadow: 0 0 0 3px var(--ax-bg-default), 0 0 0 6px var(--ax-border-accent);
+}
+
+/* FluentUI Chart dark mode support */
+.dark [class*="axis"] text,
+.dark [class*="xAxis"] text,
+.dark [class*="yAxis"] text,
+.dark .ms-LineChart text,
+.dark .ms-Chart text {
+  fill: var(--ax-text-subtle) !important;
+}
+
+/* FluentUI Legend text */
+.dark [class*="legend"] text,
+.dark [class*="Legend"] span,
+.dark [class*="legend"] span,
+.dark [class*="Legend"] button,
+.dark [class*="legend"] button,
+.dark [class*="legendContainer"] span,
+.dark [class*="legendContainer"] button {
+  color: var(--ax-text-subtle) !important;
 }

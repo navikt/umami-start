@@ -9,22 +9,22 @@ const sections = [
     {
         title: "Trafikk & hendelser",
         description: "Forstå hva som påvirker trafikken",
-        bgColor: "#fff",
-        accentColor: "#0067C5",
+        bgColor: "var(--ax-bg-default)",
+        accentColor: "var(--ax-bg-accent-moderate)",
         ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
     },
     {
         title: "Brukerreiser",
         description: "Se hvordan besøkende navigerer",
-        bgColor: "#fff",
-        accentColor: "#0067C5",
+        bgColor: "var(--ax-bg-default)",
+        accentColor: "var(--ax-bg-accent-moderate)",
         ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
     },
     {
         title: "Brukere & lojalitet",
         description: "Forstå hvem de besøkende er",
-        bgColor: "#fff",
-        accentColor: "#0067C5",
+        bgColor: "var(--ax-bg-default)",
+        accentColor: "var(--ax-bg-accent-moderate)",
         ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
     }
 ];
@@ -33,10 +33,11 @@ function Home() {
     return (
         <>
             {/* Hero section */}
+            {/* Hero section */}
             <div style={{
                 width: "100%",
-                backgroundColor: "rgb(230, 242, 255)",
-                color: "rgb(19, 17, 54)",
+                backgroundColor: "var(--ax-bg-accent-soft)",
+                color: "var(--ax-text-default)",
                 paddingTop: "70px",
                 paddingBottom: "70px",
             }}>
@@ -52,18 +53,18 @@ function Home() {
                                     gap: '6px',
                                     padding: '6px 12px',
                                     borderRadius: '999px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #ccc',
-                                    color: '#262626',
+                                    backgroundColor: 'var(--ax-bg-default)',
+                                    border: '1px solid var(--ax-border-neutral-subtle)',
+                                    color: 'var(--ax-text-default)',
                                     textDecoration: 'none',
                                     fontSize: '14px'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f1f1f1';
+                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
                                     e.currentTarget.style.textDecoration = 'underline';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'white';
+                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
                                     e.currentTarget.style.textDecoration = 'none';
                                 }}
                             >
@@ -78,18 +79,18 @@ function Home() {
                                     gap: '6px',
                                     padding: '6px 12px',
                                     borderRadius: '999px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #ccc',
-                                    color: '#262626',
+                                    backgroundColor: 'var(--ax-bg-default)',
+                                    border: '1px solid var(--ax-border-neutral-subtle)',
+                                    color: 'var(--ax-text-default)',
                                     textDecoration: 'none',
                                     fontSize: '14px'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f1f1f1';
+                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
                                     e.currentTarget.style.textDecoration = 'underline';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'white';
+                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
                                     e.currentTarget.style.textDecoration = 'none';
                                 }}
                             >
@@ -122,7 +123,7 @@ function Home() {
                                 borderRadius: '12px',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                border: `1px solid #ccc`, // Stronger border for visibility
+                                border: `1px solid var(--ax-border-neutral-subtle)`,
                             }}
                         >
                             <div style={{
@@ -130,10 +131,10 @@ function Home() {
                                 paddingLeft: '16px',
                                 marginBottom: '24px'
                             }}>
-                                <Heading as="h3" size="small" style={{ color: '#1a1a1a', marginBottom: '4px' }}>
+                                <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
                                     {section.title}
                                 </Heading>
-                                <p style={{ fontSize: '16px', color: '#444', margin: 0 }}>{section.description}</p>
+                                <p style={{ fontSize: '16px', color: 'var(--ax-text-subtle)', margin: 0 }}>{section.description}</p>
                             </div>
 
                             <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -148,21 +149,21 @@ function Home() {
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
                                                 padding: '16px 20px',
-                                                backgroundColor: 'white',
+                                                backgroundColor: 'var(--ax-bg-default)',
                                                 borderRadius: '8px',
                                                 textDecoration: 'none',
-                                                color: '#262626',
-                                                border: '1px solid #ddd', // Border for buttons
+                                                color: 'var(--ax-text-default)',
+                                                border: '1px solid var(--ax-border-neutral-subtle)', // Border for buttons
                                                 transition: 'all 0.2s ease',
                                                 fontWeight: 500
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.borderColor = '#999';
-                                                e.currentTarget.style.backgroundColor = '#f8f8f8';
+                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
+                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.borderColor = '#ddd';
-                                                e.currentTarget.style.backgroundColor = 'white';
+                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
+                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
                                             }}
                                         >
                                             <span>{page.label}</span>
@@ -176,11 +177,11 @@ function Home() {
 
                 {/* Grafbygger section */}
                 <div style={{
-                    border: '1px solid #ddd',
+                    border: '1px solid var(--ax-border-neutral-subtle)',
                     marginTop: '32px',
                     marginBottom: '40px',
                     padding: '40px',
-                    backgroundColor: 'white',
+                    backgroundColor: 'var(--ax-bg-default)',
                     borderRadius: '16px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -191,7 +192,7 @@ function Home() {
                         <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
                             Lag tilpassede grafer og tabeller
                         </Heading>
-                        <p style={{ margin: 0, color: '#444', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
+                        <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
                             Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
                         </p>
                     </div>
@@ -207,7 +208,7 @@ function Home() {
             {/* Full-width contact section - Home page only */}
             <div style={{
                 width: '100%',
-                backgroundColor: 'rgb(230, 242, 255)',
+                backgroundColor: 'var(--ax-bg-accent-soft)',
                 paddingTop: '60px',
                 paddingBottom: '60px',
                 marginBottom: '-60px'
@@ -224,13 +225,13 @@ function Home() {
                     }}>
                         {/* Chat med oss - Slack */}
                         <div style={{
-                            backgroundColor: 'white',
+                            backgroundColor: 'var(--ax-bg-default)',
                             padding: '32px',
                             borderRadius: '8px',
-                            border: '1px solid #ccc'
+                            border: '1px solid var(--ax-border-neutral-subtle)'
                         }}>
                             <Link href="https://nav-it.slack.com/archives/C02UGFS2J4B" target="_blank">
-                                <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
+                                <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
                                     Chat med ResearchOps
                                 </Heading>
                             </Link>
@@ -245,13 +246,13 @@ function Home() {
 
                         {/* Book en samtale */}
                         <div style={{
-                            backgroundColor: 'white',
+                            backgroundColor: 'var(--ax-bg-default)',
                             padding: '32px',
                             borderRadius: '8px',
-                            border: '1px solid #ccc'
+                            border: '1px solid var(--ax-border-neutral-subtle)'
                         }}>
                             <Link href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/" target="_blank">
-                                <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: '#0067C5' }}>
+                                <Heading as="h3" size="medium" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
                                     Du kan også booke en samtale
                                 </Heading>
                             </Link>

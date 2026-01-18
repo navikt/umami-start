@@ -16,10 +16,11 @@ function Oppsett() {
 
             {/* Kom i gang CTA */}
             <div style={{
-                border: '1px solid #ddd',
+                marginTop: '48px',
+                border: '1px solid var(--ax-border-subtle)',
                 marginBottom: '48px',
                 padding: '40px',
-                backgroundColor: 'rgb(230, 242, 255)',
+                backgroundColor: 'var(--ax-bg-accent-soft)',
                 borderRadius: '16px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -27,10 +28,10 @@ function Oppsett() {
                 gap: '24px'
             }}>
                 <div>
-                    <Heading as="h3" size="small" style={{ marginBottom: '12px', color: '#00347d' }}>
+                    <Heading as="h3" size="small" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
                         Kom i gang med Umami
                     </Heading>
-                    <p style={{ margin: 0, color: '#444', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
+                    <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
                         Følg kom-i-gang-guiden for å lære hvordan du setter opp Umami for din nettside eller app.
                     </p>
                 </div>
@@ -39,8 +40,8 @@ function Oppsett() {
                     style={{
                         display: 'inline-block',
                         padding: '14px 32px',
-                        backgroundColor: '#0067C5',
-                        color: 'white',
+                        backgroundColor: 'var(--ax-bg-accent-strong)',
+                        color: 'var(--ax-text-contrast)',
                         borderRadius: '50px',
                         textDecoration: 'none',
                         fontWeight: 600,
@@ -49,12 +50,12 @@ function Oppsett() {
                         boxShadow: '0 2px 4px rgba(0, 103, 197, 0.2)'
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0056b4';
+                        e.currentTarget.style.backgroundColor = 'var(--ax-bg-accent-strong-hover)';
                         e.currentTarget.style.transform = 'translateY(-1px)';
                         e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 103, 197, 0.3)';
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0067C5';
+                        e.currentTarget.style.backgroundColor = 'var(--ax-bg-accent-strong)';
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 103, 197, 0.2)';
                     }}
@@ -94,20 +95,20 @@ function Oppsett() {
                     <div
                         key={section.title}
                         style={{
-                            backgroundColor: '#fff',
+                            backgroundColor: 'var(--ax-bg-default)',
                             padding: '32px',
                             borderRadius: '12px',
                             display: 'flex',
                             flexDirection: 'column',
-                            border: `1px solid #ccc`,
+                            border: `1px solid var(--ax-border-subtle)`,
                         }}
                     >
                         <div style={{
-                            borderLeft: `4px solid #0067C5`,
+                            borderLeft: `4px solid var(--ax-bg-accent-strong)`,
                             paddingLeft: '16px',
                             marginBottom: '24px'
                         }}>
-                            <Heading as="h3" size="small" style={{ color: '#1a1a1a', marginBottom: '4px' }}>
+                            <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
                                 {section.title}
                             </Heading>
                         </div>
@@ -124,25 +125,25 @@ function Oppsett() {
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             padding: '16px 20px',
-                                            backgroundColor: 'white',
+                                            backgroundColor: 'var(--ax-bg-default)',
                                             borderRadius: '8px',
                                             textDecoration: 'none',
-                                            color: '#262626',
-                                            border: '1px solid #ddd',
+                                            color: 'var(--ax-text-default)',
+                                            border: '1px solid var(--ax-border-neutral-subtle)',
                                             transition: 'all 0.2s ease',
                                             fontWeight: 500
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.borderColor = '#999';
-                                            e.currentTarget.style.backgroundColor = '#f8f8f8';
+                                            e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
+                                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.currentTarget.style.borderColor = '#ddd';
-                                            e.currentTarget.style.backgroundColor = 'white';
+                                            e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
+                                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
                                         }}
                                     >
                                         <span>{tool.label}</span>
-                                        <span style={{ color: '#0067C5', fontSize: '18px' }}>→</span>
+                                        <span style={{ color: 'var(--ax-text-accent)', fontSize: '18px' }}>→</span>
                                     </Link>
                                 ))}
                         </nav>
