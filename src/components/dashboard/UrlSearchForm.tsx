@@ -11,11 +11,11 @@ interface Website {
     createdAt: string;
 }
 
-interface MetadashboardProps {
+interface UrlSearchFormProps {
     children?: React.ReactNode;
 }
 
-function Metadashboard({ children }: MetadashboardProps) {
+function UrlSearchForm({ children }: UrlSearchFormProps) {
     const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -187,4 +187,4 @@ function Metadashboard({ children }: MetadashboardProps) {
     );
 }
 
-export default Metadashboard;
+export default UrlSearchForm;

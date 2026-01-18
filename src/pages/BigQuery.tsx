@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
-import ChartLayout from '../components/ChartLayout';
+import ResultsPanel from '../components/chartbuilder/results/ResultsPanel';
+import ChartLayout from '../components/analysis/ChartLayout';
 import { Button, Alert, Heading, BodyLong } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
@@ -782,7 +782,7 @@ export default function BigQuery() {
             )}
 
             {/* Results Display Area */}
-            <ResultsDisplay
+            <ResultsPanel
                 result={result}
                 loading={loading}
                 error={error}

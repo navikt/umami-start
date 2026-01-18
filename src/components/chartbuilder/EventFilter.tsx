@@ -2,7 +2,7 @@ import { Button, Heading } from '@navikt/ds-react';
 import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
-import DateRangePicker from './DateRangePicker';
+import DateRangeSelector from './DateRangeSelector';
 import AlertWithCloseButton from './AlertWithCloseButton';
 import EventSelector from './EventSelector';
 
@@ -40,7 +40,7 @@ interface ChartFiltersProps {
   isEventsLoading?: boolean;
 }
 
-const ChartFilters = forwardRef(({
+const EventFilter = forwardRef(({
   filters,
   parameters,
   setFilters,
@@ -651,7 +651,7 @@ const ChartFilters = forwardRef(({
           />
 
           {/* Date Range Picker - Now AFTER event selection */}
-          <DateRangePicker
+          <DateRangeSelector
             ref={dateRangePickerRef}
             filters={filters}
             setFilters={setFilters}
@@ -669,4 +669,4 @@ const ChartFilters = forwardRef(({
   );
 });
 
-export default ChartFilters;
+export default EventFilter;

@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check, Code2, ExternalLink } from 'lucide-react';
-import ChartLayout from '../components/ChartLayout';
-import WebsitePicker from '../components/WebsitePicker';
-import PeriodPicker from '../components/PeriodPicker';
-import FunnelChart from '../components/FunnelChart';
-import HorizontalFunnelChart from '../components/HorizontalFunnelChart';
-import FunnelStats from '../components/FunnelStats';
-import SqlCodeDisplay from '../components/chartbuilder/SqlCodeDisplay';
-import AnalysisActionModal from '../components/AnalysisActionModal';
+import ChartLayout from '../components/analysis/ChartLayout';
+import WebsitePicker from '../components/analysis/WebsitePicker';
+import PeriodPicker from '../components/analysis/PeriodPicker';
+import FunnelChart from '../components/analysis/funnel/FunnelChart';
+import HorizontalFunnelChart from '../components/analysis/funnel/HorizontalFunnelChart';
+import FunnelStats from '../components/analysis/funnel/FunnelStats';
+import SqlViewer from '../components/chartbuilder/results/SqlViewer';
+import AnalysisActionModal from '../components/analysis/AnalysisActionModal';
 import { Website } from '../types/chart';
 
 
@@ -1424,7 +1424,7 @@ FROM timing_data`;
                 width={800}
             >
                 <Modal.Body>
-                    {modalSql && <SqlCodeDisplay sql={modalSql} withoutReadMore showEditButton />}
+                    {modalSql && <SqlViewer sql={modalSql} withoutReadMore showEditButton />}
                 </Modal.Body>
             </Modal>
         </ChartLayout >

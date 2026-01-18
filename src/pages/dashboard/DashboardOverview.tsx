@@ -1,8 +1,8 @@
 import { Heading, BodyLong, LinkPanel } from "@navikt/ds-react";
 import { Link } from "react-router-dom";
-import { dashboards } from "../data/dashboard";
+import { dashboards } from "../../data/dashboard";
 import { BarChartIcon, Buildings3Icon, WheelchairIcon } from "@navikt/aksel-icons";
-import Kontaktboks from "../components/kontaktboks";
+import Kontaktboks from "../../components/theme/Kontaktboks/Kontaktboks";
 
 // Map dashboard IDs to metadata (icons and custom titles)
 const dashboardMeta: Record<string, { icon: React.ReactNode; title?: string }> = {

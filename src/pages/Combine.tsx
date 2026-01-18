@@ -13,7 +13,7 @@ import {
   Alert // Add this to imports at top
 } from '@navikt/ds-react';
 import { Copy, MoveUp, MoveDown } from 'lucide-react';
-import Kontaktboks from '../components/kontaktboks';
+import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
 
 // Add Website interface
 interface Website {

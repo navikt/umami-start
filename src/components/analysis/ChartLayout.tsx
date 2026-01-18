@@ -3,7 +3,7 @@ import { Heading, BodyShort, Select } from '@navikt/ds-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
-import Kontaktboks from './kontaktboks';
+import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
 
 interface ChartLayoutProps {
     title: string;

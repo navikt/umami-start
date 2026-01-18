@@ -8,7 +8,7 @@ import {
   Textarea,
   Alert,
 } from '@navikt/ds-react';
-import Kontaktboks from '../components/kontaktboks';
+import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
 import { Copy } from 'lucide-react';
 
 interface Website {

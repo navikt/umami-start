@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Table, Heading, Tabs, Switch, ReadMore, Pagination, VStack } from '@navikt/ds-react';
-import PeriodPicker from '../components/PeriodPicker';
-import ChartLayout from '../components/ChartLayout';
-import WebsitePicker from '../components/WebsitePicker';
+import PeriodPicker from '../components/analysis/PeriodPicker';
+import ChartLayout from '../components/analysis/ChartLayout';
+import WebsitePicker from '../components/analysis/WebsitePicker';
 import { Website } from '../types/chart';
 
 

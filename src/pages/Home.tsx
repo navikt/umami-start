@@ -1,8 +1,8 @@
 import { Heading, Link, Page } from "@navikt/ds-react";
 import { Link as RouterLink } from "react-router-dom";
 import { Buildings3Icon, WheelchairIcon } from "@navikt/aksel-icons";
-import Metadashboard from "../components/metadashboard.tsx";
-import { analyticsPages } from "../components/AnalyticsNavigation.tsx";
+import UrlSearchForm from "../components/dashboard/UrlSearchForm";
+import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
 
 // Section configuration for the 3-column layout
 const sections = [
@@ -42,7 +42,7 @@ function Home() {
             }}>
                 <Page.Block width="xl" gutters>
                     <Heading spacing={true} as="h2" size="large">Mål brukeradferd med Umami</Heading>
-                    <Metadashboard>
+                    <UrlSearchForm>
                         <div style={{ marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <RouterLink
                                 to="/dashboard?visning=fylkeskontor"
@@ -97,7 +97,7 @@ function Home() {
                                 Hjelpemiddelsentralene
                             </RouterLink>
                         </div>
-                    </Metadashboard>
+                    </UrlSearchForm>
                 </Page.Block>
             </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Table, Button, Tag, Search, Switch } from "@navikt/ds-react";
-import SporingsModal from "./sporingsmodal";
+import SporingsModal from "./SporingsModal";
 
 // Add styles at the top of the file
 const styles = {

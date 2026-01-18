@@ -3,13 +3,13 @@ import { Button, CopyButton, ReadMore, Tooltip } from '@navikt/ds-react';
 import { Copy } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
-interface SqlCodeDisplayProps {
+interface SqlViewerProps {
   sql: string;
   showEditButton?: boolean;
   withoutReadMore?: boolean;
 }
 
-const SqlCodeDisplay = ({ sql, showEditButton = false, withoutReadMore = false }: SqlCodeDisplayProps) => {
+const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: SqlViewerProps) => {
   const [copiedDashboard, setCopiedDashboard] = useState(false);
 
   if (!sql) return null;
@@ -106,4 +106,4 @@ const SqlCodeDisplay = ({ sql, showEditButton = false, withoutReadMore = false }
   );
 };
 
-export default SqlCodeDisplay;
+export default SqlViewer;

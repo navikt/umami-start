@@ -27,7 +27,7 @@ interface SummarizeProps {
   isEventsLoading?: boolean;
 }
 
-const Summarize = forwardRef(({
+const MetricSelector = forwardRef(({
   metrics,
   parameters,
   METRICS,
@@ -708,4 +708,4 @@ const Summarize = forwardRef(({
   );
 });
 
-export default Summarize;
+export default MetricSelector;

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Textarea, Select, Checkbox, CheckboxGroup, ReadMore, CopyButton } from '@navikt/ds-react';
 
-interface ShareModalProps {
+interface ShareResultsModalProps {
   sql: string;
   open: boolean;
   onClose: () => void;
 }
 
-const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
+const ShareResultsModal = ({ sql, open, onClose }: ShareResultsModalProps) => {
   const [description, setDescription] = useState('');
   const [selectedTab, setSelectedTab] = useState('table');
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
@@ -150,4 +150,4 @@ const ShareModal = ({ sql, open, onClose }: ShareModalProps) => {
   );
 };
 
-export default ShareModal;
+export default ShareResultsModal;

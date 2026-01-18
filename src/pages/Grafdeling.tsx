@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
+import ResultsPanel from '../components/chartbuilder/results/ResultsPanel';
 import { Alert, Heading, BodyLong, Loader } from '@navikt/ds-react';
 import { translateValue } from '../lib/translations';
 
@@ -440,7 +440,7 @@ export default function Grafdeling() {
 
             {/* Results Display - Full Width */}
             {!loading && !error && result && (
-                <ResultsDisplay
+                <ResultsPanel
                     result={result}
                     loading={loading}
                     error={error}

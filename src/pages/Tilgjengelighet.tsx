@@ -1,5 +1,5 @@
 import {Heading, VStack} from "@navikt/ds-react";
-import Kontaktboks from '../components/kontaktboks';
+import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
 
 function Accessibility() {
     return (

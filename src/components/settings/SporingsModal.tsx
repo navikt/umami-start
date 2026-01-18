@@ -16,7 +16,7 @@ import {
   getReactViteHeadSnippet,
   getAstroSnippet,
   getGTMSnippet,
-} from "../data/tracking-snippets";
+} from "../../data/tracking-snippets";
 
 interface SporingsModalProps {
   selectedItem: { name: string; id: string };

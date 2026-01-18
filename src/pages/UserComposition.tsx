@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Tabs, Heading } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
-import ChartLayout from '../components/ChartLayout';
-import WebsitePicker from '../components/WebsitePicker';
-import PeriodPicker from '../components/PeriodPicker';
-import ResultsDisplay from '../components/chartbuilder/ResultsDisplay';
+import ChartLayout from '../components/analysis/ChartLayout';
+import WebsitePicker from '../components/analysis/WebsitePicker';
+import PeriodPicker from '../components/analysis/PeriodPicker';
+import ResultsPanel from '../components/chartbuilder/results/ResultsPanel';
 import { Website } from '../types/chart';
 import { normalizeUrlToPath } from '../lib/utils';
 
@@ -278,7 +278,7 @@ const UserComposition = () => {
                         </Tabs.List>
 
                         <div className="mt-6">
-                            <ResultsDisplay
+                            <ResultsPanel
                                 result={getCategoryData()}
                                 loading={false}
                                 error={null}

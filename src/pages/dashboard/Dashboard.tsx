@@ -1,13 +1,13 @@
 import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
-import DashboardLayout from "../components/DashboardLayout";
-import { getDashboard } from "../data/dashboard";
-import { DashboardWidget } from "../components/DashboardWidget";
-import DashboardWebsitePicker from "../components/DashboardWebsitePicker";
-import { fetchDashboardDataBatched, isBatchableChart } from "../lib/batchedDashboardFetcher";
+import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { getDashboard } from "../../data/dashboard";
+import { DashboardWidget } from "../../components/dashboard/DashboardWidget";
+import DashboardWebsitePicker from "../../components/dashboard/DashboardWebsitePicker";
+import { fetchDashboardDataBatched, isBatchableChart } from "../../lib/batchedDashboardFetcher";
 import { format } from "date-fns";
-import { normalizeUrlToPath } from "../lib/utils";
+import { normalizeUrlToPath } from "../../lib/utils";
 
 const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();

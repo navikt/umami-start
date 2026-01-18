@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
 import { Button, Tooltip, Loader } from '@navikt/ds-react';
 import { Plus, Check, ExternalLink, ArrowRight } from 'lucide-react';
-import AnalysisActionModal from './AnalysisActionModal';
+import AnalysisActionModal from '../AnalysisActionModal';
 
 interface Node {
     nodeId: string;

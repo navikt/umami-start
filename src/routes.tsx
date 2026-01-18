@@ -28,8 +28,8 @@ import Diagnosis from "./pages/Diagnosis.tsx";
 
 import EventJourney from "./pages/EventJourney.tsx";
 import UserProfile from "./pages/UserProfile.tsx";
-import Dashboard from "./pages/Dashboard.tsx";
-import DashboardOverview from "./pages/DashboardOverview.tsx";
+import Dashboard from "./pages/dashboard/Dashboard.tsx";
+import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 
 
 const routes = [

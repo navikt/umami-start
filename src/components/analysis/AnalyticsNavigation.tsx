@@ -1,5 +1,5 @@
 import { Link, List, Heading } from '@navikt/ds-react';
-import Kontaktboks from './kontaktboks';
+import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
 
 export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern' | 'hendelsesreiser' | 'sql';
 

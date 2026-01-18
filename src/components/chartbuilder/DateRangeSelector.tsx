@@ -192,7 +192,7 @@ interface DateRange {
 }
 
 // Update the component parameters to include the new props
-const DateRangePicker = forwardRef(({
+const DateRangeSelector = forwardRef(({
   filters,
   setFilters,
   maxDaysAvailable,
@@ -830,4 +830,4 @@ const DateRangePicker = forwardRef(({
   );
 });
 
-export default DateRangePicker;
+export default DateRangeSelector;

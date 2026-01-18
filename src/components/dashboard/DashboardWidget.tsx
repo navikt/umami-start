@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { Loader, Alert, Table, Pagination } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { ExternalLink } from 'lucide-react';
-import { SavedChart } from '../data/dashboard/types';
+import { SavedChart } from '../../data/dashboard/types';
 import { format, subDays } from 'date-fns';
-import { getBaseUrl } from '../lib/environment';
-import { translateValue } from '../lib/translations';
-import AnalysisActionModal from './AnalysisActionModal';
+import { getBaseUrl } from '../../lib/environment';
+import { translateValue } from '../../lib/translations';
+import AnalysisActionModal from '../analysis/AnalysisActionModal';
 // @ts-ignore
-import SiteScores from './SiteScores';
+import SiteScores from '../siteimprove/SiteScores';
 // @ts-ignore
-import SiteGroupScores from './SiteGroupScores';
-import teamsData from '../data/teamsData.json';
+import SiteGroupScores from '../siteimprove/SiteGroupScores';
+import teamsData from '../../data/teamsData.json';
 
 interface DashboardWidgetProps {
     chart: SavedChart;

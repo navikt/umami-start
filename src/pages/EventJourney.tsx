@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select, UNSAFE_Combobox, Tabs } from '@navikt/ds-react';
 import { Share2, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
-import ChartLayout from '../components/ChartLayout';
-import WebsitePicker from '../components/WebsitePicker';
-import PeriodPicker from '../components/PeriodPicker';
+import ChartLayout from '../components/analysis/ChartLayout';
+import WebsitePicker from '../components/analysis/WebsitePicker';
+import PeriodPicker from '../components/analysis/PeriodPicker';
 import { Website } from '../types/chart';
 import { normalizeUrlToPath, isDecoratorEvent } from '../lib/utils';
 

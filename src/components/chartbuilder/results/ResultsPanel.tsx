@@ -3,13 +3,13 @@ import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton } fr
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { translateValue } from '../../lib/translations';
-import SqlCodeDisplay from './SqlCodeDisplay';
-import ShareModal from './ShareModal';
-import AnalysisActionModal from '../AnalysisActionModal';
+import { translateValue } from '../../../lib/translations';
+import SqlViewer from './SqlViewer';
+import ShareResultsModal from './ShareResultsModal';
+import AnalysisActionModal from '../../analysis/AnalysisActionModal';
 import { encode } from '@toon-format/toon';
 
-interface ResultsDisplayProps {
+interface ResultsPanelProps {
   result: any;
   loading: boolean;
   error: string | null;
@@ -33,7 +33,7 @@ interface ResultsDisplayProps {
   period?: string;
 }
 
-const ResultsDisplay = ({
+const ResultsPanel = ({
   result,
   loading,
   error,
@@ -54,7 +54,7 @@ const ResultsDisplay = ({
   showCost = false,
   websiteId,
   period,
-}: ResultsDisplayProps) => {
+}: ResultsPanelProps) => {
   // Read initial tab from URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -456,7 +456,7 @@ const ResultsDisplay = ({
             )}
             {/* SQL Code Display - shown before results are loaded */}
             {showSqlCode && sql && (
-              <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
+              <SqlViewer sql={sql} showEditButton={showEditButton} />
             )}
           </div>
         )}
@@ -482,7 +482,7 @@ const ResultsDisplay = ({
             {/* SQL Code Display - shown on error for debugging */}
             {showSqlCode && sql && (
               <div className="mt-3">
-                <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
+                <SqlViewer sql={sql} showEditButton={showEditButton} />
               </div>
             )}
           </>
@@ -1029,7 +1029,7 @@ const ResultsDisplay = ({
 
             {/* SQL Code Display */}
             {showSqlCode && sql && (
-              <SqlCodeDisplay sql={sql} showEditButton={showEditButton} />
+              <SqlViewer sql={sql} showEditButton={showEditButton} />
             )}
 
             {/* Share Button */}
@@ -1060,7 +1060,7 @@ const ResultsDisplay = ({
       {/* Share Modal */}
       {
         sql && (
-          <ShareModal
+          <ShareResultsModal
             sql={sql}
             open={showShareModal}
             onClose={() => setShowShareModal(false)}
@@ -1080,4 +1080,4 @@ const ResultsDisplay = ({
   );
 };
 
-export default ResultsDisplay;
+export default ResultsPanel;

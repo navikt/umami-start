@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from '@navikt/ds-react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
-import ChartLayout from '../components/ChartLayout';
-import WebsitePicker from '../components/WebsitePicker';
-import PeriodPicker from '../components/PeriodPicker';
-import AnalyticsNavigation from '../components/AnalyticsNavigation';
+import ChartLayout from '../components/analysis/ChartLayout';
+import WebsitePicker from '../components/analysis/WebsitePicker';
+import PeriodPicker from '../components/analysis/PeriodPicker';
+import AnalyticsNavigation from '../components/analysis/AnalyticsNavigation';
 import { Website } from '../types/chart';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';

@@ -4,9 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Heading, BodyShort } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
-import ChartLayout from '../components/ChartLayout';
-import WebsitePicker from '../components/WebsitePicker';
-import PeriodPicker from '../components/PeriodPicker';
+import ChartLayout from '../components/analysis/ChartLayout';
+import WebsitePicker from '../components/analysis/WebsitePicker';
+import PeriodPicker from '../components/analysis/PeriodPicker';
 import { Website } from '../types/chart';
 import { normalizeUrlToPath } from '../lib/utils';
 

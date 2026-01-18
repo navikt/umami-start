@@ -6,7 +6,7 @@ import {
   Alert,
   CopyButton,
 } from '@navikt/ds-react';
-import Kontaktboks from '../components/kontaktboks';
+import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
 
 interface ValidationError {
   type: 'error' | 'warning';

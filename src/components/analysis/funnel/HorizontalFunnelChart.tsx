@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
-import AnalysisActionModal from './AnalysisActionModal';
+import AnalysisActionModal from '../AnalysisActionModal';
 
 interface FunnelStep {
     step: number;

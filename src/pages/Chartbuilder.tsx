@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import WebsitePicker from '../components/WebsitePicker';
-import SQLPreview from '../components/chartbuilder/sqlpreview';
-import ChartFilters from '../components/chartbuilder/ChartFilters';
-import ChartLayout from '../components/ChartLayout';
-import Summarize from '../components/chartbuilder/Summarize';
+import WebsitePicker from '../components/analysis/WebsitePicker';
+import QueryPreview from '../components/chartbuilder/results/QueryPreview';
+import EventFilter from '../components/chartbuilder/EventFilter';
+import ChartLayout from '../components/analysis/ChartLayout';
+import MetricSelector from '../components/chartbuilder/MetricSelector';
 // EventParameterSelector import removed as per user request
-import DisplayOptions from '../components/chartbuilder/DisplayOptions';
+import GroupingOptions from '../components/chartbuilder/GroupingOptions';
 import AlertWithCloseButton from '../components/chartbuilder/AlertWithCloseButton';
 import { FILTER_COLUMNS } from '../lib/constants';
 import {
@@ -1519,7 +1519,7 @@ const ChartsPage = () => {
 
               {/* Step 2: Metrics */}
               <section className="mt-4">
-                <Summarize
+                <MetricSelector
                   ref={summarizeRef}
                   metrics={config.metrics}
                   parameters={parameters}
@@ -1540,7 +1540,7 @@ const ChartsPage = () => {
 
               {/* Step 3: Event Filter Selection */}
               <section className="mt-4">
-                <ChartFilters
+                <EventFilter
                   ref={chartFiltersRef}
                   filters={filters}
                   parameters={parameters}
@@ -1563,7 +1563,7 @@ const ChartsPage = () => {
 
               {/* Step 4: Display Options */}
               <section className="mt-4">
-                <DisplayOptions
+                <GroupingOptions
                   ref={displayOptionsRef}
                   groupByFields={config.groupByFields}
                   parameters={parameters}
@@ -1618,7 +1618,7 @@ const ChartsPage = () => {
       }
 
       <div className="sticky top-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
-        <SQLPreview
+        <QueryPreview
           sql={generatedSQL}
           activeStep={currentStep}
           openFormprogress={false}

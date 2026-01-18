@@ -3,11 +3,11 @@ import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Comb
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
-import AlertWithCloseButton from './AlertWithCloseButton';
-import ResultsDisplay from './ResultsDisplay';
-import { translateValue } from '../../lib/translations';
+import AlertWithCloseButton from '../AlertWithCloseButton';
+import ResultsPanel from './ResultsPanel';
+import { translateValue } from '../../../lib/translations';
 
-interface SQLPreviewProps {
+interface QueryPreviewProps {
   sql: string;
   activeStep?: number;
   openFormprogress?: boolean;
@@ -32,7 +32,7 @@ const timeoutPromise = (ms: number) => {
   });
 };
 
-const SQLPreview = ({
+const QueryPreview = ({
   sql,
   activeStep = 1,
   openFormprogress = true,
@@ -44,7 +44,7 @@ const SQLPreview = ({
   availableEvents = [],
   isEventsLoading = false,
   websiteId
-}: SQLPreviewProps) => {
+}: QueryPreviewProps) => {
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
@@ -952,7 +952,7 @@ const SQLPreview = ({
                 </div>
               )}
 
-              <ResultsDisplay
+              <ResultsPanel
                 result={result}
                 loading={loading}
                 error={error}
@@ -1172,4 +1172,4 @@ const SQLPreview = ({
   );
 };
 
-export default SQLPreview;
+export default QueryPreview;

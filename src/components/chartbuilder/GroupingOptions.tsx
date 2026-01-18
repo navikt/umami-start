@@ -36,7 +36,7 @@ interface DisplayOptionsProps {
   isEventsLoading?: boolean;
 }
 
-const DisplayOptions = forwardRef(({
+const GroupingOptions = forwardRef(({
   groupByFields,
   parameters,
   dateFormat,
@@ -784,4 +784,4 @@ const DisplayOptions = forwardRef(({
   );
 });
 
-export default DisplayOptions;
+export default GroupingOptions;
