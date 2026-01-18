@@ -58,39 +58,42 @@ export default function Header({ theme }: HeaderProps) {
           </Button>
         </div>
         {isMobile ? (
-          <Dropdown>
-            <Button as={Dropdown.Toggle} variant="tertiary" className={linkButton}>
-              <MenuHamburgerIcon title="meny" fontSize="1.5rem" />
-            </Button>
-            <Dropdown.Menu className="w-auto">
-              <Dropdown.Menu.List>
-                <Dropdown.Menu.List.Item
-                  as={Link}
-                  href="/dashboards"
-                  className="no-underline"
-                >
-                  <BarChartIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Dashboard</span>
-                </Dropdown.Menu.List.Item>
-                <Dropdown.Menu.List.Item
-                  as={Link}
-                  href="/taksonomi"
-                  className="no-underline"
-                >
-                  <ComponentIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Taksonomi</span>
-                </Dropdown.Menu.List.Item>
-                <Dropdown.Menu.List.Item
-                  as={Link}
-                  href="/oppsett"
-                  className="no-underline"
-                >
-                  <CogIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Oppsett</span>
-                </Dropdown.Menu.List.Item>
-              </Dropdown.Menu.List>
-            </Dropdown.Menu>
-          </Dropdown>
+          <div className="flex items-center gap-2">
+            <ThemeButton />
+            <Dropdown>
+              <Button as={Dropdown.Toggle} variant="tertiary" className={linkButton}>
+                <MenuHamburgerIcon title="meny" fontSize="1.5rem" />
+              </Button>
+              <Dropdown.Menu className="w-auto">
+                <Dropdown.Menu.List>
+                  <Dropdown.Menu.List.Item
+                    as={Link}
+                    href="/dashboards"
+                    className="no-underline"
+                  >
+                    <BarChartIcon aria-hidden fontSize="1.5rem" />
+                    <span className="whitespace-nowrap">Dashboard</span>
+                  </Dropdown.Menu.List.Item>
+                  <Dropdown.Menu.List.Item
+                    as={Link}
+                    href="/taksonomi"
+                    className="no-underline"
+                  >
+                    <ComponentIcon aria-hidden fontSize="1.5rem" />
+                    <span className="whitespace-nowrap">Taksonomi</span>
+                  </Dropdown.Menu.List.Item>
+                  <Dropdown.Menu.List.Item
+                    as={Link}
+                    href="/oppsett"
+                    className="no-underline"
+                  >
+                    <CogIcon aria-hidden fontSize="1.5rem" />
+                    <span className="whitespace-nowrap">Oppsett</span>
+                  </Dropdown.Menu.List.Item>
+                </Dropdown.Menu.List>
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center w-full"></div>
