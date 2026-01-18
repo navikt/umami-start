@@ -4,9 +4,8 @@ import Komigang from './pages/articles/Komigang.tsx';
 import Oppsett from './pages/articles/Oppsett.tsx';
 import Personvern from "./pages/legal/Personvern.tsx";
 import Tilgjengelighet from "./pages/legal/Tilgjengelighet.tsx";
-import Modellbygger from "./pages/legacy/Modellbygger.tsx";
-import Copilot from "./pages/legacy/Copilot.tsx";
-import Validator from "./pages/legacy/Validator.tsx";
+
+
 import Taksonomi from "./pages/articles/Taksonomi.tsx";
 import Charts from "./pages/analysis/Chartbuilder.tsx";
 import Metabase from "./pages/articles/Metabase.tsx";
@@ -38,9 +37,8 @@ const routes = [
     { path: "/oppsett", component: <Oppsett /> },
     { path: "/personvern", component: <Personvern /> },
     { path: "/tilgjengelighet", component: <Tilgjengelighet /> },
-    { path: "/modellbygger", component: <Modellbygger /> },
-    { path: "/copilot", component: <Copilot /> },
-    { path: "/validator", component: <Validator /> },
+
+
     { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> },
     { path: "/metabase", component: <Metabase /> },
