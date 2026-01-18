@@ -1,7 +1,7 @@
 import { BodyShort, Heading, Link } from "@navikt/ds-react";
-import TeamWebsites from "../components/settings/TeamWebsites";
-import Kontaktboks from "../components/theme/Kontaktboks/Kontaktboks";
-import { developerTools } from "../components/analysis/DeveloperToolsNavigation";
+import TeamWebsites from "../../components/settings/TeamWebsites";
+import Kontaktboks from "../../components/theme/Kontaktboks/Kontaktboks";
+import { developerTools } from "../../components/analysis/DeveloperToolsNavigation";
 
 function Oppsett() {
     return (

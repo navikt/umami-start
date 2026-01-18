@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
-import ChartLayout from '../components/analysis/ChartLayout';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import PeriodPicker from '../components/analysis/PeriodPicker';
-import { Website } from '../types/chart';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
+import { Website } from '../../types/chart';
 
 const MarketingAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);

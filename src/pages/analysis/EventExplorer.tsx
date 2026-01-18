@@ -3,12 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
-import ChartLayout from '../components/analysis/ChartLayout';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import PeriodPicker from '../components/analysis/PeriodPicker';
-import { Website } from '../types/chart';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
+import { Website } from '../../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
-import { normalizeUrlToPath } from '../lib/utils';
+import { normalizeUrlToPath } from '../../lib/utils';
 
 
 const EventExplorer = () => {

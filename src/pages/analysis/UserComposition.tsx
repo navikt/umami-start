@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Tabs, Heading } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
-import ChartLayout from '../components/analysis/ChartLayout';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import PeriodPicker from '../components/analysis/PeriodPicker';
-import ResultsPanel from '../components/chartbuilder/results/ResultsPanel';
-import { Website } from '../types/chart';
-import { normalizeUrlToPath } from '../lib/utils';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
+import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
+import { Website } from '../../types/chart';
+import { normalizeUrlToPath } from '../../lib/utils';
 
 
 const UserComposition = () => {

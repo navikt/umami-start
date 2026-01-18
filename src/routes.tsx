@@ -1,33 +1,33 @@
 // src/routes.tsx
 import Home from './pages/Home.tsx';
-import Komigang from './pages/Komigang.tsx';
-import Oppsett from './pages/Oppsett.tsx';
-import Personvern from "./pages/Personvern.tsx";
-import Tilgjengelighet from "./pages/Tilgjengelighet.tsx";
-import Combine from "./pages/Combine.tsx";
-import Copilot from "./pages/Copilot.tsx";
-import Validator from "./pages/Validator.tsx";
-import Taksonomi from "./pages/Taksonomi.tsx";
-import Charts from "./pages/Chartbuilder.tsx";
-import Metabase from "./pages/Metabase.tsx";
-import Sok from "./pages/Sok.tsx";
-import BigQuery from "./pages/BigQuery.tsx";
-import Grafdeling from "./pages/Grafdeling.tsx";
-import UserJourney from "./pages/UserJourney.tsx";
-import Funnel from "./pages/Funnel.tsx";
-import Retention from "./pages/Retention.tsx";
-import UserComposition from "./pages/UserComposition.tsx";
-import EventExplorer from "./pages/EventExplorer.tsx";
-import TrafficAnalysis from "./pages/TrafficAnalysis.tsx";
-import MarketingAnalysis from "./pages/MarketingAnalysis.tsx";
+import Komigang from './pages/articles/Komigang.tsx';
+import Oppsett from './pages/articles/Oppsett.tsx';
+import Personvern from "./pages/legal/Personvern.tsx";
+import Tilgjengelighet from "./pages/legal/Tilgjengelighet.tsx";
+import Modellbygger from "./pages/legacy/Modellbygger.tsx";
+import Copilot from "./pages/legacy/Copilot.tsx";
+import Validator from "./pages/legacy/Validator.tsx";
+import Taksonomi from "./pages/articles/Taksonomi.tsx";
+import Charts from "./pages/analysis/Chartbuilder.tsx";
+import Metabase from "./pages/articles/Metabase.tsx";
 
-import UserProfiles from "./pages/UserProfiles.tsx";
+import BigQuery from "./pages/analysis/BigQuery.tsx";
+import Grafdeling from "./pages/analysis/Grafdeling.tsx";
+import UserJourney from "./pages/analysis/UserJourney.tsx";
+import Funnel from "./pages/analysis/Funnel.tsx";
+import Retention from "./pages/analysis/Retention.tsx";
+import UserComposition from "./pages/analysis/UserComposition.tsx";
+import EventExplorer from "./pages/analysis/EventExplorer.tsx";
+import TrafficAnalysis from "./pages/analysis/TrafficAnalysis.tsx";
+import MarketingAnalysis from "./pages/analysis/MarketingAnalysis.tsx";
 
-import PrivacyCheck from "./pages/PrivacyCheck.tsx";
-import Diagnosis from "./pages/Diagnosis.tsx";
+import UserProfiles from "./pages/analysis/UserProfiles.tsx";
 
-import EventJourney from "./pages/EventJourney.tsx";
-import UserProfile from "./pages/UserProfile.tsx";
+import PrivacyCheck from "./pages/analysis/PrivacyCheck.tsx";
+import Diagnosis from "./pages/analysis/Diagnosis.tsx";
+
+import EventJourney from "./pages/analysis/EventJourney.tsx";
+import UserProfile from "./pages/analysis/UserProfile.tsx";
 import Dashboard from "./pages/dashboard/Dashboard.tsx";
 import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
 
@@ -38,13 +38,13 @@ const routes = [
     { path: "/oppsett", component: <Oppsett /> },
     { path: "/personvern", component: <Personvern /> },
     { path: "/tilgjengelighet", component: <Tilgjengelighet /> },
-    { path: "/modellbygger", component: <Combine /> },
+    { path: "/modellbygger", component: <Modellbygger /> },
     { path: "/copilot", component: <Copilot /> },
     { path: "/validator", component: <Validator /> },
     { path: "/taksonomi", component: <Taksonomi /> },
     { path: "/grafbygger", component: <Charts /> },
     { path: "/metabase", component: <Metabase /> },
-    { path: "/sok", component: <Sok /> },
+
     { path: "/sql", component: <BigQuery /> },
     { path: "/grafdeling", component: <Grafdeling /> },
     { path: "/brukerreiser", component: <UserJourney /> },

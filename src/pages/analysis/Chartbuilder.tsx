@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import QueryPreview from '../components/chartbuilder/results/QueryPreview';
-import EventFilter from '../components/chartbuilder/EventFilter';
-import ChartLayout from '../components/analysis/ChartLayout';
-import MetricSelector from '../components/chartbuilder/MetricSelector';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import QueryPreview from '../../components/chartbuilder/results/QueryPreview';
+import EventFilter from '../../components/chartbuilder/EventFilter';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import MetricSelector from '../../components/chartbuilder/MetricSelector';
 // EventParameterSelector import removed as per user request
-import GroupingOptions from '../components/chartbuilder/GroupingOptions';
-import AlertWithCloseButton from '../components/chartbuilder/AlertWithCloseButton';
-import { FILTER_COLUMNS } from '../lib/constants';
+import GroupingOptions from '../../components/chartbuilder/GroupingOptions';
+import AlertWithCloseButton from '../../components/chartbuilder/AlertWithCloseButton';
+import { FILTER_COLUMNS } from '../../lib/constants';
 import {
   Parameter,
   Metric,
@@ -17,8 +17,8 @@ import {
   ChartConfig,
   Filter,
   Website
-} from '../types/chart';
-//import CopyButton from '../components/theme/CopyButton/CopyButton';
+} from '../../types/chart';
+//import CopyButton from '../../components/theme/CopyButton/CopyButton';
 
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [

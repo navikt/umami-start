@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, Label, BodyShort } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink } from 'lucide-react';
-import ChartLayout from '../components/analysis/ChartLayout';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import PeriodPicker from '../components/analysis/PeriodPicker';
-import AnalysisActionModal from '../components/analysis/AnalysisActionModal';
-import { Website } from '../types/chart';
-import { translateCountry } from '../lib/translations';
-import { normalizeUrlToPath } from '../lib/utils';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
+import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
+import { Website } from '../../types/chart';
+import { translateCountry } from '../../lib/translations';
+import { normalizeUrlToPath } from '../../lib/utils';
 import { TextField } from '@navikt/ds-react';
 
 const UserProfiles = () => {

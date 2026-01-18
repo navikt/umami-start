@@ -13,7 +13,7 @@ import {
   Alert // Add this to imports at top
 } from '@navikt/ds-react';
 import { Copy, MoveUp, MoveDown } from 'lucide-react';
-import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
+import Kontaktboks from '../../components/theme/Kontaktboks/Kontaktboks';
 
 // Add Website interface
 interface Website {
@@ -121,13 +121,13 @@ const SQLGeneratorForm = () => {
   // Update the addDataKey function
   const addDataKey = (): void => {
     if (!newDataKey.trim()) return;
-    
+
     // Split the input by newlines and commas
     const keys = newDataKey
       .split(/[\n,]/)
       .map(key => key.trim())
       .filter(key => key && !dataKeys.some(dk => dk.key === key));
-    
+
     if (keys.length) {
       setDataKeys(prev => [
         ...prev,
@@ -164,13 +164,13 @@ const SQLGeneratorForm = () => {
   // Add new function to handle multiple events
   const addEventName = (): void => {
     if (!newEventName.trim()) return;
-    
+
     // Split the input by newlines and commas
     const events = newEventName
       .split(/[\n,]/)
       .map(event => event.trim())
       .filter(event => event && !eventNames.includes(event));
-    
+
     if (events.length) {
       setEventNames(prev => [...prev, ...events]);
       setNewEventName('');
@@ -265,13 +265,13 @@ const SQLGeneratorForm = () => {
     }
 
     sql += '  FROM `team-researchops-prod-01d6.umami.public_website_event` e\n';
-    
+
     // Conditionally join the public_session table
     if (hasVisitorDetails) {
       sql += '  LEFT JOIN `team-researchops-prod-01d6.umami.public_session` s\n';
       sql += '    ON e.session_id = s.session_id\n';
     }
-    
+
     // Modified WHERE clause based on query type and website_id
     if (queryType === 'custom') {
       sql += '  WHERE e.event_name IN (\'' + eventNames.join('\', \'') + '\')\n';
@@ -279,24 +279,24 @@ const SQLGeneratorForm = () => {
       sql += '  WHERE e.event_type = 1\n'; // pageview type
     } else if (queryType === 'combined') {
       sql += '  WHERE (e.event_type = 1' + // pageview type
-             (eventNames.length > 0 ? ' OR e.event_name IN (\'' + eventNames.join('\', \'') + '\')' : '') + ')\n';
+        (eventNames.length > 0 ? ' OR e.event_name IN (\'' + eventNames.join('\', \'') + '\')' : '') + ')\n';
     }
-    
+
     if (selectedWebsite) {
       sql += `  AND e.website_id = '${selectedWebsite.id}'\n`;
     }
-    
+
     sql += ')\n\n';
     sql += 'SELECT\n';
-    
+
     // Add base columns with correct table reference
     const selectedBaseColumns = Object.entries(baseColumns)
       .filter(([_, isSelected]) => isSelected)
       .map(([column]) => `  base_query.${column}`);
-    
-      const dataKeyColumns = dataKeys.map(({ key, type }) => 
-    type === 'string' 
-      ? `  NULLIF(STRING_AGG(
+
+    const dataKeyColumns = dataKeys.map(({ key, type }) =>
+      type === 'string'
+        ? `  NULLIF(STRING_AGG(
           CASE 
             WHEN event_data.data_key = '${key}' 
             AND event_data.data_type != 2
@@ -305,19 +305,19 @@ const SQLGeneratorForm = () => {
           ',' 
           ORDER BY base_query.created_at
         ), '') AS data_key_${sanitizeColumnName(key)}`
-      : `  MAX(
+        : `  MAX(
           CASE 
             WHEN event_data.data_key = '${key}' 
             AND event_data.data_type = 2
             THEN CAST(event_data.number_value AS NUMERIC)
           END
         ) AS data_key_${sanitizeColumnName(key)}`
-  );
-      
+    );
+
     const allColumns = [...selectedBaseColumns, ...dataKeyColumns];
-    
+
     sql += allColumns.join(',\n');
-    
+
     sql += '\nFROM base_query\n';
     sql += 'LEFT JOIN `team-researchops-prod-01d6.umami.public_event_data` AS event_data\n';
     sql += '  ON base_query.event_id = event_data.website_event_id\n';
@@ -328,14 +328,14 @@ const SQLGeneratorForm = () => {
     setGeneratedSQL(sql);
   };
 
-const getParameterLookupSQL = (): string => {
-  if (!selectedWebsite) {
-    return '⚠️ Velg en nettside først for å se SQL-koden';
-  }
-  if (queryType === 'custom' && eventNames.length === 0) {
-    return '⚠️ Legg til event-navn først for å se SQL-koden';
-  }
-  return `-- Velg en av spørringene under:
+  const getParameterLookupSQL = (): string => {
+    if (!selectedWebsite) {
+      return '⚠️ Velg en nettside først for å se SQL-koden';
+    }
+    if (queryType === 'custom' && eventNames.length === 0) {
+      return '⚠️ Legg til event-navn først for å se SQL-koden';
+    }
+    return `-- Velg en av spørringene under:
 
 -- 1. Liste med kommaseparerte verdier (enkel å kopiere):
 SELECT STRING_AGG(DISTINCT data_key, ',')
@@ -353,7 +353,7 @@ JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
 WHERE e.website_id = '${selectedWebsite.id}'
   ${eventNames.length > 0 ? `AND e.event_name IN ('${eventNames.join("', '")}')` : ''}
 ORDER BY data_key;`;
-};
+  };
 
   const handleCloseEventSQL = () => {
     setEventSQLDetailsOpen(false);
@@ -365,8 +365,8 @@ ORDER BY data_key;`;
 
   // Add API fetch for websites
   useEffect(() => {
-    const baseUrl = window.location.hostname === 'localhost' 
-      ? 'https://reops-proxy.intern.nav.no' 
+    const baseUrl = window.location.hostname === 'localhost'
+      ? 'https://reops-proxy.intern.nav.no'
       : 'https://reops-proxy.ansatt.nav.no';
 
     Promise.all([
@@ -417,7 +417,7 @@ ORDER BY data_key;`;
   const getParameterLookupSQL1 = (): string => {
     if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
     if (queryType === 'custom' && eventNames.length === 0) return '⚠️ Legg til event-navn først for å se SQL-koden';
-    
+
     return `SELECT STRING_AGG(DISTINCT data_key, ',')
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
@@ -429,7 +429,7 @@ WHERE e.website_id = '${selectedWebsite.id}'
   const getParameterLookupSQL2 = (): string => {
     if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
     if (queryType === 'custom' && eventNames.length === 0) return '⚠️ Legg til event-navn først for å se SQL-koden';
-    
+
     return `SELECT DISTINCT data_key
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
 JOIN \`team-researchops-prod-01d6.umami.public_website_event\` e
@@ -465,7 +465,7 @@ ORDER BY data_key;`;
   const moveKey = (index: number, direction: 'up' | 'down') => {
     const newKeys = [...dataKeys];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (newIndex >= 0 && newIndex < newKeys.length) {
       [newKeys[index], newKeys[newIndex]] = [newKeys[newIndex], newKeys[index]];
       setDataKeys(newKeys);
@@ -473,15 +473,15 @@ ORDER BY data_key;`;
   };
 
   // Add this function before the return statement
-const handleAddDataKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
+  const handleAddDataKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       action();
     }
   };
 
-    // Add this function before the return statement
-const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
+  // Add this function before the return statement
+  const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () => void) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       action();
@@ -489,81 +489,81 @@ const handleAddEventKeyPres = (e: KeyboardEvent<HTMLInputElement>, action: () =>
   };
 
   // Split the event lookup SQL into two functions
-const getEventLookupSQL1 = (): string => {
-  if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
-  
-  let sql = `SELECT STRING_AGG(DISTINCT`;
-  if (queryType === 'combined') {
-    sql += ` CASE 
+  const getEventLookupSQL1 = (): string => {
+    if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
+
+    let sql = `SELECT STRING_AGG(DISTINCT`;
+    if (queryType === 'combined') {
+      sql += ` CASE 
       WHEN event_type = 1 THEN 'pageview'
       ELSE event_name 
     END`;
-  } else {
-    sql += ` event_name`;
-  }
-  sql += `, ',')
+    } else {
+      sql += ` event_name`;
+    }
+    sql += `, ',')
 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
 WHERE website_id = '${selectedWebsite.id}'`;
-  
-  if (queryType === 'custom') {
-    sql += `\n  AND event_type = 2`;
-  } else if (queryType === 'pageview') {
-    sql += `\n  AND event_type = 1`;
-  }
-  
-  sql += ';';
-  return sql;
-};
 
-const getEventLookupSQL2 = (): string => {
-  if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
-  
-  let sql = `SELECT DISTINCT`;
-  if (queryType === 'combined') {
-    sql += ` CASE 
+    if (queryType === 'custom') {
+      sql += `\n  AND event_type = 2`;
+    } else if (queryType === 'pageview') {
+      sql += `\n  AND event_type = 1`;
+    }
+
+    sql += ';';
+    return sql;
+  };
+
+  const getEventLookupSQL2 = (): string => {
+    if (!selectedWebsite) return '⚠️ Velg en nettside først for å se SQL-koden';
+
+    let sql = `SELECT DISTINCT`;
+    if (queryType === 'combined') {
+      sql += ` CASE 
       WHEN event_type = 1 THEN 'pageview'
       ELSE event_name 
     END as event_name`;
-  } else {
-    sql += ` event_name`;
-  }
-  sql += `, COUNT(*) as count
+    } else {
+      sql += ` event_name`;
+    }
+    sql += `, COUNT(*) as count
 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
 WHERE website_id = '${selectedWebsite.id}'`;
-  
-  if (queryType === 'custom') {
-    sql += `\n  AND event_type = 2`;
-  } else if (queryType === 'pageview') {
-    sql += `\n  AND event_type = 1`;
-  }
-  
-  sql += `
+
+    if (queryType === 'custom') {
+      sql += `\n  AND event_type = 2`;
+    } else if (queryType === 'pageview') {
+      sql += `\n  AND event_type = 1`;
+    }
+
+    sql += `
 GROUP BY ${queryType === 'combined' ? '1' : 'event_name'}
 ORDER BY count DESC;`;
-  return sql;
-};
+    return sql;
+  };
 
-const handleCopyEventSQL1 = async (): Promise<void> => {
-  if (!selectedWebsite) return;
-  try {
-    await navigator.clipboard.writeText(getEventLookupSQL1());
-    setEventSQLCopySuccess1(true);
-    setTimeout(() => setEventSQLCopySuccess1(false), 2000);
-  } catch (err) {
-    console.error('Failed to copy event SQL:', err);
-  }
-};
+  const handleCopyEventSQL1 = async (): Promise<void> => {
+    if (!selectedWebsite) return;
+    try {
+      await navigator.clipboard.writeText(getEventLookupSQL1());
+      setEventSQLCopySuccess1(true);
+      setTimeout(() => setEventSQLCopySuccess1(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy event SQL:', err);
+    }
+  };
 
-const handleCopyEventSQL2 = async (): Promise<void> => {
-  if (!selectedWebsite) return;
-  try {
-    await navigator.clipboard.writeText(getEventLookupSQL2());
-    setEventSQLCopySuccess2(true);
-    setTimeout(() => setEventSQLCopySuccess2(false), 2000);
-  } catch (err) {
-    console.error('Failed to copy event SQL:', err);
-  }
-};
+  const handleCopyEventSQL2 = async (): Promise<void> => {
+    if (!selectedWebsite) return;
+    try {
+      await navigator.clipboard.writeText(getEventLookupSQL2());
+      setEventSQLCopySuccess2(true);
+      setTimeout(() => setEventSQLCopySuccess2(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy event SQL:', err);
+    }
+  };
 
   // Add useEffect to auto-update SQL when any relevant state changes
   useEffect(() => {
@@ -587,8 +587,8 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
 
   // Add function to toggle key type
   const toggleKeyType = (key: string) => {
-    setDataKeys(prev => prev.map(dk => 
-      dk.key === key 
+    setDataKeys(prev => prev.map(dk =>
+      dk.key === key
         ? { ...dk, type: dk.type === 'string' ? 'number' : 'string' }
         : dk
     ));
@@ -599,7 +599,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
       <Heading spacing level="1" size="medium" className="pt-12 pb-6">
         Bygg en Metabase-modell med Umami-data
       </Heading>
-          <p className="text-gray-600 mb-10">
+      <p className="text-gray-600 mb-10">
         For å bygge brukervennlige dashbord i Metabase trenger du først en modell. Her kan du generere SQL-kode som gir deg tilgang til dine Umami-data med ønskede eventer og metadetaljer. Denne SQL-koden gir deg et godt utgangspunkt for videre analyse.
       </p>
 
@@ -627,10 +627,9 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
         />
 
         {/* Query Type Selection */}
-        <RadioGroup 
+        <RadioGroup
           legend="Event-typer du ønsker med i modellen"
           value={queryType}
-          className="-mb-8"
           onChange={(value: EventQueryType) => setQueryType(value)}
         >
           <Radio value="custom">Egendefinert eventer</Radio>
@@ -650,8 +649,8 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                 onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => handleAddEventKeyPres(e, addEventName)}
                 style={{ width: '100%' }}
               />
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={addEventName}
                 style={{ height: '50px' }}
               >
@@ -677,7 +676,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
               ))}
             </HGrid>
 
-            <details 
+            <details
               className="text-sm"
               open={eventSQLDetailsOpen}
               onToggle={(e) => setEventSQLDetailsOpen(e.currentTarget.open)}
@@ -732,7 +731,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="bg-white p-3 rounded border">
                         <div className="mb-3">
                           <strong className="text-sm text-gray-900">Spørring 2: Lett å kopiere rett inn i tekstfeltet</strong>
@@ -774,7 +773,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
         <div>
           <div className="space-y-2">
             <div className="flex gap-2 items-end">
-              <TextField 
+              <TextField
                 label="Event-metadetaljer"
                 description="Eksempel: skjemanavn (legg til flere med komma)"
                 value={newDataKey}
@@ -782,8 +781,8 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                 onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => handleAddDataKeyPres(e, addDataKey)}
                 style={{ width: '100%' }}
               />
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={addDataKey}
                 style={{ height: '50px' }}
               >
@@ -820,7 +819,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                           />
                         )}
                       </div>
-                      <Select 
+                      <Select
                         label=""
                         size="small"
                         value={config.type}
@@ -845,7 +844,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
             </HGrid>
 
             {/* Rest of the details section */}
-            <details 
+            <details
               className="text-sm"
               open={parameterSQLDetailsOpen}
               onToggle={(e) => setParameterSQLDetailsOpen(e.currentTarget.open)}
@@ -858,7 +857,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                   {(!queryType || (queryType === 'custom' && eventNames.length === 0) || !selectedWebsite) ? (
                     <>
                       <pre className="overflow-x-auto whitespace-pre-wrap bg-white p-2 rounded">
-                      {getParameterLookupSQL()}
+                        {getParameterLookupSQL()}
                       </pre>
                       <div className="flex justify-end space-x-2 border-t pt-2">
                         <Button
@@ -900,7 +899,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="bg-white p-3 rounded border">
                         <div className="mb-3">
                           <strong className="text-sm text-gray-900">Spørring 2: Lett å kopiere rett inn i tekstfeltet</strong>
@@ -970,7 +969,7 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                   <HGrid>
                     {Object.entries(group.columns).map(([column, _]) => (
                       <div key={column}>
-                        <Checkbox 
+                        <Checkbox
                           checked={baseColumns[column]}
                           onChange={(e) =>
                             setBaseColumns((prev) => ({
@@ -1034,15 +1033,15 @@ const handleCopyEventSQL2 = async (): Promise<void> => {
                 {generatedSQL}
               </pre>
             </div>
-                        <Button
-                variant="secondary"
-                size="small"
-                className="mt-2"
-                onClick={handleCopySQL}
-                icon={<Copy aria-hidden />}
-              >
-                {copySuccess ? 'Kopiert!' : 'Kopier'}
-              </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              className="mt-2"
+              onClick={handleCopySQL}
+              icon={<Copy aria-hidden />}
+            >
+              {copySuccess ? 'Kopiert!' : 'Kopier'}
+            </Button>
           </div>
         )}
         <Kontaktboks />

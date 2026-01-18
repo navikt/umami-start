@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import ResultsPanel from '../components/chartbuilder/results/ResultsPanel';
-import ChartLayout from '../components/analysis/ChartLayout';
+import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
+import ChartLayout from '../../components/analysis/ChartLayout';
 import { Button, Alert, Heading, BodyLong } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
-import { translateValue } from '../lib/translations';
+import { translateValue } from '../../lib/translations';
 
 const defaultQuery = `SELECT 
   website_id,

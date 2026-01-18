@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import ResultsPanel from '../components/chartbuilder/results/ResultsPanel';
+import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Alert, Heading, BodyLong, Loader } from '@navikt/ds-react';
-import { translateValue } from '../lib/translations';
+import { translateValue } from '../../lib/translations';
 
 export default function Grafdeling() {
     const [query, setQuery] = useState('');

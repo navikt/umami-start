@@ -8,7 +8,7 @@ import {
   Textarea,
   Alert,
 } from '@navikt/ds-react';
-import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
+import Kontaktboks from '../../components/theme/Kontaktboks/Kontaktboks';
 import { Copy } from 'lucide-react';
 
 interface Website {
@@ -70,10 +70,10 @@ const CopilotPage = () => {
     }
   };
 
-  // Fetch websites (same as in Explore.tsx and Combine.tsx)
+  // Fetch websites (same as in Explore.tsx and Modellbygger.tsx)
   useEffect(() => {
-    const baseUrl = window.location.hostname === 'localhost' 
-      ? 'https://reops-proxy.intern.nav.no' 
+    const baseUrl = window.location.hostname === 'localhost'
+      ? 'https://reops-proxy.intern.nav.no'
       : 'https://reops-proxy.ansatt.nav.no';
 
     Promise.all([
@@ -133,8 +133,8 @@ ${parameters.split(',').map(p => `- ${p.trim()}`).join('\n')}
 
 Available Base Columns:
 ${Object.values(columnGroups)
-  .map(group => `${group.label}:\n${Object.keys(group.columns).map(col => `- ${col}`).join('\n')}`)
-  .join('\n\n')}
+        .map(group => `${group.label}:\n${Object.keys(group.columns).map(col => `- ${col}`).join('\n')}`)
+        .join('\n\n')}
 
 SQL Requirements:
 1. Use BigQuery syntax (TIMESTAMP_DIFF, FORMAT_TIMESTAMP)
@@ -162,7 +162,7 @@ Return only working SQL queries without explanations unless asked.`;
 
   const handleCopyPrompt = async () => {
     if (!generatePrompt()) return;
-    
+
     try {
       await navigator.clipboard.writeText(generatePrompt());
       setCopySuccess(true);
@@ -174,7 +174,7 @@ Return only working SQL queries without explanations unless asked.`;
 
   const getEventsSQL = (): string => {
     if (!selectedWebsite) return '';
-    
+
     return `-- Finn alle tilgjengelige events
 SELECT STRING_AGG(DISTINCT
   CASE 
@@ -187,7 +187,7 @@ WHERE website_id = '${selectedWebsite.id}';`;
 
   const getParametersSQL = (): string => {
     if (!selectedWebsite) return '';
-    
+
     return `-- Finn alle tilgjengelige parametere
 SELECT STRING_AGG(DISTINCT data_key, ',') as parameters
 FROM \`team-researchops-prod-01d6.umami.public_event_data\` ed
@@ -203,7 +203,7 @@ WHERE e.website_id = '${selectedWebsite.id}';`;
       </Heading>
 
       <p className="text-gray-600 mb-10">
-        Bruk denne siden til å generere en AI-prompt som hjelper deg med å lage spørringer for Metabase. 
+        Bruk denne siden til å generere en AI-prompt som hjelper deg med å lage spørringer for Metabase.
         Prompten vil guide AI-assistenten til å generere SQL-kode som fungerer med din Umami-modell.
       </p>
 
@@ -233,7 +233,7 @@ WHERE e.website_id = '${selectedWebsite.id}';`;
             <Heading level="2" size="small" spacing>
               Steg 1: Finn tilgjengelige events
             </Heading>
-            
+
             <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
               <li><Link href="https://metabase.ansatt.nav.no/dashboard/484" target="_blank">Åpne Metabase</Link> i en ny fane</li>
               <li>Kjør denne spørringen for å se alle events:</li>
@@ -269,7 +269,7 @@ WHERE e.website_id = '${selectedWebsite.id}';`;
             <Heading level="2" size="small" spacing>
               Steg 2: Finn tilgjengelige parametere
             </Heading>
-            
+
             <ol className="list-decimal list-inside text-sm text-gray-600 mb-4">
               <li>Kjør denne spørringen i Metabase:</li>
             </ol>
@@ -309,7 +309,7 @@ WHERE e.website_id = '${selectedWebsite.id}';`;
             <Heading level="2" size="small">
               Din AI-prompt
             </Heading>
-            
+
             <div className="bg-gray-50 p-4 rounded relative overflow-hidden">
               <pre className="whitespace-pre-wrap max-h-[600px] overflow-y-auto">
                 {generatePrompt()}

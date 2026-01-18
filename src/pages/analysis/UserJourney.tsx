@@ -4,13 +4,13 @@ import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Head
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import ChartLayout from '../components/analysis/ChartLayout';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import PeriodPicker from '../components/analysis/PeriodPicker';
-import UmamiJourneyView from '../components/analysis/journey/UmamiJourneyView';
-import AnalysisActionModal from '../components/analysis/AnalysisActionModal';
-import { Website } from '../types/chart';
-import { normalizeUrlToPath } from '../lib/utils';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
+import UmamiJourneyView from '../../components/analysis/journey/UmamiJourneyView';
+import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
+import { Website } from '../../types/chart';
+import { normalizeUrlToPath } from '../../lib/utils';
 
 
 const UserJourney = () => {

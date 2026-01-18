@@ -4,7 +4,7 @@ import {
   Box, 
   List
 } from '@navikt/ds-react';
-import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
+import Kontaktboks from '../../components/theme/Kontaktboks/Kontaktboks';
 
 const Metabase = () => {
   return (

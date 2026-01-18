@@ -9,7 +9,7 @@ import {
   Link,
   CopyButton,
 } from '@navikt/ds-react';
-import Kontaktboks from '../components/theme/Kontaktboks/Kontaktboks';
+import Kontaktboks from '../../components/theme/Kontaktboks/Kontaktboks';
 
 const TaksonomiPage = () => {
   return (

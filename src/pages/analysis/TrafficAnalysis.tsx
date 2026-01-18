@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
-import ChartLayout from '../components/analysis/ChartLayout';
-import WebsitePicker from '../components/analysis/WebsitePicker';
-import PeriodPicker from '../components/analysis/PeriodPicker';
-import TrafficStats from '../components/analysis/traffic/TrafficStats';
-import AnalysisActionModal from '../components/analysis/AnalysisActionModal';
-import { Website } from '../types/chart';
-import { normalizeUrlToPath } from '../lib/utils';
+import ChartLayout from '../../components/analysis/ChartLayout';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
+import TrafficStats from '../../components/analysis/traffic/TrafficStats';
+import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
+import { Website } from '../../types/chart';
+import { normalizeUrlToPath } from '../../lib/utils';
 
 
 const TrafficAnalysis = () => {
