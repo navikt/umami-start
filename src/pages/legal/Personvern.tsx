@@ -47,7 +47,7 @@ function Personvern() {
                         </Heading>
                         <p className="mb-4 leading-normal">Når du besøker nettsiden bruker vi informasjonskapsler (cookies).</p>
 
-                        <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 p-6">
+                        <Box className="my-4 p-6 border border-border-subtle rounded-medium">
                             <p className="mb-4 leading-normal">Informasjonskapsler er små tekstfiler som plasseres på din datamaskin når du laster ned en nettside. Noen av informasjonskapslene er nødvendige for at ulike tjenester på nettsiden vår skal fungere slik vi ønsker.</p>
                             <p className="leading-normal">Vi bruker informasjonskapsler til å forbedre brukeropplevelsen og innholdet. Når du besøker aksel.Nav.no, sender nettleseren din opplysninger til Navs analyseverktøy.</p>
                         </Box>

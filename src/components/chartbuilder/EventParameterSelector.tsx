@@ -422,10 +422,10 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
           </ExpansionCard.Title>
         </ExpansionCard.Header>
         <ExpansionCard.Content>
-          <VStack gap="6">
+          <VStack gap="space-6">
             {/* Parameters Section - Only shown when events are selected and not loading */}
             {!isLoadingParameters && (
-              <Box borderRadius="medium">
+              <Box className="rounded-medium">
                 <Heading level="3" size="xsmall" spacing className="mt-3">
                   Egendefinerte hendelser
                 </Heading>
@@ -504,7 +504,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                               </span>
                             </Accordion.Header>
                             <Accordion.Content className={eventName === MANUAL_EVENT_NAME ? 'bg-blue-50/30' : ''}>
-                              <VStack gap="3" className="-ml-8 mt-5">
+                              <VStack gap="space-4" className="-ml-8 mt-5">
                                 {filteredGroupedParameters[eventName]?.map((param) => {
                                   const displayName = getParameterDisplayName(param);
 
@@ -516,7 +516,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                       <div className="flex items-center gap-2">
                                         <span className="font-medium">{displayName}</span>
                                       </div>
-                                      <HStack gap="2">
+                                      <HStack gap="space-2">
                                         <Button
                                           variant="secondary"
                                           size="small"
@@ -567,7 +567,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                     </ExpansionCard.Title>
                   </ExpansionCard.Header>
                   <ExpansionCard.Content>
-                    <VStack gap="3">
+                    <VStack gap="space-4">
                       <div className="flex flex-col gap-3">
                         {/* Map through FILTER_COLUMNS categories */}
                         {Object.entries(FILTER_COLUMNS).map(([key, group]) => (
@@ -586,7 +586,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                     <span className="font-medium">{column.label}</span>
                                     <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
                                   </div>
-                                  <HStack gap="2">
+                                  <HStack gap="space-2">
                                     <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
                                   </HStack>
                                 </div>

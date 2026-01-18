@@ -51,10 +51,7 @@ const SnippetBlock = ({ text, language, wrapLongLines = true }: SnippetBlockProp
                 }
             `}</style>
             <Box
-                borderWidth="1"
-                borderColor="border-subtle"
-                borderRadius="medium"
-                className="overflow-hidden relative"
+                className="overflow-hidden relative border border-border-subtle rounded-medium"
             >
                 <div className="absolute top-2 right-2 z-10 transition-opacity opacity-0 group-hover:opacity-100 focus-within:opacity-100">
                     <CopyButton copyText={text} text="Kopier" activeText="Kopiert!" size="small" />

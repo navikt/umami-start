@@ -602,7 +602,7 @@ const PrivacyCheck = () => {
                                     </Switch>
                                 </div>
 
-                                <VStack gap="4">
+                                <VStack gap="space-4">
                                     <div className="overflow-x-auto">
                                         <Table>
                                             <Table.Header>
@@ -646,7 +646,7 @@ const PrivacyCheck = () => {
                                 <Alert variant="info" className="mb-4">
                                     Her vises forekomster som er fanget opp av PII-filtrering (f.eks. [redacted]).
                                 </Alert>
-                                <VStack gap="4">
+                                <VStack gap="space-4">
                                     <div className="overflow-x-auto">
                                         <Table>
                                             <Table.Header>

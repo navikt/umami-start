@@ -201,7 +201,7 @@ const MarketingAnalysis = () => {
         };
 
         return (
-            <VStack gap="4">
+            <VStack gap="space-4">
                 <div className="flex justify-between items-end">
                     <Heading level="3" size="small">{title}</Heading>
                     <div className="w-64">

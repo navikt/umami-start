@@ -7,6 +7,7 @@ import {
   Link,
   List,
   CopyButton,
+  Heading,
 } from "@navikt/ds-react";
 import SnippetBlock from "./SnippetBlock";
 import {
@@ -152,7 +153,10 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
             </Accordion.Content>
           </Accordion.Item>
         </Accordion>
-        <List as="ul" title="Verdt å vite" style={{ marginTop: "30px" }}>
+        <Heading level="3" size="xsmall" spacing style={{ marginTop: "30px" }}>
+          Verdt å vite
+        </Heading>
+        <List as="ul">
           <List.Item>
             Sporingskoden legges vanligvis til i &lt;head&gt;-delen på
             nettsiden.

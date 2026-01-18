@@ -23,7 +23,7 @@ const TaksonomiPage = () => {
       </BodyLong>
 
       {/* Add quick links */}
-      <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8 p-6">
+      <Box className="mb-8 p-6 border border-border-subtle rounded-medium">
         <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
         <Link href="#analytics-types">
           Type-definisjoner for analytics-hendelser (@navikt/analytics-types)
@@ -44,11 +44,7 @@ const TaksonomiPage = () => {
             </BodyLong>
 
             <Box
-              borderWidth="1"
-              borderRadius="medium"
-              borderColor="border-info"
-              background="surface-info-subtle"
-              className="p-6"
+              className="p-6 border border-border-info rounded-medium bg-surface-info-subtle"
             >
               <Heading size="small" level="3">
                 Dette får du med taksonomien
@@ -74,7 +70,7 @@ const TaksonomiPage = () => {
               brukeren gjør. Tenk på hendelsesnavnet som en kort setning.
             </BodyLong>
 
-            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 p-6">
+            <Box className="my-4 p-6 border border-border-subtle rounded-medium">
               <BodyLong className="font-medium">Enkelt prinsipp:</BodyLong>
               <BodyLong className="italic">Bruk vanlig norsk som alle kan forstå.</BodyLong>
             </Box>
@@ -161,7 +157,7 @@ const TaksonomiPage = () => {
               Dette gjør det lettere å forstå nøyaktig hva som skjedde og analysere dataene senere.
             </BodyLong>
 
-            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 p-6">
+            <Box className="my-4 p-6 border border-border-subtle rounded-medium">
               <BodyLong className="font-medium">Navnestruktur:</BodyLong>
               <BodyLong className="italic">Bruk to eller flere ord der første ordet starter med liten bokstav og de neste med stor.</BodyLong>
               <BodyLong className="mt-2">For eksempel: <code>appNavn</code>, <code>skjemaType</code>, <code>tekst</code></BodyLong>
@@ -242,11 +238,7 @@ const TaksonomiPage = () => {
             </BodyLong>
 
             <Box
-              borderWidth="1"
-              borderRadius="medium"
-              borderColor="border-info"
-              background="surface-info-subtle"
-              className="p-6"
+              className="p-6 border border-border-info rounded-medium bg-surface-info-subtle"
             >
               <Heading size="small" level="3" spacing>
                 <Link href="https://github.com/navikt/analytics-types" target="_blank" className="text-text-default hover:underline">
@@ -268,13 +260,13 @@ const TaksonomiPage = () => {
               <BodyLong className="mb-2">
                 <strong>Installer pakken:</strong>
               </BodyLong>
-              <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="bg-gray-50 flex items-center justify-between p-6">
+              <Box className="bg-gray-50 flex items-center justify-between p-6 border border-border-subtle rounded-medium">
                 <code className="text-sm">npm install @navikt/analytics-types</code>
                 <CopyButton copyText="npm install @navikt/analytics-types" size="small" />
               </Box>
             </Box>
 
-            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-6 p-6">
+            <Box className="my-6 p-6 border border-border-subtle rounded-medium">
               <Heading size="xsmall" level="3" spacing>
                 Eksempel på bruk
               </Heading>
@@ -310,7 +302,7 @@ analytics(Events.NAVIGERE, properties);`}
               Her er et eksempel på hvordan du kan spore hendelser i tråd med taksonomien:
             </BodyLong>
 
-            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 bg-gray-50 p-6">
+            <Box className="my-4 bg-gray-50 p-6 border border-border-subtle rounded-medium">
               <pre className="text-base whitespace-pre-wrap">
                 {`// Når en bruker klikker på en lenke
 function handleLenkeKlikk() {

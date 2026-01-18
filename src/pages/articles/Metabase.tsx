@@ -18,7 +18,7 @@ const Metabase = () => {
       </p>
 
       {/* Introduction box */}
-      <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8 bg-blue-50 p-6">
+      <Box className="mb-8 bg-blue-50 p-6 border border-border-subtle rounded-medium">
         <Heading size="small" level="2" spacing>
           Tre steg for å lage dashboard i Metabase
         </Heading>
@@ -30,7 +30,7 @@ const Metabase = () => {
       </Box>
 
       <div className="prose max-w-full prose-lg">
-        <VStack gap="12">
+        <VStack gap="space-12">
 
           {/* STEG 1 */}
           <section id="steg1-metabase">

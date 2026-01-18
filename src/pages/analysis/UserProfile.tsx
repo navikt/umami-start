@@ -59,14 +59,14 @@ export default function UserProfile() {
 
     return (
         <div className="container mx-auto p-8 max-w-2xl">
-            <VStack gap="6">
+            <VStack gap="space-6">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 rounded-lg shadow-lg">
                     <Heading size="large">Din profil</Heading>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                    <VStack gap="4">
-                        <HStack gap="3" align="center">
+                    <VStack gap="space-4">
+                        <HStack gap="space-4" align="center">
                             <PersonIcon className="text-blue-600" fontSize="2rem" />
                             <div>
                                 <Label>Nav-ident</Label>
@@ -85,7 +85,7 @@ export default function UserProfile() {
 
                         <div className="h-px bg-gray-200" />
 
-                        <HStack gap="3" align="center">
+                        <HStack gap="space-4" align="center">
                             <div>
                                 <Label>E-post</Label>
                                 <BodyShort className="text-lg">{user?.email}</BodyShort>
