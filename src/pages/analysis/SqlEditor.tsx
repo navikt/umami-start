@@ -541,7 +541,7 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_website</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
@@ -555,7 +555,7 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Personer</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.session</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami_views.session</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
@@ -569,7 +569,7 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Alle hendelser</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.event</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami_views.event</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
@@ -583,7 +583,7 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami_views.event_data</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami_views.event_data</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
@@ -600,7 +600,7 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_website</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
@@ -614,7 +614,7 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Personer</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_session</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_session</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
@@ -628,7 +628,7 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Alle hendelser</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_website_event</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_website_event</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
@@ -642,7 +642,7 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">team-researchops-prod-01d6.umami.public_event_data</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_event_data</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
@@ -705,7 +705,7 @@ export default function SqlEditor() {
                         </div>
                         {showValidation && validateError && (
                             <div
-                                className={`relative rounded px-3 py-2 mt-2 text-sm ${validateError === 'SQL er gyldig!' ? 'bg-green-100 border border-green-400 text-green-800' : 'bg-red-100 border border-red-400 text-red-800'}`}
+                                className={`relative rounded px-3 py-2 mt-2 text-sm ${validateError === 'SQL er gyldig!' ? 'bg-[var(--ax-bg-success-soft)] border border-[var(--ax-border-success-subtle)] text-[var(--ax-text-success)]' : 'bg-[var(--ax-bg-danger-soft)] border border-[var(--ax-border-danger-subtle)] text-[var(--ax-text-danger)]'}`}
                             >
                                 <span>{validateError}</span>
                                 <button
@@ -721,7 +721,7 @@ export default function SqlEditor() {
                     </div>
 
                     {/* Submit Buttons */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mt-8">
                         <Button
                             onClick={executeQuery}
                             loading={loading}
@@ -761,7 +761,7 @@ export default function SqlEditor() {
                                     </div>
                                 )}
                                 {estimate.cacheHit && (
-                                    <div className="text-green-700">
+                                    <div className="text-[var(--ax-text-success)]">
                                         ✓ Cached (no cost)
                                     </div>
                                 )}
@@ -801,7 +801,7 @@ export default function SqlEditor() {
             {/* JSON Output - below results */}
             {result && (
                 <ReadMore header="JSON" size="small" className="mt-6">
-                    <pre className="bg-gray-100 border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
+                    <pre className="bg-[var(--ax-bg-neutral-soft)] border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
                 </ReadMore>
             )}
         </ChartLayout>

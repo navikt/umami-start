@@ -739,16 +739,16 @@ const Dashboard = () => {
 
                                             {/* Batched queries - shown grouped */}
                                             {batchedChartStats.length > 0 && (
-                                                <div className="border-l-4 border-green-500 pl-3 py-1 bg-green-50 rounded-r">
-                                                    <div className="font-medium text-green-700 mb-1">
+                                                <div className="border-l-4 border-[var(--ax-border-success)] pl-3 py-1 bg-[var(--ax-bg-success-soft)] rounded-r">
+                                                    <div className="font-medium text-[var(--ax-text-default)] mb-1">
                                                         Kombinert spørring: {Math.round(batchedTotalGb)} GB for {batchedChartStats.length} diagrammer
                                                     </div>
-                                                    <ul className="list-disc pl-5 text-green-800">
+                                                    <ul className="list-disc pl-5 text-[var(--ax-text-default)]">
                                                         {batchedChartStats.map(([id, stat]) => (
                                                             <li key={id}>{stat.title}</li>
                                                         ))}
                                                     </ul>
-                                                    <div className="text-xs text-green-600 mt-1">
+                                                    <div className="text-xs text-[var(--ax-text-subtle)] mt-1">
                                                         Spart ~{Math.round(batchedTotalGb * (batchedChartStats.length - 1))} GB ved å kombinere disse spørringene
                                                     </div>
                                                 </div>

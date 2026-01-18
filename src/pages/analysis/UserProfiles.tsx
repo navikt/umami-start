@@ -256,13 +256,15 @@ const UserProfiles = () => {
                             />
                         </div>
 
-                        <Button
-                            className="w-full mt-4"
-                            onClick={handleSearchClick}
-                            disabled={!selectedWebsite}
-                        >
-                            Vis brukerprofiler
-                        </Button>
+                        <div className="mt-8">
+                            <Button
+                                className="w-full"
+                                onClick={handleSearchClick}
+                                disabled={!selectedWebsite}
+                            >
+                                Vis brukerprofiler
+                            </Button>
+                        </div>
                     </div>
                 </>
             }
@@ -294,7 +296,7 @@ const UserProfiles = () => {
                         <Heading level="2" size="medium" className="mb-2">
                             {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'brukere'}
                         </Heading>
-                        <BodyShort className="text-gray-600 max-w-prose">
+                        <BodyShort className="text-[var(--ax-text-subtle)] max-w-prose">
                             Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.
                         </BodyShort>
                     </div>
@@ -316,7 +318,7 @@ const UserProfiles = () => {
                                     <Table.Row
                                         key={user.sessionId}
                                         onClick={() => handleRowClick(user)}
-                                        className="cursor-pointer hover:bg-gray-50"
+                                        className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]"
                                     >
                                         <Table.DataCell>
                                             <Link href="#" onClick={(e) => { e.preventDefault(); handleRowClick(user); }}>
@@ -362,7 +364,7 @@ const UserProfiles = () => {
                     )}
 
                     {queryStats && (
-                        <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-500 flex justify-end">
+                        <div className="mt-8 pt-4 border-t border-[var(--ax-border-neutral-subtle)] text-sm text-gray-500 flex justify-end">
                             <p>
                                 Data prosessert: <strong>{queryStats.totalBytesProcessedGB} GB</strong>
                             </p>
@@ -383,7 +385,7 @@ const UserProfiles = () => {
                 <Modal.Body>
                     {selectedSession && (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                            <div className="grid grid-cols-2 gap-4 bg-[var(--ax-bg-neutral-soft)] p-4 rounded-lg">
                                 <div className="col-span-2">
                                     <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Bruker ID</Heading>
                                     <code className="text-sm break-all">{selectedSession.sessionId}</code>
@@ -436,22 +438,22 @@ const UserProfiles = () => {
                                 <Heading level="3" size="small" className="mb-4">Aktivitetslogg</Heading>
 
                                 {!activityLoading && activityData.length > 0 && (
-                                    <div className="bg-gray-50 p-4 rounded-lg mb-6 flex flex-wrap gap-8 border border-gray-100">
+                                    <div className="bg-[var(--ax-bg-neutral-soft)] p-4 rounded-lg mb-6 flex flex-wrap gap-8 border border-gray-100">
                                         <div>
-                                            <span className="text-gray-700 block text-sm font-medium mb-1">Sidevisninger</span>
-                                            <span className="font-bold text-2xl text-gray-900">
+                                            <span className="text-[var(--ax-text-default)] block text-sm font-medium mb-1">Sidevisninger</span>
+                                            <span className="font-bold text-2xl text-[var(--ax-text-default)]">
                                                 {activityData.filter(a => a.type === 'pageview').length}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-700 block text-sm font-medium mb-1">Hendelser</span>
-                                            <span className="font-bold text-2xl text-gray-900">
+                                            <span className="text-[var(--ax-text-default)] block text-sm font-medium mb-1">Hendelser</span>
+                                            <span className="font-bold text-2xl text-[var(--ax-text-default)]">
                                                 {activityData.filter(a => a.type !== 'pageview').length}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-700 block text-sm font-medium mb-1">Totalt</span>
-                                            <span className="font-bold text-2xl text-gray-900">
+                                            <span className="text-[var(--ax-text-default)] block text-sm font-medium mb-1">Totalt</span>
+                                            <span className="font-bold text-2xl text-[var(--ax-text-default)]">
                                                 {activityData.length}
                                             </span>
                                         </div>
@@ -463,12 +465,12 @@ const UserProfiles = () => {
                                         <Loader />
                                     </div>
                                 ) : (
-                                    <div className="relative border-l border-gray-200 ml-3 space-y-8">
+                                    <div className="relative border-l border-[var(--ax-border-neutral-subtle)] ml-3 space-y-8">
                                         {activityData.map((item, index) => (
                                             <div key={index} className="mb-8 ml-8 relative">
-                                                <span className="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-[41px] ring-4 ring-white">
+                                                <span className="absolute flex items-center justify-center w-8 h-8 bg-[var(--ax-bg-accent-soft)] rounded-full -left-[41px] ring-4 ring-[var(--ax-bg-default)]">
                                                     {item.type === 'pageview' ? (
-                                                        <Monitor size={18} className="text-blue-600" />
+                                                        <Monitor size={18} className="text-[var(--ax-text-accent)]" />
                                                     ) : (
                                                         <User size={18} className="text-green-600" />
                                                     )}
@@ -477,15 +479,15 @@ const UserProfiles = () => {
                                                     <span className="text-sm text-gray-500">
                                                         {new Date(item.createdAt).toLocaleTimeString('no-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' })}
                                                     </span>
-                                                    <h4 className="text-lg font-medium text-gray-900">
+                                                    <h4 className="text-lg font-medium text-[var(--ax-text-default)]">
                                                         {item.type === 'pageview' ? 'Sidevisning' : item.name}
                                                     </h4>
-                                                    <p className="text-base text-gray-700">
+                                                    <p className="text-base text-[var(--ax-text-default)]">
                                                         {item.title || item.url}
                                                     </p>
                                                     {item.url && (
                                                         <code
-                                                            className="text-sm text-blue-600 hover:underline cursor-pointer mt-1 bg-gray-50 p-1.5 rounded w-fit flex items-center gap-1"
+                                                            className="text-sm text-blue-600 hover:underline cursor-pointer mt-1 bg-[var(--ax-bg-neutral-soft)] p-1.5 rounded w-fit flex items-center gap-1"
                                                             onClick={() => setSelectedActivityUrl(item.url)}
                                                         >
                                                             {item.url} <ExternalLink className="h-3 w-3" />

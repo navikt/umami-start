@@ -1510,7 +1510,7 @@ const ChartsPage = () => {
               {/* Step 1: Explorer */}
               {/* <section className='-mb-3'>
                 <div>
-                   <div className="flex justify-between items-center bg-gray-50 p-4 rounded-md">
+                   <div className="flex justify-between items-center bg-[var(--ax-bg-neutral-soft)] p-4 rounded-md">
                     <span>Vis hendelsesutforsker</span>
                      Switch would go here
                   </div>

@@ -515,7 +515,7 @@ const DateRangeSelector = forwardRef(({
         For hvilken tidsperiode?
       </Heading>
 
-      <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+      <div className="mt-3 bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-inner">
         <Tabs
           value={dateMode}
           onChange={handleTabChange}
@@ -620,7 +620,7 @@ const DateRangeSelector = forwardRef(({
               {relativeMode === 'previous' && (
                 <div className="flex items-end gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[var(--ax-text-subtle)] mb-1">
                       Antall
                     </label>
                     <input
@@ -632,7 +632,7 @@ const DateRangeSelector = forwardRef(({
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[var(--ax-text-subtle)] mb-1">
                       Periode
                     </label>
                     <select
@@ -657,7 +657,7 @@ const DateRangeSelector = forwardRef(({
                           }
                         ]);
                       }}
-                      className="w-full px-3 py-1.5 text-sm border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-1.5 text-sm border rounded-md bg-[var(--ax-bg-default)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {TIME_UNITS.map(unit => (
                         <option key={unit.value} value={unit.value}>
@@ -767,7 +767,7 @@ const DateRangeSelector = forwardRef(({
 
           {/* Interactive panel - completely revised */}
           <Tabs.Panel value="interactive" className="pt-6">
-            <div className="text-sm text-gray-700 p-4 rounded border border-green-200 mb-4">
+            <div className="text-sm text-[var(--ax-text-subtle)] p-4 rounded border border-green-200 mb-4">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
                   <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
@@ -787,7 +787,7 @@ const DateRangeSelector = forwardRef(({
                 </div>
                 <div>
                   <p className="font-medium mb-1">Filtervalg i Metabase for datofilter er aktivert</p>
-                  <p className="text-gray-600">Datoperiode kan velges via filtervalg i Metabase-dashbord</p>
+                  <p className="text-[var(--ax-text-subtle)]">Datoperiode kan velges via filtervalg i Metabase-dashbord</p>
                 </div>
               </div>
             </div>
@@ -811,7 +811,7 @@ const DateRangeSelector = forwardRef(({
                     <li>Velg ønsket datoformat under "Filter type"</li>
                     <li>Valgfritt: Legg til en beskrivende etikett og standardverdi (f.eks. "Siste 30 dager")</li>
                   </ol>
-                  <p className="text-md text-gray-700 mt-2">
+                  <p className="text-md text-[var(--ax-text-subtle)] mt-2">
                     Etter oppsett kan du teste filteret direkte i dashbordet.
                   </p>
                 </div>
@@ -821,7 +821,7 @@ const DateRangeSelector = forwardRef(({
         </Tabs>
 
         {dateMode !== 'interactive' && (
-          <div className="mt-5 text-sm text-gray-700">
+          <div className="mt-5 text-sm text-[var(--ax-text-subtle)]">
             {getStartDateDisplay()}
           </div>
         )}

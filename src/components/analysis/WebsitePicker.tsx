@@ -608,7 +608,7 @@ const WebsitePicker = ({
 
       {/* {selectedWebsite && includeParams && (
           <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-[var(--ax-text-default)]">
               Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
             </div>
           </div>

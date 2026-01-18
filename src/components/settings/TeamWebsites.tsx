@@ -132,7 +132,7 @@ function TeamWebsites() {
             </div>
             <div style={{ overflowX: 'auto' }} >
                 {/* Display the count of websites shown */}
-                <div className="my-2 text-md text-gray-700">
+                <div className="my-2 text-md text-[var(--ax-text-default)]">
                     {filteredData?.length || 0} nettsider/apper
                 </div>
                 <Table zebraStripes={true}>

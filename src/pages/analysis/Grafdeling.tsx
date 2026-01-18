@@ -422,9 +422,9 @@ export default function Grafdeling() {
 
             {/* Initial Loading State */}
             {loading && !result && (
-                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="flex flex-col items-center justify-center py-16 bg-[var(--ax-bg-default)] rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)]">
                     <Loader size="3xlarge" title="Laster data..." />
-                    <BodyLong className="mt-4 text-gray-600">Henter data...</BodyLong>
+                    <BodyLong className="mt-4 text-[var(--ax-text-subtle)]">Henter data...</BodyLong>
                 </div>
             )}
 

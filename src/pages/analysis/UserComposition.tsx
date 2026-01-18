@@ -228,14 +228,16 @@ const UserComposition = () => {
                         onEndDateChange={setCustomEndDate}
                     />
 
-                    <Button
-                        onClick={fetchData}
-                        disabled={!selectedWebsite || loading}
-                        loading={loading}
-                        className="w-full"
-                    >
-                        Vis brukersammensetning
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={fetchData}
+                            disabled={!selectedWebsite || loading}
+                            loading={loading}
+                            className="w-full"
+                        >
+                            Vis brukersammensetning
+                        </Button>
+                    </div>
                 </>
             }
         >

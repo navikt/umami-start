@@ -239,7 +239,7 @@ const MarketingAnalysis = () => {
                             )}
                         </Table.Body>
                     </Table>
-                    <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
                         <div className="flex gap-2">
                             <Button
                                 size="small"
@@ -252,7 +252,7 @@ const MarketingAnalysis = () => {
                             </Button>
                         </div>
                         {queryStats && (
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-[var(--ax-text-subtle)]">
                                 Data prosessert: {queryStats.totalBytesProcessedGB} GB
                             </span>
                         )}
@@ -301,24 +301,28 @@ const MarketingAnalysis = () => {
                         onEndDateChange={setCustomEndDate}
                     />
 
-                    <RadioGroup
-                        size="small"
-                        legend="Visning"
-                        value={metricType}
-                        onChange={(val: string) => setMetricType(val)}
-                    >
-                        <Radio value="visitors">Besøkende</Radio>
-                        <Radio value="pageviews">Sidevisninger</Radio>
-                    </RadioGroup>
+                    <div className="mt-8">
+                        <RadioGroup
+                            size="small"
+                            legend="Visning"
+                            value={metricType}
+                            onChange={(val: string) => setMetricType(val)}
+                        >
+                            <Radio value="visitors">Besøkende</Radio>
+                            <Radio value="pageviews">Sidevisninger</Radio>
+                        </RadioGroup>
+                    </div>
 
-                    <Button
-                        onClick={fetchData}
-                        disabled={!selectedWebsite || loading}
-                        loading={loading}
-                        className="w-full"
-                    >
-                        Vis analyse
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={fetchData}
+                            disabled={!selectedWebsite || loading}
+                            loading={loading}
+                            className="w-full"
+                        >
+                            Vis analyse
+                        </Button>
+                    </div>
                 </>
             }
         >

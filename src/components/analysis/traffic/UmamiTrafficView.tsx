@@ -229,7 +229,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
     }
 
     return (
-        <div className={`bg-white w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}>
+        <div className={`bg-[var(--ax-bg-default)] w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}>
             {/* Inner container */}
             <div className={`relative min-w-max ${isFullscreen ? '' : ''}`} ref={contentRef}>
 
@@ -252,12 +252,12 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                         <div key={stepData.step} className="flex-shrink-0 w-60 flex flex-col gap-4"> {/* Reduced width from 72 (18rem) to 60 (15rem) */}
                             {/* Step Header */}
                             <div className="flex flex-col items-center mb-2">
-                                <div className="text-gray-700 mb-1">
+                                <div className="text-[var(--ax-text-default)] mb-1">
                                     {stepData.step === 1 && <span className="text-sm font-medium uppercase tracking-wider">Fra</span>}
                                     {stepData.step === 2 && <span className="text-sm font-medium uppercase tracking-wider">Til</span>}
                                     {stepData.step === 3 && <span className="text-sm font-medium uppercase tracking-wider">Neste</span>}
                                 </div>
-                                <div className="text-sm font-semibold text-gray-900">
+                                <div className="text-sm font-semibold text-[var(--ax-text-default)]">
                                     {stepData.totalValue.toLocaleString('nb-NO')} {metricLabel}
                                 </div>
                             </div>
@@ -304,7 +304,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                             </div>
 
                                             {/* Percentage Bar - Bottom */}
-                                            <div className="absolute bottom-0 left-0 right-0 h-2 bg-white/30">
+                                            <div className="absolute bottom-0 left-0 right-0 h-2 bg-[var(--ax-bg-default)]/30">
                                                 <div
                                                     className="h-full bg-orange-400 transition-all duration-500 ease-out"
                                                     style={{ width: `${item.percentage}%` }}

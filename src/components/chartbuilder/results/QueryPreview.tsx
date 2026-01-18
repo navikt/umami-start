@@ -919,7 +919,7 @@ const QueryPreview = ({
                     {/* Event Name Filter */}
                     {hasEventNameFilter && (
                       <div className="w-64">
-                        {isEventsLoading && <div className="text-xs text-gray-500 mb-1">Laster hendelser...</div>}
+                        {isEventsLoading && <div className="text-xs text-[var(--ax-text-subtle)] mb-1">Laster hendelser...</div>}
                         <div className={isEventsLoading ? 'opacity-50 pointer-events-none' : ''}>
                           <UNSAFE_Combobox
                             label="Hendelsesnavn"
@@ -976,7 +976,7 @@ const QueryPreview = ({
 
             {/* Metabase Section */}
             <div className="space-y-3 mb-4">
-              <Heading level="2" size="small">Legg til i Metabase</Heading>
+              <Heading level="2" size="small" spacing>Legg til i Metabase</Heading>
 
               {/* Add incompatibility warning */}
               {showIncompatibilityWarning && (
@@ -1011,7 +1011,7 @@ const QueryPreview = ({
 
                   {/* Cost Estimate Display */}
                   {estimating && (
-                    <div className="mt-2 text-sm text-gray-600">
+                    <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
                       Estimerer kostnad...
                     </div>
                   )}
@@ -1037,7 +1037,7 @@ const QueryPreview = ({
 
                     if (!showAsAlert) {
                       return (
-                        <div className="mt-2 text-sm text-gray-600">
+                        <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
                           Data å prosessere: {gb} GB
                           {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
                         </div>
@@ -1084,7 +1084,7 @@ const QueryPreview = ({
                   <li>Trykk på <span role="img" aria-label="spill av-knapp">▶️</span> "vis resultater"-knappen</li>
                   <li>Trykk "Visualisering" for å bytte fra tabell til graf</li>
                 </ol>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-[var(--ax-text-subtle)] mt-2">
                   Merk: Hvis siden "Velg dine startdata" vises, lukk den og klikk på lenken på nytt.
                 </p>
               </ReadMore>*/}

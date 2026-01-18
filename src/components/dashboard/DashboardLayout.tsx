@@ -18,10 +18,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     children
 }) => {
     return (
-        <div className="py-8 max-w-[76.5rem] mx-auto w-full">
-            <div className="mb-8">
+        <div className="py-8 max-w-[80rem] mx-auto w-full px-4 md:px-6">
+            <div className={description ? 'mb-8' : 'mb-4'}>
                 <div className="flex flex-col gap-1">
-                    <Heading level="1" size="xlarge">
+                    <Heading level="1" size="xlarge" spacing>
                         {title}
                     </Heading>
                     {subtitle && (

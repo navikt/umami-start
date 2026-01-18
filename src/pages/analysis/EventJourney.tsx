@@ -626,13 +626,16 @@ const EventJourney = () => {
                         onEndDateChange={setCustomEndDate}
                     />
 
-                    <Button
-                        onClick={fetchData}
-                        disabled={!selectedWebsite || loading || !urlPath}
-                        loading={loading}
-                    >
-                        Vis reiser
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={fetchData}
+                            disabled={!selectedWebsite || loading || !urlPath}
+                            loading={loading}
+                            className="w-full"
+                        >
+                            Vis reiser
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -659,9 +662,9 @@ const EventJourney = () => {
                     {/* Stats Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                         {/* Unique Visitors */}
-                        <div className="bg-white border text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
+                        <div className="bg-[var(--ax-bg-default)] border text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
                             <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-gray-600">Unike besøkende</Label>
+                                <Label size="small" className="text-[var(--ax-text-subtle)]">Unike besøkende</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
                                 <div className="text-xl lg:text-2xl font-bold mb-1">{formatNumber(queryStats?.total_sessions || 0)}</div>
@@ -670,45 +673,45 @@ const EventJourney = () => {
                         </div>
 
                         {/* Interactive */}
-                        <div className="bg-blue-50 border border-blue-100 text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
+                        <div className="bg-[var(--ax-bg-accent-soft)] border border-[var(--ax-border-accent-subtle)] text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
                             <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-blue-900">Utførte handlinger</Label>
+                                <Label size="small" className="text-[var(--ax-text-accent)]">Utførte handlinger</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold text-blue-900 mb-1">
+                                <div className="text-xl lg:text-2xl font-bold text-[var(--ax-text-accent)] mb-1">
                                     {getPercentage(queryStats?.sessions_with_events || 0, queryStats?.total_sessions || 0)}
                                 </div>
-                                <div className="text-sm font-medium text-blue-800">
+                                <div className="text-sm font-medium text-[var(--ax-text-accent)] opacity-80">
                                     {formatNumber(queryStats?.sessions_with_events || 0)} sesjoner
                                 </div>
                             </div>
                         </div>
 
                         {/* Navigated No Events */}
-                        <div className="bg-green-50 border border-green-100 text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
+                        <div className="bg-[var(--ax-bg-success-soft)] border border-[var(--ax-border-success-subtle)] text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
                             <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-green-900">Navigering uten handling</Label>
+                                <Label size="small" className="text-[var(--ax-text-success)]">Navigering uten handling</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold text-green-900 mb-1">
+                                <div className="text-xl lg:text-2xl font-bold text-[var(--ax-text-success)] mb-1">
                                     {getPercentage(queryStats?.sessions_no_events_navigated || 0, queryStats?.total_sessions || 0)}
                                 </div>
-                                <div className="text-sm font-medium text-green-800">
+                                <div className="text-sm font-medium text-[var(--ax-text-success)] opacity-80">
                                     {formatNumber(queryStats?.sessions_no_events_navigated || 0)} sesjoner
                                 </div>
                             </div>
                         </div>
 
                         {/* Bounced */}
-                        <div className="bg-red-50 border border-red-100 text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
+                        <div className="bg-[var(--ax-bg-danger-soft)] border border-[var(--ax-border-danger-subtle)] text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
                             <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-red-900">Forlot nettstedet</Label>
+                                <Label size="small" className="text-[var(--ax-text-danger)]">Forlot nettstedet</Label>
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold text-red-900 mb-1">
+                                <div className="text-xl lg:text-2xl font-bold text-[var(--ax-text-danger)] mb-1">
                                     {getPercentage(queryStats?.sessions_no_events_bounced || 0, queryStats?.total_sessions || 0)}
                                 </div>
-                                <div className="text-sm font-medium text-red-800">
+                                <div className="text-sm font-medium text-[var(--ax-text-danger)] opacity-80">
                                     {formatNumber(queryStats?.sessions_no_events_bounced || 0)} sesjoner
                                 </div>
                             </div>
@@ -778,13 +781,13 @@ const EventJourney = () => {
 
                         <Tabs.Panel value="visual" className="pt-4">
 
-                            <div className="bg-white border rounded-lg p-4 mb-4 overflow-x-auto">
+                            <div className="bg-[var(--ax-bg-default)] border rounded-lg p-4 mb-4 overflow-x-auto">
                                 <div className="min-w-max">
                                     {filteredData.length > 0 ? (
                                         filteredData.map((journey, idx) => (
                                             <div key={idx} className="mb-8 last:mb-0">
                                                 <div className="flex items-center text-sm text-gray-500 mb-2">
-                                                    <span className="font-semibold text-gray-900 mr-2">{formatNumber(journey.count)} sesjoner</span>
+                                                    <span className="font-semibold text-[var(--ax-text-default)] mr-2">{formatNumber(journey.count)} sesjoner</span>
                                                     <span>({((journey.count / data.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1)}% av totalt)</span>
                                                 </div>
                                                 <div className="flex items-start overflow-x-auto pb-6 pt-6 pl-4 pr-1">
@@ -853,23 +856,23 @@ const EventJourney = () => {
 
                                                                 return (
                                                                     <div
-                                                                        className={`border rounded shadow-sm p-2 min-w-[120px] max-w-[150px] bg-white text-left text-xs cursor-pointer hover:shadow-md transition-shadow relative group ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500' : ''} ${isDecorator ? 'border-purple-300 border-l-4 border-l-purple-400' :
+                                                                        className={`border rounded shadow-sm p-2 min-w-[120px] max-w-[150px] bg-[var(--ax-bg-default)] text-left text-xs cursor-pointer hover:shadow-md transition-shadow relative group ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500' : ''} ${isDecorator ? 'border-purple-300 border-l-4 border-l-purple-400' :
                                                                             isContent ? 'border-green-300 border-l-4 border-l-green-400' :
                                                                                 isExternalExit ? 'border-amber-400 border-l-4 border-l-amber-500' :
                                                                                     isInternalNav ? 'border-amber-400 border-l-4 border-l-amber-500' :
-                                                                                        'border-gray-200'
+                                                                                        'border-[var(--ax-border-neutral-subtle)]'
                                                                             }`}
                                                                         onClick={() => setSelectedStepDetails({ title: eventName, details })}
                                                                     >
                                                                         <div className="flex justify-between items-start">
-                                                                            <div className="font-semibold truncate text-gray-900 pr-4">{cardTitle}</div>
+                                                                            <div className="font-semibold truncate text-[var(--ax-text-default)] pr-4">{cardTitle}</div>
                                                                             <button
                                                                                 onClick={(e) => toggleFunnelStep(e, eventName, stepNumber - 1, details)}
                                                                                 className={`
                                                                             absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-all
                                                                             ${isFunnelStep
                                                                                         ? 'bg-green-500 text-white'
-                                                                                        : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600 opacity-0 group-hover:opacity-100'
+                                                                                        : 'bg-[var(--ax-bg-neutral-soft)] text-gray-400 hover:bg-blue-100 hover:text-blue-600 opacity-0 group-hover:opacity-100'
                                                                                     }
                                                                         `}
                                                                                 title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
@@ -943,14 +946,14 @@ const EventJourney = () => {
                                                                         role="button"
                                                                         tabIndex={0}
                                                                         className={`border rounded-lg shadow-sm p-3 min-w-[160px] max-w-[220px] hover:shadow-md transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-500 relative cursor-pointer ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500' : ''} ${isDecorator
-                                                                            ? 'bg-white border-purple-300 hover:border-purple-400 border-l-4 border-l-purple-400'
+                                                                            ? 'bg-[var(--ax-bg-default)] border-purple-300 hover:border-purple-400 border-l-4 border-l-purple-400'
                                                                             : isContent
-                                                                                ? 'bg-white border-green-300 hover:border-green-400 border-l-4 border-l-green-400'
+                                                                                ? 'bg-[var(--ax-bg-default)] border-green-300 hover:border-green-400 border-l-4 border-l-green-400'
                                                                                 : isExternalExit
-                                                                                    ? 'bg-white border-amber-400 hover:border-amber-500 border-l-4 border-l-amber-500'
+                                                                                    ? 'bg-[var(--ax-bg-default)] border-amber-400 hover:border-amber-500 border-l-4 border-l-amber-500'
                                                                                     : isInternalNav
-                                                                                        ? 'bg-white border-amber-400 hover:border-amber-500 border-l-4 border-l-amber-500'
-                                                                                        : 'bg-white hover:border-blue-300'
+                                                                                        ? 'bg-[var(--ax-bg-default)] border-amber-400 hover:border-amber-500 border-l-4 border-l-amber-500'
+                                                                                        : 'bg-[var(--ax-bg-default)] hover:border-blue-300'
                                                                             }`}
                                                                         onClick={() => setSelectedStepDetails({ title: eventName, details })}
                                                                         onKeyDown={(e) => {
@@ -990,7 +993,7 @@ const EventJourney = () => {
                                                                                 w-6 h-6 rounded-full flex items-center justify-center transition-all z-20
                                                                                 ${isFunnelStep
                                                                                             ? 'bg-green-500 text-white shadow-sm'
-                                                                                            : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'
+                                                                                            : 'bg-[var(--ax-bg-neutral-soft)] text-gray-400 hover:bg-blue-100 hover:text-blue-600'
                                                                                         }
                                                                             `}
                                                                                     title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
@@ -1000,7 +1003,7 @@ const EventJourney = () => {
                                                                             </div>
                                                                         </div>
 
-                                                                        <div className="font-semibold text-gray-900 text-sm mb-1 truncate pr-2" title={cardTitle}>
+                                                                        <div className="font-semibold text-[var(--ax-text-default)] text-sm mb-1 truncate pr-2" title={cardTitle}>
                                                                             {cardTitle}
                                                                         </div>
                                                                         {(cardLabel || cardSubtitle) && (
@@ -1018,7 +1021,7 @@ const EventJourney = () => {
                                                                             Vis {details.length} detaljer
                                                                         </div>
                                                                     </div>
-                                                                    <div className="absolute -top-2 -left-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm z-10">
+                                                                    <div className="absolute -top-2 -left-2 bg-[var(--ax-bg-neutral-soft)] text-[var(--ax-text-subtle)] text-[10px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm z-10">
                                                                         {stepNumber}
                                                                     </div>
                                                                 </div>
@@ -1038,7 +1041,7 @@ const EventJourney = () => {
                                                             // Loop group
                                                             const borderColor = group.hasExit ? 'border-amber-400' : 'border-blue-300';
                                                             const bgColor = group.hasExit ? 'bg-amber-50/30' : 'bg-blue-50/30';
-                                                            const badgeBg = group.hasExit ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-white border-blue-200 text-blue-700';
+                                                            const badgeBg = group.hasExit ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-[var(--ax-bg-default)] border-blue-200 text-blue-700';
                                                             return (
                                                                 <div key={groupIdx} className="flex items-center flex-shrink-0">
                                                                     <div className={`relative border-2 border-dashed ${borderColor} rounded-xl pt-7 pb-4 px-4 ${bgColor} min-w-[200px]`}>
@@ -1131,7 +1134,7 @@ const EventJourney = () => {
                                                     const value = values.join(': ');
                                                     return (
                                                         <Table.Row key={i}>
-                                                            <Table.DataCell className="font-semibold capitalize text-gray-700 w-1/3">
+                                                            <Table.DataCell className="font-semibold capitalize text-[var(--ax-text-default)] w-1/3">
                                                                 {key}
                                                             </Table.DataCell>
                                                             <Table.DataCell className="break-all">
@@ -1206,7 +1209,7 @@ const EventJourney = () => {
                         <Tabs.Panel value="table" className="pt-4">
 
                             <div className="border rounded-lg overflow-hidden mt-8">
-                                <Heading level="3" size="small" className="p-4 bg-gray-50 border-b">Detaljert tabell</Heading>
+                                <Heading level="3" size="small" className="p-4 bg-[var(--ax-bg-neutral-soft)] border-b">Detaljert tabell</Heading>
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <Table.Header>
@@ -1240,7 +1243,7 @@ const EventJourney = () => {
 
                     {
                         dryRunStats && dryRunStats.totalBytesProcessedGB && (
-                            <div className="text-sm text-gray-600 text-right mt-4">
+                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
                                 Data prosessert: {Math.round(parseFloat(dryRunStats.totalBytesProcessedGB))} GB
                             </div>
                         )
@@ -1262,7 +1265,7 @@ const EventJourney = () => {
                                         variant="tertiary"
                                         size="medium"
                                         onClick={() => setFunnelSteps([])}
-                                        className="text-white hover:bg-white/10 hover:text-white"
+                                        className="text-white hover:bg-[var(--ax-bg-default)]/10 hover:text-white"
                                         icon={<Trash2 size={16} />}
                                     >
                                         Tøm

@@ -31,7 +31,7 @@ const AdvancedOptions: React.FC<AdvancedOptionsProps> = ({
             <div className="flex justify-between items-start">
               <div>
                 <Label as="p">Datointervall</Label>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-[var(--ax-text-subtle)] mt-1">
                   Velg hvor mange dager bakover du vil se data for
                 </p>
               </div>
@@ -60,7 +60,7 @@ const AdvancedOptions: React.FC<AdvancedOptionsProps> = ({
               </div>
             </div>
             
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-[var(--ax-text-subtle)]">
               <p>
                 Ser på data for de siste {dateRangeInDays} dagene 
                 {maxDaysAvailable > 0 && ` (maks ${maxDaysAvailable} dager tilgjengelig)`}

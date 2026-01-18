@@ -22,7 +22,7 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
 
     if (loading) {
-        return <div className="animate-pulse h-64 bg-gray-100 rounded-lg"></div>;
+        return <div className="animate-pulse h-64 bg-[var(--ax-bg-neutral-soft)] rounded-lg"></div>;
     }
 
     if (!data || data.length === 0) {
@@ -126,7 +126,7 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                                                 )}
 
                                                 <div
-                                                    className={`text-[10px] bg-white/10 border border-white/20 rounded px-1.5 py-0.5 opacity-90 max-w-full font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:bg-white/20 hover:opacity-100 transition-colors' : ''}`}
+                                                    className={`text-[10px] bg-[var(--ax-bg-default)]/10 border border-white/20 rounded px-1.5 py-0.5 opacity-90 max-w-full font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:bg-[var(--ax-bg-default)]/20 hover:opacity-100 transition-colors' : ''}`}
                                                     title={item.url}
                                                     onClick={(e) => isClickable && item.url ? handleUrlClick(e, item.url) : undefined}
                                                 >

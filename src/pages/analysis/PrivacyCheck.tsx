@@ -67,7 +67,7 @@ const ExampleList = ({ examples, type }: { examples: string[], type: string }) =
     if (!examples || examples.length === 0) return null;
 
     const renderItem = (ex: string) => (
-        <div className="py-1.5 px-2 bg-white border border-gray-200 rounded mb-2 overflow-x-auto">
+        <div className="py-1.5 px-2 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded mb-2 overflow-x-auto">
             <HighlightedText text={ex} type={type} />
         </div>
     );
@@ -330,14 +330,16 @@ const PrivacyCheck = () => {
                         showToday={true}
                     />
 
-                    <Button
-                        onClick={() => fetchData(false)}
-                        disabled={loading}
-                        loading={loading}
-                        className="w-full"
-                    >
-                        {selectedWebsite ? 'Kjør personvernssjekk' : 'Søk i alle nettsteder'}
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={() => fetchData(false)}
+                            disabled={loading}
+                            loading={loading}
+                            className="w-full"
+                        >
+                            {selectedWebsite ? 'Kjør personvernssjekk' : 'Søk i alle nettsteder'}
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -368,7 +370,7 @@ const PrivacyCheck = () => {
             {loading && (
                 <div className="flex flex-col justify-center items-center h-full gap-4">
                     <Loader size="xlarge" title="Søker etter personopplysninger..." />
-                    <div className="text-center text-gray-600">
+                    <div className="text-center text-[var(--ax-text-subtle)]">
                         <p className="font-medium">Dette kan ta noen sekunder</p>
                         <p className="text-sm">
                             {dryRunStats
@@ -468,7 +470,7 @@ const PrivacyCheck = () => {
                                                                 <strong>{table}</strong>
                                                                 <ul className="list-circle list-inside ml-6 mt-1">
                                                                     {Array.from(columns).sort().map((column, idx) => (
-                                                                        <li key={idx} className="text-sm text-gray-700">{column}</li>
+                                                                        <li key={idx} className="text-sm text-[var(--ax-text-default)]">{column}</li>
                                                                     ))}
                                                                 </ul>
                                                             </li>
@@ -484,27 +486,27 @@ const PrivacyCheck = () => {
                             <Tabs.Panel value="details" className="mt-4">
                                 {selectedType === 'E-post' && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Totalt antall e-poster</div>
-                                            <div className="text-2xl font-bold text-gray-900">
+                                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall e-poster</div>
+                                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                                                 {visibleData.reduce((sum, row) => sum + row.count, 0).toLocaleString('no-NO')}
                                             </div>
                                             <div className="text-xs text-gray-500 mt-1">
                                                 Unike: {visibleData.reduce((sum, row) => sum + (row.unique_count || 0), 0).toLocaleString('no-NO')}
                                             </div>
                                         </div>
-                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Nav e-poster</div>
-                                            <div className="text-2xl font-bold text-gray-900">
+                                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Nav e-poster</div>
+                                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                                                 {visibleData.reduce((sum, row) => sum + (row.nav_count || 0), 0).toLocaleString('no-NO')}
                                             </div>
                                             <div className="text-xs text-gray-500 mt-1">
                                                 Unike: {visibleData.reduce((sum, row) => sum + (row.unique_nav_count || 0), 0).toLocaleString('no-NO')}
                                             </div>
                                         </div>
-                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Andre e-poster</div>
-                                            <div className="text-2xl font-bold text-gray-900">
+                                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Andre e-poster</div>
+                                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                                                 {(visibleData.reduce((sum, row) => sum + row.count, 0) - visibleData.reduce((sum, row) => sum + (row.nav_count || 0), 0)).toLocaleString('no-NO')}
                                             </div>
                                             <div className="text-xs text-gray-500 mt-1">
@@ -516,15 +518,15 @@ const PrivacyCheck = () => {
 
                                 {!selectedWebsite && selectedType && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Antall unike nettsteder</div>
-                                            <div className="text-2xl font-bold text-gray-900">
+                                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall unike nettsteder</div>
+                                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                                                 {new Set(visibleData.map(row => row.website_id)).size.toLocaleString('no-NO')}
                                             </div>
                                         </div>
-                                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                            <div className="text-sm text-gray-900 font-medium mb-1">Antall variasjoner</div>
-                                            <div className="text-2xl font-bold text-gray-900">
+                                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall variasjoner</div>
+                                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                                                 {visibleData.length.toLocaleString('no-NO')}
                                             </div>
                                         </div>
@@ -564,7 +566,7 @@ const PrivacyCheck = () => {
                                                                     <strong>{table}</strong>
                                                                     <ul className="list-circle list-inside ml-6 mt-1">
                                                                         {Array.from(columns).sort().map((column, idx) => (
-                                                                            <li key={idx} className="text-sm text-gray-700">{column}</li>
+                                                                            <li key={idx} className="text-sm text-[var(--ax-text-default)]">{column}</li>
                                                                         ))}
                                                                     </ul>
                                                                 </li>

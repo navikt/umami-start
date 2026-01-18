@@ -233,7 +233,7 @@ const SiteGroupScores = ({ siteId, portalSiteId, groupId, baseUrl, className }) 
 
     // Stat card component for QA details
     const StatCard = ({ label, value, color }) => (
-        <div className="flex flex-col items-center p-3 bg-gray-50 rounded-lg">
+        <div className="flex flex-col items-center p-3 bg-[var(--ax-bg-neutral-soft)] rounded-lg">
             <span
                 className="text-2xl font-bold"
                 style={{ color: color || '#111' }}

@@ -431,7 +431,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 </Heading>
 
                 {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                  <List as="ul" size="small" className="text-gray-700 pb-1">
+                  <List as="ul" size="small" className="text-[var(--ax-text-subtle)] pb-1">
                     <List.Item>Vi henter alltid hendelser fra de siste 2 ukene.</List.Item>
                     <List.Item>Detaljer er forhåndsatt som tekst. Du kan endre til tall ved behov.</List.Item>
                   </List>
@@ -483,7 +483,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                         {/* Existing custom parameter accordion items */}
                         {Object.keys(filteredGroupedParameters).map(eventName => (
                           <Accordion.Item key={eventName}>
-                            <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-white' : 'bg-white'}>
+                            <Accordion.Header className={eventName === MANUAL_EVENT_NAME ? 'bg-[var(--ax-bg-default)]' : 'bg-[var(--ax-bg-default)]'}>
                               <span className="flex items-center gap-2">
                                 {
                                   (eventName && getEventDisplayName(eventName) &&
@@ -494,7 +494,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                       <Tag size="xsmall" variant="info" className="whitespace-nowrap">tilknyttet standard</Tag>
                                     </>
                                 }
-                                <span className="text-sm text-gray-600">
+                                <span className="text-sm text-[var(--ax-text-subtle)]">
                                   ({includeParams ? (
                                     `${groupedParameters[eventName]?.length || 0} ${groupedParameters[eventName]?.length === 1 ? 'detalj' : 'detaljer'}`
                                   ) : (
@@ -511,7 +511,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                                   return (
                                     <div
                                       key={param.key}
-                                      className="flex items-center justify-between p-3 bg-white rounded border"
+                                      className="flex items-center justify-between p-3 bg-[var(--ax-bg-default)] rounded border"
                                     >
                                       <div className="flex items-center gap-2">
                                         <span className="font-medium">{displayName}</span>
@@ -548,7 +548,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                 <Heading level="3" size="xsmall" spacing className="mt-6">
                   Standard hendelser og detaljer
                 </Heading>
-                <p className="text-md text-gray-700 mb-4">
+                <p className="text-md text-[var(--ax-text-subtle)] mb-4">
                   Sidevisninger og besøk spores automatisk, hvis ikke deaktivert.
                 </p>
 
@@ -557,7 +557,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                     <ExpansionCard.Title as="h3" size="small">
                       <span className="items-center gap-2">
                         <BodyShort weight="semibold">Standarddetaljer som følger med hendelser</BodyShort>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-[var(--ax-text-subtle)]">
                           {Object.values(FILTER_COLUMNS).reduce((sum, group) => {
                             const filteredColumns = group.columns.filter(col => !EXCLUDED_PARAMS.includes(col.value));
                             return sum + filteredColumns.length;
@@ -580,11 +580,11 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
                               .map(column => (
                                 <div
                                   key={column.value}
-                                  className="flex items-center justify-between p-3 bg-white rounded border mb-2"
+                                  className="flex items-center justify-between p-3 bg-[var(--ax-bg-default)] rounded border mb-2"
                                 >
                                   <div className="flex flex-col">
                                     <span className="font-medium">{column.label}</span>
-                                    <span className="text-xs text-gray-600">{getParamDescription(column.value)}</span>
+                                    <span className="text-xs text-[var(--ax-text-subtle)]">{getParamDescription(column.value)}</span>
                                   </div>
                                   <HStack gap="space-2">
                                     <Tag variant="neutral" size="xsmall">{getParamType(column.value)}</Tag>
@@ -648,7 +648,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
 
             {/* 
               {!isLoadingParameters && (parameters.some(p => p.key.startsWith(MANUAL_EVENT_NAME)) || availableEvents.length > 0) && (
-                <BodyShort size="small" spacing className="text-md text-gray-700 mt-2">
+                <BodyShort size="small" spacing className="text-md text-[var(--ax-text-subtle)] mt-2">
                   <strong>Mangler noen egendefinerte hendelser?</strong>
                 </BodyShort>
               )}
@@ -716,7 +716,7 @@ const EventParameterSelector: React.FC<EventParameterSelectorProps> = ({
       {!includeParams && onLoadDetailsClick && (
         <div className="mt-4">
           <ReadMore size="small" header="Trenger du også hendelsesdetaljene?">
-            <div className="text-sm text-gray-800 mb-3">
+            <div className="text-sm text-[var(--ax-text-default)] mb-3">
               Mange grafer kan lages uten hendelsesdetaljer. Hent dem kun ved behov.
             </div>
             <Button

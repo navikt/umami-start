@@ -64,7 +64,7 @@ export default function UserProfile() {
                     <Heading size="large">Din profil</Heading>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <div className="bg-[var(--ax-bg-default)] p-6 rounded-lg shadow-md border border-[var(--ax-border-neutral-subtle)]">
                     <VStack gap="space-4">
                         <HStack gap="space-4" align="center">
                             <PersonIcon className="text-blue-600" fontSize="2rem" />

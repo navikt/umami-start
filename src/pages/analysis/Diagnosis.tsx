@@ -311,7 +311,7 @@ const Diagnosis = () => {
             {loading && (
                 <div className="flex flex-col justify-center items-center h-full gap-4">
                     <Loader size="xlarge" title="Henter diagnose..." />
-                    <div className="text-center text-gray-600">
+                    <div className="text-center text-[var(--ax-text-subtle)]">
                         <p className="font-medium">Dette kan ta noen sekunder</p>
                         <p className="text-sm">Vi analyserer alle data i valgt periode</p>
                     </div>
@@ -324,7 +324,7 @@ const Diagnosis = () => {
                     {highlightedWebsite && (
                         <div className="flex flex-col gap-4 mb-3">
                             <Heading level="2" size="medium">Valgt nettsted eller app</Heading>
-                            <div className="bg-white border border-gray-300 rounded-lg p-5 shadow-sm">
+                            <div className="bg-[var(--ax-bg-default)] border border-gray-300 rounded-lg p-5 shadow-sm">
                                 <div className="flex items-center gap-3 mb-4">
                                     <Heading level="3" size="medium">{highlightedWebsite.website_name || highlightedWebsite.website_id}</Heading>
                                     {highlightedWebsite.last_event_at ? (
@@ -341,15 +341,15 @@ const Diagnosis = () => {
                                     <div className="text-sm text-gray-500 -mt-2 mb-4">{highlightedWebsite.domain}</div>
                                 )}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                                    <div className="p-4 rounded-lg border border-gray-200">
+                                    <div className="p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)]">
                                         <div className="text-sm text-gray-500 mb-1 font-medium">Sidevisninger</div>
                                         <div className="text-2xl font-bold">{highlightedWebsite.pageviews.toLocaleString('no-NO')}</div>
                                     </div>
-                                    <div className="p-4 rounded-lg border border-gray-200">
+                                    <div className="p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)]">
                                         <div className="text-sm text-gray-500 mb-1 font-medium">Egendefinerte</div>
                                         <div className="text-2xl font-bold">{highlightedWebsite.custom_events.toLocaleString('no-NO')}</div>
                                     </div>
-                                    <div className="p-4 rounded-lg border border-gray-200">
+                                    <div className="p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)]">
                                         <div className="text-sm text-gray-500 mb-1 font-medium">Siste aktivitet</div>
                                         <div className="text-xl font-semibold">
                                             {highlightedWebsite.last_event_at
@@ -379,22 +379,22 @@ const Diagnosis = () => {
 
                     {/* Quick Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-gray-500 font-medium">Totalt antall nettsteder</div>
                             <div className="text-2xl font-bold mt-1">{totalWebsites}</div>
                         </div>
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-gray-500 font-medium">Active i perioden</div>
                             <div className="text-2xl font-bold mt-1 text-green-600">{activeWebsites}</div>
                         </div>
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-gray-500 font-medium">Ingen aktivitet i perioden</div>
                             <div className="text-2xl font-bold mt-1 text-red-600">{inactiveWebsites}</div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="p-4 border-b border-gray-200">
+                    <div className="bg-[var(--ax-bg-default)] rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm overflow-hidden">
+                        <div className="p-4 border-b border-[var(--ax-border-neutral-subtle)]">
                             <Tabs value={activeTab} onChange={setActiveTab}>
                                 <Tabs.List>
                                     <Tabs.Tab value="all" label="Alle" />
@@ -409,17 +409,17 @@ const Diagnosis = () => {
                                     <Table.Row>
                                         <Table.HeaderCell>Status</Table.HeaderCell>
                                         <Table.HeaderCell>Nettsted</Table.HeaderCell>
-                                        <Table.HeaderCell onClick={() => handleSort('pageviews')} align="right" className="cursor-pointer hover:bg-gray-50">
+                                        <Table.HeaderCell onClick={() => handleSort('pageviews')} align="right" className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]">
                                             Sidevisninger
                                         </Table.HeaderCell>
-                                        <Table.HeaderCell onClick={() => handleSort('custom_events')} align="right" className="cursor-pointer hover:bg-gray-50">
+                                        <Table.HeaderCell onClick={() => handleSort('custom_events')} align="right" className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]">
                                             Egendefinerte
                                         </Table.HeaderCell>
-                                        <Table.HeaderCell onClick={() => handleSort('total')} align="right" className="cursor-pointer hover:bg-gray-50">
+                                        <Table.HeaderCell onClick={() => handleSort('total')} align="right" className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]">
                                             Totalt
                                         </Table.HeaderCell>
                                         {activeTab !== 'attention' && (
-                                            <Table.HeaderCell onClick={() => handleSort('last_event_at')} align="right" className="cursor-pointer hover:bg-gray-50">
+                                            <Table.HeaderCell onClick={() => handleSort('last_event_at')} align="right" className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]">
                                                 Siste aktivitet
                                             </Table.HeaderCell>
                                         )}
@@ -471,7 +471,7 @@ const Diagnosis = () => {
                             </Table>
                         </div>
                         {queryStats && (
-                            <div className="p-4 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 text-right">
+                            <div className="p-4 border-t border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] text-xs text-gray-500 text-right">
                                 Data prosessert: {queryStats.totalBytesProcessedGB} GB
                             </div>
                         )}
@@ -494,16 +494,16 @@ const Diagnosis = () => {
                     onClick={() => setIsModalOpen(false)}
                 >
                     <div
-                        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+                        className="bg-[var(--ax-bg-default)] rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                        <div className="sticky top-0 bg-[var(--ax-bg-default)] border-b border-[var(--ax-border-neutral-subtle)] px-6 py-4 flex justify-between items-center">
                             <Heading level="2" size="medium">
                                 {selectedWebsite?.website_name || 'Nettstedsanalyse'}
                             </Heading>
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                className="text-gray-400 hover:text-[var(--ax-text-subtle)] transition-colors"
                             >
                                 <X size={24} />
                             </button>
@@ -516,8 +516,8 @@ const Diagnosis = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                        <Heading level="3" size="xsmall" className="mb-1 text-gray-600">
+                                    <div className="bg-[var(--ax-bg-neutral-soft)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)]">
+                                        <Heading level="3" size="xsmall" className="mb-1 text-[var(--ax-text-subtle)]">
                                             Siste registrerte aktivitet
                                         </Heading>
                                         <div className="text-xl font-bold">
@@ -542,6 +542,12 @@ const Diagnosis = () => {
                                                     allowMultipleShapesForPoints={false}
                                                     enablePerfOptimization={true}
                                                     margins={{ left: 35, right: 20, top: 20, bottom: 35 }}
+                                                    legendProps={{
+                                                        allowFocusOnLegends: true,
+                                                        styles: {
+                                                            text: { color: 'var(--ax-text-default)' },
+                                                        }
+                                                    }}
                                                 />
                                             ) : (
                                                 <div className="flex items-center justify-center h-full text-gray-500">
@@ -550,7 +556,7 @@ const Diagnosis = () => {
                                             )}
                                         </div>
                                         {historyQueryStats && (
-                                            <div className="text-sm text-gray-600 text-right mt-2">
+                                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
                                                 Data prosessert: {historyQueryStats.totalBytesProcessedGB} GB
                                             </div>
                                         )}

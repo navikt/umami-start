@@ -354,7 +354,7 @@ const GroupingOptions = forwardRef(({
             </HelpText>
           </div>
 
-          <div className="bg-white p-4 rounded-md border shadow-inner mb-2">
+          <div className="bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-inner mb-2">
             <Tabs
               value={activeGroupingsTab}
               onChange={value => setActiveGroupingsTab(value)}
@@ -467,7 +467,7 @@ const GroupingOptions = forwardRef(({
                     </div>
 
                     {Object.keys(groupedAndFilteredParams).length === 0 ? (
-                      <div className="text-sm text-gray-600 mt-2">
+                      <div className="text-sm text-[var(--ax-text-subtle)] mt-2">
                         {searchQuery ? 'Ingen resultater funnet.' : 'Ingen egendefinerte hendelsesdetaljer funnet for denne nettsiden.'}
                       </div>
                     ) : (
@@ -485,7 +485,7 @@ const GroupingOptions = forwardRef(({
                               <Accordion.Item key={eventName} defaultOpen={!!searchQuery || hasEventNameFilter}>
                                 <Accordion.Header>
                                   {eventName === '_manual_parameters_' ? 'Manuelt lagt til' : eventName}
-                                  <span className="text-sm text-gray-600 ml-2 font-normal">
+                                  <span className="text-sm text-[var(--ax-text-subtle)] ml-2 font-normal">
                                     ({params.length})
                                   </span>
                                 </Accordion.Header>
@@ -525,7 +525,7 @@ const GroupingOptions = forwardRef(({
                           </div>
                         )}
                         {!showPagination && sortedEventNames.length > 0 && (
-                          <div className="mt-2 text-xs text-gray-500">
+                          <div className="mt-2 text-xs text-[var(--ax-text-subtle)]">
                             Viser {paginatedEventNames.length} av {sortedEventNames.length} hendelser
                           </div>
                         )}
@@ -581,7 +581,7 @@ const GroupingOptions = forwardRef(({
 
           {groupByFields.length > 0 && (
             <div className="space-y-2">
-              <Label as="p" size="small">
+              <Label as="p" size="small" className="mt-6">
                 Valgte grupperinger (sorter med pilene):
               </Label>
               <div className="flex flex-col gap-2">
@@ -595,10 +595,10 @@ const GroupingOptions = forwardRef(({
                   )?.key : undefined;
 
                   return (
-                    <div key={field} className="flex items-center justify-between bg-white px-4 py-3 rounded-md border">
+                    <div key={field} className="flex items-center justify-between bg-[var(--ax-bg-default)] px-4 py-3 rounded-md border">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-[var(--ax-text-subtle)]">
                             {index + 1}.
                           </span>
                           <span className="font-medium">
@@ -661,7 +661,7 @@ const GroupingOptions = forwardRef(({
         </div>
 
         <div>
-          <Heading level="3" size="xsmall" spacing>
+          <Heading level="3" size="xsmall" spacing className="mt-6">
             Visningsvalg
           </Heading>
           <div className="flex flex-col gap-4 pb-4">
@@ -679,7 +679,7 @@ const GroupingOptions = forwardRef(({
 
             {showCustomSort && (
               <>
-                <div className="flex flex-col gap-2 bg-white p-3 rounded-md border">
+                <div className="flex flex-col gap-2 bg-[var(--ax-bg-default)] p-3 rounded-md border">
                   <div className="flex gap-2">
                     <Select
                       label="Sorter etter"
@@ -756,7 +756,7 @@ const GroupingOptions = forwardRef(({
             </Switch>
 
             {showCustomLimit && (
-              <div className="flex gap-2 items-center bg-white p-3 rounded-md border">
+              <div className="flex gap-2 items-center bg-[var(--ax-bg-default)] p-3 rounded-md border">
                 <TextField
                   label="Maksimalt antall rader"
                   type="number"

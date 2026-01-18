@@ -189,11 +189,11 @@ const EventSelector = ({
 
   return (
     <div className='mb-4'>
-      <Heading level="3" size="xsmall" spacing>
+      <Heading level="3" size="xsmall" spacing className="mt-6">
         Hva vil du inkludere?
       </Heading>
 
-      <div className="mt-3 bg-white p-4 rounded-md border shadow-inner">
+      <div className="mt-3 bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-inner">
         <Tabs defaultValue="sidestier" size="small">
           <Tabs.List>
             <Tabs.Tab value="sidestier" label="Sidevisninger" />
@@ -238,7 +238,7 @@ const EventSelector = ({
 
                   <div className="mt-4">
                     {pageViewsMode === 'specific' && (
-                      <div className="bg-white p-4 rounded border">
+                      <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
                         <div className="mb-3">
                           <Select
                             label="URL-sti"
@@ -316,14 +316,14 @@ const EventSelector = ({
                           />
                         )}
                         {selectedPaths.length === 0 && (
-                          <div className="mt-2 text-xs text-gray-600">
+                          <div className="mt-2 text-xs text-[var(--ax-text-subtle)]">
                             Når tom vises alle sidevisninger
                           </div>
                         )}
                       </div>
                     )}
                     {pageViewsMode === 'interactive' && (
-                      <div className="bg-white p-4 rounded border">
+                      <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
                         <div className="flex items-center gap-3">
                           <div className="flex-shrink-0">
                             <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
@@ -333,7 +333,7 @@ const EventSelector = ({
                             </span>
                           </div>
                           <div>
-                            <p className="text-gray-800">URL-sti kan velges som et filtervalg</p>
+                            <p className="text-[var(--ax-text-default)]">URL-sti kan velges som et filtervalg</p>
                           </div>
                         </div>
                       </div>
@@ -388,7 +388,7 @@ const EventSelector = ({
               </RadioGroup>
               <div className="mt-4">
                 {(customEventsMode === 'specific') && (
-                  <div className="bg-white p-4 rounded border">
+                  <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
                     {isEventsLoading && !isParamsLoading && customEventsList.length === 0 && (
                       <div className="mb-4 space-y-3">
                         <Skeleton variant="text" width="40%" />
@@ -482,7 +482,7 @@ const EventSelector = ({
 
 
                     {/* Hendelsesdata filter section */}
-                    <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="mt-6 pt-4 border-t border-[var(--ax-border-neutral-subtle)]">
                       {(isParamsLoading || isEventsLoading) ? (
                         <div className="space-y-3">
                           <Skeleton variant="text" width="50%" />
@@ -575,7 +575,7 @@ const EventSelector = ({
                   </div>
                 )}
                 {customEventsMode === 'interactive' && (
-                  <div className="bg-white p-4 rounded border">
+                  <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0">
                         <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
@@ -585,7 +585,7 @@ const EventSelector = ({
                         </span>
                       </div>
                       <div>
-                        <p className="text-gray-800">Hendelsesnavn kan velges som filtervalg</p>
+                        <p className="text-[var(--ax-text-default)]">Hendelsesnavn kan velges som filtervalg</p>
                       </div>
                     </div>
                   </div>
@@ -597,7 +597,7 @@ const EventSelector = ({
 
           <Tabs.Panel value="flere_valg" className="pt-6">
             <div className="mb-4">
-              <div className="flex gap-2 items-center bg-white p-3 rounded-md border border-gray-500 mt-3 mb-6">
+              <div className="flex gap-2 items-center bg-[var(--ax-bg-default)] p-3 rounded-md border border-[var(--ax-border-neutral)] mt-3 mb-6">
                 <Select
                   label="Legg til filtre"
                   onChange={(e) => {
@@ -652,7 +652,7 @@ const EventSelector = ({
               )}
 
               {stagingFilter && setStagingFilter && (
-                <div className="mt-3 bg-white p-4 rounded-md border shadow-sm">
+                <div className="mt-3 bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-sm">
                   <div className="flex-1">
                     <div className="grid gap-4">
                       {/* Column Selector */}
@@ -698,7 +698,7 @@ const EventSelector = ({
                             </div>
                           ) : parameters.length === 0 ? (
                             <div className="flex flex-col gap-2">
-                              <p className="text-sm text-gray-600">Fant ingen hendelsesdetaljer. Du må hente data før du kan filtrere.</p>
+                              <p className="text-sm text-[var(--ax-text-subtle)]">Fant ingen hendelsesdetaljer. Du må hente data før du kan filtrere.</p>
                               <Button
                                 variant="secondary"
                                 size="small"
@@ -762,7 +762,7 @@ const EventSelector = ({
                                 <p className="font-medium text-xs">
                                   Mottaker velger selv
                                 </p>
-                                <p className="text-xs text-gray-600 truncate">
+                                <p className="text-xs text-[var(--ax-text-subtle)] truncate">
                                   Param: {stagingFilter.column === 'url_path' ? 'url_sti' :
                                     stagingFilter.column === 'event_name' ? 'hendelse' :
                                       stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_')}
@@ -848,7 +848,7 @@ const EventSelector = ({
 
           <Tabs.Panel value="active_filters" className="pt-6">
             {filters.length === 0 && (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-[var(--ax-text-subtle)]">
                 Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
               </div>
             )}
@@ -857,7 +857,7 @@ const EventSelector = ({
               <div className="space-y-3">
                 {/* Only show non-date range filters in the regular filter list */}
                 {filters.map((filter, index) => !isDateRangeFilter(filter) && (
-                  <div key={index} className="bg-white p-3 rounded border border-gray-500">
+                  <div key={index} className="bg-[var(--ax-bg-default)] p-3 rounded border border-[var(--ax-border-neutral)]">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 space-y-2">
                         <div className="flex gap-2 items-end flex-wrap">

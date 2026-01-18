@@ -272,7 +272,7 @@ const MetricSelector = forwardRef(({
 
           <div className="space-y-4">
             <div className="mb-2">
-              <div className="bg-white p-4 rounded-md border shadow-inner">
+              <div className="bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-inner">
                 <Tabs
                   value={activeMetricCategory}
                   onChange={value => setActiveMetricCategory(value)}
@@ -320,7 +320,7 @@ const MetricSelector = forwardRef(({
                   <Tabs.Panel value="andel" className="pt-4">
                     <div className="space-y-4">
                       <div>
-                        <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av alle besøkende på hele nettsiden</h4>
+                        <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Andel av alle besøkende på hele nettsiden</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
@@ -335,7 +335,7 @@ const MetricSelector = forwardRef(({
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av besøkende på en side</h4>
+                        <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Andel av besøkende på en side</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
@@ -350,7 +350,7 @@ const MetricSelector = forwardRef(({
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium mb-2 text-gray-700">Andel av hendelser på en side</h4>
+                        <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Andel av hendelser på en side</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
@@ -365,7 +365,7 @@ const MetricSelector = forwardRef(({
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium mb-2 text-gray-700">Fluktrate - andel besøkende som kun ser én side før de forlater nettstedet</h4>
+                        <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Fluktrate - andel besøkende som kun ser én side før de forlater nettstedet</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
@@ -451,17 +451,17 @@ const MetricSelector = forwardRef(({
             </div>
 
             {metrics.length > 0 && (
-              <Heading level="3" size="xsmall" spacing>
+              <Heading level="3" size="xsmall" spacing className="mt-6">
                 Valgte målinger
               </Heading>
             )}
 
             {metrics.map((metric, index) => (
-              <div key={index} className={`flex ${shouldShowDetailedView(metric, index) ? 'flex-col' : 'items-center justify-between'} bg-white px-4 py-3 rounded-md border`}>
+              <div key={index} className={`flex ${shouldShowDetailedView(metric, index) ? 'flex-col' : 'items-center justify-between'} bg-[var(--ax-bg-default)] px-4 py-3 rounded-md border`}>
                 <div className="flex items-center justify-between w-full">
                   <div className="flex flex-col">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-[var(--ax-text-subtle)]">
                         {index + 1}.
                       </span>
                       <span className="font-medium">
@@ -546,7 +546,7 @@ const MetricSelector = forwardRef(({
                             <option value="visit_id">Unike besøkende (visitors)</option>
                           </Select>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded border">
+                        <div className="bg-[var(--ax-bg-neutral-soft)] p-3 rounded border">
                           <Label size="small" className="mb-2 block">Filtrer på (WHERE)</Label>
                           <div className="flex flex-col gap-2">
                             <Select
@@ -582,7 +582,7 @@ const MetricSelector = forwardRef(({
 
                             {metric.whereColumn === 'event_name' ? (
                               <div>
-                                {isEventsLoading && <div className="text-xs text-gray-500 mb-1">Laster hendelser...</div>}
+                                {isEventsLoading && <div className="text-xs text-[var(--ax-text-subtle)] mb-1">Laster hendelser...</div>}
                                 <div className={isEventsLoading ? 'opacity-50 pointer-events-none' : ''}>
                                   <UNSAFE_Combobox
                                     label="Verdi"

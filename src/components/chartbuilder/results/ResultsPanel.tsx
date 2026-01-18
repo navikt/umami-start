@@ -197,7 +197,7 @@ const ResultsPanel = ({
 
     if (!sortedData || sortedData.length === 0) {
       return (
-        <div className="p-8 text-center text-gray-500">
+        <div className="p-8 text-center text-[var(--ax-text-subtle)]">
           <p>Ingen resultater funnet for "{activeSearchQuery}"</p>
         </div>
       );
@@ -209,13 +209,13 @@ const ResultsPanel = ({
 
     return (
       <>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100 sticky top-0">
+        <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+          <thead className="bg-[var(--ax-bg-neutral-soft)] sticky top-0">
             <tr>
               {Object.keys(result.data[0]).map((key) => (
                 <th
                   key={key}
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-[var(--ax-text-subtle)] uppercase tracking-wider cursor-pointer hover:bg-[var(--ax-bg-subtle-hover)] select-none"
                   onClick={() => handleSort(key)}
                 >
                   <div className="flex items-center gap-1">
@@ -227,18 +227,18 @@ const ResultsPanel = ({
                         <ArrowDown size={14} className="text-blue-600" />
                       )
                     ) : (
-                      <ArrowUpDown size={14} className="text-gray-400" />
+                      <ArrowUpDown size={14} className="text-[var(--ax-text-subtle)]" />
                     )}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
             {sortedData.map((row: any, idx: number) => {
               const keys = Object.keys(row);
               return (
-                <tr key={idx} className="hover:bg-gray-50">
+                <tr key={idx} className="hover:bg-[var(--ax-bg-neutral-soft)]">
                   {keys.map((key, cellIdx: number) => {
                     const value = row[key];
                     const translatedValue = translateValue(key, value);
@@ -262,7 +262,7 @@ const ResultsPanel = ({
                     return (
                       <td
                         key={cellIdx}
-                        className={`px-4 py-2 whitespace-nowrap text-sm ${clickable ? 'cursor-pointer' : 'text-gray-900'}`}
+                        className={`px-4 py-2 whitespace-nowrap text-sm ${clickable ? 'cursor-pointer' : 'text-[var(--ax-text-default)]'}`}
                         onClick={clickable ? () => setSelectedUrl(value) : undefined}
                       >
                         {clickable ? (
@@ -420,12 +420,12 @@ const ResultsPanel = ({
   const getContainerClass = () => {
     switch (containerStyle) {
       case 'white':
-        return "bg-[#fafafa] p-6 rounded-lg border border-gray-200 shadow-sm";
+        return "bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm";
       case 'none':
         return "";
       case 'green':
       default:
-        return "bg-green-50 p-4 rounded-md border border-green-100";
+        return "bg-[var(--ax-bg-neutral-soft)] p-4 rounded-md border border-[var(--ax-border-neutral-subtle)]";
     }
   };
 
@@ -504,9 +504,9 @@ const ResultsPanel = ({
               {/* Table Tab */}
               <Tabs.Panel value="table" className="pt-4">
                 <div className="space-y-3">
-                  <div className="border rounded-lg overflow-hidden bg-white">
+                  <div className="border rounded-lg overflow-hidden bg-[var(--ax-bg-default)]">
                     {/* Search Input */}
-                    <div className="p-3 bg-gray-50 border-b space-y-2">
+                    <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-b space-y-2">
                       <Search
                         label="Søk i tabellen"
                         hideLabel={false}
@@ -572,7 +572,7 @@ const ResultsPanel = ({
                       {tableContent}
                     </div>
                     {/* Table Footer */}
-                    <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t">
+                    <div className="px-4 py-2 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t">
                       <div className="flex justify-between items-center">
                         <span>
                           {(() => {
@@ -617,7 +617,7 @@ const ResultsPanel = ({
 
               {/* Line Chart Tab */}
               <Tabs.Panel value="linechart" className="pt-4">
-                <div className="border rounded-lg bg-white p-4">
+                <div className="border rounded-lg bg-[var(--ax-bg-default)] p-4">
                   {(() => {
                     const chartData = prepareLineChartData(showAverage);
                     console.log('Line Chart Data:', chartData);
@@ -650,10 +650,16 @@ const ResultsPanel = ({
                               allowMultipleShapesForPoints={false}
                               enablePerfOptimization={true}
                               margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                              legendProps={{
+                                allowFocusOnLegends: true,
+                                styles: {
+                                  text: { color: 'var(--ax-text-default)' },
+                                }
+                              }}
                             />
                           </ResponsiveContainer>
                         </div>
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-2 text-xs text-[var(--ax-text-subtle)]">
                           Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
                         </div>
                       </div>
@@ -664,7 +670,7 @@ const ResultsPanel = ({
 
               {/* Area Chart Tab */}
               <Tabs.Panel value="areachart" className="pt-4">
-                <div className="border rounded-lg bg-white p-4">
+                <div className="border rounded-lg bg-[var(--ax-bg-default)] p-4">
                   {(() => {
                     const baseChartData = prepareLineChartData(false);
 
@@ -742,10 +748,16 @@ const ResultsPanel = ({
                               margins={{ left: 50, right: 50, top: 20, bottom: 35 }}
                               yMinValue={isPercentageStacked ? 0 : undefined}
                               yMaxValue={isPercentageStacked ? 100 : undefined}
+                              legendProps={{
+                                allowFocusOnLegends: true,
+                                styles: {
+                                  text: { color: 'var(--ax-text-default)' },
+                                }
+                              }}
                             />
                           </ResponsiveContainer>
                         </div>
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-2 text-xs text-[var(--ax-text-subtle)]">
                           Viser {chartData.data.lineChartData?.[0]?.data?.length || 0} datapunkter
                           {isPercentageStacked && ' (prosent av totalen per tidspunkt)'}
                         </div>
@@ -757,7 +769,7 @@ const ResultsPanel = ({
 
               {/* Bar Chart Tab */}
               <Tabs.Panel value="barchart" className="pt-4">
-                <div className="border rounded-lg bg-white p-4">
+                <div className="border rounded-lg bg-[var(--ax-bg-default)] p-4">
                   {(() => {
                     const chartData = prepareBarChartData();
                     console.log('Bar Chart Data:', chartData);
@@ -826,7 +838,7 @@ const ResultsPanel = ({
                             </ResponsiveContainer>
                           </div>
                         </div>
-                        <div className="mt-2 text-sm text-gray-700">
+                        <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
                           Viser {displayData.length} kategorier (hold markøren over stolpene for detaljer)
                         </div>
                       </div>
@@ -837,7 +849,7 @@ const ResultsPanel = ({
 
               {/* Pie Chart Tab */}
               <Tabs.Panel value="piechart" className="pt-4">
-                <div className="border rounded-lg bg-white p-4">
+                <div className="border rounded-lg bg-[var(--ax-bg-default)] p-4">
                   {(() => {
                     const chartData = preparePieChartData();
                     console.log('Pie Chart Data:', chartData);
@@ -923,7 +935,7 @@ const ResultsPanel = ({
                               />
                             </ResponsiveContainer>
                           </div>
-                          <div className="mt-4 text-lg text-gray-800">
+                          <div className="mt-4 text-lg text-[var(--ax-text-default)]">
                             <p className="font-medium mb-3">Viser {displayData.length} kategorier med prosentandeler:</p>
                             <div className="mt-2 flex flex-col gap-2">
                               {displayData.map((item, idx) => {
@@ -933,7 +945,7 @@ const ResultsPanel = ({
                                 // Skip displaying if percentage is NaN
                                 if (isNaN(parseFloat(percentage))) return null;
                                 return (
-                                  <div key={idx} className="flex justify-between items-center py-1 px-2 hover:bg-gray-50 rounded">
+                                  <div key={idx} className="flex justify-between items-center py-1 px-2 hover:bg-[var(--ax-bg-neutral-soft)] rounded">
                                     <span>{item.x}</span>
                                     <strong className="ml-4">{percentage}%</strong>
                                   </div>
@@ -996,7 +1008,7 @@ const ResultsPanel = ({
 
                   {/* Copy Section */}
                   <div>
-                    <p className="text-sm font-medium text-gray-700 mb-2">Eller kopier dem:</p>
+                    <p className="text-sm font-medium text-[var(--ax-text-subtle)] mb-2">Eller kopier dem:</p>
                     <div className="flex gap-2 flex-wrap items-center">
                       <CopyButton
                         copyText={getCSVContent()}

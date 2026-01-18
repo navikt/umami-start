@@ -58,21 +58,21 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType }) => {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-900 font-medium mb-1">{box1Label}</div>
-                <div className="text-2xl font-bold text-gray-900">
+            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box1Label}</div>
+                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                     {formatValue(box1Value)}
                 </div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-900 font-medium mb-1">{box2Label}</div>
-                <div className="text-2xl font-bold text-gray-900">
+            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box2Label}</div>
+                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                     {formatValue(box2Value)}
                 </div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-900 font-medium mb-1">{box3Label}</div>
-                <div className="text-2xl font-bold text-gray-900 flex items-baseline gap-2">
+            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box3Label}</div>
+                <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline gap-2">
                     {formatValue(box3Value)}
                     {box3Subtext && (
                         <span className="text-sm font-normal text-gray-500">

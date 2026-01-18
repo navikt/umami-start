@@ -414,7 +414,7 @@ const TrafficAnalysis = () => {
                             {paginatedData.map((row, i) => (
                                 <Table.Row
                                     key={i}
-                                    className={isClickableRow(row.name) ? 'cursor-pointer hover:bg-gray-50' : ''}
+                                    className={isClickableRow(row.name) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
                                     onClick={() => isClickableRow(row.name) && onRowClick?.(row.name)}
                                 >
                                     <Table.DataCell className="truncate max-w-md" title={row.name}>
@@ -483,25 +483,29 @@ const TrafficAnalysis = () => {
                         onEndDateChange={setCustomEndDate}
                     />
 
-                    <RadioGroup
-                        size="small"
-                        legend="Visning"
-                        value={metricType}
-                        onChange={(val: string) => setMetricType(val)}
-                    >
-                        <Radio value="visitors">Besøkende</Radio>
-                        <Radio value="pageviews">Sidevisninger</Radio>
-                        <Radio value="proportion">Andel (av besøkende)</Radio>
-                    </RadioGroup>
+                    <div className="mt-8">
+                        <RadioGroup
+                            size="small"
+                            legend="Visning"
+                            value={metricType}
+                            onChange={(val: string) => setMetricType(val)}
+                        >
+                            <Radio value="visitors">Besøkende</Radio>
+                            <Radio value="pageviews">Sidevisninger</Radio>
+                            <Radio value="proportion">Andel (av besøkende)</Radio>
+                        </RadioGroup>
+                    </div>
 
-                    <Button
-                        onClick={fetchSeriesData}
-                        disabled={!selectedWebsite || loading}
-                        loading={loading}
-                        className="w-full"
-                    >
-                        Vis trafikk
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={fetchSeriesData}
+                            disabled={!selectedWebsite || loading}
+                            loading={loading}
+                            className="w-full"
+                        >
+                            Vis trafikk
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -568,6 +572,12 @@ const TrafficAnalysis = () => {
                                                         allowMultipleShapesForPoints={false}
                                                         enablePerfOptimization={true}
                                                         margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                        legendProps={{
+                                                            allowFocusOnLegends: true,
+                                                            styles: {
+                                                                text: { color: 'var(--ax-text-default)' },
+                                                            }
+                                                        }}
                                                     />
                                                 </ResponsiveContainer>
                                             ) : (
@@ -602,7 +612,7 @@ const TrafficAnalysis = () => {
                                                 ))}
                                             </Table.Body>
                                         </Table>
-                                        <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
                                             <div className="flex gap-2">
                                                 <Button
                                                     size="small"
@@ -614,7 +624,7 @@ const TrafficAnalysis = () => {
                                                 </Button>
                                             </div>
                                             {seriesQueryStats && (
-                                                <span className="text-sm text-gray-600">
+                                                <span className="text-sm text-[var(--ax-text-subtle)]">
                                                     Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
                                                 </span>
                                             )}
@@ -629,7 +639,7 @@ const TrafficAnalysis = () => {
                                     <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} />
                                     <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} />
                                     {flowQueryStats && (
-                                        <div className="text-sm text-gray-600 text-right">
+                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right">
                                             Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
                                         </div>
                                     )}
@@ -649,7 +659,7 @@ const TrafficAnalysis = () => {
                                     <TrafficTable title="Kanaler" data={channels} />
                                     <TrafficTable title="Trafikkilder" data={referrers} />
                                     {flowQueryStats && (
-                                        <div className="text-sm text-gray-600 text-right">
+                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right">
                                             Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
                                         </div>
                                     )}

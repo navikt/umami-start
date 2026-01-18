@@ -390,14 +390,16 @@ const EventExplorer = () => {
                         onEndDateChange={setCustomEndDate}
                     />
 
-                    <Button
-                        onClick={fetchEvents}
-                        disabled={!selectedWebsite || loadingEvents}
-                        loading={loadingEvents}
-                        className="w-full"
-                    >
-                        Vis hendelser
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={fetchEvents}
+                            disabled={!selectedWebsite || loadingEvents}
+                            loading={loadingEvents}
+                            className="w-full"
+                        >
+                            Vis hendelser
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -432,7 +434,7 @@ const EventExplorer = () => {
             {!selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (
                 <div>
                     {pagePath && (
-                        <BodyShort className="text-gray-600 mb-4">
+                        <BodyShort className="text-[var(--ax-text-subtle)] mb-4">
                             Viser hendelser for URL-sti: {pagePath}
                         </BodyShort>
                     )}
@@ -465,7 +467,7 @@ const EventExplorer = () => {
                         </Table>
                     </div>
                     {eventsQueryStats && (
-                        <div className="text-sm text-gray-600 text-right mt-2">
+                        <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
                             Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
                         </div>
                     )}
@@ -528,6 +530,12 @@ const EventExplorer = () => {
                                                             allowMultipleShapesForPoints={false}
                                                             enablePerfOptimization={true}
                                                             margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                            legendProps={{
+                                                                allowFocusOnLegends: true,
+                                                                styles: {
+                                                                    text: { color: 'var(--ax-text-default)' },
+                                                                }
+                                                            }}
                                                         />
                                                     </ResponsiveContainer>
                                                 ) : (
@@ -542,20 +550,20 @@ const EventExplorer = () => {
                                     {/* Table */}
                                     <div className="border rounded-lg overflow-hidden">
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-gray-100">
+                                            <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                                <thead className="bg-[var(--ax-bg-neutral-soft)]">
                                                     <tr>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dato</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Dato</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                                     {seriesData.map((item, index) => (
-                                                        <tr key={index} className="hover:bg-gray-50">
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
                                                                 {new Date(item.time).toLocaleDateString('nb-NO')}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
                                                                 {item.count.toLocaleString('nb-NO')}
                                                             </td>
                                                         </tr>
@@ -563,7 +571,7 @@ const EventExplorer = () => {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
                                             <div className="flex gap-2">
                                                 <Button
                                                     size="small"
@@ -597,7 +605,7 @@ const EventExplorer = () => {
                                                 </Button>
                                             </div>
                                             {queryStats && (
-                                                <span className="text-sm text-gray-600">
+                                                <span className="text-sm text-[var(--ax-text-subtle)]">
                                                     Data prosessert: {queryStats.totalBytesProcessedGB} GB
                                                 </span>
                                             )}
@@ -751,7 +759,7 @@ const EventExplorer = () => {
                                                         </Tabs.Panel>
                                                     </Tabs>
                                                     {parameterValuesQueryStats && (
-                                                        <div className="text-sm text-gray-600 text-right mt-4">
+                                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
                                                             Data prosessert: {parameterValuesQueryStats.totalBytesProcessedGB} GB
                                                         </div>
                                                     )}

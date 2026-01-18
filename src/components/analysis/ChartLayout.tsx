@@ -82,7 +82,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     return (
         <div className="py-8 max-w-[1600px] mx-auto">
             <div className="mb-8">
-                <Heading level="1" size="xlarge" className="mb-2">
+                <Heading level="1" size="xlarge" spacing>
                     {title}
                 </Heading>
                 <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
@@ -95,7 +95,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                     {isSidebarOpen && (
                         <>
                             <div className={`bg-[var(--ax-bg-neutral-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     <div className="pb-2">
                                         <Select
                                             size="small"
@@ -135,7 +135,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             {/* Collapse button on divider - hidden on mobile */}
                             <button
                                 onClick={() => setIsSidebarOpen(false)}
-                                className={`hidden md:flex absolute top-3 ${buttonPosition} -translate-x-1/2 items-center justify-center w-6 h-12 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 hover:border-blue-300 transition-colors z-10`}
+                                className={`hidden md:flex absolute top-3 ${buttonPosition} -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-accent)] transition-colors z-10`}
                                 title="Minimer filter"
                                 aria-label="Minimer filter"
                             >

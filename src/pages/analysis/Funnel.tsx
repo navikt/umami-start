@@ -854,7 +854,7 @@ FROM timing_data`;
                     <div className="pt-2 space-y-3">
                         <Heading level="3" size="xsmall">Steg i trakten</Heading>
                         {steps.map((step, index) => (
-                            <div key={index} className="border border-gray-300 rounded-lg p-3 bg-white relative">
+                            <div key={index} className="border border-gray-300 rounded-lg p-3 bg-[var(--ax-bg-default)] relative">
                                 <div className="flex items-start gap-3">
                                     {/* Step number badge */}
                                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
@@ -923,7 +923,7 @@ FROM timing_data`;
                                                 {step.params && step.params.length > 0 && (
                                                     <div className="space-y-3 mb-3">
                                                         {step.params.map((param, pIndex) => (
-                                                            <div key={pIndex} className="bg-gray-50 rounded-md p-3 relative group">
+                                                            <div key={pIndex} className="bg-[var(--ax-bg-neutral-soft)] rounded-md p-3 relative group">
                                                                 <Button
                                                                     variant="tertiary-neutral"
                                                                     size="small"
@@ -945,7 +945,7 @@ FROM timing_data`;
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => updateStepParam(index, pIndex, 'operator', param.operator === 'equals' ? 'contains' : 'equals')}
-                                                                            className="px-2 py-1.5 text-sm font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                                            className="px-2 py-1.5 text-sm font-mono bg-[var(--ax-bg-default)] border border-gray-300 rounded hover:bg-[var(--ax-bg-neutral-soft)] transition-colors"
                                                                             title={param.operator === 'equals' ? 'Eksakt match (klikk for inneholder)' : 'Inneholder (klikk for eksakt)'}
                                                                         >
                                                                             {param.operator === 'equals' ? '=' : '≈'}
@@ -1013,7 +1013,7 @@ FROM timing_data`;
                         onClick={fetchData}
                         disabled={!selectedWebsite || loading}
                         loading={loading}
-                        className="w-full"
+                        className="w-full mt-8"
                     >
                         Lag trakt
                     </Button>
@@ -1068,7 +1068,7 @@ FROM timing_data`;
                                 />
                                 <div className="flex gap-2 justify-between items-center mt-4">
                                     {funnelQueryStats && (
-                                        <span className="text-sm text-gray-600 mr-auto">
+                                        <span className="text-sm text-[var(--ax-text-subtle)] mr-auto">
                                             Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
                                         </span>
                                     )}
@@ -1102,7 +1102,7 @@ FROM timing_data`;
                                 />
                                 <div className="flex gap-2 justify-between items-center mt-4">
                                     {funnelQueryStats && (
-                                        <span className="text-sm text-gray-600 mr-auto">
+                                        <span className="text-sm text-[var(--ax-text-subtle)] mr-auto">
                                             Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
                                         </span>
                                     )}
@@ -1130,17 +1130,17 @@ FROM timing_data`;
                             <Tabs.Panel value="table" className="pt-4">
                                 <div className="border rounded-lg overflow-hidden">
                                     <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-100">
+                                        <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                            <thead className="bg-[var(--ax-bg-neutral-soft)]">
                                                 <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Steg</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">URL</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gikk videre</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Falt fra</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Steg</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">URL</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Gikk videre</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Falt fra</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
+                                            <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                                 {funnelData.map((item, index) => {
                                                     const nextItem = funnelData[index + 1];
                                                     const percentageOfNext = nextItem && item.count > 0 ? Math.round((nextItem.count / item.count) * 100) : null;
@@ -1148,8 +1148,8 @@ FROM timing_data`;
                                                     const dropoffPercentage = percentageOfNext !== null ? 100 - percentageOfNext : null;
 
                                                     return (
-                                                        <tr key={index} className="hover:bg-gray-50">
-                                                            <td className="px-6 py-4 whitespace-nowrap text-base font-medium text-gray-900">
+                                                        <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-base font-medium text-[var(--ax-text-default)]">
                                                                 Steg {item.step + 1}
                                                             </td>
                                                             <td className="px-6 py-4 text-base break-all">
@@ -1162,14 +1162,14 @@ FROM timing_data`;
 
                                                                         return (
                                                                             <div className="flex flex-col gap-1">
-                                                                                <div className="font-semibold text-gray-700">{step.value}</div>
+                                                                                <div className="font-semibold text-[var(--ax-text-default)]">{step.value}</div>
                                                                                 {(lenketekst || tekst) && (
-                                                                                    <div className="text-sm font-medium text-gray-900">
+                                                                                    <div className="text-sm font-medium text-[var(--ax-text-default)]">
                                                                                         {lenketekst || tekst}
                                                                                     </div>
                                                                                 )}
                                                                                 {destinasjon && (
-                                                                                    <div className="text-xs text-gray-500 break-all bg-gray-50 px-1 py-0.5 rounded border border-gray-100 italic">
+                                                                                    <div className="text-xs text-gray-500 break-all bg-[var(--ax-bg-neutral-soft)] px-1 py-0.5 rounded border border-gray-100 italic">
                                                                                         {destinasjon}
                                                                                     </div>
                                                                                 )}
@@ -1190,14 +1190,14 @@ FROM timing_data`;
                                                                     return <span className="text-gray-500">{item.url}</span>;
                                                                 })()}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-base text-gray-900 font-bold">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-base text-[var(--ax-text-default)] font-bold">
                                                                 {item.count.toLocaleString('nb-NO')}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-base">
                                                                 {percentageOfNext !== null ? (
                                                                     <span className="text-green-700 font-medium">{percentageOfNext}%</span>
                                                                 ) : (
-                                                                    <span className="text-gray-600 font-medium">Fullført ✓</span>
+                                                                    <span className="text-[var(--ax-text-subtle)] font-medium">Fullført ✓</span>
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-base">
@@ -1213,7 +1213,7 @@ FROM timing_data`;
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
                                         <Button
                                             size="small"
                                             variant="secondary"
@@ -1223,7 +1223,7 @@ FROM timing_data`;
                                             Last ned CSV
                                         </Button>
                                         {funnelQueryStats && (
-                                            <span className="text-sm text-gray-600 mr-auto">
+                                            <span className="text-sm text-[var(--ax-text-subtle)] mr-auto">
                                                 Data prosessert: {funnelQueryStats.totalBytesProcessedGB} GB
                                             </span>
                                         )}
@@ -1309,19 +1309,19 @@ FROM timing_data`;
 
                                                 <div className="border rounded-lg overflow-hidden mb-3">
                                                     <div className="overflow-x-auto">
-                                                        <table className="min-w-full divide-y divide-gray-200">
-                                                            <thead className="bg-gray-100">
+                                                        <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                                            <thead className="bg-[var(--ax-bg-neutral-soft)]">
                                                                 <tr>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fra steg</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Til steg</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gjennomsnitt</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Median</th>
+                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Fra steg</th>
+                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Til steg</th>
+                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Gjennomsnitt</th>
+                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Median</th>
                                                                 </tr>
                                                             </thead>
-                                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                            <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                                                 {stepsTiming.map((timing, index) => (
-                                                                    <tr key={index} className="hover:bg-gray-50">
-                                                                        <td className="px-6 py-4 text-base text-gray-900">
+                                                                    <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                                        <td className="px-6 py-4 text-base text-[var(--ax-text-default)]">
                                                                             <div className="flex flex-col gap-0.5">
                                                                                 <span className="font-medium">Steg {timing.fromStep + 1}</span>
                                                                                 {timing.fromUrl && selectedWebsite ? (
@@ -1336,7 +1336,7 @@ FROM timing_data`;
                                                                                 )}
                                                                             </div>
                                                                         </td>
-                                                                        <td className="px-6 py-4 text-base text-gray-900">
+                                                                        <td className="px-6 py-4 text-base text-[var(--ax-text-default)]">
                                                                             <div className="flex flex-col gap-0.5">
                                                                                 <span className="font-medium">Steg {timing.toStep + 1}</span>
                                                                                 {timing.toUrl && selectedWebsite ? (
@@ -1363,10 +1363,10 @@ FROM timing_data`;
                                                         </table>
                                                     </div>
                                                     {/* Footer inside the table container to match styling */}
-                                                    <div className="p-3 bg-gray-50 border-t flex justify-between items-center">
+                                                    <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-t flex justify-between items-center">
                                                         <div>
                                                             {timingQueryStats && (
-                                                                <span className="text-sm text-gray-600">
+                                                                <span className="text-sm text-[var(--ax-text-subtle)]">
                                                                     Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
                                                                 </span>
                                                             )}
@@ -1411,7 +1411,7 @@ FROM timing_data`;
 
             {
                 !loading && !error && funnelData.length === 0 && hasAttemptedFetch && (
-                    <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mt-4">
+                    <div className="text-center p-8 text-gray-500 bg-[var(--ax-bg-neutral-soft)] rounded-lg border border-[var(--ax-border-neutral-subtle)] mt-4">
                         Ingen data funnet for denne trakten i valgt periode.
                     </div>
                 )

@@ -249,34 +249,34 @@ const Retention = () => {
 
         return (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="text-sm text-gray-900 font-medium mb-1">Totalt antall brukere</div>
-                    <div className="text-2xl font-bold text-gray-900">
+                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall brukere</div>
+                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                         {retentionStats.baseline.toLocaleString('nb-NO')}
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
                         Unike brukere (Dag 0)
                     </div>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="text-sm text-gray-900 font-medium mb-1">Kom tilbake etter 1 dag</div>
-                    <div className="text-2xl font-bold text-gray-900">
+                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Kom tilbake etter 1 dag</div>
+                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                         {retentionStats.day1 ? ((retentionStats.day1.returning_users / retentionStats.baseline) * 100).toFixed(1) : 0}%
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
                         {retentionStats.day1 ? retentionStats.day1.returning_users.toLocaleString('nb-NO') : 0} unike brukere
                     </div>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="text-sm text-gray-900 font-medium mb-1">
+                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">
                         {retentionStats.day7 ? 'Kom tilbake etter 1 uke' : `Kom tilbake etter ${retentionStats.lastDay?.day || 0} dager`}
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                         {retentionStats.day7
                             ? ((retentionStats.day7.returning_users / retentionStats.baseline) * 100).toFixed(1)
                             : (retentionStats.lastDay ? ((retentionStats.lastDay.returning_users / retentionStats.baseline) * 100).toFixed(1) : 0)}%
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
                         {retentionStats.day7
                             ? retentionStats.day7.returning_users.toLocaleString('nb-NO')
                             : (retentionStats.lastDay ? retentionStats.lastDay.returning_users.toLocaleString('nb-NO') : 0)} unike brukere
@@ -321,14 +321,16 @@ const Retention = () => {
 
 
 
-                    <Button
-                        onClick={fetchData}
-                        disabled={!selectedWebsite || loading}
-                        loading={loading}
-                        className="w-full"
-                    >
-                        Vis brukerlojalitet
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            onClick={fetchData}
+                            disabled={!selectedWebsite || loading}
+                            loading={loading}
+                            className="w-full"
+                        >
+                            Vis brukerlojalitet
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -397,12 +399,18 @@ const Retention = () => {
                                             data={chartData.data}
                                             legendsOverflowText={'Overflow Items'}
                                             yAxisTickFormat={(d: any) => `${d}% `}
+                                            legendProps={{
+                                                allowFocusOnLegends: true,
+                                                styles: {
+                                                    text: { color: 'var(--ax-text-default)' },
+                                                }
+                                            }}
                                         />
                                     </ResponsiveContainer>
                                 )}
                             </div>
                             {queryStats && (
-                                <div className="text-sm text-gray-600 text-right mt-4">
+                                <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
                                     Data prosessert: {queryStats.totalBytesProcessedGB} GB
                                 </div>
                             )}
@@ -411,24 +419,24 @@ const Retention = () => {
                         <Tabs.Panel value="table" className="pt-4">
                             <div className="border rounded-lg overflow-hidden">
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-100">
+                                    <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                        <thead className="bg-[var(--ax-bg-neutral-soft)]">
                                             <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Dag</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Antall brukere</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Prosent</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Dag</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall brukere</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Prosent</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
+                                        <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                             {retentionData.map((item, index) => (
-                                                <tr key={index} className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
                                                         Dag {item.day}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
                                                         {item.returning_users.toLocaleString('nb-NO')}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
                                                         {item.percentage}%
                                                     </td>
                                                 </tr>
@@ -436,7 +444,7 @@ const Retention = () => {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="flex gap-2 p-3 bg-gray-50 border-t justify-between items-center">
+                                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
                                     <Button
                                         size="small"
                                         variant="secondary"
@@ -446,7 +454,7 @@ const Retention = () => {
                                         Last ned CSV
                                     </Button>
                                     {queryStats && (
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-[var(--ax-text-subtle)]">
                                             Data prosessert: {queryStats.totalBytesProcessedGB} GB
                                         </span>
                                     )}
@@ -458,7 +466,7 @@ const Retention = () => {
             )}
 
             {!loading && !error && retentionData.length === 0 && hasAttemptedFetch && (
-                <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mt-4">
+                <div className="text-center p-8 text-gray-500 bg-[var(--ax-bg-neutral-soft)] rounded-lg border border-[var(--ax-border-neutral-subtle)] mt-4">
                     Ingen data funnet for valgt periode.
                 </div>
             )}

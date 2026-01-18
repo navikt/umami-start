@@ -22,7 +22,7 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
 
     if (loading) {
-        return <div className="animate-pulse h-64 bg-gray-100 rounded-lg"></div>;
+        return <div className="animate-pulse h-64 bg-[var(--ax-bg-neutral-soft)] rounded-lg"></div>;
     }
 
     if (!data || data.length === 0) {
@@ -67,11 +67,11 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                                     {/* Left side: gikk videre (conversion) */}
                                     <div className="flex-1 flex justify-end pr-3 md:pr-6">
                                         <div
-                                            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-green-50 border border-green-200"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--ax-bg-success-soft)] border border-[var(--ax-border-success-subtle)]"
                                             title={`${percentageOfPrev}% av brukerne fra forrige steg gikk videre til dette steget`}
                                         >
-                                            <span className="text-lg md:text-xl font-bold text-green-700">{percentageOfPrev}%</span>
-                                            <span className="text-sm font-medium text-green-700 hidden sm:inline">gikk videre</span>
+                                            <span className="text-lg md:text-xl font-bold text-[var(--ax-text-success)]">{percentageOfPrev}%</span>
+                                            <span className="text-sm font-medium text-[var(--ax-text-success)] hidden sm:inline">gikk videre</span>
                                         </div>
                                     </div>
 
@@ -86,11 +86,11 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                                     <div className="flex-1 flex justify-start pl-3 md:pl-6">
                                         {dropoffCount > 0 ? (
                                             <div
-                                                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200"
+                                                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--ax-bg-danger-soft)] border border-[var(--ax-border-danger-subtle)]"
                                                 title={`${dropoffCount.toLocaleString('nb-NO')} brukere (${dropoffPercentage}%) falt fra mellom forrige steg og dette steget`}
                                             >
-                                                <span className="text-lg md:text-xl font-bold text-red-700">{dropoffPercentage}%</span>
-                                                <span className="text-sm font-medium text-red-700 hidden sm:inline">falt fra (-{dropoffCount.toLocaleString('nb-NO')})</span>
+                                                <span className="text-lg md:text-xl font-bold text-[var(--ax-text-danger)]">{dropoffPercentage}%</span>
+                                                <span className="text-sm font-medium text-[var(--ax-text-danger)] hidden sm:inline">falt fra (-{dropoffCount.toLocaleString('nb-NO')})</span>
                                             </div>
                                         ) : (
                                             <div className="px-3 py-1.5">
@@ -141,7 +141,7 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                                                 )}
 
                                                 <div
-                                                    className={`text-[11px] bg-white/10 border border-white/20 rounded px-2 py-0.5 opacity-90 max-w-full font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:bg-white/20 hover:opacity-100 transition-colors' : ''}`}
+                                                    className={`text-[11px] bg-[var(--ax-bg-default)]/10 border border-white/20 rounded px-2 py-0.5 opacity-90 max-w-full font-medium break-words text-center flex items-center justify-center gap-1 ${isClickable ? 'cursor-pointer hover:bg-[var(--ax-bg-default)]/20 hover:opacity-100 transition-colors' : ''}`}
                                                     title={item.url}
                                                     onClick={(e) => isClickable && item.url ? handleUrlClick(e, item.url) : undefined}
                                                 >
@@ -155,7 +155,7 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                                                         {item.params
                                                             .filter(p => !['lenketekst', 'tekst', 'label', 'tittel', 'destinasjon', 'url'].includes(p.key.toLowerCase()))
                                                             .map((p, i) => (
-                                                                <div key={i} className="bg-white/5 border border-white/10 px-1 py-0.5 rounded text-[9px] font-medium text-white/70 whitespace-nowrap max-w-full truncate" title={`${p.key} = ${p.value}`}>
+                                                                <div key={i} className="bg-[var(--ax-bg-default)]/5 border border-white/10 px-1 py-0.5 rounded text-[9px] font-medium text-white/70 whitespace-nowrap max-w-full truncate" title={`${p.key} = ${p.value}`}>
                                                                     {p.key}: {p.value}
                                                                 </div>
                                                             ))

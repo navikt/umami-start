@@ -16,14 +16,14 @@ const FunnelStats: React.FC<FunnelStatsProps> = ({ data }) => {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-900 font-medium mb-1">Totalt startet</div>
-                <div className="text-2xl font-bold text-gray-900">
+            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt startet</div>
+                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                     {totalStarted.toLocaleString('nb-NO')}
                 </div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-900 font-medium mb-1">Fullførte</div>
+            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Fullførte</div>
                 <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-bold text-green-600">
                         {totalCompleted.toLocaleString('nb-NO')}
@@ -33,8 +33,8 @@ const FunnelStats: React.FC<FunnelStatsProps> = ({ data }) => {
                     </span>
                 </div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-900 font-medium mb-1">Falt fra</div>
+            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Falt fra</div>
                 <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-bold text-red-600">
                         {dropoffCount.toLocaleString('nb-NO')}

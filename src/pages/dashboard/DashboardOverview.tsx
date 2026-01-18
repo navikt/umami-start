@@ -7,15 +7,15 @@ import Kontaktboks from "../../components/theme/Kontaktboks/Kontaktboks";
 // Map dashboard IDs to metadata (icons and custom titles)
 const dashboardMeta: Record<string, { icon: React.ReactNode; title?: string }> = {
     'standard': {
-        icon: <BarChartIcon className="w-8 h-8 text-blue-600" aria-hidden />,
+        icon: <BarChartIcon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />,
         title: 'Webstatistikk (generelt)'
     },
     'fylkeskontor': {
-        icon: <Buildings3Icon className="w-8 h-8 text-blue-600" aria-hidden />,
+        icon: <Buildings3Icon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />,
         title: 'Nav fylkeskontor'
     },
     'hjelpemiddelsentral': {
-        icon: <WheelchairIcon className="w-8 h-8 text-blue-600" aria-hidden />,
+        icon: <WheelchairIcon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />,
         title: 'Hjelpemiddelsentralene'
     }
 };
@@ -28,14 +28,14 @@ const DashboardOverview = () => {
             <Heading size="xlarge" level="1" className="mb-2">
                 Dashboard
             </Heading>
-            <BodyLong className="mb-8 text-gray-600">
+            <BodyLong className="mb-0 text-[var(--ax-text-subtle)]">
                 Oversikt over tilpassede dashboard.
             </BodyLong>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 mt-12">
                 {dashboardEntries.map(([id, config]) => {
                     const meta = dashboardMeta[id] || {
-                        icon: <BarChartIcon className="w-8 h-8 text-blue-600" aria-hidden />
+                        icon: <BarChartIcon className="w-8 h-8 text-[var(--ax-text-accent)]" aria-hidden />
                     };
 
                     return (
@@ -47,13 +47,14 @@ const DashboardOverview = () => {
                             className="hover:shadow-md transition-shadow group"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="flex-shrink-0 p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                <div className="flex-shrink-0 p-2 bg-[var(--ax-bg-accent-soft)] rounded-lg group-hover:bg-[var(--ax-bg-accent-soft-hover)] transition-colors">
+                                    {/* Clone element to override className if needed, or just rely on the object definition if I update dashboardMeta too */}
                                     {meta.icon}
                                 </div>
                                 <div>
-                                    <LinkPanel.Title className="text-lg">
+                                    <div className="text-base font-semibold text-[var(--ax-text-default)]">
                                         {meta.title || config.title}
-                                    </LinkPanel.Title>
+                                    </div>
                                 </div>
                             </div>
                         </LinkPanel>

@@ -391,6 +391,7 @@ const UserJourney = () => {
                         onClick={() => fetchData()}
                         disabled={!selectedWebsite || loading}
                         loading={loading}
+                        className="w-full mt-8"
                     >
                         Vis brukerreiser
                     </Button>
@@ -431,7 +432,7 @@ const UserJourney = () => {
 
                         <Tabs.Panel value="sankey" className="pt-2">
 
-                            <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+                            <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto' : ''}`}>
                                 {isFullscreen && (
                                     <div className="mb-4 flex justify-end">
                                         <Button
@@ -467,7 +468,7 @@ const UserJourney = () => {
                                     </div>
                                 </div>
                                 {queryStats && (
-                                    <div className="text-sm text-gray-600 text-right mt-4">
+                                    <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
                                         Data prosessert: {queryStats.totalBytesProcessedGB} GB
                                     </div>
                                 )}
@@ -475,7 +476,7 @@ const UserJourney = () => {
                         </Tabs.Panel>
 
                         <Tabs.Panel value="steps" className="pt-4">
-                            <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+                            <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto' : ''}`}>
                                 {!isFullscreen && (
                                     <InfoCard data-color="info" className="mb-6">
                                         <InfoCard.Header>
@@ -526,7 +527,7 @@ const UserJourney = () => {
                                     isLoadingMore={isUpdating}
                                 />
                                 {queryStats && (
-                                    <div className="text-sm text-gray-600 text-right mt-4">
+                                    <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
                                         Data prosessert: {queryStats.totalBytesProcessedGB} GB
                                     </div>
                                 )}
@@ -536,16 +537,16 @@ const UserJourney = () => {
                         <Tabs.Panel value="table" className="pt-4">
                             <div className="border rounded-lg overflow-hidden">
                                 <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-100 sticky top-0">
+                                    <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                        <thead className="bg-[var(--ax-bg-neutral-soft)] sticky top-0">
                                             <tr>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Steg</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Til side</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Fra side</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Antall brukere</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase">Steg</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase">Til side</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase">Fra side</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase">Antall brukere</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
+                                        <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                             {rawData && rawData.links.map((link: any, idx: number) => {
                                                 const sourceNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.source);
                                                 const targetNode = rawData.nodes.find((n: any) => rawData.nodes.indexOf(n) === link.target);
@@ -558,8 +559,8 @@ const UserJourney = () => {
                                                 }
 
                                                 return (
-                                                    <tr key={idx} className="hover:bg-gray-50">
-                                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{step}</td>
+                                                    <tr key={idx} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-[var(--ax-text-default)]">{step}</td>
                                                         <td className="px-4 py-2 text-sm">
                                                             {targetNode?.name && selectedWebsite ? (
                                                                 <span
@@ -569,7 +570,7 @@ const UserJourney = () => {
                                                                     {targetNode.name} <ExternalLink className="h-3 w-3" />
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-gray-900">{targetNode?.name || '-'}</span>
+                                                                <span className="text-[var(--ax-text-default)]">{targetNode?.name || '-'}</span>
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-2 text-sm">
@@ -581,23 +582,23 @@ const UserJourney = () => {
                                                                     {sourceNode.name} <ExternalLink className="h-3 w-3" />
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-gray-900">{sourceNode?.name || '-'}</span>
+                                                                <span className="text-[var(--ax-text-default)]">{sourceNode?.name || '-'}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{link.value.toLocaleString('nb-NO')}</td>
+                                                        <td className="px-4 py-2 whitespace-nowrap text-sm text-[var(--ax-text-default)]">{link.value.toLocaleString('nb-NO')}</td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t flex justify-between items-center">
+                                <div className="px-4 py-2 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t flex justify-between items-center">
                                     <span>{rawData && `${rawData.links.length} forbindelser mellom ${rawData.nodes.length} sider`}</span>
                                     {queryStats && (
                                         <span>Data prosessert: {queryStats.totalBytesProcessedGB} GB</span>
                                     )}
                                 </div>
-                                <div className="flex gap-2 p-3 bg-gray-50 border-b">
+                                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-b">
                                     <Button
                                         size="small"
                                         variant="secondary"

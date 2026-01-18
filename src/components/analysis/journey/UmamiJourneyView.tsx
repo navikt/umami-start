@@ -307,7 +307,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
         <>
             <div
                 ref={containerRef}
-                className={`bg-white w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}
+                className={`bg-[var(--ax-bg-default)] w-full p-6 ${isFullscreen ? 'overflow-auto' : 'overflow-x-auto'}`}
             >
                 {/* Inner container */}
                 <div className={`relative min-w-max ${isFullscreen ? '' : ''}`} ref={contentRef}>
@@ -334,7 +334,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                     <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm">
                                         {stepData.displayStep}
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900">
+                                    <div className="text-sm font-semibold text-[var(--ax-text-default)]">
                                         {stepData.totalValue.toLocaleString('nb-NO')} besøkende
                                     </div>
                                 </div>
@@ -383,7 +383,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                                     {/* Action Button - Visible on hover, opens modal */}
                                                                     {websiteId && (
                                                                         <button
-                                                                            className="flex-shrink-0 p-1 rounded-md hover:bg-white/20 transition-all text-gray-400 opacity-0 group-hover/text:opacity-100"
+                                                                            className="flex-shrink-0 p-1 rounded-md hover:bg-[var(--ax-bg-default)]/20 transition-all text-gray-400 opacity-0 group-hover/text:opacity-100"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 setSelectedUrl(item.name);
@@ -409,7 +409,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                             w-6 h-6 rounded-full flex items-center justify-center transition-all
                                                             ${isFunnelStep
                                                                     ? 'bg-green-500 text-white opacity-100'
-                                                                    : 'bg-white/30 text-white hover:bg-white/50 opacity-100'
+                                                                    : 'bg-[var(--ax-bg-default)]/30 text-white hover:bg-[var(--ax-bg-default)]/50 opacity-100'
                                                                 }
                                                         `}
                                                             title={isFunnelStep ? "Fjern fra trakt" : "Legg til i trakt"}
@@ -420,7 +420,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                 </div>
 
                                                 {/* Percentage Bar - Bottom */}
-                                                <div className="absolute bottom-0 left-0 right-0 h-2 bg-white/30">
+                                                <div className="absolute bottom-0 left-0 right-0 h-2 bg-[var(--ax-bg-default)]/30">
                                                     <div
                                                         className="h-full bg-orange-400 transition-all duration-500 ease-out"
                                                         style={{ width: `${item.percentage}%` }}
@@ -442,8 +442,8 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                     className={`
                                         group flex flex-col items-center justify-center gap-3
                                         w-full h-[300px] mt-14 rounded-lg border-2 border-dashed border-gray-400
-                                        hover:border-blue-600 hover:bg-blue-50 transition-all duration-200
-                                        text-gray-600 hover:text-blue-700
+                                        hover:border-blue-600 hover:bg-[var(--ax-bg-accent-soft)] transition-all duration-200
+                                        text-[var(--ax-text-subtle)] hover:text-blue-700
                                         ${isLoadingMore ? 'opacity-70 cursor-wait' : 'cursor-pointer'}
                                     `}
                                 >
@@ -454,8 +454,8 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                         </>
                                     ) : (
                                         <>
-                                            <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors shadow-sm border border-gray-200">
-                                                <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform text-gray-700 group-hover:text-blue-700" />
+                                            <div className="w-12 h-12 rounded-full bg-[var(--ax-bg-neutral-soft)] group-hover:bg-[var(--ax-bg-accent-soft)] flex items-center justify-center transition-colors shadow-sm border border-[var(--ax-border-neutral-subtle)]">
+                                                <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform text-[var(--ax-text-default)] group-hover:text-blue-700" />
                                             </div>
                                             <div className="flex flex-col items-center">
                                                 <span className="font-bold text-base">Last inn mer</span>
@@ -487,7 +487,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                 variant="tertiary"
                                 size="medium"
                                 onClick={() => setFunnelSteps([])}
-                                className="text-white hover:bg-white/10 hover:text-white"
+                                className="text-white hover:bg-[var(--ax-bg-default)]/10 hover:text-white"
                             >
                                 Tøm valgte
                             </Button>

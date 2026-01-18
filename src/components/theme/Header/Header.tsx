@@ -30,7 +30,7 @@ export default function Header({ theme }: HeaderProps) {
     "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " + (theme === "dark" ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]" : "!text-white hover:!text-white");
   return (
     <div style={{ background: theme === "dark" ? "var(--ax-bg-default)" : "rgba(19,17,54)" }} className="border-b border-[var(--ax-border-neutral-subtle)]">
-      <header className="flex py-1 z-10 items-center max-w-[76.5rem] m-auto justify-between px-4">
+      <header className="flex py-1 z-10 items-center max-w-[80rem] m-auto justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
           <Button as={Link} variant="tertiary" className={linkButton} href="/" aria-label="Start Umami">
             <div className="flex items-center gap-2">
