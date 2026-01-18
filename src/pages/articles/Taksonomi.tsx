@@ -23,7 +23,7 @@ const TaksonomiPage = () => {
       </BodyLong>
 
       {/* Add quick links */}
-      <Box padding="4" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8">
+      <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="mb-8 p-6">
         <Heading size="xsmall" level="2" className="mb-3">Snarvei</Heading>
         <Link href="#analytics-types">
           Type-definisjoner for analytics-hendelser (@navikt/analytics-types)
@@ -31,10 +31,10 @@ const TaksonomiPage = () => {
       </Box>
 
       <div>
-        <VStack gap="12">
+        <VStack gap="space-12">
           {/* Motivation Section */}
           <section>
-            <Heading level="2" size="medium" spacing>
+            <Heading level="2" size="medium" spacing className="mt-12">
               Hvorfor bruke taksonomi?
             </Heading>
             <BodyLong spacing>
@@ -44,11 +44,11 @@ const TaksonomiPage = () => {
             </BodyLong>
 
             <Box
-              className="p-6 pb-3"
               borderWidth="1"
               borderRadius="medium"
               borderColor="border-info"
               background="surface-info-subtle"
+              className="p-6"
             >
               <Heading size="small" level="3">
                 Dette får du med taksonomien
@@ -66,7 +66,7 @@ const TaksonomiPage = () => {
 
           {/* Event Naming Standards */}
           <section>
-            <Heading level="2" size="medium" spacing>
+            <Heading level="2" size="medium" spacing className="mt-12">
               Slik navngir du hendelser
             </Heading>
             <BodyLong spacing>
@@ -74,7 +74,7 @@ const TaksonomiPage = () => {
               brukeren gjør. Tenk på hendelsesnavnet som en kort setning.
             </BodyLong>
 
-            <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4">
+            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 p-6">
               <BodyLong className="font-medium">Enkelt prinsipp:</BodyLong>
               <BodyLong className="italic">Bruk vanlig norsk som alle kan forstå.</BodyLong>
             </Box>
@@ -153,7 +153,7 @@ const TaksonomiPage = () => {
 
           {/* Parameters Section */}
           <section>
-            <Heading level="2" size="medium" spacing>
+            <Heading level="2" size="medium" spacing className="mt-12">
               Slik navngir du hendelsesdetaljer
             </Heading>
             <BodyLong spacing>
@@ -161,7 +161,7 @@ const TaksonomiPage = () => {
               Dette gjør det lettere å forstå nøyaktig hva som skjedde og analysere dataene senere.
             </BodyLong>
 
-            <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4">
+            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 p-6">
               <BodyLong className="font-medium">Navnestruktur:</BodyLong>
               <BodyLong className="italic">Bruk to eller flere ord der første ordet starter med liten bokstav og de neste med stor.</BodyLong>
               <BodyLong className="mt-2">For eksempel: <code>appNavn</code>, <code>skjemaType</code>, <code>tekst</code></BodyLong>
@@ -234,7 +234,7 @@ const TaksonomiPage = () => {
 
           {/* Analytics Types Package Section */}
           <section id="analytics-types">
-            <Heading level="2" size="medium" spacing>
+            <Heading level="2" size="medium" spacing className="mt-12">
               Type-definisjoner for analytics-hendelser
             </Heading>
             <BodyLong spacing>
@@ -242,11 +242,11 @@ const TaksonomiPage = () => {
             </BodyLong>
 
             <Box
-              className="p-6"
               borderWidth="1"
               borderRadius="medium"
               borderColor="border-info"
               background="surface-info-subtle"
+              className="p-6"
             >
               <Heading size="small" level="3" spacing>
                 <Link href="https://github.com/navikt/analytics-types" target="_blank" className="text-text-default hover:underline">
@@ -268,13 +268,13 @@ const TaksonomiPage = () => {
               <BodyLong className="mb-2">
                 <strong>Installer pakken:</strong>
               </BodyLong>
-              <Box padding="3" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="bg-gray-50 flex items-center justify-between">
+              <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="bg-gray-50 flex items-center justify-between p-6">
                 <code className="text-sm">npm install @navikt/analytics-types</code>
                 <CopyButton copyText="npm install @navikt/analytics-types" size="small" />
               </Box>
             </Box>
 
-            <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-6">
+            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-6 p-6">
               <Heading size="xsmall" level="3" spacing>
                 Eksempel på bruk
               </Heading>
@@ -302,7 +302,7 @@ analytics(Events.NAVIGERE, properties);`}
 
           {/* Implementation in Umami */}
           <section>
-            <Heading level="2" size="medium" spacing>
+            <Heading level="2" size="medium" spacing className="mt-12">
               Implementer i koden
             </Heading>
             <BodyLong spacing>
@@ -310,7 +310,7 @@ analytics(Events.NAVIGERE, properties);`}
               Her er et eksempel på hvordan du kan spore hendelser i tråd med taksonomien:
             </BodyLong>
 
-            <Box padding="8" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 bg-gray-50">
+            <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 bg-gray-50 p-6">
               <pre className="text-base whitespace-pre-wrap">
                 {`// Når en bruker klikker på en lenke
 function handleLenkeKlikk() {
@@ -334,7 +334,7 @@ function handleSkjemaSendt() {
 
           {/* Verification section */}
           <section>
-            <Heading level="2" size="medium" spacing>
+            <Heading level="2" size="medium" spacing className="mt-12">
               Test og verifiser
             </Heading>
             <BodyLong spacing>

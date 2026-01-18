@@ -90,7 +90,8 @@ function Komigang() {
 
             <Heading spacing={true} as="h3" size="medium"
                 style={{ marginTop: "60px", marginBottom: "30px" }}>Måle</Heading>
-            <List as="ol" title="Mål det som betyr noe">
+            <Heading size="xsmall" level="3" spacing>Mål det som betyr noe</Heading>
+            <List as="ol">
                 <List.Item>
                     <strong>Måleplan:</strong> Start med hvorfor, og lag deretter en plan for hva og hvordan dere skal
                     måle.
@@ -117,7 +118,8 @@ function Komigang() {
 
             <Heading spacing={true} as="h3" size="medium"
                 style={{ marginTop: "60px", marginBottom: "30px" }}>Analysere</Heading>
-            <List as="ul" title="Her finner du Umami-data">
+            <Heading size="xsmall" level="3" spacing>Her finner du Umami-data</Heading>
+            <List as="ul">
                 <List.Item>
                     <strong><Link href={"./"}>Umami Dashboard:</Link></strong> Grunnleggende analyser og dashboard med data fra
                     Umami.
@@ -129,7 +131,8 @@ function Komigang() {
                 </List.Item>
             </List>
 
-            <List as="ul" title="Lykkes med Umami i Metabase" className="pt-4">
+            <Heading size="xsmall" level="3" spacing className="pt-4">Lykkes med Umami i Metabase</Heading>
+            <List as="ul">
                 <List.Item>
                     <strong><Link
                         href={"/grafbygger"}>Grafbyggeren:</Link></strong> Lag grafer og tabeller.
@@ -145,7 +148,8 @@ function Komigang() {
 
             <Heading spacing={true} as="h3" size="medium" style={{ marginTop: "60px", marginBottom: "30px" }}>Dele og
                 lære</Heading>
-            <List as="ul" title="Bli med på kaffeprat? ☕">
+            <Heading size="xsmall" level="3" spacing>Bli med på kaffeprat? ☕</Heading>
+            <List as="ul">
                 <List.Item>
                     <strong>Slack:</strong> Bli med i kanalen <Link
                         href={"https://nav-it.slack.com/archives/C070BPKR830"}>#produktanalyse</Link> og <Link

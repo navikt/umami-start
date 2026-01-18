@@ -13,9 +13,9 @@ function Personvern() {
             </p>
 
             <div className="prose max-w-full prose-lg">
-                <VStack gap="12">
+                <VStack gap="space-12">
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Hva er Start Umami
                         </Heading>
                         <p className="mb-4 leading-normal">
@@ -24,7 +24,7 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Formålet med audit loggingen
                         </Heading>
                         <p className="mb-4 leading-normal">
@@ -42,18 +42,18 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Bruk av informasjonskapsler (cookies)
                         </Heading>
                         <p className="mb-4 leading-normal">Når du besøker nettsiden bruker vi informasjonskapsler (cookies).</p>
 
-                        <Box padding="6" borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4">
+                        <Box borderWidth="1" borderColor="border-subtle" borderRadius="medium" className="my-4 p-6">
                             <p className="mb-4 leading-normal">Informasjonskapsler er små tekstfiler som plasseres på din datamaskin når du laster ned en nettside. Noen av informasjonskapslene er nødvendige for at ulike tjenester på nettsiden vår skal fungere slik vi ønsker.</p>
-                            <p className="mb-4 leading-normal">Vi bruker informasjonskapsler til å forbedre brukeropplevelsen og innholdet. Når du besøker aksel.Nav.no, sender nettleseren din opplysninger til Navs analyseverktøy.</p>
+                            <p className="leading-normal">Vi bruker informasjonskapsler til å forbedre brukeropplevelsen og innholdet. Når du besøker aksel.Nav.no, sender nettleseren din opplysninger til Navs analyseverktøy.</p>
                         </Box>
 
                         <section>
-                            <Heading level="3" size="small" spacing>
+                            <Heading level="3" size="small" spacing className="mt-8">
                                 skyra*
                             </Heading>
                             <p className="mb-4 leading-normal">
@@ -62,7 +62,7 @@ function Personvern() {
                         </section>
 
                         <section>
-                            <Heading level="3" size="small" spacing>
+                            <Heading level="3" size="small" spacing className="mt-8">
                                 skyra.state
                             </Heading>
                             <p className="mb-4 leading-normal">
@@ -71,7 +71,7 @@ function Personvern() {
                         </section>
 
                         <section>
-                            <Heading level="3" size="small" spacing>
+                            <Heading level="3" size="small" spacing className="mt-8">
                                 Umami
                             </Heading>
                             <p className="mb-4 leading-normal">
@@ -81,7 +81,7 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Dine rettigheter
                         </Heading>
                         <p className="mb-4 leading-normal">
@@ -90,7 +90,7 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Personvernombudet
                         </Heading>
                         <p className="mb-4 leading-normal">
@@ -99,7 +99,7 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Klage til Datatilsynet
                         </Heading>
                         <p className="leading-normal">
@@ -108,7 +108,7 @@ function Personvern() {
                     </section>
 
                     <section>
-                        <Heading level="2" size="medium" spacing>
+                        <Heading level="2" size="medium" spacing className="mt-12">
                             Feil, mangler og forbedringsforslag
                         </Heading>
                         <p className="leading-normal">Hvis du opplever problemer eller har forslag til forbedringer hører vi veldig gjerne fra deg! Feil og mangler kan rapporteres til <a className="underline" href="mailto:eilif.johansen@nav.no">eilif.johansen@nav.no</a>, eller <a className="underline" href="https://nav-it.slack.com/archives/C02UGFS2J4B">#researchops</a> på Slack.</p>

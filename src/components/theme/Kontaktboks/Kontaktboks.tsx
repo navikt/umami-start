@@ -2,7 +2,7 @@ import { List, Link, Heading, VStack } from "@navikt/ds-react";
 
 export default function Kontaktboks() {
     return (
-        <VStack gap="2">
+        <VStack gap="space-2" className="mt-12">
             <Heading as="h3" size="medium">Ønsker du noen å sparre med?</Heading>
             <List as="ul">
                 <List.Item>

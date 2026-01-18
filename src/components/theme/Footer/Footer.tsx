@@ -24,7 +24,7 @@ const Footer = () => {
 function LogoBlock() {
     return (
         <div>
-            <div className="text-2xl whitespace-nowrap flex items-center" aria-label="Start Umami" role="img">
+            <div className="text-2xl whitespace-nowrap flex items-center !text-white" aria-label="Start Umami" role="img">
                 <svg
                     width="1em"
                     height="1em"
@@ -44,8 +44,8 @@ function LogoBlock() {
                 </svg>
                 <span>Umami</span>
             </div>
-            <p className="mt-3 leading-normal">&copy; {new Date().getFullYear()} Nav</p>
-            <p className="leading-normal">Arbeids- og velferdsetaten</p>
+            <p className="mt-3 leading-normal !text-white">&copy; {new Date().getFullYear()} Nav</p>
+            <p className="leading-normal !text-white">Arbeids- og velferdsetaten</p>
         </div>
     );
 }
@@ -53,7 +53,7 @@ function LogoBlock() {
 function Snarveier() {
     return (
         <div>
-            <Heading level="2" size="xsmall">
+            <Heading level="2" size="xsmall" className="!text-white">
                 Juridisk
             </Heading>
             <BodyShort as="ul" className="mt-3 grid gap-3">
@@ -71,7 +71,7 @@ function Snarveier() {
 function SideLenker() {
     return (
         <div>
-            <Heading level="2" size="xsmall">
+            <Heading level="2" size="xsmall" className="!text-white">
                 Erklæringer
             </Heading>
             <BodyShort as="ul" className="mt-3 grid gap-3">
@@ -89,7 +89,7 @@ function SideLenker() {
 function Kontakt() {
     return (
         <div>
-            <Heading level="2" size="xsmall">
+            <Heading level="2" size="xsmall" className="!text-white">
                 Finn oss
             </Heading>
             <BodyShort as="ul" className="mt-3 grid gap-3">

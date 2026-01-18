@@ -178,7 +178,7 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                             ))}
                         </List>
                     )}
-                    <BodyShort>
+                    <BodyShort className="mt-4 mb-2">
                         Savner du en nettside eller app? <Link href="/komigang">Følg kom-i-gang-guiden!</Link>
                     </BodyShort>
                 </ReadMore>
