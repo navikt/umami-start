@@ -277,8 +277,7 @@ const ChartsPage = () => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
-  /* const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0); */
-  // const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
+  const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
 
   // Add missing state variables for date range settings
   const [dateRangeInDays, setDateRangeInDays] = useState<number>(14);
@@ -1449,16 +1448,15 @@ const ChartsPage = () => {
     }
   }, []);
 
-  const handleEventsLoad = useCallback((events: string[], autoParameters?: { key: string; type: 'string' }[], _maxDays?: number) => {
+  const handleEventsLoad = useCallback((events: string[], autoParameters?: { key: string; type: 'string' }[], maxDays?: number) => {
     setAvailableEvents(events);
     if (autoParameters) {
       setParameters(autoParameters);
     }
-    // if (maxDays !== undefined) {
-    //   setMaxDaysAvailable(maxDays);
-    // }
+    if (maxDays !== undefined) {
+      setMaxDaysAvailable(maxDays);
+    }
     setDateRangeReady(true);
-    // setIsLoading(false);
   }, []);
 
   const setParamAggregation = (strategy: 'representative' | 'unique') => {
@@ -1546,7 +1544,7 @@ const ChartsPage = () => {
                   parameters={parameters}
                   setFilters={setFilters}
                   availableEvents={availableEvents}
-                  maxDaysAvailable={dateRangeInDays}
+                  maxDaysAvailable={maxDaysAvailable}
                   onEnableCustomEvents={(withParams = false) => {
                     // Always request to load events (at least names)
                     setRequestLoadEvents(true);
