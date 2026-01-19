@@ -29,9 +29,9 @@ const ScrollToTopWrapper = () => {
 // Create a wrapper component for Page Layout
 const PageLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isHome = location.pathname === "/";
+  const isFullWidthPage = location.pathname === "/" || location.pathname === "/dashboards";
 
-  if (isHome) {
+  if (isFullWidthPage) {
     return <main style={{ width: "100%" }}>{children}</main>;
   }
 
