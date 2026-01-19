@@ -32,6 +32,7 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
   const isFullWidthPage =
     location.pathname === "/" ||
     location.pathname === "/dashboards" ||
+    location.pathname === "/dashboard" ||
     location.pathname === "/oppsett" ||
     location.pathname === "/komigang" ||
     location.pathname === "/grafbygger" ||
@@ -42,12 +43,17 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
     location.pathname.startsWith("/trafikkanalyse") ||
     location.pathname.startsWith("/markedsanalyse") ||
     location.pathname.startsWith("/utforsk-hendelser") ||
+    location.pathname.startsWith("/datastruktur") ||
     location.pathname.startsWith("/brukerprofiler") ||
     location.pathname.startsWith("/brukerlojalitet") ||
     location.pathname.startsWith("/brukersammensetning") ||
+    location.pathname.startsWith("/brukerreiser") ||
+    location.pathname.startsWith("/hendelsesreiser") ||
     location.pathname.startsWith("/trakt") ||
     location.pathname.startsWith("/personvernssjekk") ||
     location.pathname.startsWith("/diagnose") ||
+    location.pathname.startsWith("/grafdeling") ||
+    location.pathname.startsWith("/profil") ||
     location.pathname.startsWith("/sql");
 
   if (isFullWidthPage) {

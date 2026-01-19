@@ -3,7 +3,7 @@ import { Heading, BodyShort, Select, Page } from "@navikt/ds-react";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
-import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
+import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
 
 interface ChartLayoutProps {
     title: string;
@@ -174,11 +174,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
                 {/* {currentPage && <AnalyticsNavigation currentPage={currentPage} />} */}
 
-                <div className="mt-12">
-                    <Kontaktboks />
-                </div>
-
             </Page.Block>
+            <KontaktSeksjon showMarginBottom={true} />
         </>
     );
 };
