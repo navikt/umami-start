@@ -25,13 +25,16 @@ function Oppsett() {
             </div>
 
             <Page.Block width="xl" gutters className="pb-16 px-4">
-                {/* Kom i gang CTA */}
+                <div style={{ marginTop: "38px", marginBottom: "32px" }}>
+                    <Heading as="h2" size="medium">Utviklerverktøy</Heading>
+                </div>
+
+                {/* Kom i gang CTA - below title, above cards */}
                 <div style={{
-                    marginTop: '48px',
-                    border: '1px solid var(--ax-border-subtle)',
-                    marginBottom: '48px',
+                    border: '1px solid var(--ax-border-neutral-subtle)',
+                    marginBottom: '40px',
                     padding: '40px',
-                    backgroundColor: 'var(--ax-bg-accent-soft)',
+                    backgroundColor: 'var(--ax-bg-default)',
                     borderRadius: '16px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -39,7 +42,7 @@ function Oppsett() {
                     gap: '24px'
                 }}>
                     <div>
-                        <Heading as="h3" size="small" style={{ marginBottom: '12px', color: 'var(--ax-text-accent)' }}>
+                        <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
                             Kom i gang med Umami
                         </Heading>
                         <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
@@ -48,58 +51,30 @@ function Oppsett() {
                     </div>
                     <Link
                         href="/komigang"
-                        style={{
-                            display: 'inline-block',
-                            padding: '14px 32px',
-                            backgroundColor: 'var(--ax-bg-accent-strong)',
-                            color: 'var(--ax-text-contrast)',
-                            borderRadius: '50px',
-                            textDecoration: 'none',
-                            fontWeight: 600,
-                            fontSize: '16px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 2px 4px rgba(0, 103, 197, 0.2)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-accent-strong-hover)';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 103, 197, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-accent-strong)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 103, 197, 0.2)';
-                        }}
+                        className="primary-button"
                     >
                         Gå til kom-i-gang-guiden
                     </Link>
                 </div>
 
-                <Heading spacing as="h2" size="medium" className="mt-12 mb-6">
-                    Utviklerverktøy
-                </Heading>
-
-                {/* 3-Column Analysis Cards */}
+                {/* 3-Column Developer Tools Cards */}
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                     gap: '24px',
-                    marginBottom: '48px'
+                    marginBottom: '25px'
                 }}>
                     {[
                         {
                             title: "Grafbygging",
-                            description: "Sett opp avanserte dashboards og kjør direkte SQL-spørringer mot dataene.",
                             ids: ['grafbygger', 'sql']
                         },
                         {
                             title: "Datasjekk",
-                            description: "Verktøy for å validere oppsettet og sikre at personvern ivaretas.",
                             ids: ['personvern', 'diagnose']
                         },
                         {
                             title: "Aktiviteter",
-                            description: "Gå i dybden på enkelthendelser og forstå enkeltbrukeres reiser.",
                             ids: ['event-explorer', 'brukerprofiler']
                         }
                     ].map((section) => (
@@ -111,7 +86,7 @@ function Oppsett() {
                                 borderRadius: '12px',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                border: `1px solid var(--ax-border-subtle)`,
+                                border: `1px solid var(--ax-border-neutral-subtle)`,
                             }}
                         >
                             <div style={{
@@ -154,7 +129,7 @@ function Oppsett() {
                                             }}
                                         >
                                             <span>{tool.label}</span>
-                                            <span style={{ color: 'var(--ax-text-accent)', fontSize: '18px' }}>→</span>
+                                            <span style={{ color: 'var(--ax-bg-accent-strong)', fontSize: '18px' }}>→</span>
                                         </Link>
                                     ))}
                             </nav>
@@ -162,7 +137,7 @@ function Oppsett() {
                     ))}
                 </div>
 
-                <Heading spacing as="h2" size="medium" className="mt-12 mb-3" id="sporingskoder">
+                <Heading spacing as="h2" size="medium" className="mt-12 pt-2 mb-3" id="sporingskoder">
                     Sporingskoder
                 </Heading>
                 <BodyShort className="mb-8">
