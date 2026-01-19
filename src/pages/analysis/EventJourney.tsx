@@ -29,6 +29,7 @@ const EventJourney = () => {
     const [dryRunStats, setDryRunStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+    const [hasSearched, setHasSearched] = useState<boolean>(false);
 
     // Modal state
     const [selectedStepDetails, setSelectedStepDetails] = useState<{ title: string, details: string[] } | null>(null);
@@ -121,6 +122,7 @@ const EventJourney = () => {
         setLoading(true);
         setError(null);
         setData([]);
+        setHasSearched(true);
 
         // Calculate date range
         const now = new Date();
@@ -1283,6 +1285,13 @@ const EventJourney = () => {
                         )
                     }
                 </>
+            )}
+
+            {/* Empty State */}
+            {!loading && hasSearched && urlPath && data.length === 0 && !error && (
+                <div className="flex justify-center items-center h-full text-gray-500">
+                    Ingen egendefinerte hendelser funnet for valgt periode og filter.
+                </div>
             )}
         </ChartLayout >
     );
