@@ -29,7 +29,26 @@ const ScrollToTopWrapper = () => {
 // Create a wrapper component for Page Layout
 const PageLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isFullWidthPage = location.pathname === "/" || location.pathname === "/dashboards";
+  const isFullWidthPage =
+    location.pathname === "/" ||
+    location.pathname === "/dashboards" ||
+    location.pathname === "/oppsett" ||
+    location.pathname === "/komigang" ||
+    location.pathname === "/grafbygger" ||
+    location.pathname === "/personvern" ||
+    location.pathname === "/tilgjengelighet" ||
+    location.pathname === "/taksonomi" ||
+    location.pathname === "/metabase" ||
+    location.pathname.startsWith("/trafikkanalyse") ||
+    location.pathname.startsWith("/markedsanalyse") ||
+    location.pathname.startsWith("/utforsk-hendelser") ||
+    location.pathname.startsWith("/brukerprofiler") ||
+    location.pathname.startsWith("/brukerlojalitet") ||
+    location.pathname.startsWith("/brukersammensetning") ||
+    location.pathname.startsWith("/trakt") ||
+    location.pathname.startsWith("/personvernssjekk") ||
+    location.pathname.startsWith("/diagnose") ||
+    location.pathname.startsWith("/sql");
 
   if (isFullWidthPage) {
     return <main style={{ width: "100%" }}>{children}</main>;

@@ -1,9 +1,9 @@
 // src/routes.tsx
 import Home from './pages/Home.tsx';
 import Komigang from './pages/articles/Komigang.tsx';
-import Oppsett from './pages/articles/Oppsett.tsx';
-import Personvern from "./pages/legal/Personvern.tsx";
-import Tilgjengelighet from "./pages/legal/Tilgjengelighet.tsx";
+import Oppsett from './pages/topics/Oppsett.tsx';
+import Personvern from "./pages/articles/Personvern.tsx";
+import Tilgjengelighet from "./pages/articles/Tilgjengelighet.tsx";
 
 
 import Taksonomi from "./pages/articles/Taksonomi.tsx";
@@ -27,8 +27,8 @@ import Diagnosis from "./pages/analysis/Diagnosis.tsx";
 
 import EventJourney from "./pages/analysis/EventJourney.tsx";
 import UserProfile from "./pages/analysis/UserProfile.tsx";
-import Dashboard from "./pages/dashboard/Dashboard.tsx";
-import DashboardOverview from "./pages/dashboard/DashboardOverview.tsx";
+import Dashboard from "./pages/analysis/Dashboard.tsx";
+import DashboardOverview from "./pages/topics/DashboardOverview.tsx";
 
 
 const routes = [

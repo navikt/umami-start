@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heading, BodyShort, Select } from '@navikt/ds-react';
+import { Heading, BodyShort, Select, Page } from "@navikt/ds-react";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
@@ -80,93 +80,106 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     const buttonPosition = wideSidebar ? 'left-1/2' : 'left-1/3';
 
     return (
-        <div className="py-8 max-w-[1600px] mx-auto">
-            <div className="mb-8">
-                <Heading level="1" size="xlarge" spacing>
-                    {title}
-                </Heading>
-                <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
-                    {description}
-                </BodyShort>
+        <>
+            <div style={{
+                width: "100%",
+                backgroundColor: "var(--ax-bg-accent-soft)",
+                color: "var(--ax-text-default)",
+                paddingTop: "40px",
+                paddingBottom: "32px",
+                marginBottom: "24px"
+            }}>
+                <Page.Block width="xl" gutters>
+                    <Heading level="1" size="xlarge" spacing>
+                        {title}
+                    </Heading>
+                    <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
+                        {description}
+                    </BodyShort>
+                </Page.Block>
             </div>
 
-            <div className="rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)]">
-                <div className="flex flex-col md:flex-row min-h-[600px] relative">
-                    {isSidebarOpen && (
-                        <>
-                            <div className={`bg-[var(--ax-bg-neutral-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
-                                <div className="space-y-6">
-                                    <div className="pb-2">
-                                        <Select
-                                            size="small"
-                                            label="Type analyse"
-                                            value={currentPage || ''}
-                                            onChange={handleChartChange}
-                                        >
-                                            <option value="" disabled>Velg...</option>
-                                            {chartGroups.map((group) => (
-                                                <optgroup label={group.title} key={group.title}>
-                                                    {group.ids.map(id => {
-                                                        const page = analyticsPages.find(p => p.id === id);
-                                                        if (!page) return null;
-                                                        return (
+            <Page.Block width="xl" gutters className="pb-16">
+
+
+                <div className="rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)]">
+                    <div className="flex flex-col md:flex-row min-h-[600px] relative">
+                        {isSidebarOpen && (
+                            <>
+                                <div className={`bg-[var(--ax-bg-neutral-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
+                                    <div className="space-y-6">
+                                        <div className="pb-2">
+                                            <Select
+                                                size="small"
+                                                label="Type analyse"
+                                                value={currentPage || ''}
+                                                onChange={handleChartChange}
+                                            >
+                                                <option value="" disabled>Velg...</option>
+                                                {chartGroups.map((group) => (
+                                                    <optgroup label={group.title} key={group.title}>
+                                                        {group.ids.map(id => {
+                                                            const page = analyticsPages.find(p => p.id === id);
+                                                            if (!page) return null;
+                                                            return (
+                                                                <option key={page.id} value={page.id}>
+                                                                    {page.label}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </optgroup>
+                                                ))}
+                                                <optgroup label="Tilpasset & datasjekk">
+                                                    {analyticsPages
+                                                        .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
+                                                        .map(page => (
                                                             <option key={page.id} value={page.id}>
                                                                 {page.label}
                                                             </option>
-                                                        );
-                                                    })}
+                                                        ))
+                                                    }
                                                 </optgroup>
-                                            ))}
-                                            <optgroup label="Tilpasset & datasjekk">
-                                                {analyticsPages
-                                                    .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
-                                                    .map(page => (
-                                                        <option key={page.id} value={page.id}>
-                                                            {page.label}
-                                                        </option>
-                                                    ))
-                                                }
-                                            </optgroup>
-                                        </Select>
+                                            </Select>
+                                        </div>
+                                        {filters}
                                     </div>
-                                    {filters}
                                 </div>
-                            </div>
-                            {/* Collapse button on divider - hidden on mobile */}
+                                {/* Collapse button on divider - hidden on mobile */}
+                                <button
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className={`hidden md:flex absolute top-3 ${buttonPosition} -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-accent)] transition-colors z-10`}
+                                    title="Minimer filter"
+                                    aria-label="Minimer filter"
+                                >
+                                    <ChevronLeft size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
+                                </button>
+                            </>
+                        )}
+                        {!isSidebarOpen && (
+                            /* Expand button on left edge - hidden on mobile */
                             <button
-                                onClick={() => setIsSidebarOpen(false)}
-                                className={`hidden md:flex absolute top-3 ${buttonPosition} -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-accent)] transition-colors z-10`}
-                                title="Minimer filter"
-                                aria-label="Minimer filter"
+                                onClick={() => setIsSidebarOpen(true)}
+                                className="hidden md:flex absolute top-3 left-0 -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] transition-colors z-10"
+                                title="Vis filter"
+                                aria-label="Vis filter"
                             >
-                                <ChevronLeft size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
+                                <ChevronRight size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
                             </button>
-                        </>
-                    )}
-                    {!isSidebarOpen && (
-                        /* Expand button on left edge - hidden on mobile */
-                        <button
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="hidden md:flex absolute top-3 left-0 -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] transition-colors z-10"
-                            title="Vis filter"
-                            aria-label="Vis filter"
-                        >
-                            <ChevronRight size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
-                        </button>
-                    )}
-                    <div className={`w-full ${isSidebarOpen ? contentWidth : ''} p-6`}>
-                        {children}
+                        )}
+                        <div className={`w-full ${isSidebarOpen ? contentWidth : ''} p-6`}>
+                            {children}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* {currentPage && <AnalyticsNavigation currentPage={currentPage} />} */}
+                {/* {currentPage && <AnalyticsNavigation currentPage={currentPage} />} */}
 
-            <div className="mt-12">
-                <Kontaktboks />
-            </div>
+                <div className="mt-12">
+                    <Kontaktboks />
+                </div>
 
-        </div>
+            </Page.Block>
+        </>
     );
 };
 

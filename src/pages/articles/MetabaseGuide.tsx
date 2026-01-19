@@ -2,176 +2,196 @@ import {
   Heading,
   VStack,
   Box,
-  List
+  List,
+  Page
 } from '@navikt/ds-react';
-import Kontaktboks from '../../components/theme/Kontaktboks/Kontaktboks';
+import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon";
 
 const MetabaseGuide = () => {
   return (
-    <div className="w-full max-w-[800px] mx-auto">
-      <Heading spacing level="1" size="large" className="pt-24 pb-4">
-        Slik lager du dashboards i Metabase
-      </Heading>
-
-      <p className="text-[var(--ax-text-subtle)] mb-8 text-xl leading-relaxed">
-        En steg-for-steg guide for å lage dashboard med Umami-data i Metabase.
-      </p>
-
-      {/* Introduction box */}
-      <Box className="mb-8 bg-[var(--ax-bg-accent-soft)] p-6 border border-[var(--ax-border-subtle)] rounded-medium">
-        <Heading size="small" level="2" spacing>
-          Tre steg for å lage dashboard i Metabase
-        </Heading>
-        <List as="ol" size="small" className="mt-2 text-[var(--ax-text-default)] space-y-2">
-          <List.Item>Opprett nytt dashboard i Metabase</List.Item>
-          <List.Item>Lag grafer med Umami Grafbyggeren</List.Item>
-          <List.Item>Legg til grafer i Matabase-dashboardet</List.Item>
-        </List>
-      </Box>
-
-      <div className="prose max-w-full prose-lg">
-        <VStack gap="space-12">
-
-          {/* STEG 1 */}
-          <section id="steg1-metabase">
-            <Heading level="2" size="medium" spacing className="flex items-center gap-2 mt-12">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ax-bg-accent-strong)] text-[var(--ax-text-contrast)] text-base font-semibold">1</span>
-              Opprett nytt dashboard i Metabase
-            </Heading>
-            <ol className="mt-4 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">a</span>
-                <span>
-                  Gå til <a href="https://metabase.ansatt.nav.no/dashboard/484" target='_new' className="text-[var(--ax-text-accent)] underline">Metabase</a>.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">b</span>
-                <span>
-                  Klikk på <b>+ Ny</b> i hovedmenyen og velg <b>Infotavle / Dashboard</b>.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">c</span>
-                <span>
-                  Gi dashboardet et navn, beskrivelse og velg plassering.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">d</span>
-                <span>
-                  Trykk <b>Lag / Create</b> for å opprette dashboardet.
-                </span>
-              </li>
-            </ol>
-          </section>
-
-          {/* STEG 2 */}
-          <section id="steg2-grafbygger">
-            <Heading level="2" size="medium" spacing className="flex items-center gap-2 mt-12">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ax-bg-accent-strong)] text-[var(--ax-text-contrast)] text-base font-semibold">2</span>
-              Lag grafer med Umami Grafbyggeren
+    <>
+      <div style={{
+        width: "100%",
+        backgroundColor: "var(--ax-bg-accent-soft)",
+        color: "var(--ax-text-default)",
+        paddingTop: "70px",
+        paddingBottom: "70px",
+      }}>
+        <Page.Block width="xl" gutters>
+          <div className="max-w-[800px] mx-auto">
+            <Heading spacing level="1" size="large">
+              Slik lager du dashboards i Metabase
             </Heading>
 
-            <Heading level="3" size="xsmall" spacing className="mt-4 ml-8">
-              Start i Umami Grafbyggeren
-            </Heading>
-            <ol className="mt-2 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">a</span>
-                <span>
-                  Gå til <a href="/grafbygger" target='_new' className="text-[var(--ax-text-accent)] underline">Umami Grafbygger</a>.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">b</span>
-                <span>
-                  Velg nettside eller app, og hvilke data du vil vise i grafen.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">c</span>
-                <span>
-                  Velg "interaktiv" dersom du ønsker filreringsvalg i dashboardet.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-semibold text-base mt-1">d</span>
-                <span>
-                  Når du er fornøyd, trykk kopiere og fortsett i Metabase.
-                </span>
-              </li>
-            </ol>
-
-            <Heading level="3" size="xsmall" spacing className="mt-8 ml-8">
-              Ferdigstill og lagre grafen i Metabase
-            </Heading>
-            <ol className="mt-2 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">e</span>
-                <span>
-                  Lim inn grafen i <a href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0=" target='_new' className="text-[var(--ax-text-accent)] underline">Metabase</a>.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">f</span>
-                <span>
-                  Trykk på ▶️ "vis resultater"-knappen.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">g</span>
-                <span>
-                  Trykk "visualisering" for å bytte fra tabell til graf.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">h</span>
-                <span>
-                  Trykk på "lagre"-knappen. Gi grafen et navn og velg plassering.
-                </span>
-              </li>
-            </ol>
-          </section>
-
-          {/* STEG 3 */}
-          <section id="steg3-legge-til">
-            <Heading level="2" size="medium" spacing className="flex items-center gap-2 mt-12">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ax-bg-accent-strong)] text-[var(--ax-text-contrast)] text-base font-semibold">3</span>
-              Legg til grafer i Matabase-dashboardet
-            </Heading>
-            <ol className="mt-4 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">a</span>
-                <span>
-                  Åpne dashboardet ditt i redigeringsmodus ved å trykke på blyant-ikonet.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">b</span>
-                <span>
-                  Trykk på <b>+</b> (pluss tegnet) i menyen, og velg hvilken graf du vil legge til.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">c</span>
-                <span>
-                  Plasser grafen der du vil ha den i dashboardet.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">d</span>
-                <span>
-                  Trykk <b>Lagre</b> når du er ferdig.
-                </span>
-              </li>
-            </ol>
-          </section>
-
-          <Kontaktboks />
-        </VStack>
+            <p className="text-[var(--ax-text-subtle)] mt-4 text-xl leading-relaxed">
+              En steg-for-steg guide for å lage dashboard med Umami-data i Metabase.
+            </p>
+          </div>
+        </Page.Block>
       </div>
-    </div>
+
+      <Page.Block width="xl" gutters className="pb-16 px-4">
+        <div className="max-w-[800px] mx-auto">
+          {/* Introduction box */}
+          <Box className="mt-12 mb-8 bg-[var(--ax-bg-accent-soft)] p-6 border border-[var(--ax-border-subtle)] rounded-medium">
+            <Heading size="small" level="2" spacing>
+              Tre steg for å lage dashboard i Metabase
+            </Heading>
+            <List as="ol" size="small" className="mt-2 text-[var(--ax-text-default)] space-y-2">
+              <List.Item>Opprett nytt dashboard i Metabase</List.Item>
+              <List.Item>Lag grafer med Umami Grafbyggeren</List.Item>
+              <List.Item>Legg til grafer i Matabase-dashboardet</List.Item>
+            </List>
+          </Box>
+
+          <div className="prose max-w-full prose-lg">
+            <VStack gap="space-12">
+
+              {/* STEG 1 */}
+              <section id="steg1-metabase" className="pt-12">
+                <Heading level="2" size="medium" spacing className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ax-bg-accent-strong)] text-[var(--ax-text-contrast)] text-base font-semibold">1</span>
+                  Opprett nytt dashboard i Metabase
+                </Heading>
+                <ol className="mt-4 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">a</span>
+                    <span>
+                      Gå til <a href="https://metabase.ansatt.nav.no/dashboard/484" target='_new' className="text-[var(--ax-text-accent)] underline">Metabase</a>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">b</span>
+                    <span>
+                      Klikk på <b>+ Ny</b> i hovedmenyen og velg <b>Infotavle / Dashboard</b>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">c</span>
+                    <span>
+                      Gi dashboardet et navn, beskrivelse og velg plassering.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">d</span>
+                    <span>
+                      Trykk <b>Lag / Create</b> for å opprette dashboardet.
+                    </span>
+                  </li>
+                </ol>
+              </section>
+
+              {/* STEG 2 */}
+              <section id="steg2-grafbygger" className="pt-12">
+                <Heading level="2" size="medium" spacing className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ax-bg-accent-strong)] text-[var(--ax-text-contrast)] text-base font-semibold">2</span>
+                  Lag grafer med Umami Grafbyggeren
+                </Heading>
+
+                <div className="pt-4 ml-8">
+                  <Heading level="3" size="xsmall" spacing>
+                    Start i Umami Grafbyggeren
+                  </Heading>
+                </div>
+                <ol className="mt-2 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">a</span>
+                    <span>
+                      Gå til <a href="/grafbygger" target='_new' className="text-[var(--ax-text-accent)] underline">Umami Grafbygger</a>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">b</span>
+                    <span>
+                      Velg nettside eller app, og hvilke data du vil vise i grafen.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">c</span>
+                    <span>
+                      Velg "interaktiv" dersom du ønsker filreringsvalg i dashboardet.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">d</span>
+                    <span>
+                      Når du er fornøyd, trykk kopiere og fortsett i Metabase.
+                    </span>
+                  </li>
+                </ol>
+
+                <div className="pt-8 ml-8">
+                  <Heading level="3" size="xsmall" spacing>
+                    Ferdigstill og lagre grafen i Metabase
+                  </Heading>
+                </div>
+                <ol className="mt-2 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">e</span>
+                    <span>
+                      Lim inn grafen i <a href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0=" target='_new' className="text-[var(--ax-text-accent)] underline">Metabase</a>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">f</span>
+                    <span>
+                      Trykk på ▶️ "vis resultater"-knappen.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">g</span>
+                    <span>
+                      Trykk "visualisering" for å bytte fra tabell til graf.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">h</span>
+                    <span>
+                      Trykk på "lagre"-knappen. Gi grafen et navn og velg plassering.
+                    </span>
+                  </li>
+                </ol>
+              </section>
+
+              {/* STEG 3 */}
+              <section id="steg3-legge-til" className="pt-12">
+                <Heading level="2" size="medium" spacing className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ax-bg-accent-strong)] text-[var(--ax-text-contrast)] text-base font-semibold">3</span>
+                  Legg til grafer i Matabase-dashboardet
+                </Heading>
+                <ol className="mt-4 space-y-2 text-[var(--ax-text-default)] list-none ml-8">
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">a</span>
+                    <span>
+                      Åpne dashboardet ditt i redigeringsmodus ved å trykke på blyant-ikonet.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">b</span>
+                    <span>
+                      Trykk på <b>+</b> (pluss tegnet) i menyen, og velg hvilken graf du vil legge til.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">c</span>
+                    <span>
+                      Plasser grafen der du vil ha den i dashboardet.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)] font-semibold text-base mt-1">d</span>
+                    <span>
+                      Trykk <b>Lagre</b> når du er ferdig.
+                    </span>
+                  </li>
+                </ol>
+              </section>
+            </VStack>
+          </div>
+        </div>
+      </Page.Block>
+      <KontaktSeksjon showMarginBottom={true} narrowContent />
+    </>
   );
 };
 
