@@ -33,7 +33,7 @@ function Personvern() {
                                     Hva er Start Umami
                                 </Heading>
                                 <p className="mb-4 leading-normal">
-                                    Start Umami is a website for Nav Arbeids- og velferdsdirektoratet. Privacy statement for the treatment of personal information. For more info: <Link href="https://www.Nav.no/no/Nav-og-samfunn/om-Nav/personvern-i-arbeids-og-velferdsetaten" className="underline hover:no-underline">Ansattes personvern</Link>
+                                    Start Umami er en nettside for Nav Arbeids- og velferdsdirektoratet. Personvernerklæring for behandling av personopplysninger. For mer info: <Link href="https://navno.sharepoint.com/sites/intranett-hr/SitePages/Personvernerkl%C3%A6ring.aspx" className="underline hover:no-underline">ansattes personvern</Link>
                                 </p>
                             </section>
 
