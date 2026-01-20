@@ -123,7 +123,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
             0 0 0 1.5px #111,    /* thin black outer */
             0 0 0 6px ${color},  /* thick color */
             0 0 0 7.5px #111,    /* thin black inner */
-            0 0 0 11px #fff      /* white background ring */
+            0 0 0 11px var(--ax-bg-default)      /* background ring */
         `;
     };
 
@@ -152,7 +152,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                         className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.qa.total),
-                                            color: '#111',
+                                            color: 'var(--ax-text-default)',
                                         }}
                                         aria-label={`Kvalitetsikring: ${roundToOneDecimal(scoreOverview.qa.total)}`}
                                     >
@@ -171,7 +171,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                         className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.a11y.total),
-                                            color: '#111',
+                                            color: 'var(--ax-text-default)',
                                         }}
                                         aria-label={`Universell utforming: ${roundToOneDecimal(scoreOverview.a11y.total)}`}
                                     >
@@ -190,7 +190,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                         className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.seo.total),
-                                            color: '#111',
+                                            color: 'var(--ax-text-default)',
                                         }}
                                         aria-label={`SEO: ${roundToOneDecimal(scoreOverview.seo.total)}`}
                                     >
@@ -209,7 +209,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                         className="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-[var(--ax-bg-default)]"
                                         style={{
                                             boxShadow: getCircleBoxShadow(scoreOverview.total),
-                                            color: '#111',
+                                            color: 'var(--ax-text-default)',
                                         }}
                                         aria-label={`Snitt: ${roundToOneDecimal(scoreOverview.total)}`}
                                     >
