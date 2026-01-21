@@ -10,23 +10,26 @@ function Oppsett() {
                 width: "100%",
                 backgroundColor: "var(--ax-bg-accent-soft)",
                 color: "var(--ax-text-default)",
-                paddingTop: "70px",
-                paddingBottom: "70px",
+                paddingTop: "32px",
+                paddingBottom: "32px",
+                marginBottom: "24px"
             }}>
                 <Page.Block width="xl" gutters>
-                    <Heading spacing level="1" size="large">
-                        Oppsett av Umami
-                    </Heading>
+                    <div className="flex flex-col gap-[10px]">
+                        <Heading level="1" size="xlarge">
+                            Oppsett av Umami
+                        </Heading>
 
-                    <BodyShort size="large" className="mt-4">
-                        Her finner du guider, utviklerverktøy og <Link href="#sporingskoder">sporingskoder</Link> for Umami.
-                    </BodyShort>
+                        <BodyShort size="medium" className="text-[var(--ax-text-neutral-subtle)]">
+                            Her finner du utviklerverktøy, veiledning og <Link href="#sporingskoder">sporingskoder</Link> for Umami.
+                        </BodyShort>
+                    </div>
                 </Page.Block>
             </div>
 
             <Page.Block width="xl" gutters className="pb-16 px-4">
                 <div style={{ marginTop: "38px", marginBottom: "32px" }}>
-                    <Heading as="h2" size="medium">Utviklerverktøy</Heading>
+                    <Heading as="h2" size="medium">Utviklerverktøy og veiledning</Heading>
                 </div>
 
                 {/* Kom i gang CTA - below title, above cards */}

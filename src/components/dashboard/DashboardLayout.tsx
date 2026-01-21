@@ -29,21 +29,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 marginBottom: "24px"
             }}>
                 <Page.Block width="xl" gutters>
-                    <div className="flex flex-col gap-1">
-                        <Heading level="1" size="xlarge">
-                            {title}
-                        </Heading>
-                        {subtitle && (
-                            <Heading level="2" size="medium" className="text-[var(--ax-text-neutral-subtle)] font-normal">
-                                {subtitle}
+                    <div className="flex flex-col gap-[10px]">
+                        <div className="flex flex-col gap-[6px]">
+                            <Heading level="1" size="xlarge">
+                                {title}
                             </Heading>
+                            {subtitle && (
+                                <Heading level="2" size="medium" className="text-[var(--ax-text-neutral-subtle)] font-normal">
+                                    {subtitle}
+                                </Heading>
+                            )}
+                        </div>
+                        {description && (
+                            <BodyShort size="medium" className="text-[var(--ax-text-neutral-subtle)] max-w-3xl">
+                                {description}
+                            </BodyShort>
                         )}
                     </div>
-                    {description && (
-                        <BodyShort size="medium" className="mt-2 text-[var(--ax-text-neutral-subtle)] max-w-3xl">
-                            {description}
-                        </BodyShort>
-                    )}
                 </Page.Block>
             </div>
 

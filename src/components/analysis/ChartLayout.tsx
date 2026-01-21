@@ -90,12 +90,14 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                 marginBottom: "24px"
             }}>
                 <Page.Block width="xl" gutters>
-                    <Heading level="1" size="xlarge">
-                        {title}
-                    </Heading>
-                    <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
-                        {description}
-                    </BodyShort>
+                    <div className="flex flex-col gap-[10px]">
+                        <Heading level="1" size="xlarge">
+                            {title}
+                        </Heading>
+                        <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
+                            {description}
+                        </BodyShort>
+                    </div>
                 </Page.Block>
             </div>
 
