@@ -120,8 +120,13 @@ const Dashboard = () => {
 
     // Helper function matching metadashboard.tsx logic
     const normalizeDomain = (domain: string) => {
-        if (domain === "www.nav.no") return domain;
-        return domain.replace(/^www\./, "");
+        const cleaned = domain
+            .trim()
+            .toLowerCase()
+            .replace(/^https?:\/\//, "") // Just in case a protocol sneaks in
+            .replace(/\.$/, "") // Drop trailing dot
+            .replace(/^www\./, ""); // Ignore www prefix for matching
+        return cleaned === "nav.no" ? "www.nav.no" : cleaned; // Preserve prod canonical
     };
 
     // Resolve domain to websiteId for external app compatibility
@@ -158,11 +163,25 @@ const Dashboard = () => {
                 }
                 const normalizedInputDomain = normalizeDomain(inputDomain);
 
-                // Find matching website using same logic as metadashboard.tsx
-                const matchedWebsite = filteredWebsites.find((item: any) =>
-                    normalizeDomain(item.domain) === normalizedInputDomain ||
-                    normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)} `)
-                );
+                // Find matching website: prefer exact match, then longest suffix match (most specific subdomain)
+                const matchedWebsite = filteredWebsites.reduce((best: any | null, item: any) => {
+                    const normalizedDomain = normalizeDomain(item.domain);
+
+                    // Exact hostname match wins immediately
+                    if (normalizedDomain === normalizedInputDomain) {
+                        return item;
+                    }
+
+                    // Suffix match: input is a subdomain of this website's domain
+                    if (normalizedInputDomain.endsWith(`.${normalizedDomain}`)) {
+                        // Keep the longer (more specific) domain
+                        if (!best) return item;
+                        const bestLen = normalizeDomain(best.domain).length;
+                        return normalizedDomain.length > bestLen ? item : best;
+                    }
+
+                    return best;
+                }, null);
 
                 if (matchedWebsite) {
                     // Update URL to use websiteId instead of domain (cleaner URLs)

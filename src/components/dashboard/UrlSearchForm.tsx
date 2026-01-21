@@ -25,8 +25,13 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
     const [searchError, setSearchError] = useState<string | null>(null);
 
     const normalizeDomain = (domain: string) => {
-        if (domain === "www.nav.no") return domain;
-        return domain.replace(/^www\./, "");
+        const cleaned = domain
+            .trim()
+            .toLowerCase()
+            .replace(/^https?:\/\//, "")
+            .replace(/\.$/, "")
+            .replace(/^www\./, "");
+        return cleaned === "nav.no" ? "www.nav.no" : cleaned;
     };
 
     const fetchWebsites = async (): Promise<Website[]> => {
@@ -124,11 +129,25 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             const inputDomain = urlObj.hostname;
             const normalizedInputDomain = normalizeDomain(inputDomain);
 
-            const matchedWebsite = websites.find(
-                (item) =>
-                    normalizeDomain(item.domain) === normalizedInputDomain ||
-                    normalizedInputDomain.endsWith(`.${normalizeDomain(item.domain)}`)
-            );
+            // Find best match: prefer exact match, then longest suffix match (most specific subdomain)
+            const matchedWebsite = websites.reduce<Website | null>((best, item) => {
+                const normalizedDomain = normalizeDomain(item.domain);
+
+                // Exact match wins immediately
+                if (normalizedDomain === normalizedInputDomain) {
+                    return item;
+                }
+
+                // Suffix match: input is a subdomain of this website's domain
+                if (normalizedInputDomain.endsWith(`.${normalizedDomain}`)) {
+                    // Keep the longer (more specific) domain
+                    if (!best) return item;
+                    const bestLen = normalizeDomain(best.domain).length;
+                    return normalizedDomain.length > bestLen ? item : best;
+                }
+
+                return best;
+            }, null);
 
             if (matchedWebsite) {
                 // Navigate to dashboard
