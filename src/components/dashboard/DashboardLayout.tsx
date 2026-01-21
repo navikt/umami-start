@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Heading, BodyShort, Page } from '@navikt/ds-react';
+import { Page } from '@navikt/ds-react';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
+import { PageHeader } from '../theme/PageHeader/PageHeader';
 
 interface DashboardLayoutProps {
     title: string;
@@ -20,34 +21,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
     return (
         <>
-            <div style={{
-                width: "100%",
-                backgroundColor: "var(--ax-bg-accent-soft)",
-                color: "var(--ax-text-default)",
-                paddingTop: "32px",
-                paddingBottom: "32px",
-                marginBottom: "24px"
-            }}>
-                <Page.Block width="xl" gutters>
-                    <div className="flex flex-col gap-[10px]">
-                        <div className="flex flex-col gap-[6px]">
-                            <Heading level="1" size="xlarge">
-                                {title}
-                            </Heading>
-                            {subtitle && (
-                                <Heading level="2" size="medium" className="text-[var(--ax-text-neutral-subtle)] font-normal">
-                                    {subtitle}
-                                </Heading>
-                            )}
-                        </div>
-                        {description && (
-                            <BodyShort size="medium" className="text-[var(--ax-text-neutral-subtle)] max-w-3xl">
-                                {description}
-                            </BodyShort>
-                        )}
-                    </div>
-                </Page.Block>
-            </div>
+            <PageHeader
+                title={title}
+                subtitle={subtitle}
+                description={description}
+            />
 
             <Page.Block width="xl" gutters className="pb-16">
                 {filters && (

@@ -11,29 +11,16 @@ import {
   Page,
 } from '@navikt/ds-react';
 import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon";
+import { PageHeader } from "../../components/theme/PageHeader/PageHeader";
 
 const TaksonomiPage = () => {
   return (
     <>
-      <div style={{
-        width: "100%",
-        backgroundColor: "var(--ax-bg-accent-soft)",
-        color: "var(--ax-text-default)",
-        paddingTop: "70px",
-        paddingBottom: "70px",
-      }}>
-        <Page.Block width="xl" gutters>
-          <div className="max-w-[800px] mx-auto">
-            <Heading spacing level="1" size="large">
-              Navs taksonomi for produktanalyse
-            </Heading>
-
-            <BodyLong size="large" className="mt-4 text-[var(--ax-text-subtle)]">
-              En guide til hvordan du navngir hendelser i Umami for å sikre gode analyser.
-            </BodyLong>
-          </div>
-        </Page.Block>
-      </div>
+      <PageHeader
+        title="Navs taksonomi for produktanalyse"
+        description="En guide til hvordan du navngir hendelser i Umami for å sikre gode analyser."
+        variant="article"
+      />
 
       <Page.Block width="xl" gutters className="pb-16 px-4">
         <div className="max-w-[800px] mx-auto">

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Heading, BodyShort, Select, Page } from "@navikt/ds-react";
+import { Select, Page } from "@navikt/ds-react";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
+import { PageHeader } from '../theme/PageHeader/PageHeader';
 
 interface ChartLayoutProps {
     title: string;
@@ -81,25 +82,10 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
     return (
         <>
-            <div style={{
-                width: "100%",
-                backgroundColor: "var(--ax-bg-accent-soft)",
-                color: "var(--ax-text-default)",
-                paddingTop: "32px",
-                paddingBottom: "32px",
-                marginBottom: "24px"
-            }}>
-                <Page.Block width="xl" gutters>
-                    <div className="flex flex-col gap-[10px]">
-                        <Heading level="1" size="xlarge">
-                            {title}
-                        </Heading>
-                        <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
-                            {description}
-                        </BodyShort>
-                    </div>
-                </Page.Block>
-            </div>
+            <PageHeader
+                title={title}
+                description={description}
+            />
 
             <Page.Block width="xl" gutters className="pb-16">
 

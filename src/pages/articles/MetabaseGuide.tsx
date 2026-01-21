@@ -6,29 +6,16 @@ import {
   Page
 } from '@navikt/ds-react';
 import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon";
+import { PageHeader } from "../../components/theme/PageHeader/PageHeader";
 
 const MetabaseGuide = () => {
   return (
     <>
-      <div style={{
-        width: "100%",
-        backgroundColor: "var(--ax-bg-accent-soft)",
-        color: "var(--ax-text-default)",
-        paddingTop: "70px",
-        paddingBottom: "70px",
-      }}>
-        <Page.Block width="xl" gutters>
-          <div className="max-w-[800px] mx-auto">
-            <Heading spacing level="1" size="large">
-              Slik lager du dashboards i Metabase
-            </Heading>
-
-            <p className="text-[var(--ax-text-subtle)] mt-4 text-xl leading-relaxed">
-              En steg-for-steg guide for å lage dashboard med Umami-data i Metabase.
-            </p>
-          </div>
-        </Page.Block>
-      </div>
+      <PageHeader
+        title="Slik lager du dashboards i Metabase"
+        description="En steg-for-steg guide for å lage dashboard med Umami-data i Metabase."
+        variant="article"
+      />
 
       <Page.Block width="xl" gutters className="pb-16 px-4">
         <div className="max-w-[800px] mx-auto">

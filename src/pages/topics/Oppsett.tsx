@@ -1,31 +1,16 @@
 import { BodyShort, Heading, Link, Page } from "@navikt/ds-react";
 import TeamWebsites from "../../components/settings/TeamWebsites";
 import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon";
+import { PageHeader } from "../../components/theme/PageHeader/PageHeader";
 import { developerTools } from "../../components/analysis/DeveloperToolsNavigation";
 
 function Oppsett() {
     return (
         <>
-            <div style={{
-                width: "100%",
-                backgroundColor: "var(--ax-bg-accent-soft)",
-                color: "var(--ax-text-default)",
-                paddingTop: "32px",
-                paddingBottom: "32px",
-                marginBottom: "24px"
-            }}>
-                <Page.Block width="xl" gutters>
-                    <div className="flex flex-col gap-[10px]">
-                        <Heading level="1" size="xlarge">
-                            Oppsett av Umami
-                        </Heading>
-
-                        <BodyShort size="medium" className="text-[var(--ax-text-neutral-subtle)]">
-                            Her finner du utviklerverktøy, veiledning og <Link href="#sporingskoder">sporingskoder</Link> for Umami.
-                        </BodyShort>
-                    </div>
-                </Page.Block>
-            </div>
+            <PageHeader
+                title="Oppsett av Umami"
+                description={<>Her finner du utviklerverktøy, veiledning og <Link href="#sporingskoder">sporingskoder</Link> for Umami.</>}
+            />
 
             <Page.Block width="xl" gutters className="pb-16 px-4">
                 <div style={{ marginTop: "38px", marginBottom: "32px" }}>
