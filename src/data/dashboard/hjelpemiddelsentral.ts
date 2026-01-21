@@ -18,7 +18,7 @@ export const hjelpemiddelsentralDashboard: DashboardConfig = {
   },
 
   // Message to show when required filter is not selected
-  customFilterRequiredMessage: "Velg en hjelpemiddelsentral for å vise webstatistikk.",
+  customFilterRequiredMessage: "Velg en sentral for å vise webstatistikk.",
 
   // Only show these metric types in the Visning filter (hide 'proportion'/andel)
   metricTypeOptions: ['visitors', 'pageviews'],
