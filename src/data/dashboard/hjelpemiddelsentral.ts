@@ -2,7 +2,8 @@ import { DashboardConfig } from './types';
 import hjelpemiddelsentralData from '../hjelpemiddelsentraler.json';
 
 export const hjelpemiddelsentralDashboard: DashboardConfig = {
-  title: "Webstatistikk for Hjelpemiddelsentralene",
+  title: "Hjelpemiddelsentralene",
+  description: "Webstatistikk for hjelpemiddelsentralsidene på nav.no",
 
   // Hide the website picker and URL-sti filter (they work behind the scenes)
   hiddenFilters: {
