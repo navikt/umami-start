@@ -5,6 +5,7 @@ import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import { normalizeUrlToPath } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
 const MarketingAnalysis = () => {
@@ -132,29 +133,7 @@ const MarketingAnalysis = () => {
         }
     };
 
-    const normalizeUrlToPath = (input: string): string => {
-        if (!input.trim()) return '/';
-        let trimmed = input.trim();
-        try {
-            if (trimmed.includes('://')) {
-                const url = new URL(trimmed);
-                return url.pathname;
-            }
-            if (trimmed.startsWith('/') && trimmed.includes('.')) {
-                const withoutLeadingSlash = trimmed.substring(1);
-                if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
-                    trimmed = withoutLeadingSlash;
-                }
-            }
-            if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
-                const url = new URL('https://' + trimmed);
-                return url.pathname;
-            }
-        } catch (e) {
-            // Ignore
-        }
-        return trimmed;
-    };
+
 
     const AnalysisTable = ({ title, data, metricLabel, queryStats }: { title: string, data: any[], metricLabel: string, queryStats: any }) => {
         const [search, setSearch] = useState('');

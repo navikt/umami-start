@@ -10,6 +10,7 @@ import HorizontalFunnelChart from '../../components/analysis/funnel/HorizontalFu
 import FunnelStats from '../../components/analysis/funnel/FunnelStats';
 import SqlViewer from '../../components/chartbuilder/results/SqlViewer';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
+import { normalizeUrlToPath } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
 
@@ -558,29 +559,7 @@ FROM timing_data`;
         setSteps(newSteps);
     };
 
-    const normalizeUrlToPath = (input: string): string => {
-        if (!input.trim()) return '/';
-        let trimmed = input.trim();
-        try {
-            if (trimmed.includes('://')) {
-                const url = new URL(trimmed);
-                return url.pathname;
-            }
-            if (trimmed.startsWith('/') && trimmed.includes('.')) {
-                const withoutLeadingSlash = trimmed.substring(1);
-                if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
-                    trimmed = withoutLeadingSlash;
-                }
-            }
-            if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
-                const url = new URL('https://' + trimmed);
-                return url.pathname;
-            }
-        } catch (e) {
-            // Ignore
-        }
-        return trimmed;
-    };
+
 
     const fetchData = async () => {
         if (!selectedWebsite) return;

@@ -17,8 +17,13 @@ export const normalizeUrlToPath = (input: string): string => {
     }
     if (trimmed.startsWith('/') && trimmed.includes('.')) {
       const withoutLeadingSlash = trimmed.substring(1);
-      if (withoutLeadingSlash.includes('/') && !withoutLeadingSlash.startsWith('/')) {
-        trimmed = withoutLeadingSlash;
+      const firstSlashIndex = withoutLeadingSlash.indexOf('/');
+
+      if (firstSlashIndex !== -1 && !withoutLeadingSlash.startsWith('/')) {
+        const potentialDomain = withoutLeadingSlash.substring(0, firstSlashIndex);
+        if (potentialDomain.includes('.')) {
+          trimmed = withoutLeadingSlash.substring(firstSlashIndex);
+        }
       }
     }
     if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
