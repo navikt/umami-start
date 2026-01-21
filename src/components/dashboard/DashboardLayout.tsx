@@ -20,27 +20,36 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
     return (
         <>
-            <Page.Block width="xl" gutters className="py-8">
-                <div className={description ? 'mb-8' : 'mb-4'}>
+            <div style={{
+                width: "100%",
+                backgroundColor: "var(--ax-bg-accent-soft)",
+                color: "var(--ax-text-default)",
+                paddingTop: "32px",
+                paddingBottom: "32px",
+                marginBottom: "24px"
+            }}>
+                <Page.Block width="xl" gutters>
                     <div className="flex flex-col gap-1">
-                        <Heading level="1" size="xlarge" spacing>
+                        <Heading level="1" size="xlarge">
                             {title}
                         </Heading>
                         {subtitle && (
-                            <Heading level="2" size="medium" className="text-[var(--ax-text-subtle)] font-normal">
+                            <Heading level="2" size="medium" className="text-[var(--ax-text-neutral-subtle)] font-normal">
                                 {subtitle}
                             </Heading>
                         )}
                     </div>
                     {description && (
-                        <BodyShort size="medium" className="mt-4 text-[var(--ax-text-subtle)] max-w-3xl">
+                        <BodyShort size="medium" className="mt-2 text-[var(--ax-text-neutral-subtle)] max-w-3xl">
                             {description}
                         </BodyShort>
                     )}
-                </div>
+                </Page.Block>
+            </div>
 
+            <Page.Block width="xl" gutters className="pb-16">
                 {filters && (
-                    <div className="flex flex-wrap items-end gap-4 p-4 mb-8 bg-[var(--ax-bg-neutral-soft)] rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm transition-all">
+                    <div className="flex flex-wrap items-end gap-4 p-4 mb-8 bg-[var(--ax-bg-accent-soft)] rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm transition-all">
                         {filters}
                     </div>
                 )}

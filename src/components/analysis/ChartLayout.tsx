@@ -85,12 +85,12 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                 width: "100%",
                 backgroundColor: "var(--ax-bg-accent-soft)",
                 color: "var(--ax-text-default)",
-                paddingTop: "40px",
+                paddingTop: "32px",
                 paddingBottom: "32px",
                 marginBottom: "24px"
             }}>
                 <Page.Block width="xl" gutters>
-                    <Heading level="1" size="xlarge" spacing>
+                    <Heading level="1" size="xlarge">
                         {title}
                     </Heading>
                     <BodyShort className="text-[var(--ax-text-neutral-subtle)]">
@@ -106,7 +106,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                     <div className="flex flex-col md:flex-row min-h-[600px] relative">
                         {isSidebarOpen && (
                             <>
-                                <div className={`bg-[var(--ax-bg-neutral-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
+                                <div className={`bg-[var(--ax-bg-accent-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
                                     <div className="space-y-6">
                                         <div className="pb-2">
                                             <Select
