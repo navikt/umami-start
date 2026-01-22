@@ -114,12 +114,20 @@ const QueryPreview = ({
     setHasEventNameFilter(eventNamePattern.test(sql));
   }, [sql]);
 
-  // Generate processed SQL with date substitution
-  const getProcessedSql = () => {
+  // Generate processed SQL with optional placeholder preservation for Metabase
+  const getProcessedSql = (options?: { preserveMetabasePlaceholders?: boolean }) => {
+    const preserveMetabasePlaceholders = options?.preserveMetabasePlaceholders === true;
+    const interactiveFilter = (columns: string[]) =>
+      filters.some(f => columns.includes((f.column || '').toLowerCase()) && f.interactive === true && f.metabaseParam === true);
+
+    const interactiveDateFilter = interactiveFilter(['created_at']);
+    const interactiveUrlFilter = interactiveFilter(['url_path', 'url', 'url_sti']);
+    const interactiveEventFilter = interactiveFilter(['event_name', 'event']);
+
     let processedSql = sql;
 
     // Date Filter Substitution
-    if (hasMetabaseDateFilter && dateRange.from && dateRange.to) {
+    if (hasMetabaseDateFilter && dateRange.from && dateRange.to && !(preserveMetabasePlaceholders && interactiveDateFilter)) {
       const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
       const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
       const replacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
@@ -129,9 +137,14 @@ const QueryPreview = ({
     // URL Path Substitution
     if (hasUrlPathFilter) {
       const pattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/gi;
-      if (urlPath && urlPath.trim() !== '') {
+
+      // For Metabase copies with no explicit path, keep placeholder so recipient can choose
+      if (preserveMetabasePlaceholders && (!urlPath || urlPath.trim() === '')) {
+        // leave placeholder intact
+      } else if (urlPath && urlPath.trim() !== '') {
         processedSql = processedSql.replace(pattern, `'${urlPath.replace(/'/g, "''")}'`);
-      } else {
+      } else if (!(preserveMetabasePlaceholders && interactiveUrlFilter)) {
+        // Only fall back to '/' when actually executing (not when preserving placeholders)
         processedSql = processedSql.replace(pattern, `'/'`);
       }
     }
@@ -139,10 +152,15 @@ const QueryPreview = ({
     // Event Name Substitution
     if (hasEventNameFilter) {
       const pattern = /\{\{\s*(event_name|hendelse)\s*\}\}/gi;
-      if (eventName && eventName.trim() !== '') {
+
+      // Preserve placeholder for Metabase copies when user chose "recipient selects"
+      if (preserveMetabasePlaceholders && (!eventName || eventName.trim() === '')) {
+        // leave placeholder intact
+      } else if (eventName && eventName.trim() !== '') {
         const safeEventName = eventName.replace(/'/g, "''");
         processedSql = processedSql.replace(pattern, `'${safeEventName}'`);
-      } else {
+      } else if (!(preserveMetabasePlaceholders && interactiveEventFilter)) {
+        // Only empty out when executing without an event filter
         processedSql = processedSql.replace(pattern, `''`);
       }
     }
@@ -479,8 +497,8 @@ const QueryPreview = ({
   };
 
   const handleCopy = async () => {
-    const processedSql = getProcessedSql();
-    navigator.clipboard.writeText(processedSql);
+    const metabaseSql = getProcessedSql({ preserveMetabasePlaceholders: true });
+    navigator.clipboard.writeText(metabaseSql);
     setCopied(true);
 
     // Also run cost estimation
@@ -494,7 +512,7 @@ const QueryPreview = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
+          body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
       ]) as Response;
