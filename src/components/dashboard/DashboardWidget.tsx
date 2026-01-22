@@ -45,7 +45,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
     // State for AnalysisActionModal
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
-    
+
     // Handler to open chart SQL in SqlEditor with contextual filters
     const handleOpenSql = () => {
         if (!chart.sql) return;
@@ -437,10 +437,17 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 color: '#0067c5',
             }];
 
+            // Generate a unique key based on data to force re-render when data changes
+            // This ensures the x-axis labels are calculated with correct container dimensions
+            const firstX = points[0]?.x;
+            const lastX = points[points.length - 1]?.x;
+            const chartKey = `line-${points.length}-${firstX instanceof Date ? firstX.getTime() : firstX || 0}-${lastX instanceof Date ? lastX.getTime() : lastX || 0}`;
+
             return (
                 <div style={{ width: '100%', height: '350px' }}>
                     <ResponsiveContainer>
                         <LineChart
+                            key={chartKey}
                             data={{ lineChartData: lines }}
                             yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
                             margins={{ left: 60, right: 20, top: 20, bottom: 40 }}
@@ -460,11 +467,11 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         } else if (chart.type === 'table') {
             // Extract __TOTAL__ row if showTotal is enabled
             let tableData = data;
-            
+
             if (chart.showTotal) {
                 tableData = data.filter((row: any) => !Object.values(row).includes('__TOTAL__'));
             }
-            
+
             const rowsPerPage = 10;
             const totalRows = tableData.length;
             const totalPages = Math.ceil(totalRows / rowsPerPage);
