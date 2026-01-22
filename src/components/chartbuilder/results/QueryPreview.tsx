@@ -136,16 +136,18 @@ const QueryPreview = ({
 
     // URL Path Substitution
     if (hasUrlPathFilter) {
-      const pattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/gi;
+      // When preserving for Metabase, always keep the placeholder so the recipient can choose the path
+      if (!preserveMetabasePlaceholders) {
+        const pattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/gi;
+        const trimmedPath = (urlPath || '').trim();
+        const hasExplicitPath = trimmedPath.length > 0 && trimmedPath !== '/';
 
-      // For Metabase copies with no explicit path, keep placeholder so recipient can choose
-      if (preserveMetabasePlaceholders && (!urlPath || urlPath.trim() === '')) {
-        // leave placeholder intact
-      } else if (urlPath && urlPath.trim() !== '') {
-        processedSql = processedSql.replace(pattern, `'${urlPath.replace(/'/g, "''")}'`);
-      } else if (!(preserveMetabasePlaceholders && interactiveUrlFilter)) {
-        // Only fall back to '/' when actually executing (not when preserving placeholders)
-        processedSql = processedSql.replace(pattern, `'/'`);
+        if (hasExplicitPath) {
+          processedSql = processedSql.replace(pattern, `'${trimmedPath.replace(/'/g, "''")}'`);
+        } else if (!interactiveUrlFilter) {
+          // Only fall back to '/' when not using Metabase parameter mode
+          processedSql = processedSql.replace(pattern, `'/'`);
+        }
       }
     }
 
@@ -982,7 +984,8 @@ const QueryPreview = ({
                 prepareLineChartData={prepareLineChartData}
                 prepareBarChartData={prepareBarChartData}
                 preparePieChartData={preparePieChartData}
-                sql={getProcessedSql()}
+                // Show the Metabase-friendly SQL (placeholders preserved) in the viewer
+                sql={getProcessedSql({ preserveMetabasePlaceholders: true })}
                 hideHeading={true}
                 containerStyle="none"
                 showSqlCode={true}
