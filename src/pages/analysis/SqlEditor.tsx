@@ -70,6 +70,8 @@ export default function SqlEditor() {
 
     const applyUrlFiltersToSql = (sql: string): string => {
         let processedSql = sql;
+        let fromSql: string | null = null;
+        let toSql: string | null = null;
 
         // Website ID substitution {{website_id}}
         if (hasWebsiteIdPlaceholder && websiteIdState) {
@@ -114,10 +116,22 @@ export default function SqlEditor() {
             const now = new Date();
             const from = dateRange.from || subDays(now, 30);
             const to = dateRange.to || now;
-            const fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
-            const toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
+            fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
+            toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
             const dateReplacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
             processedSql = processedSql.replace(datePattern, dateReplacement);
+        }
+
+        // If query joins partitioned public_session, mirror the date filter to enable partition pruning
+        if (fromSql && toSql && /public_session/gi.test(processedSql) && !/public_session[^\n]*created_at/gi.test(processedSql)) {
+            const eventFilter = `\`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+            const sessionPredicate = `\`team-researchops-prod-01d6.umami.public_session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+
+            if (processedSql.includes(eventFilter)) {
+                processedSql = processedSql.replace(eventFilter, `${eventFilter} AND ${sessionPredicate}`);
+            } else if (/WHERE/i.test(processedSql)) {
+                processedSql = processedSql.replace(/WHERE/i, (match) => `${match} ${sessionPredicate} AND`);
+            }
         }
 
         return processedSql;
