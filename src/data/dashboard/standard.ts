@@ -24,7 +24,6 @@ export const standardDashboard: DashboardConfig = {
 
 SELECT
   FORMAT_TIMESTAMP('%Y-%m-%d', base_query.created_at) AS dato,
-  COUNT(*) as Totalt_antall,
   COUNT(DISTINCT base_query.session_id) as Unike_besokende
 FROM base_query
 GROUP BY
@@ -36,6 +35,7 @@ LIMIT 1000`
       title: "Besøk gruppert på sider",
       type: "table",
       width: '40',
+      showTotal: true,
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.*  FROM \`team-researchops-prod-01d6.umami.public_website_event\`
@@ -51,8 +51,16 @@ SELECT
 FROM base_query
 GROUP BY
   base_query.url_path
+
+UNION ALL
+
+SELECT
+  COUNT(DISTINCT base_query.session_id) as Unike_besokende,
+  '__TOTAL__' as url_path
+FROM base_query
+
 ORDER BY 1 DESC
-LIMIT 1000
+LIMIT 1001
 
 `
     },

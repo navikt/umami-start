@@ -11,6 +11,8 @@ export interface SavedChart {
     // Siteimprove specific config
     siteimprove_id?: string; // Site ID for Siteimprove (overrides team lookup)
     siteimprove_portal_id?: string; // Site ID used in Siteimprove Portal URL (if different)
+    // If true, extract __TOTAL__ row from data and display as header total
+    showTotal?: boolean;
 }
 
 // Configuration for which standard filters should be hidden

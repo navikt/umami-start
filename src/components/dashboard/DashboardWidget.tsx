@@ -431,14 +431,21 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 </div>
             );
         } else if (chart.type === 'table') {
+            // Extract __TOTAL__ row if showTotal is enabled
+            let tableData = data;
+            
+            if (chart.showTotal) {
+                tableData = data.filter((row: any) => !Object.values(row).includes('__TOTAL__'));
+            }
+            
             const rowsPerPage = 10;
-            const totalRows = data.length;
+            const totalRows = tableData.length;
             const totalPages = Math.ceil(totalRows / rowsPerPage);
 
             // Simple client-side pagination
             const start = (page - 1) * rowsPerPage;
             const end = start + rowsPerPage;
-            const currentData = data.slice(start, end);
+            const currentData = tableData.slice(start, end);
 
             return (
                 <div className="flex flex-col gap-4">
@@ -446,7 +453,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                         <Table size="small">
                             <Table.Header>
                                 <Table.Row>
-                                    {Object.keys(data[0]).map(key => (
+                                    {Object.keys(tableData[0] || data[0]).map(key => (
                                         <Table.HeaderCell key={key}>{key}</Table.HeaderCell>
                                     ))}
                                 </Table.Row>
@@ -504,32 +511,26 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         return <div>Ukjent diagramtype: {chart.type}</div>;
     };
 
-    // Calculate total for the first metric column (for line charts)
-    const totalCount = data.length > 0 && chart.type === 'line' ? (() => {
-        const keys = Object.keys(data[0]);
-        if (keys.length >= 2) {
-            const metricKey = keys[1]; // First metric column after date
-            return data.reduce((acc: number, row: any) => {
-                const val = parseFloat(String(row[metricKey]));
-                return isNaN(val) ? acc : acc + val;
-            }, 0);
+    // Extract total value for tables with showTotal
+    const tableTotalValue = chart.showTotal && chart.type === 'table' && data.length > 0 ? (() => {
+        const totalRow = data.find((row: any) => Object.values(row).includes('__TOTAL__'));
+        if (!totalRow) return null;
+        const keys = Object.keys(totalRow);
+        for (const key of keys) {
+            const val = totalRow[key];
+            if (typeof val === 'number') return val;
         }
-        return 0;
-    })() : 0;
-
-    // Get label based on metric type
-    const metricLabel = filters.metricType === 'pageviews' ? 'sidevisninger' 
-        : filters.metricType === 'proportion' ? '' 
-        : 'besøk';
+        return null;
+    })() : null;
 
     return (
         <>
             <div className={`bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
-                <div className="flex flex-col mb-6">
+                <div className="flex flex-col mb-4">
                     <h2 className="text-xl font-semibold">{chart.title}</h2>
-                    {chart.type === 'line' && totalCount > 0 && filters.metricType !== 'proportion' && (
-                        <p className="text-2xl font-bold text-[var(--ax-text-default)] mt-1">
-                            {totalCount.toLocaleString('nb-NO')} {metricLabel}
+                    {tableTotalValue !== null && (
+                        <p className="text-lg text-[var(--ax-text-default)] mt-1">
+                            {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : 'besøk totalt'}
                         </p>
                     )}
                     {chart.description && (
