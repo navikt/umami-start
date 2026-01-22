@@ -74,7 +74,8 @@ export default function SqlEditor() {
         let toSql: string | null = null;
 
         // Website ID substitution {{website_id}}
-        if (hasWebsiteIdPlaceholder && websiteIdState) {
+        const hasWebsitePlaceholderInline = /\{\{\s*website_id\s*\}\}/i.test(processedSql);
+        if (hasWebsitePlaceholderInline && websiteIdState) {
             const sanitizedWebsiteId = websiteIdState.replace(/'/g, "''");
             // Replace placeholder even if it is wrapped in quotes to avoid double quoting
             processedSql = processedSql.replace(/(['"])?\s*\{\{\s*website_id\s*\}\}\s*\1?/gi, `'${sanitizedWebsiteId}'`);
@@ -136,6 +137,17 @@ export default function SqlEditor() {
 
         return processedSql;
     };
+
+    // Only substitute website_id placeholder for copy actions (keep other filters untouched)
+    const applyWebsiteIdOnly = (sql: string): string => {
+        let processedSql = sql;
+        const hasWebsitePlaceholderInline = /\{\{\s*website_id\s*\}\}/i.test(processedSql);
+        if (hasWebsitePlaceholderInline && websiteIdState) {
+            const sanitizedWebsiteId = websiteIdState.replace(/'/g, "''");
+            processedSql = processedSql.replace(/(['"])?\s*\{\{\s*website_id\s*\}\}\s*\1?/gi, `'${sanitizedWebsiteId}'`);
+        }
+        return processedSql;
+    };
     // State for editor height (for resizable editor)
     const [editorHeight, setEditorHeight] = useState(400);
     // Initialize state with empty string to avoid showing default until we check URL
@@ -152,6 +164,24 @@ export default function SqlEditor() {
     const [formatSuccess, setFormatSuccess] = useState(false);
     const [lastProcessedSql, setLastProcessedSql] = useState<string>('');
     const [copiedMetabase, setCopiedMetabase] = useState(false);
+
+    const ensureWebsitePlaceholder = (currentQuery: string): string => {
+        // If placeholder or any website_id already exists, leave untouched
+        if (/\{\{\s*website_id\s*\}\}/i.test(currentQuery) || /website_id\s*=\s*['"]/i.test(currentQuery)) {
+            return currentQuery;
+        }
+
+        const table = '`team-researchops-prod-01d6.umami.public_website_event`';
+
+        if (/WHERE/i.test(currentQuery)) {
+            return currentQuery.replace(/WHERE/i, (match) => `${match} ${table}.website_id = '{{website_id}}' AND`);
+        }
+
+        const trimmed = currentQuery.trimEnd();
+        const suffix = trimmed.endsWith(';') ? ';' : '';
+        const base = trimmed.replace(/;$/, '');
+        return `${base} WHERE ${table}.website_id = '{{website_id}}'${suffix}`;
+    };
 
     // Extract websiteId from SQL query for AnalysisActionModal
     const extractWebsiteId = (sql: string): string | undefined => {
@@ -702,6 +732,7 @@ export default function SqlEditor() {
                                         onWebsiteChange={(website) => {
                                             setSelectedWebsite(website);
                                             setWebsiteIdState(website?.id || '');
+                                            setQuery(prev => ensureWebsitePlaceholder(prev));
                                         }}
                                         variant="minimal"
                                     />
@@ -1049,7 +1080,7 @@ export default function SqlEditor() {
                         variant="secondary"
                         type="button"
                         onClick={() => {
-                            const metabaseSql = query; // copy raw SQL before filter substitution
+                            const metabaseSql = applyWebsiteIdOnly(query); // only hardcode website_id; keep other placeholders
                             navigator.clipboard.writeText(metabaseSql);
                             setCopiedMetabase(true);
                             setTimeout(() => setCopiedMetabase(false), 2000);
