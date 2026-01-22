@@ -436,8 +436,6 @@ const ChartsPage = () => {
     // Apply URL path filter if provided (from dashboard)
     if (urlPathFromUrl && !filtersFromUrl) {
       const paths = urlPathFromUrl.split(',');
-      const operator = pathOperatorFromUrl === 'starts-with' ? 'LIKE' : 
-                       paths.length > 1 ? 'IN' : '=';
       
       // Add event_type filter for pageviews
       filtersToApply.push({ 
