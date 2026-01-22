@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Loader, Alert, Table, Pagination } from '@navikt/ds-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader, Alert, Table, Pagination, Button } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Code } from 'lucide-react';
 import { SavedChart } from '../../data/dashboard/types';
 import { format, subDays } from 'date-fns';
 import { getBaseUrl } from '../../lib/environment';
@@ -35,6 +36,7 @@ interface DashboardWidgetProps {
 }
 
 export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId }: DashboardWidgetProps) => {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any[]>([]);
@@ -43,6 +45,31 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
     // State for AnalysisActionModal
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+    
+    // Handler to open chart SQL in SqlEditor with contextual filters
+    const handleOpenSql = () => {
+        if (!chart.sql) return;
+
+        const params = new URLSearchParams();
+        params.set('sql', chart.sql);
+
+        // Carry over website
+        if (websiteId) params.set('websiteId', websiteId);
+        if (selectedWebsite?.domain) params.set('domain', selectedWebsite.domain);
+
+        // Carry over URL filters
+        if (filters.urlFilters?.length) {
+            params.set('urlPath', filters.urlFilters.join(','));
+            params.set('pathOperator', filters.pathOperator || 'equals');
+        }
+
+        // Carry over date range
+        if (filters.dateRange) params.set('dateRange', filters.dateRange);
+        if (filters.customStartDate) params.set('customStartDate', filters.customStartDate.toISOString());
+        if (filters.customEndDate) params.set('customEndDate', filters.customEndDate.toISOString());
+
+        navigate(`/sql?${params.toString()}`);
+    };
 
     // Helper to check if a value is a clickable URL path
     const isClickablePath = (val: any): boolean => {
@@ -527,7 +554,18 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         <>
             <div className={`bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
                 <div className="flex flex-col mb-4">
-                    <h2 className="text-xl font-semibold">{chart.title}</h2>
+                    <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-xl font-semibold text-[var(--ax-text-default)]">{chart.title}</h2>
+                        {chart.sql && (
+                            <Button
+                                variant="tertiary"
+                                size="xsmall"
+                                onClick={handleOpenSql}
+                                title="Åpne SQL i verktøyet"
+                                icon={<Code className="h-4 w-4" />}
+                            />
+                        )}
+                    </div>
                     {tableTotalValue !== null && (
                         <p className="text-lg text-[var(--ax-text-default)] mt-1">
                             {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : 'besøk totalt'}

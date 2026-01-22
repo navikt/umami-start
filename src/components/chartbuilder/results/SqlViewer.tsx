@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Button, CopyButton, ReadMore, Tooltip } from '@navikt/ds-react';
-import { Copy } from 'lucide-react';
+import { Button, CopyButton, ReadMore, Tooltip, Heading, Link } from '@navikt/ds-react';
+import { Copy, ExternalLink } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
 interface SqlViewerProps {
@@ -11,6 +11,7 @@ interface SqlViewerProps {
 
 const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: SqlViewerProps) => {
   const [copiedDashboard, setCopiedDashboard] = useState(false);
+  const [copiedMetabase, setCopiedMetabase] = useState(false);
 
   if (!sql) return null;
 
@@ -24,6 +25,12 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
     navigator.clipboard.writeText(dashboardSql);
     setCopiedDashboard(true);
     setTimeout(() => setCopiedDashboard(false), 3000);
+  };
+
+  const handleCopyToMetabase = () => {
+    navigator.clipboard.writeText(sql);
+    setCopiedMetabase(true);
+    setTimeout(() => setCopiedMetabase(false), 3000);
   };
 
   const content = (
@@ -89,6 +96,29 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
             contextmenu: false, // disable context menu for cleaner feel
           }}
         />
+      </div>
+
+      <div className="pt-2 border-t border-[var(--ax-border-neutral-subtle)] space-y-2">
+        <Heading level="3" size="xsmall">Legg til i Metabase</Heading>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="xsmall"
+            variant="secondary"
+            type="button"
+            onClick={handleCopyToMetabase}
+            icon={<Copy size={14} />}
+          >
+            {copiedMetabase ? 'Kopiert!' : 'Kopier spørringen'}
+          </Button>
+          <Link
+            href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm"
+          >
+            Åpne Metabase <ExternalLink size={14} />
+          </Link>
+        </div>
       </div>
     </div>
   );

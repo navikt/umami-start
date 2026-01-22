@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { subDays, format } from 'date-fns';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import ChartLayout from '../../components/analysis/ChartLayout';
-import { Button, Alert, Heading, BodyLong } from '@navikt/ds-react';
+import { Button, Alert, Heading, BodyLong, DatePicker, TextField, Label, Link } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
-import { PlayIcon } from 'lucide-react';
+import { PlayIcon, Copy } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
 import { translateValue } from '../../lib/translations';
+import WebsitePicker from '../../components/analysis/WebsitePicker';
+
+type Website = {
+    id: string;
+    name: string;
+    domain: string;
+    teamId: string;
+    createdAt: string;
+};
 
 const defaultQuery = `SELECT 
   website_id,
@@ -33,6 +44,84 @@ const truncateJSON = (obj: any, maxChars: number = 50000): string => {
 };
 
 export default function SqlEditor() {
+    const [searchParams] = useSearchParams();
+
+    const urlPathFromUrl = searchParams.get('urlPath');
+    const pathOperatorFromUrl = searchParams.get('pathOperator');
+    const dateRangeFromUrl = searchParams.get('dateRange');
+    const customStartFromUrl = searchParams.get('customStartDate');
+    const customEndFromUrl = searchParams.get('customEndDate');
+
+    const [hasMetabaseDateFilter, setHasMetabaseDateFilter] = useState(false);
+    const [hasUrlPathFilter, setHasUrlPathFilter] = useState(false);
+    const [hasWebsiteIdPlaceholder, setHasWebsiteIdPlaceholder] = useState(false);
+    const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+        from: subDays(new Date(), 30),
+        to: new Date(),
+    });
+    const [urlPath, setUrlPath] = useState('');
+    const [websiteIdState, setWebsiteIdState] = useState<string>('');
+    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+
+    // Ensure we land at top when navigating in
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }, []);
+
+    const applyUrlFiltersToSql = (sql: string): string => {
+        let processedSql = sql;
+
+        // Website ID substitution {{website_id}}
+        if (hasWebsiteIdPlaceholder && websiteIdState) {
+            const sanitizedWebsiteId = websiteIdState.replace(/'/g, "''");
+            // Replace placeholder even if it is wrapped in quotes to avoid double quoting
+            processedSql = processedSql.replace(/(['"])?\s*\{\{\s*website_id\s*\}\}\s*\1?/gi, `'${sanitizedWebsiteId}'`);
+        }
+
+        // URL path substitution (Metabase style [[ {{url_sti}} --]] '/')
+        const pathSource = urlPathFromUrl || urlPath;
+        if (pathSource) {
+            const paths = pathSource.split(',').filter(Boolean);
+            const operator = pathOperatorFromUrl === 'starts-with' ? 'starts-with' : 'equals';
+
+            if (paths.length > 0) {
+                if (operator === 'starts-with') {
+                    if (paths.length === 1) {
+                        const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']*')/gi;
+                        processedSql = processedSql.replace(assignmentRegex, `LIKE '${paths[0]}%'`);
+                    } else {
+                        const multiLikeRegex = /(\S+)\s*=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']*')/gi;
+                        processedSql = processedSql.replace(multiLikeRegex, (_m, column) => {
+                            const likeConditions = paths.map(p => `${column} LIKE '${p}%'`).join(' OR ');
+                            return `(${likeConditions})`;
+                        });
+                    }
+                } else {
+                    const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']*')/gi;
+                    processedSql = paths.length === 1
+                        ? processedSql.replace(assignmentRegex, `= '${paths[0]}'`)
+                        : processedSql.replace(assignmentRegex, `IN (${paths.map(p => `'${p}'`).join(', ')})`);
+                }
+            }
+        } else {
+            // No external path provided; keep default '/'
+            processedSql = processedSql.replace(/\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]/gi, '');
+        }
+
+        // Date substitution [[AND {{created_at}} ]] -- always replace if marker exists (default last 30 days)
+        const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi;
+        if (datePattern.test(processedSql)) {
+            const now = new Date();
+            const from = dateRange.from || subDays(now, 30);
+            const to = dateRange.to || now;
+            const fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
+            const toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
+            const dateReplacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+            processedSql = processedSql.replace(datePattern, dateReplacement);
+        }
+
+        return processedSql;
+    };
     // State for editor height (for resizable editor)
     const [editorHeight, setEditorHeight] = useState(400);
     // Initialize state with empty string to avoid showing default until we check URL
@@ -47,6 +136,8 @@ export default function SqlEditor() {
     const [showEstimate, setShowEstimate] = useState(true);
     const [shareSuccess, setShareSuccess] = useState(false);
     const [formatSuccess, setFormatSuccess] = useState(false);
+    const [lastProcessedSql, setLastProcessedSql] = useState<string>('');
+    const [copiedMetabase, setCopiedMetabase] = useState(false);
 
     // Extract websiteId from SQL query for AnalysisActionModal
     const extractWebsiteId = (sql: string): string | undefined => {
@@ -56,7 +147,7 @@ export default function SqlEditor() {
     };
 
     const websiteId = extractWebsiteId(query);
-    // Check for SQL in URL params on mount
+    // Check for SQL in URL params on mount and init filters
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const sqlParam = urlParams.get('sql');
@@ -77,7 +168,52 @@ export default function SqlEditor() {
             // No SQL param, use default
             setQuery(defaultQuery);
         }
+
+        // Init urlPath state from URL
+        if (urlPathFromUrl) {
+            setUrlPath(urlPathFromUrl.split(',')[0]);
+        }
+
+        // Init websiteId from URL
+        const websiteIdParam = urlParams.get('websiteId');
+        if (websiteIdParam) {
+            setWebsiteIdState(websiteIdParam);
+        }
+
+        // Init date range state from URL
+        const now = new Date();
+        let from: Date | undefined = subDays(now, 30);
+        let to: Date | undefined = now;
+        if (dateRangeFromUrl === 'custom' && customStartFromUrl && customEndFromUrl) {
+            from = new Date(customStartFromUrl);
+            to = new Date(customEndFromUrl);
+        } else if (dateRangeFromUrl === 'current_month') {
+            from = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+            to = now;
+        } else if (dateRangeFromUrl === 'last_month') {
+            from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            to = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+        setDateRange({ from, to });
     }, []);
+
+    // Detect metabase placeholders
+    useEffect(() => {
+        if (!query) {
+            setHasMetabaseDateFilter(false);
+            setHasUrlPathFilter(false);
+            setHasWebsiteIdPlaceholder(false);
+            return;
+        }
+        const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
+        setHasMetabaseDateFilter(datePattern.test(query));
+
+        const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
+        setHasUrlPathFilter(urlPathPattern.test(query));
+
+        const websiteIdPattern = /\{\{\s*website_id\s*\}\}/i;
+        setHasWebsiteIdPlaceholder(websiteIdPattern.test(query));
+    }, [query]);
 
     const estimateCost = async () => {
         setEstimating(true);
@@ -87,13 +223,16 @@ export default function SqlEditor() {
         const encodedSql = encodeURIComponent(query);
         window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
 
+        const processedSql = applyUrlFiltersToSql(query);
+        setLastProcessedSql(processedSql);
+
         try {
             const response = await fetch('/api/bigquery/estimate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query, analysisType: 'Sqlverktøy' }),
+                body: JSON.stringify({ query: processedSql, analysisType: 'Sqlverktøy' }),
             });
 
             const data = await response.json();
@@ -119,13 +258,16 @@ export default function SqlEditor() {
         const encodedSql = encodeURIComponent(query);
         window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
 
+        const processedSql = applyUrlFiltersToSql(query);
+        setLastProcessedSql(processedSql);
+
         try {
             const response = await fetch('/api/bigquery', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query, analysisType: 'Sqlverktøy' }),
+                body: JSON.stringify({ query: processedSql, analysisType: 'Sqlverktøy' }),
             });
 
             const data = await response.json();
@@ -536,7 +678,66 @@ export default function SqlEditor() {
             wideSidebar={true}
             filters={
                 <>
-                    <ReadMore header="Tilgjengelige tabeller" size="small">
+                    {/* Metabase-lignende filterkontroller (auto når placeholders finnes) */}
+                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder) && (
+                        <div className="flex flex-wrap gap-4 mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded bg-[var(--ax-bg-neutral-soft)]">
+                            {hasWebsiteIdPlaceholder && (
+                                <div className="flex-1 min-w-[260px]">
+                                    <WebsitePicker
+                                        selectedWebsite={selectedWebsite}
+                                        onWebsiteChange={(website) => {
+                                            setSelectedWebsite(website);
+                                            setWebsiteIdState(website?.id || '');
+                                        }}
+                                        variant="minimal"
+                                    />
+                                </div>
+                            )}
+
+                            {hasMetabaseDateFilter && (
+                                <div>
+                                    <Label className="mb-1 block">Datoperiode</Label>
+                                    <div className="h-2" aria-hidden="true" />
+                                    <DatePicker
+                                        mode="range"
+                                        selected={{ from: dateRange.from, to: dateRange.to }}
+                                        onSelect={(range) => {
+                                            if (range) {
+                                                setDateRange({ from: range.from, to: range.to });
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex gap-2">
+                                            <DatePicker.Input
+                                                label="Fra dato"
+                                                size="small"
+                                                value={dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''}
+                                            />
+                                            <DatePicker.Input
+                                                label="Til dato"
+                                                size="small"
+                                                value={dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : ''}
+                                            />
+                                        </div>
+                                    </DatePicker>
+                                </div>
+                            )}
+
+                            {hasUrlPathFilter && (
+                                <div className="flex-1 min-w-[240px]">
+                                    <TextField
+                                        label="URL-sti"
+                                        size="small"
+                                        description="F.eks. / for forsiden"
+                                        value={urlPath}
+                                        onChange={(e) => setUrlPath(e.target.value)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <ReadMore header="Tilgjengelige tabeller" size="small" className="mt-4">
                         <ul className="space-y-3">
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
@@ -698,6 +899,15 @@ export default function SqlEditor() {
                                 size="small"
                                 variant="secondary"
                                 type="button"
+                                onClick={estimateCost}
+                                loading={estimating}
+                            >
+                                Estimer kostnad
+                            </Button>
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                type="button"
                                 onClick={shareQuery}
                             >
                                 {shareSuccess ? '✓ Kopiert' : 'Del'}
@@ -720,28 +930,9 @@ export default function SqlEditor() {
                         )}
                     </div>
 
-                    {/* Submit Buttons */}
-                    <div className="flex flex-wrap gap-2 mt-8">
-                        <Button
-                            onClick={executeQuery}
-                            loading={loading}
-                            icon={<PlayIcon size={18} />}
-                            variant="primary"
-                        >
-                            Vis resultater
-                        </Button>
-                        <Button
-                            onClick={estimateCost}
-                            loading={estimating}
-                            variant="secondary"
-                        >
-                            Estimer kostnad
-                        </Button>
-                    </div>
-
                     {/* Cost Estimate Display */}
                     {estimate && showEstimate && (
-                        <Alert variant="info" className="relative" size="small">
+                        <Alert variant="info" className="relative" size="small" style={{ marginTop: 24 }}>
                             <button
                                 type="button"
                                 aria-label="Lukk"
@@ -751,15 +942,23 @@ export default function SqlEditor() {
                                 ×
                             </button>
                             <div className="space-y-1 text-sm">
-                                <div>
-                                    <strong>Data:</strong>
-                                    {parseFloat(estimate.totalBytesProcessedGB) >= 0.01 && ` ${estimate.totalBytesProcessedGB} GB`}
-                                </div>
-                                {parseFloat(estimate.estimatedCostUSD) > 0 && (
-                                    <div>
-                                        <strong>Kostnad:</strong> ${estimate.estimatedCostUSD} USD
-                                    </div>
-                                )}
+                                {(() => {
+                                    const gb = parseFloat(estimate.totalBytesProcessedGB);
+                                    const cost = parseFloat(estimate.estimatedCostUSD) || (isFinite(gb) ? gb * 0.00625 : 0);
+                                    return (
+                                        <>
+                                            <div>
+                                                <strong>Data:</strong>
+                                                {isFinite(gb) && gb >= 0.01 ? ` ${gb} GB` : ''}
+                                            </div>
+                                            {cost > 0 && (
+                                                <div>
+                                                    <strong>Kostnad:</strong> ${cost.toFixed(2)} USD
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                                 {estimate.cacheHit && (
                                     <div className="text-[var(--ax-text-success)]">
                                         ✓ Cached (no cost)
@@ -768,6 +967,18 @@ export default function SqlEditor() {
                             </div>
                         </Alert>
                     )}
+
+                    {/* Submit Buttons */}
+                    <div className="flex flex-wrap gap-2 mt-6">
+                        <Button
+                            onClick={executeQuery}
+                            loading={loading}
+                            icon={<PlayIcon size={18} />}
+                            variant="primary"
+                        >
+                            Vis resultater
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -778,6 +989,13 @@ export default function SqlEditor() {
                         Query Error
                     </Heading>
                     <BodyLong>{error}</BodyLong>
+                    {lastProcessedSql && (
+                        <ReadMore header="SQL etter filtre" size="small" className="mt-3">
+                            <pre className="bg-[var(--ax-bg-neutral-soft)] border border-[var(--ax-border-neutral-subtle)] rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>
+                                {lastProcessedSql}
+                            </pre>
+                        </ReadMore>
+                    )}
                 </Alert>
             )}
 
@@ -795,6 +1013,8 @@ export default function SqlEditor() {
                 prepareBarChartData={prepareBarChartData}
                 preparePieChartData={preparePieChartData}
                 sql={query}
+                showSqlCode={true}
+                showEditButton={true}
                 websiteId={websiteId}
             />
 
@@ -804,6 +1024,38 @@ export default function SqlEditor() {
                     <pre className="bg-[var(--ax-bg-neutral-soft)] border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
                 </ReadMore>
             )}
+
+            {/* Metabase quick actions */}
+            <div className="mt-6 pt-2 space-y-1.5">
+                <Heading level="3" size="xsmall">Legg til i Metabase</Heading>
+                <div className="h-1" aria-hidden="true" />
+                <div className="flex flex-col items-start gap-2">
+                    <Button
+                        size="small"
+                        variant="secondary"
+                        type="button"
+                        onClick={() => {
+                            const metabaseSql = query; // copy raw SQL before filter substitution
+                            navigator.clipboard.writeText(metabaseSql);
+                            setCopiedMetabase(true);
+                            setTimeout(() => setCopiedMetabase(false), 2000);
+                        }}
+                        icon={<Copy size={16} />}
+                    >
+                        {copiedMetabase ? 'Kopiert!' : 'Kopier spørring'}
+                    </Button>
+                    <div className="pl-[2px]">
+                        <Link
+                            href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm"
+                        >
+                            Åpne Metabase
+                        </Link>
+                    </div>
+                </div>
+            </div>
         </ChartLayout>
     );
 }

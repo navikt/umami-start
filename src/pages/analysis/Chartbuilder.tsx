@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import QueryPreview from '../../components/chartbuilder/results/QueryPreview';
 import EventFilter from '../../components/chartbuilder/EventFilter';
@@ -262,6 +263,24 @@ const getRequiredTables = (
 };
 
 const ChartsPage = () => {
+  const [searchParams] = useSearchParams();
+  
+  // Parse URL params for pre-populating from Dashboard
+  const websiteIdFromUrl = searchParams.get('websiteId');
+  const domainFromUrl = searchParams.get('domain');
+  const websiteNameFromUrl = searchParams.get('websiteName');
+  const titleFromUrl = searchParams.get('title');
+  const urlPathFromUrl = searchParams.get('urlPath');
+  const pathOperatorFromUrl = searchParams.get('pathOperator');
+  const dateRangeFromUrl = searchParams.get('dateRange');
+  const configFromUrl = searchParams.get('config');
+  const filtersFromUrl = searchParams.get('filters');
+  
+  // Track if we've applied URL params (to avoid re-applying)
+  const [hasAppliedUrlParams, setHasAppliedUrlParams] = useState(false);
+  // Store pending filters to apply after events are loaded
+  const [pendingFiltersFromUrl, setPendingFiltersFromUrl] = useState<Filter[] | null>(null);
+  
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
     filters: [],
@@ -355,6 +374,148 @@ const ChartsPage = () => {
       document.removeEventListener('summarizeStepStatus', handleSummarizeStepStatus);
     };
   }, []);
+
+  // Apply URL params from Dashboard on initial load
+  useEffect(() => {
+    if (hasAppliedUrlParams) return;
+    
+    // Check if we have URL params to apply
+    const hasUrlParams = websiteIdFromUrl || configFromUrl || filtersFromUrl || urlPathFromUrl;
+    if (!hasUrlParams) {
+      setHasAppliedUrlParams(true);
+      return;
+    }
+
+    // Create website object from URL params if we have the necessary info
+    if (websiteIdFromUrl && domainFromUrl) {
+      const websiteFromUrl: Website = {
+        id: websiteIdFromUrl,
+        domain: domainFromUrl,
+        name: websiteNameFromUrl || domainFromUrl,
+        teamId: '',
+        createdAt: ''
+      };
+      
+      setConfig(prev => ({
+        ...prev,
+        website: websiteFromUrl
+      }));
+    }
+    
+    // Apply config from URL if provided (from chartbuilder-created charts)
+    if (configFromUrl) {
+      try {
+        const parsedConfig = JSON.parse(configFromUrl);
+        setConfig(prev => ({
+          ...prev,
+          ...parsedConfig,
+          // Keep the website we just set if config doesn't have one
+          website: prev.website || parsedConfig.website
+        }));
+        if (parsedConfig.metrics && parsedConfig.metrics.length > 0) {
+          setHasUserSelectedMetrics(true);
+        }
+      } catch (e) {
+        console.error('Failed to parse config from URL:', e);
+      }
+    }
+    
+    // Build filters to apply
+    const filtersToApply: Filter[] = [];
+    
+    // Apply filters from URL if provided
+    if (filtersFromUrl) {
+      try {
+        const parsedFilters = JSON.parse(filtersFromUrl);
+        filtersToApply.push(...parsedFilters);
+      } catch (e) {
+        console.error('Failed to parse filters from URL:', e);
+      }
+    }
+    
+    // Apply URL path filter if provided (from dashboard)
+    if (urlPathFromUrl && !filtersFromUrl) {
+      const paths = urlPathFromUrl.split(',');
+      const operator = pathOperatorFromUrl === 'starts-with' ? 'LIKE' : 
+                       paths.length > 1 ? 'IN' : '=';
+      
+      // Add event_type filter for pageviews
+      filtersToApply.push({ 
+        column: 'event_type', 
+        operator: '=', 
+        value: '1' 
+      });
+      
+      // Add URL path filter
+      if (paths.length > 1) {
+        filtersToApply.push({
+          column: 'url_path',
+          operator: 'IN',
+          value: paths[0],
+          multipleValues: paths
+        });
+      } else if (pathOperatorFromUrl === 'starts-with') {
+        filtersToApply.push({
+          column: 'url_path',
+          operator: 'LIKE',
+          value: paths[0]
+        });
+      } else {
+        filtersToApply.push({
+          column: 'url_path',
+          operator: '=',
+          value: paths[0]
+        });
+      }
+    }
+    
+    // Apply date range filter if provided
+    if (dateRangeFromUrl) {
+      // Calculate the date range based on the period
+      let fromSQL = '';
+      let toSQL = 'CURRENT_TIMESTAMP()';
+      
+      if (dateRangeFromUrl === 'current_month') {
+        fromSQL = "TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH)";
+      } else if (dateRangeFromUrl === 'last_month') {
+        fromSQL = "TIMESTAMP_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 MONTH), MONTH)";
+        toSQL = "TIMESTAMP_SUB(TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH), INTERVAL 1 SECOND)";
+      } else {
+        // Default to last 30 days
+        fromSQL = "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)";
+      }
+      
+      filtersToApply.push(
+        { column: 'created_at', operator: '>=', value: fromSQL, dateRangeType: 'dynamic' },
+        { column: 'created_at', operator: '<=', value: toSQL, dateRangeType: 'dynamic' }
+      );
+      
+      // Also update date range in days for WebsitePicker
+      let days = 30;
+      if (dateRangeFromUrl === 'current_month') {
+        days = new Date().getDate();
+      } else if (dateRangeFromUrl === 'last_month') {
+        const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 0);
+        days = lastMonth.getDate();
+      }
+      setDateRangeInDays(days);
+    }
+    
+    // Store filters to be applied - they'll be set after EventFilter mounts
+    if (filtersToApply.length > 0) {
+      setPendingFiltersFromUrl(filtersToApply);
+    }
+    
+    setHasAppliedUrlParams(true);
+  }, [hasAppliedUrlParams, websiteIdFromUrl, domainFromUrl, websiteNameFromUrl, configFromUrl, filtersFromUrl, urlPathFromUrl, pathOperatorFromUrl, dateRangeFromUrl]);
+
+  // Apply pending filters once dateRangeReady is true (EventFilter has mounted)
+  useEffect(() => {
+    if (pendingFiltersFromUrl && dateRangeReady) {
+      setFilters(pendingFiltersFromUrl);
+      setPendingFiltersFromUrl(null);
+    }
+  }, [pendingFiltersFromUrl, dateRangeReady]);
 
   // Add state to manage FormProgress open state
   // const [formProgressOpen, setFormProgressOpen] = useState<boolean>(true);
@@ -1614,6 +1775,15 @@ const ChartsPage = () => {
           </div>
         )
       }
+
+      {/* Alert when pre-loaded from Dashboard */}
+      {titleFromUrl && hasAppliedUrlParams && config.website && (
+        <div className="mb-4">
+          <AlertWithCloseButton variant="info">
+            Forhåndsvisning fra dashboard: <strong>{titleFromUrl}</strong>. Du kan nå redigere og tilpasse grafen.
+          </AlertWithCloseButton>
+        </div>
+      )}
 
       <div className="sticky top-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
         <QueryPreview

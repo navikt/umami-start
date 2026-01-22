@@ -433,7 +433,7 @@ const ResultsPanel = ({
 
   return (
     <div className="space-y-2 mb-6">
-      {!hideHeading && <Heading level="2" size="small">Vis resultater</Heading>}
+      {!hideHeading && <Heading level="2" size="small" className="mb-2">Vis resultater</Heading>}
 
       <div className={containerClass}>
         {/* Only show button if no results yet */}
@@ -453,10 +453,6 @@ const ResultsPanel = ({
                 <p className="font-medium">Spørring kjører...</p>
                 <p className="mt-1">Dette kan ta opptil 20-30 sekunder for store datasett. Vennligst vent.</p>
               </Alert>
-            )}
-            {/* SQL Code Display - shown before results are loaded */}
-            {showSqlCode && sql && (
-              <SqlViewer sql={sql} showEditButton={showEditButton} />
             )}
           </div>
         )}
@@ -479,12 +475,6 @@ const ResultsPanel = ({
                 )}
               </div>
             </Alert>
-            {/* SQL Code Display - shown on error for debugging */}
-            {showSqlCode && sql && (
-              <div className="mt-3">
-                <SqlViewer sql={sql} showEditButton={showEditButton} />
-              </div>
-            )}
           </>
         )}
 
