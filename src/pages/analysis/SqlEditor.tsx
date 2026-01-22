@@ -55,6 +55,7 @@ export default function SqlEditor() {
     const [hasMetabaseDateFilter, setHasMetabaseDateFilter] = useState(false);
     const [hasUrlPathFilter, setHasUrlPathFilter] = useState(false);
     const [hasWebsiteIdPlaceholder, setHasWebsiteIdPlaceholder] = useState(false);
+    const [hasNettsidePlaceholder, setHasNettsidePlaceholder] = useState(false);
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
         from: subDays(new Date(), 30),
         to: new Date(),
@@ -79,6 +80,14 @@ export default function SqlEditor() {
             const sanitizedWebsiteId = websiteIdState.replace(/'/g, "''");
             // Replace placeholder even if it is wrapped in quotes to avoid double quoting
             processedSql = processedSql.replace(/(['"])?\s*\{\{\s*website_id\s*\}\}\s*\1?/gi, `'${sanitizedWebsiteId}'`);
+        }
+
+        // Nettside substitution {{nettside}} -> website domain
+        const hasNettsidePlaceholder = /\{\{\s*nettside\s*\}\}/i.test(processedSql);
+        if (hasNettsidePlaceholder && selectedWebsite?.domain) {
+            const sanitizedDomain = selectedWebsite.domain.replace(/'/g, "''");
+            // Replace placeholder even if it is wrapped in quotes to avoid double quoting
+            processedSql = processedSql.replace(/(['"])?\s*\{\{\s*nettside\s*\}\}\s*\1?/gi, `'${sanitizedDomain}'`);
         }
 
         // URL path substitution (Metabase style [[ {{url_sti}} --]] '/')
@@ -111,6 +120,24 @@ export default function SqlEditor() {
             processedSql = processedSql.replace(/\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]/gi, '');
         }
 
+        // Optional URL path substitution [[AND {{url_sti}} ]]
+        const andUrlStiPattern = /\[\[\s*AND\s*\{\{url_sti\}\}\s*\]\]/gi;
+        if (andUrlStiPattern.test(processedSql)) {
+            if (pathSource) {
+                // Only support single path for now in this format, or could expand to IN/OR logic
+                const path = pathSource.split(',')[0];
+                const operator = pathOperatorFromUrl === 'starts-with' ? 'starts-with' : 'equals';
+
+                if (operator === 'starts-with') {
+                    processedSql = processedSql.replace(andUrlStiPattern, `AND url_path LIKE '${path}%'`);
+                } else {
+                    processedSql = processedSql.replace(andUrlStiPattern, `AND url_path = '${path}'`);
+                }
+            } else {
+                processedSql = processedSql.replace(andUrlStiPattern, '');
+            }
+        }
+
         // Date substitution [[AND {{created_at}} ]] -- always replace if marker exists (default last 30 days)
         const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi;
         if (datePattern.test(processedSql)) {
@@ -119,7 +146,18 @@ export default function SqlEditor() {
             const to = dateRange.to || now;
             fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
             toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
-            const dateReplacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+
+            // Detect likely table to apply date filter to
+            let tablePrefix = '`team-researchops-prod-01d6.umami.public_website_event`';
+            if (processedSql.includes('umami_views.event')) {
+                tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
+            } else if (processedSql.includes('umami_views.session')) {
+                tablePrefix = '`team-researchops-prod-01d6.umami_views.session`';
+            } else if (processedSql.includes('public_session')) {
+                tablePrefix = '`team-researchops-prod-01d6.umami.public_session`';
+            }
+
+            const dateReplacement = `AND ${tablePrefix}.created_at BETWEEN ${fromSql} AND ${toSql}`;
             processedSql = processedSql.replace(datePattern, dateReplacement);
         }
 
@@ -253,10 +291,14 @@ export default function SqlEditor() {
         setHasMetabaseDateFilter(datePattern.test(query));
 
         const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
-        setHasUrlPathFilter(urlPathPattern.test(query));
+        const andUrlPathPattern = /\[\[\s*AND\s*\{\{url_sti\}\}\s*\]\]/i;
+        setHasUrlPathFilter(urlPathPattern.test(query) || andUrlPathPattern.test(query));
 
         const websiteIdPattern = /\{\{\s*website_id\s*\}\}/i;
         setHasWebsiteIdPlaceholder(websiteIdPattern.test(query));
+
+        const nettsidePattern = /\{\{\s*nettside\s*\}\}/i;
+        setHasNettsidePlaceholder(nettsidePattern.test(query));
     }, [query]);
 
     const estimateCost = async () => {
@@ -723,9 +765,9 @@ export default function SqlEditor() {
             filters={
                 <>
                     {/* Metabase-lignende filterkontroller (auto når placeholders finnes) */}
-                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder) && (
+                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
                         <div className="flex flex-wrap gap-4 mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded bg-[var(--ax-bg-neutral-soft)]">
-                            {hasWebsiteIdPlaceholder && (
+                            {(hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
                                 <div className="flex-1 min-w-[260px]">
                                     <WebsitePicker
                                         selectedWebsite={selectedWebsite}
