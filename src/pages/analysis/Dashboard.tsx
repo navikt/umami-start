@@ -674,13 +674,13 @@ const Dashboard = () => {
                 </div>
             ) : !effectiveWebsiteId ? (
                 <div className="w-fit">
-                    <Alert variant="info" size="small" className="bg-[var(--ax-bg-accent-soft)]">
+                    <Alert variant="info" size="small">
                         Legg til URL-sti og trykk Oppdater for å vise statistikk.
                     </Alert>
                 </div>
             ) : !requiredFiltersAreSatisfied ? (
                 <div className="w-fit">
-                    <Alert variant="info" size="small" className="bg-[var(--ax-bg-accent-soft)]">
+                    <Alert variant="info" size="small">
                         {dashboard.customFilterRequiredMessage || "Velg nødvendige filtre for å vise data."}
                     </Alert>
                 </div>
@@ -730,7 +730,7 @@ const Dashboard = () => {
 
                     {dashboard.charts.length === 0 && (
                         <div className="col-span-full">
-                            <Alert variant="info" className="bg-[var(--ax-bg-accent-soft)]">Ingen diagrammer konfigurert.</Alert>
+                            <Alert variant="info">Ingen diagrammer konfigurert.</Alert>
                         </div>
                     )}
 
