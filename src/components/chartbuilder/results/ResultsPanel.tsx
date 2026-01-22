@@ -449,7 +449,7 @@ const ResultsPanel = ({
               Vis resultater
             </Button>
             {loading && showLoadingMessage && (
-              <Alert variant="info" className="text-sm">
+              <Alert variant="info" className="text-sm mt-2">
                 <p className="font-medium">Spørring kjører...</p>
                 <p className="mt-1">Dette kan ta opptil 20-30 sekunder for store datasett. Vennligst vent.</p>
               </Alert>

@@ -1060,6 +1060,7 @@ export default function SqlEditor() {
                 sql={query}
                 showSqlCode={true}
                 showEditButton={true}
+                showCost={true}
                 websiteId={websiteId}
             />
 
