@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
-import { Alert, Heading, BodyLong, Loader } from '@navikt/ds-react';
+import { Alert, BodyLong, Loader } from '@navikt/ds-react';
 import { translateValue } from '../../lib/translations';
+import ChartLayout from '../../components/analysis/ChartLayout';
 
 export default function Grafdeling() {
     const [query, setQuery] = useState('');
@@ -412,34 +413,30 @@ export default function Grafdeling() {
         };
     };
 
-    return (
-        <div className="py-8 max-w-[1600px] mx-auto">
-            <div className="mb-8">
-                <Heading level="1" size="large" className="mb-2 pt-3 max-w-3xl">
-                    {description ? description : 'Umami grafdeling'}
-                </Heading>
-            </div>
-
-            {/* Initial Loading State */}
-            {loading && !result && (
-                <div className="flex flex-col items-center justify-center py-16 bg-[var(--ax-bg-default)] rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)]">
+    // Build the main content
+    const renderContent = () => {
+        // Initial Loading State
+        if (loading && !result) {
+            return (
+                <div className="flex flex-col items-center justify-center py-16">
                     <Loader size="3xlarge" title="Laster data..." />
                     <BodyLong className="mt-4 text-[var(--ax-text-subtle)]">Henter data...</BodyLong>
                 </div>
-            )}
+            );
+        }
 
-            {/* Error Display */}
-            {error && !loading && (
+        // Error Display
+        if (error && !loading) {
+            return (
                 <Alert variant="error">
-                    <Heading level="3" size="small" spacing>
-                        Feil
-                    </Heading>
                     <BodyLong>{error}</BodyLong>
                 </Alert>
-            )}
+            );
+        }
 
-            {/* Results Display - Full Width */}
-            {!loading && !error && result && (
+        // Results Display
+        if (!loading && !error && result) {
+            return (
                 <ResultsPanel
                     result={result}
                     loading={loading}
@@ -454,13 +451,26 @@ export default function Grafdeling() {
                     preparePieChartData={preparePieChartData}
                     hideHeading={true}
                     sql={query}
-                    showSqlCode={true}
+                    showSqlCode={false}
                     showEditButton={true}
                     hiddenTabs={result && result.data && result.data.length > 12 ? ['barchart', 'piechart'] : []}
                     containerStyle="white"
                     websiteId={websiteId}
                 />
-            )}
-        </div>
+            );
+        }
+
+        return null;
+    };
+
+    return (
+        <ChartLayout
+            title={description || 'Umami grafdeling'}
+            description="Delt visualisering fra Umami"
+            currentPage="grafdeling"
+            hideSidebar={true}
+        >
+            {renderContent()}
+        </ChartLayout>
     );
 }

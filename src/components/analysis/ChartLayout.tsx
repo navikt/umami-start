@@ -9,10 +9,11 @@ import { PageHeader } from '../theme/PageHeader/PageHeader';
 interface ChartLayoutProps {
     title: string;
     description: string;
-    filters: React.ReactNode;
+    filters?: React.ReactNode;
     children: React.ReactNode;
     currentPage?: AnalyticsPage;
     wideSidebar?: boolean;
+    hideSidebar?: boolean;
 }
 
 const chartGroups = [
@@ -39,9 +40,10 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     filters,
     children,
     currentPage,
-    wideSidebar = false
+    wideSidebar = false,
+    hideSidebar = false
 }) => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(!hideSidebar);
     const navigate = useNavigate();
 
     const handleChartChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -90,8 +92,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
             <Page.Block width="xl" gutters className="pb-16">
 
 
-                <div className="rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)]">
-                    <div className="flex flex-col md:flex-row min-h-[600px] relative">
+                <div className={hideSidebar ? 'mb-8' : 'rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)]'}>
+                    <div className={hideSidebar ? '' : 'flex flex-col md:flex-row min-h-[600px] relative'}>
                         {isSidebarOpen && (
                             <>
                                 <div className={`bg-[var(--ax-bg-accent-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
@@ -143,7 +145,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                                 </button>
                             </>
                         )}
-                        {!isSidebarOpen && (
+                        {!isSidebarOpen && !hideSidebar && (
                             /* Expand button on left edge - hidden on mobile */
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
@@ -154,7 +156,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                                 <ChevronRight size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
                             </button>
                         )}
-                        <div className={`w-full ${isSidebarOpen ? contentWidth : ''} p-6`}>
+                        <div className={`w-full ${isSidebarOpen ? contentWidth : ''} ${hideSidebar ? '' : 'p-6'}`}>
                             {children}
                         </div>
                     </div>
