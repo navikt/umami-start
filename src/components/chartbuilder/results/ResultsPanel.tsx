@@ -425,7 +425,7 @@ const ResultsPanel = ({
         return "";
       case 'green':
       default:
-        return "bg-[var(--ax-bg-neutral-soft)] p-4 rounded-md border border-[var(--ax-border-neutral-subtle)]";
+        return "bg-white";
     }
   };
 
@@ -433,7 +433,7 @@ const ResultsPanel = ({
 
   return (
     <div className="space-y-2 mb-6">
-      {!hideHeading && <Heading level="2" size="small" className="mb-2">Vis resultater</Heading>}
+      {!hideHeading && <Heading level="2" size="small" className="mb-2 pb-2">Vis resultater</Heading>}
 
       <div className={containerClass}>
         {/* Only show button if no results yet */}
