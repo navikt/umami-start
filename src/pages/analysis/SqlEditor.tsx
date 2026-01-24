@@ -353,7 +353,20 @@ export default function SqlEditor() {
         setHasHardcodedWebsiteId(hardcodedWebsiteIdPattern.test(query));
 
         // Detect custom {{variable}} placeholders (excluding known ones)
-        const knownVariables = ['website_id', 'nettside', 'url_sti', 'url_path', 'created_at'];
+        // Only exclude url_sti/url_path if they're used in the special [[...]] patterns
+        const urlPathInSpecialPattern =
+            urlPathPattern.test(query) ||
+            andUrlPathPattern.test(query) ||
+            urlPathPattern2.test(query) ||
+            andUrlPathPattern2.test(query);
+
+        // Base known variables that should always have special handling
+        const alwaysKnownVariables = ['website_id', 'nettside', 'created_at'];
+        // Only treat url_sti/url_path as known if they're in special patterns
+        const knownVariables = urlPathInSpecialPattern
+            ? [...alwaysKnownVariables, 'url_sti', 'url_path']
+            : alwaysKnownVariables;
+
         const allVariablesRegex = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/gi;
         const matches = [...query.matchAll(allVariablesRegex)];
         const detectedVars = matches
