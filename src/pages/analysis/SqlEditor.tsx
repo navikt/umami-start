@@ -567,7 +567,7 @@ export default function SqlEditor() {
             // Group data by series
             const seriesMap = new Map<string, any[]>();
 
-            data.forEach((row: any) => {
+            data.forEach((row: any, rowIndex: number) => {
                 const rawSeriesValue = row[seriesKey];
                 const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
                 const seriesValue = String(translatedSeriesValue || 'Ukjent');
@@ -580,11 +580,15 @@ export default function SqlEditor() {
 
                 let x: number | Date;
                 if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-                    x = new Date(xValue);
+                    const parsedDate = new Date(xValue);
+                    // Check if the date is valid
+                    x = !isNaN(parsedDate.getTime()) ? parsedDate : rowIndex;
                 } else if (typeof xValue === 'number') {
                     x = xValue;
                 } else {
-                    x = new Date(xValue).getTime() || 0;
+                    // Try to parse as date, fallback to index if invalid
+                    const parsedDate = new Date(xValue);
+                    x = !isNaN(parsedDate.getTime()) ? parsedDate : rowIndex;
                 }
 
                 seriesMap.get(seriesValue)!.push({
