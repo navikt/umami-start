@@ -60,6 +60,7 @@ export default function SqlEditor() {
     const [hasHardcodedWebsiteId, setHasHardcodedWebsiteId] = useState(false);
     const [customVariables, setCustomVariables] = useState<string[]>([]);
     const [customVariableValues, setCustomVariableValues] = useState<Record<string, string>>({});
+    const [oldTableWarning, setOldTableWarning] = useState<boolean>(false);
     const [availableWebsites, setAvailableWebsites] = useState<Website[]>([]);
     const autoSelectedWebsiteIdRef = useRef<string | null>(null);
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
@@ -164,7 +165,7 @@ export default function SqlEditor() {
                 tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
             } else if (processedSql.includes('umami_views.session')) {
                 tablePrefix = '`team-researchops-prod-01d6.umami_views.session`';
-            } else if (processedSql.includes('public_session')) {
+            } else if (processedSql.includes('public_session') && !processedSql.includes('public_website_event')) {
                 tablePrefix = '`team-researchops-prod-01d6.umami.public_session`';
             }
 
@@ -376,6 +377,18 @@ export default function SqlEditor() {
         setCustomVariables(detectedVars);
     }, [query]);
 
+    // Detect usage of old tables which cause partition errors and suggest new views
+    useEffect(() => {
+        const hasOldEventTable = /umami\.public_website_event/.test(query);
+        const hasOldSessionTable = /umami\.public_session/.test(query);
+
+        if (hasOldEventTable || hasOldSessionTable) {
+            setOldTableWarning(true);
+        } else {
+            setOldTableWarning(false);
+        }
+    }, [query]);
+
     // Fetch available websites for auto-selection
     useEffect(() => {
         if (availableWebsites.length > 0) return;
@@ -460,6 +473,8 @@ export default function SqlEditor() {
 
         const processedSql = applyUrlFiltersToSql(query);
         setLastProcessedSql(processedSql);
+
+
 
         try {
             const response = await fetch('/api/bigquery', {
@@ -1259,6 +1274,38 @@ export default function SqlEditor() {
                 </>
             }
         >
+            {/* Old Table Warning & Fix */}
+            {oldTableWarning && (
+                <Alert variant="warning" className="mb-4">
+                    <Heading level="3" size="small" spacing>
+                        Utdaterte tabeller oppdaget
+                    </Heading>
+                    <BodyLong>
+                        Spørringen din bruker gamle tabellnavn. Vi anbefaler å bytte til de nye <code>umami_views</code> tabellene:
+                        <ul className="list-disc list-inside mt-2 text-sm">
+                            <li><code>public_website_event</code> &rarr; <code>umami_views.event</code></li>
+                            <li><code>public_session</code> &rarr; <code>umami_views.session</code></li>
+                        </ul>
+                    </BodyLong>
+                    <div className="mt-3">
+                        <Button
+                            size="small"
+                            variant="primary"
+                            onClick={() => {
+                                // Replace old tables with new views
+                                let newQuery = query
+                                    .replace(/umami\.public_website_event/gi, 'umami_views.event')
+                                    .replace(/umami\.public_session/gi, 'umami_views.session');
+                                setQuery(newQuery);
+                                setOldTableWarning(false);
+                            }}
+                        >
+                            Oppdater SQL-spørringen til nye tabeller
+                        </Button>
+                    </div>
+                </Alert>
+            )}
+
             {/* Error Display */}
             {error && (
                 <Alert variant="error" className="mb-4">
@@ -1266,6 +1313,38 @@ export default function SqlEditor() {
                         Query Error
                     </Heading>
                     <BodyLong>{error}</BodyLong>
+
+                    {/* Helper button for partition error */}
+                    {error.includes("partition elimination") && error.includes("created_at") && (
+                        <div className="mt-3">
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={() => {
+                                    // Add [[AND {{created_at}}]] to the WHERE clause
+                                    let newQuery = query;
+                                    if (/WHERE/i.test(query) && !/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i.test(query)) {
+                                        // Find the last condition in the WHERE clause and add after it
+                                        // Look for the end of the WHERE clause (before GROUP BY, ORDER BY, or end of query)
+                                        const whereMatch = query.match(/WHERE\s+([\s\S]*?)(?=\s*(GROUP BY|ORDER BY|LIMIT|$|\)[\s\n]*,))/i);
+                                        if (whereMatch) {
+                                            const whereClause = whereMatch[0];
+                                            const newWhereClause = whereClause.trimEnd() + '\n      [[AND {{created_at}}]]';
+                                            newQuery = query.replace(whereClause, newWhereClause);
+                                        }
+                                    }
+                                    setQuery(newQuery);
+                                    setError(null);
+                                }}
+                            >
+                                Legg til datofilter [[AND {"{{created_at}}"}]]
+                            </Button>
+                            <p className="text-sm mt-2 text-[var(--ax-text-subtle)]">
+                                Tabellen krever et filter på created_at for partisjonering
+                            </p>
+                        </div>
+                    )}
+
                     {lastProcessedSql && (
                         <ReadMore header="SQL etter filtre" size="small" className="mt-3">
                             <pre className="bg-[var(--ax-bg-neutral-soft)] border border-[var(--ax-border-neutral-subtle)] rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>
@@ -1289,7 +1368,7 @@ export default function SqlEditor() {
                 prepareLineChartData={prepareLineChartData}
                 prepareBarChartData={prepareBarChartData}
                 preparePieChartData={preparePieChartData}
-                sql={query}
+                sql={lastProcessedSql || query}
                 showSqlCode={true}
                 showEditButton={true}
                 showCost={true}
