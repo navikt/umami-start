@@ -204,8 +204,14 @@ export default function SqlEditor() {
     const [copiedMetabase, setCopiedMetabase] = useState(false);
 
     const ensureWebsitePlaceholder = (currentQuery: string): string => {
-        // If placeholder or any website_id already exists, leave untouched
-        if (/\{\{\s*website_id\s*\}\}/i.test(currentQuery) || /website_id\s*=\s*['"]/i.test(currentQuery)) {
+        // If any website-related placeholder or filter already exists, leave untouched
+        // Check for {{website_id}}, {{nettside}}, website_id =, or website_domain =
+        if (
+            /\{\{\s*website_id\s*\}\}/i.test(currentQuery) ||
+            /\{\{\s*nettside\s*\}\}/i.test(currentQuery) ||
+            /website_id\s*=\s*['"]/i.test(currentQuery) ||
+            /website_domain\s*=\s*/i.test(currentQuery)
+        ) {
             return currentQuery;
         }
 
