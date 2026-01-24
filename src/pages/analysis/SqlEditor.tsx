@@ -98,7 +98,7 @@ export default function SqlEditor() {
             processedSql = processedSql.replace(/(['"])?\s*\{\{\s*nettside\s*\}\}\s*\1?/gi, `'${sanitizedDomain}'`);
         }
 
-        // URL path substitution (Metabase style [[ {{url_sti}} --]] '/')
+        // URL path substitution (Metabase style [[ {{url_sti}} --]] '/' or [[ {{url_path}} --]] '/')
         const pathSource = urlPathFromUrl || urlPath;
         if (pathSource) {
             const paths = pathSource.split(',').filter(Boolean);
@@ -107,29 +107,30 @@ export default function SqlEditor() {
             if (paths.length > 0) {
                 if (operator === 'starts-with') {
                     if (paths.length === 1) {
-                        const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']*')/gi;
+                        // Match both url_sti and url_path
+                        const assignmentRegex = /=\s*\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]\s*('[^']*')/gi;
                         processedSql = processedSql.replace(assignmentRegex, `LIKE '${paths[0]}%'`);
                     } else {
-                        const multiLikeRegex = /(\S+)\s*=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']*')/gi;
+                        const multiLikeRegex = /(\S+)\s*=\s*\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]\s*('[^']*')/gi;
                         processedSql = processedSql.replace(multiLikeRegex, (_m, column) => {
                             const likeConditions = paths.map(p => `${column} LIKE '${p}%'`).join(' OR ');
                             return `(${likeConditions})`;
                         });
                     }
                 } else {
-                    const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']*')/gi;
+                    const assignmentRegex = /=\s*\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]\s*('[^']*')/gi;
                     processedSql = paths.length === 1
                         ? processedSql.replace(assignmentRegex, `= '${paths[0]}'`)
                         : processedSql.replace(assignmentRegex, `IN (${paths.map(p => `'${p}'`).join(', ')})`);
                 }
             }
         } else {
-            // No external path provided; keep default '/'
-            processedSql = processedSql.replace(/\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]/gi, '');
+            // No external path provided; keep default '/' - match both url_sti and url_path
+            processedSql = processedSql.replace(/\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]/gi, '');
         }
 
-        // Optional URL path substitution [[AND {{url_sti}} ]]
-        const andUrlStiPattern = /\[\[\s*AND\s*\{\{url_sti\}\}\s*\]\]/gi;
+        // Optional URL path substitution [[AND {{url_sti}} ]] or [[AND {{url_path}} ]]
+        const andUrlStiPattern = /\[\[\s*AND\s*\{\{url_(?:sti|path)\}\}\s*\]\]/gi;
         if (andUrlStiPattern.test(processedSql)) {
             if (pathSource) {
                 // Only support single path for now in this format, or could expand to IN/OR logic
@@ -317,7 +318,15 @@ export default function SqlEditor() {
 
         const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
         const andUrlPathPattern = /\[\[\s*AND\s*\{\{url_sti\}\}\s*\]\]/i;
-        setHasUrlPathFilter(urlPathPattern.test(query) || andUrlPathPattern.test(query));
+        // Also detect url_path as a synonym for url_sti
+        const urlPathPattern2 = /\[\[\s*\{\{url_path\}\}\s*--\s*\]\]\s*'\/'/i;
+        const andUrlPathPattern2 = /\[\[\s*AND\s*\{\{url_path\}\}\s*\]\]/i;
+        setHasUrlPathFilter(
+            urlPathPattern.test(query) ||
+            andUrlPathPattern.test(query) ||
+            urlPathPattern2.test(query) ||
+            andUrlPathPattern2.test(query)
+        );
 
         const websiteIdPattern = /\{\{\s*website_id\s*\}\}/i;
         setHasWebsiteIdPlaceholder(websiteIdPattern.test(query));
