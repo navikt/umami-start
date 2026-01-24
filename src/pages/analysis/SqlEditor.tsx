@@ -6,7 +6,7 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import { Button, Alert, Heading, BodyLong, TextField, Link } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
-import { PlayIcon, Copy } from 'lucide-react';
+import { PlayIcon, Copy, X } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
 import { translateValue } from '../../lib/translations';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
@@ -61,6 +61,7 @@ export default function SqlEditor() {
     const [customVariables, setCustomVariables] = useState<string[]>([]);
     const [customVariableValues, setCustomVariableValues] = useState<Record<string, string>>({});
     const [oldTableWarning, setOldTableWarning] = useState<boolean>(false);
+    const [showUpgradeSuccess, setShowUpgradeSuccess] = useState<boolean>(false);
     const [availableWebsites, setAvailableWebsites] = useState<Website[]>([]);
     const autoSelectedWebsiteIdRef = useRef<string | null>(null);
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
@@ -71,7 +72,7 @@ export default function SqlEditor() {
         };
     });
     const [period, setPeriod] = useState<string>('current_month');
-    const [urlPath, setUrlPath] = useState('');
+    const [urlPath, setUrlPath] = useState('/');
     const [websiteIdState, setWebsiteIdState] = useState<string>('');
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
 
@@ -1152,6 +1153,59 @@ export default function SqlEditor() {
 
                     {/* Query Input */}
                     <div>
+                        {/* Old Table Warning & Fix */}
+                        {oldTableWarning && (
+                            <Alert variant="warning" className="mb-4">
+                                <Heading level="3" size="small" spacing>
+                                    Utdaterte tabeller oppdaget
+                                </Heading>
+                                <BodyLong>
+                                    Spørringen din bruker gamle tabellnavn. Vi anbefaler å bytte til de nye <code>umami_views</code> tabellene:
+                                    <ul className="list-disc list-inside mt-2 text-sm">
+                                        <li><code>public_website_event</code> &rarr; <code>umami_views.event</code></li>
+                                        <li><code>public_session</code> &rarr; <code>umami_views.session</code></li>
+                                    </ul>
+                                </BodyLong>
+                                <div className="mt-3">
+                                    <Button
+                                        size="small"
+                                        variant="primary"
+                                        onClick={() => {
+                                            // Replace old tables with new views
+                                            let newQuery = query
+                                                .replace(/umami\.public_website_event/gi, 'umami_views.event')
+                                                .replace(/umami\.public_session/gi, 'umami_views.session');
+                                            setQuery(newQuery);
+                                            setOldTableWarning(false);
+                                            setShowUpgradeSuccess(true);
+                                        }}
+                                    >
+                                        Oppdater SQL-spørringen til nye tabeller
+                                    </Button>
+                                </div>
+                            </Alert>
+                        )}
+
+                        {/* Success Message */}
+                        {showUpgradeSuccess && (
+                            <Alert variant="success" className="mb-4 relative">
+                                <Heading level="3" size="small" spacing>
+                                    Tabeller oppgradert!
+                                </Heading>
+                                <BodyLong>
+                                    SQL-spørringen er nå oppdatert til å bruke nye tabeller (<code>umami_views</code>).
+                                </BodyLong>
+                                <button
+                                    onClick={() => setShowUpgradeSuccess(false)}
+                                    className="absolute right-3 top-3 p-1 hover:bg-[var(--ax-bg-neutral-soft)] rounded text-[var(--ax-text-default)]"
+                                    aria-label="Lukk melding"
+                                    type="button"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </Alert>
+                        )}
+
                         <label className="block font-medium mb-2" htmlFor="sql-editor">SQL-spørring</label>
                         <div
                             className="border rounded resize-y overflow-auto"
@@ -1274,37 +1328,7 @@ export default function SqlEditor() {
                 </>
             }
         >
-            {/* Old Table Warning & Fix */}
-            {oldTableWarning && (
-                <Alert variant="warning" className="mb-4">
-                    <Heading level="3" size="small" spacing>
-                        Utdaterte tabeller oppdaget
-                    </Heading>
-                    <BodyLong>
-                        Spørringen din bruker gamle tabellnavn. Vi anbefaler å bytte til de nye <code>umami_views</code> tabellene:
-                        <ul className="list-disc list-inside mt-2 text-sm">
-                            <li><code>public_website_event</code> &rarr; <code>umami_views.event</code></li>
-                            <li><code>public_session</code> &rarr; <code>umami_views.session</code></li>
-                        </ul>
-                    </BodyLong>
-                    <div className="mt-3">
-                        <Button
-                            size="small"
-                            variant="primary"
-                            onClick={() => {
-                                // Replace old tables with new views
-                                let newQuery = query
-                                    .replace(/umami\.public_website_event/gi, 'umami_views.event')
-                                    .replace(/umami\.public_session/gi, 'umami_views.session');
-                                setQuery(newQuery);
-                                setOldTableWarning(false);
-                            }}
-                        >
-                            Oppdater SQL-spørringen til nye tabeller
-                        </Button>
-                    </div>
-                </Alert>
-            )}
+
 
             {/* Error Display */}
             {error && (
