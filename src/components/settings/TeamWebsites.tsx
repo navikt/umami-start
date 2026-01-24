@@ -1,25 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Table, Button, Tag, Search, Switch } from "@navikt/ds-react";
+import { Table, Button, Tag, Search, Select } from "@navikt/ds-react";
 import SporingsModal from "./SporingsModal";
 
-// Add styles at the top of the file
 const styles = {
     container: {
         display: 'flex',
         flexWrap: 'wrap',
         gap: '20px',
         marginBottom: "20px",
-        marginTop: "25px"
-    },
-    searchForm: {
-        width: '250px',
-        '@media (max-width: 768px)': {
-            width: '100%',
-            flexBasis: '100%'
-        }
+        marginTop: "25px",
+        alignItems: 'flex-end'
     }
 } as const;
+
 
 interface Website {
     id: string;
@@ -30,13 +24,38 @@ interface Website {
     createdAt: string;
 }
 
+interface GroupedWebsite {
+    baseName: string;
+    prod?: Website;
+    dev?: Website;
+    domain: string;
+    createdAt: string;
+}
+
+type FilterType = 'all' | 'prod-only' | 'dev-only' | 'both';
+
+const PROD_TEAM_ID = 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b';
+
+function getBaseName(name: string): string {
+    // Remove " - dev" or " - prod" suffix (handling different dash types: hyphen, en-dash, em-dash)
+    // Also handle variations in whitespace
+    return name
+        .replace(/\s*[-–—]\s*(dev|prod)\s*$/i, '')
+        .trim();
+}
+
+function isProd(website: Website): boolean {
+    return website.teamId === PROD_TEAM_ID;
+}
+
 function TeamWebsites() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [data, setData] = useState<Website[] | null>(null);
-    const [filteredData, setFilteredData] = useState<Website[] | null>(null);
+    const [groupedData, setGroupedData] = useState<GroupedWebsite[]>([]);
+    const [filteredData, setFilteredData] = useState<GroupedWebsite[]>([]);
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [selectedItem, setSelectedItem] = useState<{ name: string; id: string }>({ name: '', id: '' });
-    const [showDevApps, setShowDevApps] = useState<boolean>(false);
+    const [selectedItem, setSelectedItem] = useState<{ name: string; id: string; domain?: string; createdAt?: string }>({ name: '', id: '' });
+    const [filter, setFilter] = useState<FilterType>('all');
     const [pendingSporingskode, setPendingSporingskode] = useState<string | null>(null);
     const ref = useRef<HTMLDialogElement>(null);
 
@@ -60,75 +79,119 @@ function TeamWebsites() {
         }
     }, [data, pendingSporingskode]);
 
+    // Fetch data
     useEffect(() => {
-        const baseUrl = ''; // Use relative path for local API
-
-        fetch(`${baseUrl}/api/bigquery/websites`)
+        fetch('/api/bigquery/websites')
             .then(response => response.json())
             .then((response) => {
-                const websitesData = response.data || [];
-
-                // Deduplicate by name to avoid key collisions
-                const uniqueWebsites = websitesData.filter((website: Website, index: number, self: Website[]) =>
-                    index === self.findIndex((w) => w.name === website.name)
-                );
-
-                // Sort by teamId (Dev first, then Prod) and then by name
-                uniqueWebsites.sort((a: Website, b: Website) => {
-                    const teamIdA = a.teamId || '';
-                    const teamIdB = b.teamId || '';
-
-                    if (teamIdA === teamIdB) {
-                        return a.name.localeCompare(b.name);
-                    }
-                    return teamIdB.localeCompare(teamIdA);
-                });
-
-                setData(uniqueWebsites);
-                setFilteredData(uniqueWebsites);
+                const websitesData: Website[] = response.data || [];
+                setData(websitesData);
             })
             .catch(error => console.error("Error fetching data:", error));
     }, []);
 
+    // Group websites by base name
     useEffect(() => {
-        if (data) {
-            const filtered = data.filter((website) => {
-                // Check if search query exactly matches ID - show regardless of environment
-                if (searchQuery !== "") {
-                    const searchLower = searchQuery.toLowerCase();
-                    if (website.id.toLowerCase() === searchLower) {
-                        return true;
-                    }
-                }
+        if (!data) return;
 
-                // Regular environment filtering
-                const teamId = website.teamId || '';
-                const envMatch = showDevApps
-                    ? teamId === 'bceb3300-a2fb-4f73-8cec-7e3673072b30'
-                    : teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b';
+        const groups = new Map<string, GroupedWebsite>();
 
-                // Then apply other search criteria if there's a search query
-                if (searchQuery === "") {
-                    return envMatch;
-                } else {
-                    const searchLower = searchQuery.toLowerCase();
-                    const nameMatches = website.name.toLowerCase().includes(searchLower);
-                    const domainMatches = website.domain && website.domain.toLowerCase().includes(searchLower);
-                    return envMatch && (nameMatches || domainMatches);
+        data.forEach(website => {
+            const baseName = getBaseName(website.name);
+
+            if (!groups.has(baseName)) {
+                groups.set(baseName, {
+                    baseName,
+                    domain: website.domain,
+                    createdAt: website.createdAt
+                });
+            }
+
+            const group = groups.get(baseName)!;
+
+            if (isProd(website)) {
+                group.prod = website;
+                // Prefer prod domain and date
+                group.domain = website.domain;
+                group.createdAt = website.createdAt;
+            } else {
+                group.dev = website;
+                // Only use dev domain/date if no prod
+                if (!group.prod) {
+                    group.domain = website.domain;
+                    group.createdAt = website.createdAt;
                 }
-            });
-            setFilteredData(filtered);
+            }
+        });
+
+        // Sort by base name
+        const sorted = Array.from(groups.values()).sort((a, b) =>
+            a.baseName.localeCompare(b.baseName, 'nb')
+        );
+
+        setGroupedData(sorted);
+    }, [data]);
+
+    // Filter grouped data
+    useEffect(() => {
+        let filtered = groupedData;
+
+        // Apply environment filter
+        switch (filter) {
+            case 'prod-only':
+                filtered = filtered.filter(g => g.prod && !g.dev);
+                break;
+            case 'dev-only':
+                filtered = filtered.filter(g => g.dev && !g.prod);
+                break;
+            case 'both':
+                filtered = filtered.filter(g => g.prod && g.dev);
+                break;
+            // 'all' shows everything
         }
-    }, [searchQuery, data, showDevApps]);
 
-    const handleButtonClick = (name: string, id: string) => {
-        setSelectedItem({ name, id });
+        // Apply search filter
+        if (searchQuery) {
+            const searchLower = searchQuery.toLowerCase();
+            filtered = filtered.filter(g => {
+                // Check if search matches ID exactly
+                if (g.prod?.id.toLowerCase() === searchLower || g.dev?.id.toLowerCase() === searchLower) {
+                    return true;
+                }
+                // Check name and domain
+                const nameMatches = g.baseName.toLowerCase().includes(searchLower);
+                const domainMatches = g.domain?.toLowerCase().includes(searchLower);
+                return nameMatches || domainMatches;
+            });
+        }
+
+        setFilteredData(filtered);
+    }, [groupedData, searchQuery, filter]);
+
+    const handleButtonClick = (name: string, id: string, domain?: string, createdAt?: string) => {
+        setSelectedItem({ name, id, domain, createdAt });
         setSearchParams({ sporingskode: id });
         ref.current?.showModal();
     };
 
-    const handleSearchChange = (value: string) => {
-        setSearchQuery(value);
+    const formatDate = (createdAt: string | { value: string } | null): string => {
+        if (!createdAt) return 'Ukjent dato';
+
+        let dateStr: string;
+        if (typeof createdAt === 'object' && createdAt !== null && 'value' in createdAt) {
+            dateStr = createdAt.value;
+        } else {
+            dateStr = createdAt;
+        }
+
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return 'Ugyldig dato';
+
+        return date.toLocaleDateString('nb-NO', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     };
 
     return (
@@ -139,84 +202,96 @@ function TeamWebsites() {
                         label="Søk alle NAV sine sider"
                         variant="simple"
                         value={searchQuery}
-                        onChange={handleSearchChange}
+                        onChange={setSearchQuery}
                         onClear={() => setSearchQuery("")}
                         size="small"
                     />
                 </form>
-                <Switch
+                <Select
+                    label="Filtrer miljø"
                     size="small"
-                    position="right"
-                    checked={showDevApps}
-                    onChange={(e) => setShowDevApps(e.target.checked)}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as FilterType)}
+                    style={{ width: '180px' }}
                 >
-                    Vis dev-sider
-                </Switch>
+                    <option value="all">Alle</option>
+                    <option value="prod-only">Kun prod</option>
+                    <option value="dev-only">Kun dev</option>
+                </Select>
             </div>
-            <div style={{ overflowX: 'auto' }} >
-                {/* Display the count of websites shown */}
+            <div style={{ overflowX: 'auto' }}>
                 <div className="my-2 text-md text-[var(--ax-text-default)]">
-                    {filteredData?.length || 0} nettsider/apper
+                    {filteredData.length} nettsider/apper
                 </div>
-                <Table zebraStripes={true}>
+                <Table>
                     <Table.Header>
                         <Table.Row>
-                            <Table.HeaderCell scope="col">Umami-prosjekt</Table.HeaderCell>
-                            <Table.HeaderCell scope="col">Miljø</Table.HeaderCell>
-                            <Table.HeaderCell scope="col">Hoveddomene</Table.HeaderCell>
-                            <Table.HeaderCell scope="col">Opprettet</Table.HeaderCell>
-                            <Table.HeaderCell scope="col">Sporingskode</Table.HeaderCell>
+                            <Table.HeaderCell scope="col" style={{ width: '20%' }}>Umami-prosjekt</Table.HeaderCell>
+                            <Table.HeaderCell scope="col" style={{ width: '10%' }}>Miljø</Table.HeaderCell>
+                            <Table.HeaderCell scope="col" style={{ width: '35%' }}>Hoveddomene</Table.HeaderCell>
+                            <Table.HeaderCell scope="col" style={{ width: '15%' }}>Opprettet</Table.HeaderCell>
+                            <Table.HeaderCell scope="col" style={{ width: '20%' }}>Sporingskode</Table.HeaderCell>
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                        {filteredData && filteredData.map(({ id, name, domain, createdAt, teamId }) => (
-                            <Table.Row key={id}>
-                                <Table.HeaderCell scope="row">
-                                    {name}
-                                </Table.HeaderCell>
-                                <Table.DataCell>
-                                    <Tag variant={teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'success' : 'alt1'}>
-                                        {teamId === 'aa113c34-e213-4ed6-a4f0-0aea8a503e6b' ? 'prod' : 'dev'}
-                                    </Tag>
-                                </Table.DataCell>
-                                <Table.DataCell>{domain}</Table.DataCell>
-                                <Table.DataCell>
-                                    {(() => {
-                                        if (!createdAt) return 'Ukjent dato';
+                        {filteredData.map((group) => {
+                            const rowCount = (group.prod ? 1 : 0) + (group.dev ? 1 : 0);
+                            const isLastRowProd = group.prod && !group.dev;
+                            const groupSeparatorStyle = { borderBottom: '2px solid var(--a-border-divider)' };
 
-                                        let dateStr;
-
-                                        // Handle BigQuery timestamp format { value: string }
-                                        if (typeof createdAt === 'object' && createdAt !== null && 'value' in createdAt) {
-                                            dateStr = (createdAt as any).value;
-                                        } else {
-                                            dateStr = createdAt;
-                                        }
-
-                                        const date = new Date(dateStr);
-
-                                        if (isNaN(date.getTime())) {
-                                            return 'Ugyldig dato';
-                                        }
-
-                                        return date.toLocaleDateString('nb-NO', {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric'
-                                        });
-                                    })()}
-                                </Table.DataCell>
-                                <Table.DataCell>
-                                    <Button
-                                        variant="primary"
-                                        size="small"
-                                        onClick={() => handleButtonClick(name, id)}
-                                    >
-                                        Sporingskode
-                                    </Button>
-                                </Table.DataCell>
-                            </Table.Row>
-                        ))}
+                            return (
+                                <React.Fragment key={group.baseName}>
+                                    {group.prod && (
+                                        <Table.Row
+                                            style={!isLastRowProd ? undefined : groupSeparatorStyle}
+                                        >
+                                            <Table.HeaderCell scope="row" rowSpan={rowCount} style={{ verticalAlign: 'middle' }}>
+                                                {group.baseName}
+                                            </Table.HeaderCell>
+                                            <Table.DataCell>
+                                                <Tag variant="success" size="small">prod</Tag>
+                                            </Table.DataCell>
+                                            <Table.DataCell>{group.prod.domain}</Table.DataCell>
+                                            <Table.DataCell>{formatDate(group.prod.createdAt)}</Table.DataCell>
+                                            <Table.DataCell>
+                                                <Button
+                                                    variant="primary"
+                                                    size="small"
+                                                    onClick={() => handleButtonClick(group.prod!.name, group.prod!.id, group.prod!.domain, group.prod!.createdAt)}
+                                                >
+                                                    Sporingskode prod
+                                                </Button>
+                                            </Table.DataCell>
+                                        </Table.Row>
+                                    )}
+                                    {group.dev && (
+                                        <Table.Row
+                                            style={groupSeparatorStyle}
+                                        >
+                                            {!group.prod && (
+                                                <Table.HeaderCell scope="row" style={{ verticalAlign: 'middle' }}>
+                                                    {group.baseName}
+                                                </Table.HeaderCell>
+                                            )}
+                                            <Table.DataCell>
+                                                <Tag variant="alt1" size="small">dev</Tag>
+                                            </Table.DataCell>
+                                            <Table.DataCell>{group.dev.domain}</Table.DataCell>
+                                            <Table.DataCell>{formatDate(group.dev.createdAt)}</Table.DataCell>
+                                            <Table.DataCell>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="small"
+                                                    onClick={() => handleButtonClick(group.dev!.name, group.dev!.id, group.dev!.domain, group.dev!.createdAt)}
+                                                >
+                                                    Sporingskode dev
+                                                </Button>
+                                            </Table.DataCell>
+                                        </Table.Row>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </Table.Body>
                 </Table>
             </div>
@@ -230,4 +305,3 @@ function TeamWebsites() {
 }
 
 export default TeamWebsites;
-

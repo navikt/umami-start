@@ -20,9 +20,29 @@ import {
 } from "../../data/tracking-snippets";
 
 interface SporingsModalProps {
-  selectedItem: { name: string; id: string };
+  selectedItem: { name: string; id: string; domain?: string; createdAt?: string };
   onClose?: () => void;
 }
+
+const formatDate = (createdAt: string | { value: string } | undefined): string => {
+  if (!createdAt) return '';
+
+  let dateStr: string;
+  if (typeof createdAt === 'object' && createdAt !== null && 'value' in createdAt) {
+    dateStr = createdAt.value;
+  } else {
+    dateStr = createdAt;
+  }
+
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+
+  return date.toLocaleDateString('nb-NO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
 
 const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
   ({ selectedItem, onClose }, ref) => (
@@ -34,26 +54,36 @@ const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
       onClose={onClose}
     >
       <Modal.Body>
-        <BodyShort
-          spacing
-          size="medium"
-          style={{
-            margin: "15px 0px 30px 0px",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-          }}
-        >
-          <span>
-            <strong>Nettside-ID:</strong> {selectedItem.id}
-          </span>
-          <CopyButton
-            copyText={selectedItem.id}
-            text="Kopier ID"
-            activeText="Kopiert!"
-            size="small"
-          />
-        </BodyShort>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+          {selectedItem.createdAt && formatDate(selectedItem.createdAt) && (
+            <BodyShort size="medium">
+              <strong>Opprettet:</strong> {formatDate(selectedItem.createdAt)}
+            </BodyShort>
+          )}
+          {selectedItem.domain && (
+            <BodyShort size="medium">
+              <strong>Hoveddomene:</strong> {selectedItem.domain}
+            </BodyShort>
+          )}
+          <BodyShort
+            size="medium"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <span>
+              <strong>Nettside-ID:</strong> {selectedItem.id}
+            </span>
+            <CopyButton
+              copyText={selectedItem.id}
+              text="Kopier ID"
+              activeText="Kopiert!"
+              size="small"
+            />
+          </BodyShort>
+        </div>
 
         <Accordion>
           <Accordion.Item>
