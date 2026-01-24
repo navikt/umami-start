@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { subDays, format } from 'date-fns';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
@@ -57,6 +57,9 @@ export default function SqlEditor() {
     const [hasUrlPathFilter, setHasUrlPathFilter] = useState(false);
     const [hasWebsiteIdPlaceholder, setHasWebsiteIdPlaceholder] = useState(false);
     const [hasNettsidePlaceholder, setHasNettsidePlaceholder] = useState(false);
+    const [hasHardcodedWebsiteId, setHasHardcodedWebsiteId] = useState(false);
+    const [availableWebsites, setAvailableWebsites] = useState<Website[]>([]);
+    const autoSelectedWebsiteIdRef = useRef<string | null>(null);
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
         const now = new Date();
         return {
@@ -239,6 +242,15 @@ export default function SqlEditor() {
         return match?.[1];
     };
 
+    // Replace hardcoded website_id with a new one
+    const replaceHardcodedWebsiteId = (sql: string, newWebsiteId: string): string => {
+        // Replace all occurrences of website_id = 'old-uuid' with website_id = 'new-uuid'
+        return sql.replace(
+            /(website_id\s*=\s*)(['"])([0-9a-f-]{36})\2/gi,
+            `$1$2${newWebsiteId}$2`
+        );
+    };
+
     const websiteId = extractWebsiteId(query);
     // Check for SQL in URL params on mount and init filters
     useEffect(() => {
@@ -290,12 +302,14 @@ export default function SqlEditor() {
         setDateRange({ from, to });
     }, []);
 
-    // Detect metabase placeholders
+    // Detect metabase placeholders and hardcoded website IDs
     useEffect(() => {
         if (!query) {
             setHasMetabaseDateFilter(false);
             setHasUrlPathFilter(false);
             setHasWebsiteIdPlaceholder(false);
+            setHasNettsidePlaceholder(false);
+            setHasHardcodedWebsiteId(false);
             return;
         }
         const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
@@ -310,7 +324,50 @@ export default function SqlEditor() {
 
         const nettsidePattern = /\{\{\s*nettside\s*\}\}/i;
         setHasNettsidePlaceholder(nettsidePattern.test(query));
+
+        // Detect hardcoded website_id = 'uuid' pattern
+        const hardcodedWebsiteIdPattern = /website_id\s*=\s*['"][0-9a-f-]{36}['"]/i;
+        setHasHardcodedWebsiteId(hardcodedWebsiteIdPattern.test(query));
     }, [query]);
+
+    // Fetch available websites for auto-selection
+    useEffect(() => {
+        if (availableWebsites.length > 0) return;
+
+        fetch('/api/bigquery/websites')
+            .then(response => response.json())
+            .then((response: { data: Website[] }) => {
+                const websitesData = response.data || [];
+                setAvailableWebsites(websitesData);
+            })
+            .catch(error => {
+                console.error('Error fetching websites for auto-selection:', error);
+            });
+    }, [availableWebsites.length]);
+
+    // Auto-select website when a hardcoded website_id is detected in the query
+    useEffect(() => {
+        if (!hasHardcodedWebsiteId || availableWebsites.length === 0) return;
+
+        const detectedWebsiteId = extractWebsiteId(query);
+        if (!detectedWebsiteId) return;
+
+        // Don't auto-select if we've already auto-selected this ID or if user has selected something
+        if (autoSelectedWebsiteIdRef.current === detectedWebsiteId) return;
+        if (selectedWebsite?.id === detectedWebsiteId) {
+            autoSelectedWebsiteIdRef.current = detectedWebsiteId;
+            return;
+        }
+
+        // Find the website in the available list
+        const matchingWebsite = availableWebsites.find(w => w.id === detectedWebsiteId);
+        if (matchingWebsite) {
+            console.log('Auto-selecting website from SQL:', matchingWebsite.name);
+            setSelectedWebsite(matchingWebsite);
+            setWebsiteIdState(matchingWebsite.id);
+            autoSelectedWebsiteIdRef.current = detectedWebsiteId;
+        }
+    }, [hasHardcodedWebsiteId, query, availableWebsites, selectedWebsite?.id]);
 
     const estimateCost = async () => {
         setEstimating(true);
@@ -813,20 +870,33 @@ export default function SqlEditor() {
             filters={
                 <>
                     {/* Metabase-lignende filterkontroller (auto når placeholders finnes) */}
-                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
+                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder || hasHardcodedWebsiteId) && (
                         <>
                             <Heading size="xsmall" level="3" style={{ paddingBottom: '8px' }}>Filtre</Heading>
                             <div className="flex flex-col gap-4 mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded" style={{ backgroundColor: 'var(--ax-bg-default, #fff)' }}>
-                                {(hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
+                                {(hasWebsiteIdPlaceholder || hasNettsidePlaceholder || hasHardcodedWebsiteId) && (
                                     <div className="flex-1 min-w-[260px]">
                                         <WebsitePicker
                                             selectedWebsite={selectedWebsite}
                                             onWebsiteChange={(website) => {
                                                 setSelectedWebsite(website);
                                                 setWebsiteIdState(website?.id || '');
-                                                setQuery(prev => ensureWebsitePlaceholder(prev));
+
+                                                // Only modify the query if user is switching to a DIFFERENT website
+                                                // Don't modify if it's the same website that's already in the SQL
+                                                const currentWebsiteIdInSql = extractWebsiteId(query);
+                                                const isNewWebsite = website?.id && website.id !== currentWebsiteIdInSql;
+
+                                                if (hasHardcodedWebsiteId && isNewWebsite) {
+                                                    // Replace the hardcoded website_id with the new one
+                                                    setQuery(prev => replaceHardcodedWebsiteId(prev, website.id));
+                                                } else if (!hasHardcodedWebsiteId && !hasNettsidePlaceholder) {
+                                                    setQuery(prev => ensureWebsitePlaceholder(prev));
+                                                }
                                             }}
                                             variant="minimal"
+                                            disableAutoRestore={hasHardcodedWebsiteId}
+                                            customLabel={hasHardcodedWebsiteId ? "Nettside eller app (overskriver SQL-koden)" : "Nettside eller app"}
                                         />
                                     </div>
                                 )}

@@ -22,6 +22,8 @@ interface WebsitePickerProps {
   disableAutoEvents?: boolean; // Add flag to disable auto-fetching of events
   requestLoadEvents?: boolean; // Add flag to manually trigger event loading
   onLoadingChange?: (isLoading: boolean) => void; // Add callback for loading state
+  disableAutoRestore?: boolean; // Disable auto-restore from localStorage/URL (for SQL editor)
+  customLabel?: string; // Custom label for the combobox
 }
 
 interface EventProperty {
@@ -101,7 +103,9 @@ const WebsitePicker = ({
   variant = 'default',
   disableAutoEvents = false,
   requestLoadEvents = false,
-  onLoadingChange
+  onLoadingChange,
+  disableAutoRestore = false,
+  customLabel
 }: WebsitePickerProps) => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
@@ -415,6 +419,12 @@ const WebsitePicker = ({
 
   // On mount, try to restore from localStorage
   useEffect(() => {
+    // Skip auto-restore if disabled (e.g., for SQL editor where query has its own website ID)
+    if (disableAutoRestore) {
+      initialUrlChecked.current = true;
+      return;
+    }
+
     if (initialUrlChecked.current) return;
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -435,10 +445,13 @@ const WebsitePicker = ({
     }
 
     initialUrlChecked.current = true;
-  }, [selectedWebsite, handleWebsiteChange]);
+  }, [selectedWebsite, handleWebsiteChange, disableAutoRestore]);
 
   // Check for website ID in URL after websites are loaded
   useEffect(() => {
+    // Skip if auto-restore is disabled
+    if (disableAutoRestore) return;
+
     if (!websitesLoaded.current || websites.length === 0) return;
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -451,7 +464,7 @@ const WebsitePicker = ({
         handleWebsiteChange(website);
       }
     }
-  }, [websites, handleWebsiteChange]);
+  }, [websites, handleWebsiteChange, disableAutoRestore]);
 
   // Fetch events when a website is selected (only if onEventsLoad callback is provided)
   useEffect(() => {
@@ -555,7 +568,7 @@ const WebsitePicker = ({
 
         <UNSAFE_Combobox
           size="small"
-          label="Nettside eller app"
+          label={customLabel || "Nettside eller app"}
           options={sortedWebsites.map(website => ({
             label: website.name,
             value: website.name,
