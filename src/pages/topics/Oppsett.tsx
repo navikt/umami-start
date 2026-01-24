@@ -13,36 +13,59 @@ function Oppsett() {
             />
 
             <Page.Block width="xl" gutters className="pb-16 px-4">
+                {/* Veiledninger Section */}
                 <div style={{ marginTop: "38px", marginBottom: "32px" }}>
-                    <Heading as="h2" size="medium">Utviklerverktøy og veiledning</Heading>
+                    <Heading as="h2" size="medium">Veiledninger</Heading>
                 </div>
 
-                {/* Kom i gang CTA - below title, above cards */}
                 <div style={{
-                    border: '1px solid var(--ax-border-neutral-subtle)',
-                    marginBottom: '40px',
-                    padding: '40px',
-                    backgroundColor: 'var(--ax-bg-default)',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '24px'
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '16px',
+                    marginBottom: '48px'
                 }}>
-                    <div>
-                        <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
-                            Kom i gang med Umami
-                        </Heading>
-                        <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
-                            Følg kom-i-gang-guiden for å lære hvordan du setter opp Umami for din nettside eller app.
-                        </p>
-                    </div>
-                    <Link
-                        href="/komigang"
-                        className="primary-button"
-                    >
-                        Gå til kom-i-gang-guiden
-                    </Link>
+                    {[
+                        { href: '/komigang', label: 'Kom i gang', description: 'Sett opp Umami for din nettside' },
+                        { href: '/taksonomi', label: 'Taksonomi', description: 'Navngi hendelser og egenskaper' },
+                        { href: '/metabase', label: 'Metabase-guide', description: 'Lag dashbord i Metabase' }
+                    ].map((article) => (
+                        <Link
+                            key={article.href}
+                            href={article.href}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '20px 24px',
+                                backgroundColor: 'var(--ax-bg-default)',
+                                borderRadius: '12px',
+                                textDecoration: 'none',
+                                color: 'var(--ax-text-default)',
+                                border: '1px solid var(--ax-border-neutral-subtle)',
+                                transition: 'all 0.2s ease',
+                                fontWeight: 500
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
+                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
+                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
+                            }}
+                        >
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{article.label}</div>
+                                <div style={{ fontSize: '14px', color: 'var(--ax-text-subtle)', fontWeight: 400 }}>{article.description}</div>
+                            </div>
+                            <span style={{ color: 'var(--ax-bg-accent-strong)', fontSize: '18px', marginLeft: '16px' }}>→</span>
+                        </Link>
+                    ))}
+                </div>
+
+                {/* Utviklerverktøy Section */}
+                <div style={{ marginBottom: "32px" }}>
+                    <Heading as="h2" size="medium">Utviklerverktøy</Heading>
                 </div>
 
                 {/* 3-Column Developer Tools Cards */}

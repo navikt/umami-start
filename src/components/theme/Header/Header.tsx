@@ -1,6 +1,5 @@
 import {
   MenuHamburgerIcon,
-  ComponentIcon,
   CogIcon,
   BarChartIcon
 } from "@navikt/aksel-icons";
@@ -74,14 +73,7 @@ export default function Header({ theme }: HeaderProps) {
                     <BarChartIcon aria-hidden fontSize="1.5rem" />
                     <span className="whitespace-nowrap">Dashboard</span>
                   </Dropdown.Menu.List.Item>
-                  <Dropdown.Menu.List.Item
-                    as={Link}
-                    href="/taksonomi"
-                    className="no-underline"
-                  >
-                    <ComponentIcon aria-hidden fontSize="1.5rem" />
-                    <span className="whitespace-nowrap">Taksonomi</span>
-                  </Dropdown.Menu.List.Item>
+
                   <Dropdown.Menu.List.Item
                     as={Link}
                     href="/oppsett"
@@ -109,17 +101,7 @@ export default function Header({ theme }: HeaderProps) {
                   <span className="whitespace-nowrap">Dashboard</span>
                 </div>
               </Button>
-              <Button
-                as={Link}
-                variant="tertiary"
-                href="/taksonomi"
-                className={linkButton}
-              >
-                <div className="flex items-center gap-2">
-                  <ComponentIcon aria-hidden fontSize="1.5rem" />
-                  <span className="whitespace-nowrap">Taksonomi</span>
-                </div>
-              </Button>
+
               <Button
                 as={Link}
                 variant="tertiary"

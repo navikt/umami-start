@@ -36,6 +36,12 @@ export const developerTools = [
         href: '/sql',
         label: 'SQL-spørringer',
         description: 'Kjør egne SQL-spørringer'
+    },
+    {
+        id: 'taksonomi',
+        href: '/taksonomi',
+        label: 'Taksonomi',
+        description: 'Oversikt over hendelser og egenskaper'
     }
 ];
 
