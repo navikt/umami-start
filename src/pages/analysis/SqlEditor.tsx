@@ -3,13 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { subDays, format } from 'date-fns';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import ChartLayout from '../../components/analysis/ChartLayout';
-import { Button, Alert, Heading, BodyLong, DatePicker, TextField, Label, Link } from '@navikt/ds-react';
+import { Button, Alert, Heading, BodyLong, TextField, Link } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon, Copy } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
 import { translateValue } from '../../lib/translations';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 
 type Website = {
     id: string;
@@ -56,10 +57,14 @@ export default function SqlEditor() {
     const [hasUrlPathFilter, setHasUrlPathFilter] = useState(false);
     const [hasWebsiteIdPlaceholder, setHasWebsiteIdPlaceholder] = useState(false);
     const [hasNettsidePlaceholder, setHasNettsidePlaceholder] = useState(false);
-    const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-        from: subDays(new Date(), 30),
-        to: new Date(),
+    const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
+        const now = new Date();
+        return {
+            from: new Date(now.getFullYear(), now.getMonth(), 1),
+            to: now,
+        };
     });
+    const [period, setPeriod] = useState<string>('current_month');
     const [urlPath, setUrlPath] = useState('');
     const [websiteIdState, setWebsiteIdState] = useState<string>('');
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -772,62 +777,69 @@ export default function SqlEditor() {
                 <>
                     {/* Metabase-lignende filterkontroller (auto når placeholders finnes) */}
                     {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
-                        <div className="flex flex-wrap gap-4 mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded bg-[var(--ax-bg-neutral-soft)]">
-                            {(hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
-                                <div className="flex-1 min-w-[260px]">
-                                    <WebsitePicker
-                                        selectedWebsite={selectedWebsite}
-                                        onWebsiteChange={(website) => {
-                                            setSelectedWebsite(website);
-                                            setWebsiteIdState(website?.id || '');
-                                            setQuery(prev => ensureWebsitePlaceholder(prev));
-                                        }}
-                                        variant="minimal"
-                                    />
-                                </div>
-                            )}
+                        <>
+                            <Heading size="xsmall" level="3" style={{ paddingBottom: '8px' }}>Filtre</Heading>
+                            <div className="flex flex-col gap-4 mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded" style={{ backgroundColor: 'var(--ax-bg-default, #fff)' }}>
+                                {(hasWebsiteIdPlaceholder || hasNettsidePlaceholder) && (
+                                    <div className="flex-1 min-w-[260px]">
+                                        <WebsitePicker
+                                            selectedWebsite={selectedWebsite}
+                                            onWebsiteChange={(website) => {
+                                                setSelectedWebsite(website);
+                                                setWebsiteIdState(website?.id || '');
+                                                setQuery(prev => ensureWebsitePlaceholder(prev));
+                                            }}
+                                            variant="minimal"
+                                        />
+                                    </div>
+                                )}
 
-                            {hasMetabaseDateFilter && (
-                                <div>
-                                    <Label className="mb-1 block">Datoperiode</Label>
-                                    <div className="h-2" aria-hidden="true" />
-                                    <DatePicker
-                                        mode="range"
-                                        selected={{ from: dateRange.from, to: dateRange.to }}
-                                        onSelect={(range) => {
-                                            if (range) {
-                                                setDateRange({ from: range.from, to: range.to });
-                                            }
-                                        }}
-                                    >
-                                        <div className="flex gap-2">
-                                            <DatePicker.Input
-                                                label="Fra dato"
-                                                size="small"
-                                                value={dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''}
-                                            />
-                                            <DatePicker.Input
-                                                label="Til dato"
-                                                size="small"
-                                                value={dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : ''}
-                                            />
-                                        </div>
-                                    </DatePicker>
-                                </div>
-                            )}
+                                {hasMetabaseDateFilter && (
+                                    <div className="flex-1 min-w-[260px]">
+                                        <PeriodPicker
+                                            period={period}
+                                            onPeriodChange={(newPeriod) => {
+                                                setPeriod(newPeriod);
+                                                const now = new Date();
+                                                if (newPeriod === 'today') {
+                                                    setDateRange({
+                                                        from: now,
+                                                        to: now
+                                                    });
+                                                } else if (newPeriod === 'current_month') {
+                                                    setDateRange({
+                                                        from: new Date(now.getFullYear(), now.getMonth(), 1),
+                                                        to: now
+                                                    });
+                                                } else if (newPeriod === 'last_month') {
+                                                    setDateRange({
+                                                        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+                                                        to: new Date(now.getFullYear(), now.getMonth(), 0)
+                                                    });
+                                                }
+                                            }}
+                                            startDate={dateRange.from}
+                                            onStartDateChange={(date) => setDateRange(prev => ({ ...prev, from: date }))}
+                                            endDate={dateRange.to}
+                                            onEndDateChange={(date) => setDateRange(prev => ({ ...prev, to: date }))}
+                                            showToday={true}
+                                        />
+                                    </div>
+                                )}
 
-                            {hasUrlPathFilter && (
-                                <div className="flex-1 min-w-[240px]">
-                                    <TextField
-                                        label="URL-sti"
-                                        size="small"
-                                        description="F.eks. / for forsiden"
-                                        value={urlPath}
-                                        onChange={(e) => setUrlPath(e.target.value)}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                                {hasUrlPathFilter && (
+                                    <div className="flex-1 min-w-[240px]">
+                                        <TextField
+                                            label="URL-sti"
+                                            size="small"
+                                            description="F.eks. / for forsiden"
+                                            value={urlPath}
+                                            onChange={(e) => setUrlPath(e.target.value)}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
 
                     <ReadMore header="Tilgjengelige tabeller" size="small" className="mt-4">
