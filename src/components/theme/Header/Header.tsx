@@ -27,7 +27,7 @@ export default function Header({ theme }: HeaderProps) {
   }, []);
 
   const linkButton =
-    "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " + (theme === "dark" ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]" : "!text-white hover:!text-white");
+    "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " + (theme === "dark" ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]" : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
   return (
     <div style={{ background: theme === "dark" ? "var(--ax-bg-default)" : "rgba(19,17,54)" }} className="border-b border-[var(--ax-border-neutral-subtle)]">
       <header className="flex py-1 z-10 items-center max-w-[80rem] m-auto justify-between px-4 md:px-6">
@@ -51,7 +51,7 @@ export default function Header({ theme }: HeaderProps) {
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className={`text-2xl whitespace-nowrap ${theme === "dark" ? "text-[var(--ax-text-default)]" : "text-white"}`}>
+              <span className="text-2xl whitespace-nowrap">
                 Umami
               </span>
             </div>
