@@ -381,6 +381,40 @@ export default function SqlEditor() {
         }
     };
 
+    // Helper to temporarily replace Metabase placeholders with valid SQL for formatting/validation
+    const sanitizePlaceholders = (sql: string): { sanitized: string; placeholders: Map<string, string> } => {
+        const placeholders = new Map<string, string>();
+        let sanitized = sql;
+        let counter = 0;
+
+        // Replace [[...]] optional blocks with a unique token
+        sanitized = sanitized.replace(/\[\[[^\]]*\]\]/g, (match) => {
+            const token = `__METABASE_OPT_${counter++}__`;
+            placeholders.set(token, match);
+            return `/* ${token} */`;
+        });
+
+        // Replace {{...}} variable placeholders with a unique token
+        sanitized = sanitized.replace(/\{\{[^}]+\}\}/g, (match) => {
+            const token = `__METABASE_VAR_${counter++}__`;
+            placeholders.set(token, match);
+            return `'${token}'`;
+        });
+
+        return { sanitized, placeholders };
+    };
+
+    // Helper to restore Metabase placeholders after formatting
+    const restorePlaceholders = (sql: string, placeholders: Map<string, string>): string => {
+        let restored = sql;
+        placeholders.forEach((original, token) => {
+            // Handle both comment-wrapped optional blocks and quoted variables
+            restored = restored.replace(new RegExp(`/\\*\\s*${token}\\s*\\*/`, 'g'), original);
+            restored = restored.replace(new RegExp(`'${token}'`, 'g'), original);
+        });
+        return restored;
+    };
+
     // Simple SQL validation: check for empty input and basic SELECT/statement
     const validateSQL = () => {
         // Update URL with current query
@@ -399,9 +433,10 @@ export default function SqlEditor() {
             setShowValidation(true);
             return false;
         }
-        // Try formatting to catch syntax errors
+        // Try formatting to catch syntax errors (with placeholder sanitization)
         try {
-            sqlFormatter.format(query);
+            const { sanitized } = sanitizePlaceholders(query);
+            sqlFormatter.format(sanitized);
             setValidateError('SQL er gyldig!');
             setShowValidation(true);
             return true;
@@ -418,8 +453,10 @@ export default function SqlEditor() {
         window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
 
         try {
-            const formatted = sqlFormatter.format(query);
-            setQuery(formatted);
+            const { sanitized, placeholders } = sanitizePlaceholders(query);
+            const formatted = sqlFormatter.format(sanitized);
+            const restored = restorePlaceholders(formatted, placeholders);
+            setQuery(restored);
             setFormatSuccess(true);
             setTimeout(() => setFormatSuccess(false), 2000);
         } catch (e) {
