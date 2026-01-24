@@ -58,6 +58,8 @@ export default function SqlEditor() {
     const [hasWebsiteIdPlaceholder, setHasWebsiteIdPlaceholder] = useState(false);
     const [hasNettsidePlaceholder, setHasNettsidePlaceholder] = useState(false);
     const [hasHardcodedWebsiteId, setHasHardcodedWebsiteId] = useState(false);
+    const [customVariables, setCustomVariables] = useState<string[]>([]);
+    const [customVariableValues, setCustomVariableValues] = useState<Record<string, string>>({});
     const [availableWebsites, setAvailableWebsites] = useState<Website[]>([]);
     const autoSelectedWebsiteIdRef = useRef<string | null>(null);
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
@@ -179,6 +181,18 @@ export default function SqlEditor() {
                 processedSql = processedSql.replace(eventFilter, `${eventFilter} AND ${sessionPredicate}`);
             } else if (/WHERE/i.test(processedSql)) {
                 processedSql = processedSql.replace(/WHERE/i, (match) => `${match} ${sessionPredicate} AND`);
+            }
+        }
+
+        // Custom variable substitution {{variable_name}}
+        for (const varName of customVariables) {
+            const value = customVariableValues[varName];
+            if (value !== undefined && value !== '') {
+                const varRegex = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'gi');
+                // If the value looks like a number, don't add quotes
+                const isNumeric = /^-?\d+\.?\d*$/.test(value);
+                const replacement = isNumeric ? value : `'${value.replace(/'/g, "''")}'`;
+                processedSql = processedSql.replace(varRegex, replacement);
             }
         }
 
@@ -337,6 +351,16 @@ export default function SqlEditor() {
         // Detect hardcoded website_id = 'uuid' pattern
         const hardcodedWebsiteIdPattern = /website_id\s*=\s*['"][0-9a-f-]{36}['"]/i;
         setHasHardcodedWebsiteId(hardcodedWebsiteIdPattern.test(query));
+
+        // Detect custom {{variable}} placeholders (excluding known ones)
+        const knownVariables = ['website_id', 'nettside', 'url_sti', 'url_path', 'created_at'];
+        const allVariablesRegex = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/gi;
+        const matches = [...query.matchAll(allVariablesRegex)];
+        const detectedVars = matches
+            .map(m => m[1])
+            .filter(v => !knownVariables.includes(v.toLowerCase()))
+            .filter((v, i, arr) => arr.indexOf(v) === i); // unique
+        setCustomVariables(detectedVars);
     }, [query]);
 
     // Fetch available websites for auto-selection
@@ -883,7 +907,7 @@ export default function SqlEditor() {
             filters={
                 <>
                     {/* Metabase-lignende filterkontroller (auto når placeholders finnes) */}
-                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder || hasHardcodedWebsiteId) && (
+                    {(hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder || hasHardcodedWebsiteId || customVariables.length > 0) && (
                         <>
                             <Heading size="xsmall" level="3" style={{ paddingBottom: '8px' }}>Filtre</Heading>
                             <div className="flex flex-col gap-4 mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded" style={{ backgroundColor: 'var(--ax-bg-default, #fff)' }}>
@@ -958,6 +982,21 @@ export default function SqlEditor() {
                                         />
                                     </div>
                                 )}
+
+                                {/* Custom variable inputs */}
+                                {customVariables.map((varName) => (
+                                    <div key={varName} className="flex-1 min-w-[200px]">
+                                        <TextField
+                                            label={varName.replace(/_/g, ' ')}
+                                            size="small"
+                                            value={customVariableValues[varName] || ''}
+                                            onChange={(e) => setCustomVariableValues(prev => ({
+                                                ...prev,
+                                                [varName]: e.target.value
+                                            }))}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         </>
                     )}
