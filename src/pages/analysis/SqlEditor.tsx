@@ -62,6 +62,7 @@ export default function SqlEditor() {
     const [customVariableValues, setCustomVariableValues] = useState<Record<string, string>>({});
     const [oldTableWarning, setOldTableWarning] = useState<boolean>(false);
     const [showUpgradeSuccess, setShowUpgradeSuccess] = useState<boolean>(false);
+    const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [availableWebsites, setAvailableWebsites] = useState<Website[]>([]);
     const autoSelectedWebsiteIdRef = useRef<string | null>(null);
     const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
@@ -467,6 +468,7 @@ export default function SqlEditor() {
         setLoading(true);
         setError(null);
         setResult(null);
+        setHasAttemptedFetch(true);
 
         // Update URL with current query
         const encodedSql = encodeURIComponent(query);
@@ -1380,63 +1382,67 @@ export default function SqlEditor() {
             )}
 
             {/* Results Display Area */}
-            <ResultsPanel
-                result={result}
-                loading={loading}
-                error={error}
-                queryStats={result?.queryStats || estimate}
-                lastAction={null}
-                showLoadingMessage={estimating || loading}
-                executeQuery={executeQuery}
-                handleRetry={executeQuery}
-                prepareLineChartData={prepareLineChartData}
-                prepareBarChartData={prepareBarChartData}
-                preparePieChartData={preparePieChartData}
-                sql={lastProcessedSql || query}
-                showSqlCode={true}
-                showEditButton={true}
-                showCost={true}
-                websiteId={websiteId}
-            />
+            {hasAttemptedFetch && (
+                <>
+                    <ResultsPanel
+                        result={result}
+                        loading={loading}
+                        error={error}
+                        queryStats={result?.queryStats || estimate}
+                        lastAction={null}
+                        showLoadingMessage={estimating || loading}
+                        executeQuery={executeQuery}
+                        handleRetry={executeQuery}
+                        prepareLineChartData={prepareLineChartData}
+                        prepareBarChartData={prepareBarChartData}
+                        preparePieChartData={preparePieChartData}
+                        sql={lastProcessedSql || query}
+                        showSqlCode={true}
+                        showEditButton={true}
+                        showCost={true}
+                        websiteId={websiteId}
+                    />
 
-            {/* JSON Output - below results */}
-            {result && (
-                <ReadMore header="JSON" size="small" className="mt-6">
-                    <pre className="bg-[var(--ax-bg-neutral-soft)] border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
-                </ReadMore>
-            )}
+                    {/* JSON Output - below results */}
+                    {result && (
+                        <ReadMore header="JSON" size="small" className="mt-6">
+                            <pre className="bg-[var(--ax-bg-neutral-soft)] border border-gray-300 rounded p-3 text-xs font-mono whitespace-pre-wrap" style={{ margin: 0 }}>{truncateJSON(result)}</pre>
+                        </ReadMore>
+                    )}
 
-            {/* Metabase quick actions */}
-            <div className="mt-6 pt-2 space-y-1.5">
-                <Heading level="3" size="xsmall">Legg til i Metabase</Heading>
-                <div className="h-1" aria-hidden="true" />
-                <div className="flex flex-col items-start gap-2">
-                    <Button
-                        size="small"
-                        variant="secondary"
-                        type="button"
-                        onClick={() => {
-                            const metabaseSql = applyWebsiteIdOnly(query); // only hardcode website_id; keep other placeholders
-                            navigator.clipboard.writeText(metabaseSql);
-                            setCopiedMetabase(true);
-                            setTimeout(() => setCopiedMetabase(false), 2000);
-                        }}
-                        icon={<Copy size={16} />}
-                    >
-                        {copiedMetabase ? 'Kopiert!' : 'Kopier spørring'}
-                    </Button>
-                    <div className="pl-[2px]">
-                        <Link
-                            href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm"
-                        >
-                            Åpne Metabase
-                        </Link>
+                    {/* Metabase quick actions */}
+                    <div className="mt-6 pt-2 space-y-1.5">
+                        <Heading level="3" size="xsmall">Legg til i Metabase</Heading>
+                        <div className="h-1" aria-hidden="true" />
+                        <div className="flex flex-col items-start gap-2">
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                type="button"
+                                onClick={() => {
+                                    const metabaseSql = applyWebsiteIdOnly(query); // only hardcode website_id; keep other placeholders
+                                    navigator.clipboard.writeText(metabaseSql);
+                                    setCopiedMetabase(true);
+                                    setTimeout(() => setCopiedMetabase(false), 2000);
+                                }}
+                                icon={<Copy size={16} />}
+                            >
+                                {copiedMetabase ? 'Kopiert!' : 'Kopier spørring'}
+                            </Button>
+                            <div className="pl-[2px]">
+                                <Link
+                                    href="https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3MzEsInR5cGUiOiJuYXRpdmUiLCJuYXRpdmUiOnsicXVlcnkiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX19LCJkaXNwbGF5IjoidGFibGUiLCJ2aXN1YWxpemF0aW9uX3NldHRpbmdzIjp7fSwidHlwZSI6InF1ZXN0aW9uIn0="
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-sm"
+                                >
+                                    Åpne Metabase
+                                </Link>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </>
+            )}
         </ChartLayout>
     );
 }
