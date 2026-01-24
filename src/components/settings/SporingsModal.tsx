@@ -21,15 +21,17 @@ import {
 
 interface SporingsModalProps {
   selectedItem: { name: string; id: string };
+  onClose?: () => void;
 }
 
 const SporingsModal = forwardRef<HTMLDialogElement, SporingsModalProps>(
-  ({ selectedItem }, ref) => (
+  ({ selectedItem, onClose }, ref) => (
     <Modal
       ref={ref}
       header={{ heading: "Sporingskode for " + selectedItem.name }}
       width="medium"
       className="sporings-modal"
+      onClose={onClose}
     >
       <Modal.Body>
         <BodyShort

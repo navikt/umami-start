@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Table, Button, Tag, Search, Switch } from "@navikt/ds-react";
 import SporingsModal from "./SporingsModal";
 
@@ -30,13 +31,34 @@ interface Website {
 }
 
 function TeamWebsites() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [data, setData] = useState<Website[] | null>(null);
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedItem, setSelectedItem] = useState<{ name: string; id: string }>({ name: '', id: '' });
     const [showDevApps, setShowDevApps] = useState<boolean>(false);
+    const [pendingSporingskode, setPendingSporingskode] = useState<string | null>(null);
     const ref = useRef<HTMLDialogElement>(null);
 
+    // Check for sporingskode URL param on mount
+    useEffect(() => {
+        const sporingskodeId = searchParams.get('sporingskode');
+        if (sporingskodeId) {
+            setPendingSporingskode(sporingskodeId);
+        }
+    }, []);
+
+    // Open modal when we have both data and a pending sporingskode
+    useEffect(() => {
+        if (data && pendingSporingskode) {
+            const website = data.find(w => w.id === pendingSporingskode);
+            if (website) {
+                setSelectedItem({ name: website.name, id: website.id });
+                ref.current?.showModal();
+            }
+            setPendingSporingskode(null);
+        }
+    }, [data, pendingSporingskode]);
 
     useEffect(() => {
         const baseUrl = ''; // Use relative path for local API
@@ -101,6 +123,7 @@ function TeamWebsites() {
 
     const handleButtonClick = (name: string, id: string) => {
         setSelectedItem({ name, id });
+        setSearchParams({ sporingskode: id });
         ref.current?.showModal();
     };
 
@@ -197,7 +220,11 @@ function TeamWebsites() {
                     </Table.Body>
                 </Table>
             </div>
-            <SporingsModal ref={ref} selectedItem={selectedItem} />
+            <SporingsModal
+                ref={ref}
+                selectedItem={selectedItem}
+                onClose={() => setSearchParams({})}
+            />
         </>
     );
 }
