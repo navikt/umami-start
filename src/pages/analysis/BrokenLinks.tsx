@@ -13,7 +13,7 @@ interface BrokenLink {
     checking_now: boolean;
     last_checked: string;
     first_detected: string;
-    is_confirmed?: boolean;
+    pages: number;
 }
 
 interface PageWithBrokenLinks {
@@ -263,7 +263,8 @@ const BrokenLinks = () => {
 
             const brokenLinksData = await brokenLinksResponse.json();
             if (brokenLinksData && brokenLinksData.items) {
-                setBrokenLinks(brokenLinksData.items);
+                const sortedLinks = (brokenLinksData.items as BrokenLink[]).sort((a, b) => b.pages - a.pages);
+                setBrokenLinks(sortedLinks);
             }
 
             // Fetch Pages with Broken Links
@@ -403,7 +404,7 @@ const BrokenLinks = () => {
                                             <Table.Row>
                                                 <Table.HeaderCell />
                                                 <Table.HeaderCell>URL</Table.HeaderCell>
-                                                <Table.HeaderCell>Bekreftet</Table.HeaderCell>
+                                                <Table.HeaderCell>Antall sider</Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
@@ -419,7 +420,7 @@ const BrokenLinks = () => {
                                                         </DsLink>
                                                     </Table.HeaderCell>
                                                     <Table.DataCell>
-                                                        {link.is_confirmed ? 'Ja' : 'Nei'}
+                                                        {link.pages}
                                                     </Table.DataCell>
                                                 </Table.ExpandableRow>
                                             ))}
