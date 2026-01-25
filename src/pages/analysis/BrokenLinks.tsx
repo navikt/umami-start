@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Alert, Loader, Link as DsLink, Tabs } from '@navikt/ds-react';
+import { Table, Alert, Loader, Link as DsLink, Tabs, HelpText } from '@navikt/ds-react';
 import { ExternalLink } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
+import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
@@ -27,11 +28,21 @@ interface PageBrokenLink {
     link_text?: string;
 }
 
+interface CrawlData {
+    last_crawl: string;
+    next_crawl: string;
+    is_crawl_enabled: boolean;
+    is_crawl_running: boolean;
+    permission: string;
+}
+
 const BrokenLinks = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [brokenLinks, setBrokenLinks] = useState<BrokenLink[]>([]);
     const [pagesWithBrokenLinks, setPagesWithBrokenLinks] = useState<PageWithBrokenLinks[]>([]);
     const [siteimproveId, setSiteimproveId] = useState<string | null>(null);
+    const [actionModalUrl, setActionModalUrl] = useState<string | null>(null);
+    const [crawlInfo, setCrawlInfo] = useState<CrawlData | null>(null);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -242,6 +253,7 @@ const BrokenLinks = () => {
         setError(null);
         setBrokenLinks([]);
         setPagesWithBrokenLinks([]);
+        setCrawlInfo(null);
 
         try {
             const baseUrl = getBaseUrl({
@@ -277,6 +289,16 @@ const BrokenLinks = () => {
                     const sortedPages = (pagesData.items as PageWithBrokenLinks[]).sort((a, b) => b.broken_links - a.broken_links);
                     setPagesWithBrokenLinks(sortedPages);
                 }
+            }
+
+            // Fetch Content Crawl Info for Last Scan
+            const crawlUrl = `${baseUrl}/siteimprove/sites/${siteimproveId}/content/crawl`;
+            const crawlResponse = await fetch(crawlUrl, { credentials });
+
+            if (crawlResponse.ok) {
+                const crawlData = await crawlResponse.json();
+                console.log('Siteimprove Crawl Data:', crawlData);
+                setCrawlInfo(crawlData);
             }
 
         } catch (err: any) {
@@ -350,6 +372,40 @@ const BrokenLinks = () => {
                                 {pagesWithBrokenLinks.length}
                             </div>
                         </div>
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Siste scan</div>
+                            <div className="flex items-center justify-between">
+                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                    {crawlInfo?.last_crawl ? new Date(crawlInfo.last_crawl).toLocaleDateString('nb-NO') : '-'}
+                                </div>
+                                <HelpText title="Status for scan">
+                                    <div className="flex flex-col gap-2 min-w-[200px]">
+                                        <div>
+                                            <div className="font-semibold text-sm">Sist sjekket</div>
+                                            <div className="text-sm">
+                                                {crawlInfo?.last_crawl ? new Date(crawlInfo.last_crawl).toLocaleString('nb-NO') : '-'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="font-semibold text-sm">Neste planlagte scan</div>
+                                            <div className="text-sm">
+                                                {crawlInfo?.next_crawl ? new Date(crawlInfo.next_crawl).toLocaleString('nb-NO') : '-'}
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <div className="font-semibold text-sm">Scan aktivert</div>
+                                                <div className="text-sm">{crawlInfo?.is_crawl_enabled ? 'Ja' : 'Nei'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-sm">Kjører nå</div>
+                                                <div className="text-sm">{crawlInfo?.is_crawl_running ? 'Ja' : 'Nei'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </HelpText>
+                            </div>
+                        </div>
                     </div>
 
                     <Tabs value={activeTab} onChange={setActiveTab}>
@@ -368,7 +424,7 @@ const BrokenLinks = () => {
                                             <Table.Row>
                                                 <Table.HeaderCell />
                                                 <Table.HeaderCell>URL</Table.HeaderCell>
-                                                <Table.HeaderCell>Antall ødelagte lenker</Table.HeaderCell>
+                                                <Table.HeaderCell>Ødelagte</Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
@@ -379,7 +435,14 @@ const BrokenLinks = () => {
                                                     togglePlacement="left"
                                                 >
                                                     <Table.HeaderCell scope="row">
-                                                        <DsLink href={page.url} target="_blank" className="break-all flex items-center gap-1">
+                                                        <DsLink
+                                                            href="#"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                setActionModalUrl(getUrlPath(page.url));
+                                                            }}
+                                                            className="break-all flex items-center gap-1"
+                                                        >
                                                             {getUrlPath(page.url)} <ExternalLink size={14} />
                                                         </DsLink>
                                                     </Table.HeaderCell>
@@ -404,7 +467,7 @@ const BrokenLinks = () => {
                                             <Table.Row>
                                                 <Table.HeaderCell />
                                                 <Table.HeaderCell>URL</Table.HeaderCell>
-                                                <Table.HeaderCell>Antall sider</Table.HeaderCell>
+                                                <Table.HeaderCell>Tilfeller</Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
@@ -432,6 +495,14 @@ const BrokenLinks = () => {
                     </Tabs>
                 </>
             )}
+
+            <AnalysisActionModal
+                open={!!actionModalUrl}
+                onClose={() => setActionModalUrl(null)}
+                urlPath={actionModalUrl}
+                websiteId={selectedWebsite?.id}
+                domain={selectedWebsite?.domain}
+            />
 
         </ChartLayout>
     );
