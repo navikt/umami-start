@@ -29,6 +29,7 @@ import EventJourney from "./pages/analysis/EventJourney.tsx";
 import UserProfile from "./pages/analysis/UserProfile.tsx";
 import Dashboard from "./pages/analysis/Dashboard.tsx";
 import DashboardOverview from "./pages/topics/DashboardOverview.tsx";
+import BrokenLinks from "./pages/analysis/BrokenLinks.tsx";
 
 
 const routes = [
@@ -59,7 +60,9 @@ const routes = [
     { path: "/diagnose", component: <Diagnosis /> },
     { path: "/profil", component: <UserProfile /> },
     { path: "/dashboards", component: <DashboardOverview /> },
-    { path: "/dashboard", component: <Dashboard /> }
+    { path: "/dashboards", component: <DashboardOverview /> },
+    { path: "/dashboard", component: <Dashboard /> },
+    { path: "/kvalitet/odelagte-lenker", component: <BrokenLinks /> }
 ];
 
 export default routes;

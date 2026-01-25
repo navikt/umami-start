@@ -1,7 +1,7 @@
 import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
 
-export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern' | 'hendelsesreiser' | 'sql' | 'grafdeling';
+export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern' | 'hendelsesreiser' | 'sql' | 'grafdeling' | 'odelagte-lenker';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
@@ -87,6 +87,12 @@ export const analyticsPages = [
         href: '/personvernssjekk',
         label: 'Personvernssjekk',
         description: 'Søk etter potensielle personopplysninger'
+    },
+    {
+        id: 'odelagte-lenker',
+        href: '/kvalitet/odelagte-lenker',
+        label: 'Ødelagte lenker',
+        description: 'Se ødelagte lenker fra Siteimprove'
     }
 ];
 

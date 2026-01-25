@@ -28,6 +28,10 @@ const chartGroups = [
     {
         title: "Brukere & lojalitet",
         ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
+    },
+    {
+        title: "Innholdskvalitet",
+        ids: ['odelagte-lenker']
     }
 ];
 

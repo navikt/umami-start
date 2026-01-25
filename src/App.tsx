@@ -54,6 +54,7 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
     location.pathname.startsWith("/diagnose") ||
     location.pathname.startsWith("/grafdeling") ||
     location.pathname.startsWith("/profil") ||
+    location.pathname.startsWith("/kvalitet/odelagte-lenker") ||
     location.pathname.startsWith("/sql");
 
   if (isFullWidthPage) {
