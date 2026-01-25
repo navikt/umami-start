@@ -8,6 +8,7 @@ import teamsData from '../../data/teamsData.json';
 import { getBaseUrl } from '../../lib/environment';
 
 interface BrokenLink {
+    id: number;
     url: string;
     checking_now: boolean;
     last_checked: string;
@@ -142,6 +143,90 @@ const BrokenLinks = () => {
                                     <DsLink href={link.url} target="_blank" className="break-all flex items-center gap-1 text-base">
                                         {link.url} <ExternalLink size={16} />
                                     </DsLink>
+                                </Table.DataCell>
+                            </Table.Row>
+                        ))}
+                    </Table.Body>
+                </Table>
+            </div>
+        );
+    }, [siteimproveId]);
+
+    // Helper component to fetch and display pages where a specific link is broken
+    const BrokenLinkPagesContent = useCallback(({ linkId }: { linkId: number }) => {
+        const [pages, setPages] = useState<any[]>([]);
+        const [loadingPages, setLoadingPages] = useState(true);
+        const [pagesError, setPagesError] = useState<string | null>(null);
+
+        useEffect(() => {
+            const fetchBrokenLinkPages = async () => {
+                if (!siteimproveId) return;
+
+                try {
+                    const baseUrl = getBaseUrl({
+                        localUrl: "https://reops-proxy.intern.nav.no",
+                        prodUrl: "https://reops-proxy.ansatt.nav.no",
+                    });
+                    const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
+
+                    const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/broken_links/${linkId}/pages?page_size=50`;
+                    const response = await fetch(url, { credentials });
+
+                    if (!response.ok) {
+                        throw new Error('Kunne ikke hente sider for denne lenken.');
+                    }
+
+                    const data = await response.json();
+                    if (data && data.items) {
+                        setPages(data.items);
+                    }
+                } catch (err: any) {
+                    console.error('Error fetching broken link pages:', err);
+                    setPagesError(err.message || 'Feil ved henting av sider.');
+                } finally {
+                    setLoadingPages(false);
+                }
+            };
+
+            fetchBrokenLinkPages();
+        }, [linkId]);
+
+        if (loadingPages) {
+            return (
+                <div className="flex items-center gap-2 py-2">
+                    <Loader size="small" title="Henter sider..." />
+                    <span className="text-sm text-[var(--ax-text-subtle)]">Henter sider...</span>
+                </div>
+            );
+        }
+
+        if (pagesError) {
+            return <Alert variant="warning" size="small">{pagesError}</Alert>;
+        }
+
+        if (pages.length === 0) {
+            return <span className="text-sm text-[var(--ax-text-subtle)]">Ingen sider funnet.</span>;
+        }
+
+        return (
+            <div className="py-4">
+                <Table>
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.HeaderCell>Side URL</Table.HeaderCell>
+                            <Table.HeaderCell>Sidetittel</Table.HeaderCell>
+                        </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                        {pages.map((page, idx) => (
+                            <Table.Row key={idx}>
+                                <Table.DataCell>
+                                    <DsLink href={page.url} target="_blank" className="break-all flex items-center gap-1 text-base">
+                                        {getUrlPath(page.url)} <ExternalLink size={16} />
+                                    </DsLink>
+                                </Table.DataCell>
+                                <Table.DataCell>
+                                    {page.title || '-'}
                                 </Table.DataCell>
                             </Table.Row>
                         ))}
@@ -316,22 +401,27 @@ const BrokenLinks = () => {
                                     <Table size="small" zebraStripes>
                                         <Table.Header>
                                             <Table.Row>
+                                                <Table.HeaderCell />
                                                 <Table.HeaderCell>URL</Table.HeaderCell>
                                                 <Table.HeaderCell>Bekreftet</Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
                                             {brokenLinks.map((link, index) => (
-                                                <Table.Row key={index}>
-                                                    <Table.DataCell>
+                                                <Table.ExpandableRow
+                                                    key={link.id || index}
+                                                    content={<BrokenLinkPagesContent linkId={link.id} />}
+                                                    togglePlacement="left"
+                                                >
+                                                    <Table.HeaderCell scope="row">
                                                         <DsLink href={link.url} target="_blank" className="break-all flex items-center gap-1">
                                                             {link.url} <ExternalLink size={14} />
                                                         </DsLink>
-                                                    </Table.DataCell>
+                                                    </Table.HeaderCell>
                                                     <Table.DataCell>
                                                         {link.is_confirmed ? 'Ja' : 'Nei'}
                                                     </Table.DataCell>
-                                                </Table.Row>
+                                                </Table.ExpandableRow>
                                             ))}
                                         </Table.Body>
                                     </Table>
