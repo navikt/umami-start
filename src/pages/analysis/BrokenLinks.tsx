@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Alert, Loader, Link as DsLink, Tabs, HelpText, Button } from '@navikt/ds-react';
+import { useSearchParams } from 'react-router-dom';
+import { Table, Alert, Loader, Link as DsLink, Tabs, HelpText, Button, TextField } from '@navikt/ds-react';
 import { ExternalLink } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
@@ -46,7 +47,9 @@ const BrokenLinks = () => {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<string>('pages');
+    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
 
     const getSiteimproveId = (domain: string) => {
         let team = null;
@@ -340,17 +343,40 @@ const BrokenLinks = () => {
         fetchSiteimproveData(String(siteimproveId));
     }, [selectedWebsite]);
 
+    const filteredPages = pagesWithBrokenLinks.filter(page => !urlPath || page.url.toLowerCase().includes(urlPath.toLowerCase()));
+
     return (
         <ChartLayout
             title="Ødelagte lenker"
             description="Oversikt over ødelagte lenker fra Siteimprove."
             currentPage="odelagte-lenker"
             filters={
-                <WebsitePicker
-                    selectedWebsite={selectedWebsite}
-                    onWebsiteChange={setSelectedWebsite}
-                    variant="minimal"
-                />
+                <>
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsite}
+                        onWebsiteChange={setSelectedWebsite}
+                        variant="minimal"
+                    />
+                    <TextField
+                        size="small"
+                        label="URL-sti (valgfritt)"
+                        description="Filtrer på url-sti (f.eks /sok)"
+                        value={urlPath}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setUrlPath(val);
+
+                            // Update URL params
+                            const newParams = new URLSearchParams(searchParams);
+                            if (val) {
+                                newParams.set('urlPath', val);
+                            } else {
+                                newParams.delete('urlPath');
+                            }
+                            setSearchParams(newParams, { replace: true });
+                        }}
+                    />
+                </>
             }
         >
             {error && (
@@ -359,156 +385,168 @@ const BrokenLinks = () => {
                 </Alert>
             )}
 
-            {!selectedWebsite && !loading && (
-                <Alert variant="info">
-                    Velg en nettside for å se status på lenker.
-                </Alert>
-            )}
+            {
+                !selectedWebsite && !loading && (
+                    <Alert variant="info">
+                        Velg en nettside for å se status på lenker.
+                    </Alert>
+                )
+            }
 
-            {loading && (
-                <div className="flex justify-center items-center h-64">
-                    <Loader size="xlarge" title="Henter ødelagte lenker..." />
-                </div>
-            )}
-
-            {!loading && !error && selectedWebsite && (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall ødelagte lenker</div>
-                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                {brokenLinks.length}
-                            </div>
-                        </div>
-                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall sider med ødelagte lenker</div>
-                            <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                {pagesWithBrokenLinks.length}
-                            </div>
-                        </div>
-                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Siste scan</div>
-                            <div className="flex items-center justify-between">
-                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                    {crawlInfo?.last_crawl ? new Date(crawlInfo.last_crawl).toLocaleDateString('nb-NO') : '-'}
-                                </div>
-                                <HelpText title="Status for scan">
-                                    <div className="flex flex-col gap-2 min-w-[200px]">
-                                        <div>
-                                            <div className="font-semibold text-sm">Sist sjekket</div>
-                                            <div className="text-sm">
-                                                {crawlInfo?.last_crawl ? new Date(crawlInfo.last_crawl).toLocaleString('nb-NO') : '-'}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="font-semibold text-sm">Neste planlagte scan</div>
-                                            <div className="text-sm">
-                                                {crawlInfo?.next_crawl ? new Date(crawlInfo.next_crawl).toLocaleString('nb-NO') : '-'}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <div className="font-semibold text-sm">Scan aktivert</div>
-                                                <div className="text-sm">{crawlInfo?.is_crawl_enabled ? 'Ja' : 'Nei'}</div>
-                                            </div>
-                                            <div>
-                                                <div className="font-semibold text-sm">Kjører nå</div>
-                                                <div className="text-sm">{crawlInfo?.is_crawl_running ? 'Ja' : 'Nei'}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </HelpText>
-                            </div>
-                        </div>
+            {
+                loading && (
+                    <div className="flex justify-center items-center h-64">
+                        <Loader size="xlarge" title="Henter ødelagte lenker..." />
                     </div>
+                )
+            }
 
-                    <Tabs value={activeTab} onChange={setActiveTab}>
-                        <Tabs.List>
-                            <Tabs.Tab value="pages" label="Sider med ødelagte lenker" />
-                            <Tabs.Tab value="links" label="Alle ødelagte lenker" />
-                        </Tabs.List>
+            {
+                !loading && !error && selectedWebsite && (
+                    <>
 
-                        <Tabs.Panel value="pages" className="pt-4">
-                            {pagesWithBrokenLinks.length === 0 ? (
-                                <Alert variant="success">Fant ingen sider med ødelagte lenker!</Alert>
-                            ) : (
-                                <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
-                                    <Table size="small" zebraStripes>
-                                        <Table.Header>
-                                            <Table.Row>
-                                                <Table.HeaderCell />
-                                                <Table.HeaderCell>URL</Table.HeaderCell>
-                                                <Table.HeaderCell>Ødelagte</Table.HeaderCell>
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {pagesWithBrokenLinks.map((page, index) => (
-                                                <Table.ExpandableRow
-                                                    key={page.id || index}
-                                                    content={<PageBrokenLinksContent pageId={page.id} />}
-                                                    togglePlacement="left"
-                                                >
-                                                    <Table.HeaderCell scope="row">
-                                                        <DsLink
-                                                            href="#"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                setActionModalUrl(getUrlPath(page.url));
-                                                            }}
-                                                            className="break-all flex items-center gap-1"
-                                                        >
-                                                            {getUrlPath(page.url)} <ExternalLink size={14} />
-                                                        </DsLink>
-                                                    </Table.HeaderCell>
-                                                    <Table.DataCell>
-                                                        {page.broken_links}
-                                                    </Table.DataCell>
-                                                </Table.ExpandableRow>
-                                            ))}
-                                        </Table.Body>
-                                    </Table>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall ødelagte lenker</div>
+                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                    {brokenLinks.length}
                                 </div>
-                            )}
-                        </Tabs.Panel>
-
-                        <Tabs.Panel value="links" className="pt-4">
-                            {brokenLinks.length === 0 ? (
-                                <Alert variant="success">Fant ingen ødelagte lenker! 🎉</Alert>
-                            ) : (
-                                <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
-                                    <Table size="small" zebraStripes>
-                                        <Table.Header>
-                                            <Table.Row>
-                                                <Table.HeaderCell />
-                                                <Table.HeaderCell>URL</Table.HeaderCell>
-                                                <Table.HeaderCell>Tilfeller</Table.HeaderCell>
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {brokenLinks.map((link, index) => (
-                                                <Table.ExpandableRow
-                                                    key={link.id || index}
-                                                    content={<BrokenLinkPagesContent linkId={link.id} />}
-                                                    togglePlacement="left"
-                                                >
-                                                    <Table.HeaderCell scope="row">
-                                                        <DsLink href={link.url} target="_blank" className="break-all flex items-center gap-1">
-                                                            {link.url} <ExternalLink size={14} />
-                                                        </DsLink>
-                                                    </Table.HeaderCell>
-                                                    <Table.DataCell>
-                                                        {link.pages}
-                                                    </Table.DataCell>
-                                                </Table.ExpandableRow>
-                                            ))}
-                                        </Table.Body>
-                                    </Table>
+                            </div>
+                            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall sider med ødelagte lenker</div>
+                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                    {pagesWithBrokenLinks.length}
                                 </div>
-                            )}
-                        </Tabs.Panel>
-                    </Tabs>
-                </>
-            )}
+                            </div>
+                            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Siste scan</div>
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                        {crawlInfo?.last_crawl ? new Date(crawlInfo.last_crawl).toLocaleDateString('nb-NO') : '-'}
+                                    </div>
+                                    <HelpText title="Status for scan">
+                                        <div className="flex flex-col gap-2 min-w-[200px]">
+                                            <div>
+                                                <div className="font-semibold text-sm">Sist sjekket</div>
+                                                <div className="text-sm">
+                                                    {crawlInfo?.last_crawl ? new Date(crawlInfo.last_crawl).toLocaleString('nb-NO') : '-'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-sm">Neste planlagte scan</div>
+                                                <div className="text-sm">
+                                                    {crawlInfo?.next_crawl ? new Date(crawlInfo.next_crawl).toLocaleString('nb-NO') : '-'}
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <div className="font-semibold text-sm">Scan aktivert</div>
+                                                    <div className="text-sm">{crawlInfo?.is_crawl_enabled ? 'Ja' : 'Nei'}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="font-semibold text-sm">Kjører nå</div>
+                                                    <div className="text-sm">{crawlInfo?.is_crawl_running ? 'Ja' : 'Nei'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </HelpText>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Tabs value={activeTab} onChange={setActiveTab}>
+                            <Tabs.List>
+                                <Tabs.Tab value="pages" label="Sider med ødelagte lenker" />
+                                <Tabs.Tab value="links" label="Alle ødelagte lenker" />
+                            </Tabs.List>
+
+                            <Tabs.Panel value="pages" className="pt-4">
+                                {filteredPages.length === 0 ? (
+                                    <Alert variant="success">
+                                        {urlPath
+                                            ? `Fant ingen ødelagte lenker for "${urlPath}"`
+                                            : "Fant ingen sider med ødelagte lenker!"
+                                        }
+                                    </Alert>
+                                ) : (
+                                    <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
+                                        <Table size="small" zebraStripes>
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    <Table.HeaderCell />
+                                                    <Table.HeaderCell>URL</Table.HeaderCell>
+                                                    <Table.HeaderCell>Ødelagte</Table.HeaderCell>
+                                                </Table.Row>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {filteredPages.map((page, index) => (
+                                                    <Table.ExpandableRow
+                                                        key={page.id || index}
+                                                        content={<PageBrokenLinksContent pageId={page.id} />}
+                                                        togglePlacement="left"
+                                                    >
+                                                        <Table.HeaderCell scope="row">
+                                                            <DsLink
+                                                                href="#"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setActionModalUrl(getUrlPath(page.url));
+                                                                }}
+                                                                className="break-all flex items-center gap-1"
+                                                            >
+                                                                {getUrlPath(page.url)} <ExternalLink size={14} />
+                                                            </DsLink>
+                                                        </Table.HeaderCell>
+                                                        <Table.DataCell>
+                                                            {page.broken_links}
+                                                        </Table.DataCell>
+                                                    </Table.ExpandableRow>
+                                                ))}
+                                            </Table.Body>
+                                        </Table>
+                                    </div>
+                                )}
+                            </Tabs.Panel>
+
+                            <Tabs.Panel value="links" className="pt-4">
+                                {brokenLinks.length === 0 ? (
+                                    <Alert variant="success">Fant ingen ødelagte lenker! 🎉</Alert>
+                                ) : (
+                                    <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
+                                        <Table size="small" zebraStripes>
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    <Table.HeaderCell />
+                                                    <Table.HeaderCell>URL</Table.HeaderCell>
+                                                    <Table.HeaderCell>Tilfeller</Table.HeaderCell>
+                                                </Table.Row>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {brokenLinks.map((link, index) => (
+                                                    <Table.ExpandableRow
+                                                        key={link.id || index}
+                                                        content={<BrokenLinkPagesContent linkId={link.id} />}
+                                                        togglePlacement="left"
+                                                    >
+                                                        <Table.HeaderCell scope="row">
+                                                            <DsLink href={link.url} target="_blank" className="break-all flex items-center gap-1">
+                                                                {link.url} <ExternalLink size={14} />
+                                                            </DsLink>
+                                                        </Table.HeaderCell>
+                                                        <Table.DataCell>
+                                                            {link.pages}
+                                                        </Table.DataCell>
+                                                    </Table.ExpandableRow>
+                                                ))}
+                                            </Table.Body>
+                                        </Table>
+                                    </div>
+                                )}
+                            </Tabs.Panel>
+                        </Tabs>
+                    </>
+                )
+            }
 
             <AnalysisActionModal
                 open={!!actionModalUrl}
@@ -518,7 +556,7 @@ const BrokenLinks = () => {
                 domain={selectedWebsite?.domain}
             />
 
-        </ChartLayout>
+        </ChartLayout >
     );
 };
 

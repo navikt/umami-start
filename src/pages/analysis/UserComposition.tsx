@@ -15,7 +15,7 @@ const UserComposition = () => {
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
-    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('pagePath') || '');
+    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
@@ -30,7 +30,7 @@ const UserComposition = () => {
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
         // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('pagePath');
+        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath') || searchParams.has('pagePath');
         if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
             fetchData();
@@ -124,8 +124,10 @@ const UserComposition = () => {
                 const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
                 if (pagePath.trim()) {
-                    newParams.set('pagePath', pagePath.trim());
+                    newParams.set('urlPath', pagePath.trim());
+                    newParams.delete('pagePath');
                 } else {
+                    newParams.delete('urlPath');
                     newParams.delete('pagePath');
                 }
 

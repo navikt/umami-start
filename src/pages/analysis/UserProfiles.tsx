@@ -19,7 +19,7 @@ const UserProfiles = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('pagePath') || '');
+    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [users, setUsers] = useState<any[]>([]);
     const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -124,6 +124,20 @@ const UserProfiles = () => {
             setUsers(result.users);
             setTotalUsers(result.total);
             setQueryStats(result.queryStats);
+
+            // Update URL with configuration for sharing
+            const newParams = new URLSearchParams(window.location.search);
+            newParams.set('period', period);
+            if (pagePath) {
+                newParams.set('urlPath', pagePath);
+                newParams.delete('pagePath');
+            } else {
+                newParams.delete('urlPath');
+                newParams.delete('pagePath');
+            }
+
+            // Update URL without navigation
+            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'En feil oppstod');

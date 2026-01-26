@@ -16,7 +16,7 @@ const EventExplorer = () => {
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
-    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('pagePath') || '');
+    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
@@ -135,8 +135,11 @@ const EventExplorer = () => {
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             if (pagePath) {
-                newParams.set('pagePath', pagePath);
+                newParams.set('urlPath', pagePath);
+                // Clean up legacy param if present
+                newParams.delete('pagePath');
             } else {
+                newParams.delete('urlPath');
                 newParams.delete('pagePath');
             }
 
@@ -206,8 +209,10 @@ const EventExplorer = () => {
                 newParams.set('period', period);
                 newParams.set('event', selectedEvent);
                 if (pagePath) {
-                    newParams.set('pagePath', pagePath);
+                    newParams.set('urlPath', pagePath);
+                    newParams.delete('pagePath');
                 } else {
+                    newParams.delete('urlPath');
                     newParams.delete('pagePath');
                 }
 

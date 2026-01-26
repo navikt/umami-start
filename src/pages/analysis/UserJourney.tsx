@@ -18,7 +18,7 @@ const UserJourney = () => {
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
-    const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('startUrl') || '');
+    const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('startUrl') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
@@ -52,7 +52,7 @@ const UserJourney = () => {
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
         // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('startUrl') || searchParams.has('steps') || searchParams.has('limit') || searchParams.has('direction');
+        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath') || searchParams.has('startUrl') || searchParams.has('steps') || searchParams.has('limit') || searchParams.has('direction');
         if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
             fetchData();
@@ -278,8 +278,10 @@ const UserJourney = () => {
             newParams.set('limit', limit.toString());
             newParams.set('direction', journeyDirection);
             if (normalizedStartUrl) {
-                newParams.set('startUrl', normalizedStartUrl);
+                newParams.set('urlPath', normalizedStartUrl);
+                newParams.delete('startUrl');
             } else {
+                newParams.delete('urlPath');
                 newParams.delete('startUrl');
             }
 
