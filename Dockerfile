@@ -31,7 +31,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:5181bb4b6a9129064acae4632ea92f3f991dd30d63c5d804fe59b9ad70faa544
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:b7ce5490584aee31e9bb42c5f44b23bc8356cd0fc554d8b0600caf2e5f65eeff
 
 # Build arg for GitHub token
 ARG GITHUB_TOKEN
