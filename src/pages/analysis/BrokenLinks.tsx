@@ -407,15 +407,15 @@ const BrokenLinks = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall ødelagte lenker</div>
-                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                    {brokenLinks.length}
-                                </div>
-                            </div>
-                            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall sider med ødelagte lenker</div>
                                 <div className="text-2xl font-bold text-[var(--ax-text-default)]">
                                     {pagesWithBrokenLinks.length}
+                                </div>
+                            </div>
+                            <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall ødelagte lenker</div>
+                                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                    {brokenLinks.length}
                                 </div>
                             </div>
                             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
