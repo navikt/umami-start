@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Alert, Loader, Link as DsLink, Tabs, HelpText } from '@navikt/ds-react';
+import { Table, Alert, Loader, Link as DsLink, Tabs, HelpText, Button } from '@navikt/ds-react';
 import { ExternalLink } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
@@ -89,38 +89,40 @@ const BrokenLinks = () => {
         const [loadingPageLinks, setLoadingPageLinks] = useState(true);
         const [pageError, setPageError] = useState<string | null>(null);
 
-        useEffect(() => {
-            const fetchPageBrokenLinks = async () => {
-                if (!siteimproveId) return;
+        const fetchPageBrokenLinks = useCallback(async () => {
+            if (!siteimproveId) return;
+            setLoadingPageLinks(true);
+            setPageError(null);
 
-                try {
-                    const baseUrl = getBaseUrl({
-                        localUrl: "https://reops-proxy.intern.nav.no",
-                        prodUrl: "https://reops-proxy.ansatt.nav.no",
-                    });
-                    const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
+            try {
+                const baseUrl = getBaseUrl({
+                    localUrl: "https://reops-proxy.intern.nav.no",
+                    prodUrl: "https://reops-proxy.ansatt.nav.no",
+                });
+                const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
-                    const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/pages_with_broken_links/${pageId}/broken_links?page_size=50`;
-                    const response = await fetch(url, { credentials });
+                const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/pages_with_broken_links/${pageId}/broken_links?page_size=50`;
+                const response = await fetch(url, { credentials });
 
-                    if (!response.ok) {
-                        throw new Error('Kunne ikke hente ødelagte lenker for denne siden.');
-                    }
-
-                    const data = await response.json();
-                    if (data && data.items) {
-                        setPageBrokenLinks(data.items);
-                    }
-                } catch (err: any) {
-                    console.error('Error fetching page broken links:', err);
-                    setPageError(err.message || 'Feil ved henting av ødelagte lenker.');
-                } finally {
-                    setLoadingPageLinks(false);
+                if (!response.ok) {
+                    throw new Error('Kunne ikke hente ødelagte lenker for denne siden.');
                 }
-            };
 
+                const data = await response.json();
+                if (data && data.items) {
+                    setPageBrokenLinks(data.items);
+                }
+            } catch (err: any) {
+                console.error('Error fetching page broken links:', err);
+                setPageError(err.message || 'Feil ved henting av ødelagte lenker.');
+            } finally {
+                setLoadingPageLinks(false);
+            }
+        }, [pageId, siteimproveId]);
+
+        useEffect(() => {
             fetchPageBrokenLinks();
-        }, [pageId]);
+        }, [fetchPageBrokenLinks]);
 
         if (loadingPageLinks) {
             return (
@@ -132,7 +134,12 @@ const BrokenLinks = () => {
         }
 
         if (pageError) {
-            return <Alert variant="warning" size="small">{pageError}</Alert>;
+            return (
+                <div className="flex flex-col gap-2 items-start py-2">
+                    <Alert variant="warning" size="small">{pageError}</Alert>
+                    <Button variant="secondary" size="small" onClick={fetchPageBrokenLinks}>Prøv igjen</Button>
+                </div>
+            );
         }
 
         if (pageBrokenLinks.length === 0) {
@@ -169,38 +176,40 @@ const BrokenLinks = () => {
         const [loadingPages, setLoadingPages] = useState(true);
         const [pagesError, setPagesError] = useState<string | null>(null);
 
-        useEffect(() => {
-            const fetchBrokenLinkPages = async () => {
-                if (!siteimproveId) return;
+        const fetchBrokenLinkPages = useCallback(async () => {
+            if (!siteimproveId) return;
+            setLoadingPages(true);
+            setPagesError(null);
 
-                try {
-                    const baseUrl = getBaseUrl({
-                        localUrl: "https://reops-proxy.intern.nav.no",
-                        prodUrl: "https://reops-proxy.ansatt.nav.no",
-                    });
-                    const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
+            try {
+                const baseUrl = getBaseUrl({
+                    localUrl: "https://reops-proxy.intern.nav.no",
+                    prodUrl: "https://reops-proxy.ansatt.nav.no",
+                });
+                const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
-                    const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/broken_links/${linkId}/pages?page_size=50`;
-                    const response = await fetch(url, { credentials });
+                const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/broken_links/${linkId}/pages?page_size=50`;
+                const response = await fetch(url, { credentials });
 
-                    if (!response.ok) {
-                        throw new Error('Kunne ikke hente sider for denne lenken.');
-                    }
-
-                    const data = await response.json();
-                    if (data && data.items) {
-                        setPages(data.items);
-                    }
-                } catch (err: any) {
-                    console.error('Error fetching broken link pages:', err);
-                    setPagesError(err.message || 'Feil ved henting av sider.');
-                } finally {
-                    setLoadingPages(false);
+                if (!response.ok) {
+                    throw new Error('Kunne ikke hente sider for denne lenken.');
                 }
-            };
 
+                const data = await response.json();
+                if (data && data.items) {
+                    setPages(data.items);
+                }
+            } catch (err: any) {
+                console.error('Error fetching broken link pages:', err);
+                setPagesError(err.message || 'Feil ved henting av sider.');
+            } finally {
+                setLoadingPages(false);
+            }
+        }, [linkId, siteimproveId]);
+
+        useEffect(() => {
             fetchBrokenLinkPages();
-        }, [linkId]);
+        }, [fetchBrokenLinkPages]);
 
         if (loadingPages) {
             return (
@@ -212,7 +221,12 @@ const BrokenLinks = () => {
         }
 
         if (pagesError) {
-            return <Alert variant="warning" size="small">{pagesError}</Alert>;
+            return (
+                <div className="flex flex-col gap-2 items-start py-2">
+                    <Alert variant="warning" size="small">{pagesError}</Alert>
+                    <Button variant="secondary" size="small" onClick={fetchBrokenLinkPages}>Prøv igjen</Button>
+                </div>
+            );
         }
 
         if (pages.length === 0) {
