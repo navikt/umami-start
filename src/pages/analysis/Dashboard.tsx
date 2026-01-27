@@ -101,6 +101,9 @@ const Dashboard = () => {
     const [urlPasteError, setUrlPasteError] = useState("");
     const urlModalRef = useRef<HTMLDialogElement>(null);
 
+    // Combobox input state
+    const [comboInputValue, setComboInputValue] = useState("");
+
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
         pathOperator: defaultPathOperator,
@@ -536,6 +539,9 @@ const Dashboard = () => {
                         ]}
                         selectedOptions={tempUrlPaths}
                         onToggleSelected={(option, isSelected) => {
+                            // Clear input on selection
+                            setComboInputValue("");
+
                             if (option === "BULK_ADD_TRIGGER") {
                                 if (isSelected) {
                                     setUrlPasteError("");
@@ -545,9 +551,24 @@ const Dashboard = () => {
                             }
                             if (isSelected) {
                                 const normalized = normalizeUrlToPath(option);
-                                setTempUrlPaths(prev => [...prev, normalized]);
+                                setTempUrlPaths(prev => {
+                                    if (prev.includes(normalized)) return prev;
+                                    return [...prev, normalized];
+                                });
                             } else {
                                 setTempUrlPaths(prev => prev.filter(p => p !== option));
+                            }
+                        }}
+                        value={comboInputValue}
+                        onChange={(val) => setComboInputValue(val)}
+                        onBlur={() => {
+                            if (comboInputValue.trim()) {
+                                const normalized = normalizeUrlToPath(comboInputValue.trim());
+                                setTempUrlPaths(prev => {
+                                    if (prev.includes(normalized)) return prev;
+                                    return [...prev, normalized];
+                                });
+                                setComboInputValue("");
                             }
                         }}
                         placeholder="Skriv og trykk enter"
