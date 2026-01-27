@@ -860,6 +860,7 @@ const Dashboard = () => {
                             prefetchedData={chart.id ? batchedData.get(chart.id) : undefined}
                             shouldWaitForBatch={chart.id ? batchableChartIds.has(chart.id) && !batchingComplete : false}
                             siteimproveGroupId={getSiteimproveGroupId}
+                            dashboardTitle={dashboard.title}
                         />
                     ))}
 

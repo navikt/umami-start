@@ -10,6 +10,7 @@ export default function Grafdeling() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [description, setDescription] = useState<string>('');
+    const [dashboardTitle, setDashboardTitle] = useState<string>('');
     const [queryStats, setQueryStats] = useState<any>(null);
 
     // Extract websiteId from SQL query
@@ -26,9 +27,13 @@ export default function Grafdeling() {
         const urlParams = new URLSearchParams(window.location.search);
         let sqlParam = urlParams.get('sql');
         const descParam = urlParams.get('beskrivelse') || urlParams.get('desc');
+        const dashboardParam = urlParams.get('dashboard');
 
         if (descParam) {
             setDescription(descParam);
+        }
+        if (dashboardParam) {
+            setDashboardTitle(dashboardParam);
         }
 
         if (sqlParam) {
@@ -466,7 +471,7 @@ export default function Grafdeling() {
     return (
         <ChartLayout
             title={description || 'Umami grafdeling'}
-            description="Delt visualisering fra Umami"
+            description={dashboardTitle ? `Fra dashboard: ${dashboardTitle}` : "Delt visualisering fra Umami"}
             currentPage="grafdeling"
             hideSidebar={true}
         >

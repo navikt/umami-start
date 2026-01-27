@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Loader, Alert, Table, Pagination, Button } from '@navikt/ds-react';
+import { Loader, Alert, Table, Pagination } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { ExternalLink, Code } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { SavedChart } from '../../data/dashboard/types';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { getBaseUrl } from '../../lib/environment';
 import { translateValue } from '../../lib/translations';
 import AnalysisActionModal from '../analysis/AnalysisActionModal';
@@ -33,43 +32,28 @@ interface DashboardWidgetProps {
     shouldWaitForBatch?: boolean;
     // Siteimprove group ID for group-level scoring (from custom filter selection)
     siteimproveGroupId?: string;
+    dashboardTitle?: string;
 }
 
-export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId }: DashboardWidgetProps) => {
-    const navigate = useNavigate();
+// ... imports ...
+import { processDashboardSql } from '../dashboard/dashboardQueryUtils';
+import ChartActionModal from '../analysis/ChartActionModal';
+
+// ... interface ...
+
+export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId, dashboardTitle }: DashboardWidgetProps) => { // Removed useNavigate
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     // Track if individual fetch has been done to prevent repeat fetches
     const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
-    // State for AnalysisActionModal
+    // State for AnalysisActionModal (for links in table)
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+    // State for ChartActionModal (for title click)
+    const [isActionModalOpen, setIsActionModalOpen] = useState(false);
 
-    // Handler to open chart SQL in SqlEditor with contextual filters
-    const handleOpenSql = () => {
-        if (!chart.sql) return;
 
-        const params = new URLSearchParams();
-        params.set('sql', chart.sql);
-
-        // Carry over website
-        if (websiteId) params.set('websiteId', websiteId);
-        if (selectedWebsite?.domain) params.set('domain', selectedWebsite.domain);
-
-        // Carry over URL filters
-        if (filters.urlFilters?.length) {
-            params.set('urlPath', filters.urlFilters.join(','));
-            params.set('pathOperator', filters.pathOperator || 'equals');
-        }
-
-        // Carry over date range
-        if (filters.dateRange) params.set('dateRange', filters.dateRange);
-        if (filters.customStartDate) params.set('customStartDate', filters.customStartDate.toISOString());
-        if (filters.customEndDate) params.set('customEndDate', filters.customEndDate.toISOString());
-
-        navigate(`/sql?${params.toString()}`);
-    };
 
     // Helper to check if a value is a clickable URL path
     const isClickablePath = (val: any): boolean => {
@@ -113,135 +97,8 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             setError(null);
 
             try {
-                let processedSql = chart.sql;
-
-                // 1. Substitute website_id
-                processedSql = processedSql.replace(/{{website_id}}/g, websiteId);
-
-                // 2. Substitute URL Path
-                // Pattern: [[ {{url_sti}} --]] 'default_value'
-                // This pattern looks for the block [[ {{url_sti}} --]] and the following token which is usually the default.
-                // However, based on the specific strings seen:
-                // ... url_path = [[ {{url_sti}} --]] '/'
-                // We should handle the metabase-like syntax manually or regex.
-
-                // Simple regex to catch the block:  `\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]`
-                // And we need to find what comes after it to decide what to do?
-                // Actually, the user's syntax in SQLPreview was:
-                // `url_path = [[ {{url_sti}} --]] '/'`
-                // If filters.urlFilters has values, we replace `[[ {{url_sti}} --]] '/'` with `'value'` or `'value1', 'value2'`.
-                // If empty, we replace `[[ {{url_sti}} --]]` with nothing? No, that leaves `url_path = '/'`. 
-                // Wait. `url_path = [[ {{url_sti}} --]] '/'`
-                // If I have a value: `url_path = 'my/path'`
-                // If no value: `url_path = '/'`
-                // So I need to replace the WHOLE sequence `[[ {{url_sti}} --]] '/'` with the active value.
-
-                if (filters.urlFilters.length > 0) {
-                    const operator = filters.pathOperator || 'equals';
-
-                    // Regex to capture the context around the template block
-                    // We need to handle both "url_path = [[ {{url_sti}} --]] '/'" patterns
-                    // For multiple values with starts-with, we need OR conditions
-                    // For multiple values with equals, we use IN clause
-
-                    if (operator === 'starts-with') {
-                        if (filters.urlFilters.length === 1) {
-                            // Single value: simple LIKE
-                            const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
-                            processedSql = processedSql.replace(assignmentRegex, `LIKE '${filters.urlFilters[0]}%'`);
-                        } else {
-                            // Multiple values: need to replace "url_path = [[ ... ]] '/'" with "(url_path LIKE 'x%' OR url_path LIKE 'y%')"
-                            // First, identify the column name before the = sign
-                            const multiLikeRegex = /(\S+)\s*=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
-                            processedSql = processedSql.replace(multiLikeRegex, (_match, column) => {
-                                const likeConditions = filters.urlFilters.map(p => `${column} LIKE '${p}%'`).join(' OR ');
-                                return `(${likeConditions})`;
-                            });
-                        }
-                    } else {
-                        // equals operator - support multiple values with IN clause
-                        const assignmentRegex = /=\s*\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*('[^']+')/gi;
-                        if (filters.urlFilters.length === 1) {
-                            processedSql = processedSql.replace(assignmentRegex, `= '${filters.urlFilters[0]}'`);
-                        } else {
-                            // Multiple values: use IN clause
-                            const quotedPaths = filters.urlFilters.map(p => `'${p}'`).join(', ');
-                            processedSql = processedSql.replace(assignmentRegex, `IN (${quotedPaths})`);
-                        }
-                    }
-                } else {
-                    // If no filters, replace just the `[[...]]` part with empty string? 
-                    // No, `[[ {{url_sti}} --]]` acts as a comment marker that says "if variable is missing, use what follows".
-                    // So we remove the marker `[[ {{url_sti}} --]]` effectively enabling the default value `'/'`.
-                    processedSql = processedSql.replace(/\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]/gi, "");
-                }
-
-                // 3. Substitute Date / Created At
-                // Pattern: `[[AND {{created_at}} ]]`
-                // This is a Metabase conditional clause. If we have a date range, we substitute it with `AND created_at BETWEEN ...`
-                // If not, we remove the block.
-
-                // Calculate dates
-                const now = new Date();
-                let startDate: Date;
-                let endDate = now;
-
-                if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
-                    startDate = filters.customStartDate;
-                    endDate = filters.customEndDate;
-                } else if (filters.dateRange === 'current_month') {
-                    startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                } else if (filters.dateRange === 'last_month') {
-                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                    endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-                } else {
-                    startDate = subDays(now, 30);
-                }
-
-                const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
-                const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
-
-                const dateReplacement = `AND \`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
-
-                // Replace the block
-                processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, dateReplacement);
-
-                // 4. Handle metric type (visitors vs pageviews vs proportion)
-                if (filters.metricType === 'pageviews') {
-                    // Replace COUNT(DISTINCT [table.]session_id) as Unike_besokende with COUNT(*) as Sidevisninger
-                    // Handle both "base_query.session_id" and plain "session_id"
-                    processedSql = processedSql.replace(
-                        /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_\.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
-                        'COUNT(*) as Sidevisninger'
-                    );
-                    // Also replace any standalone references to Unike_besokende (e.g., in ORDER BY)
-                    processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Sidevisninger');
-                } else if (filters.metricType === 'proportion') {
-                    // Replace COUNT(DISTINCT) with a percentage calculation
-                    // IMPORTANT: Use ALL site visitors as denominator, not just filtered visitors
-                    // This makes proportion meaningful when using path filters
-                    const totalSiteVisitorsSubquery = `(SELECT COUNT(DISTINCT session_id) FROM \`team-researchops-prod-01d6.umami.public_website_event\` WHERE website_id = '${websiteId}' AND event_type = 1 AND created_at BETWEEN ${fromSql} AND ${toSql})`;
-
-                    processedSql = processedSql.replace(
-                        /COUNT\s*\(\s*DISTINCT\s+(?:([a-zA-Z_\.]+)\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
-                        (_match, tablePrefix) => {
-                            const sessionRef = tablePrefix ? `${tablePrefix}.session_id` : 'session_id';
-                            return `CONCAT(CAST(ROUND(COUNT(DISTINCT ${sessionRef}) * 100.0 / ${totalSiteVisitorsSubquery}, 1) AS STRING), '%') as Andel`;
-                        }
-                    );
-                    // Also replace any standalone references to Unike_besokende (e.g., in ORDER BY)
-                    processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Andel');
-                } else if (filters.metricType === 'visits') {
-                    // Replace COUNT(DISTINCT session_id) with COUNT(DISTINCT visit_id)
-                    // And rename alias to "Antall økter"
-                    processedSql = processedSql.replace(
-                        /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_\.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
-                        'COUNT(DISTINCT visit_id) as `Antall økter`'
-                    );
-                    // Also replace any standalone references to Unike_besokende (e.g., in ORDER BY)
-                    processedSql = processedSql.replace(/\bUnike_besokende\b/g, '`Antall økter`');
-                }
-
+                // Use centralized utility to process SQL
+                const processedSql = processDashboardSql(chart.sql, websiteId, filters);
 
                 const response = await fetch('/api/bigquery', {
                     method: 'POST',
@@ -571,16 +428,19 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             <div className={`bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
                 <div className="flex flex-col mb-4">
                     <div className="flex items-center justify-between gap-3">
-                        <h2 className="text-xl font-semibold text-[var(--ax-text-default)]">{chart.title}</h2>
-                        {chart.sql && (
-                            <Button
-                                variant="tertiary"
-                                size="xsmall"
-                                onClick={handleOpenSql}
-                                title="Åpne SQL i verktøyet"
-                                icon={<Code className="h-4 w-4" />}
-                            />
-                        )}
+                        <h2 className="text-xl font-semibold text-[var(--ax-text-default)]">
+                            {chart.sql ? (
+                                <button
+                                    className="bg-transparent border-none p-0 hover:underline hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-[var(--ax-text-default)] rounded text-left"
+                                    onClick={() => setIsActionModalOpen(true)}
+                                >
+                                    {chart.title}
+                                </button>
+                            ) : (
+                                chart.title
+                            )}
+                        </h2>
+
                     </div>
                     {tableTotalValue !== null && (
                         <p className="text-lg text-[var(--ax-text-default)] mt-1">
@@ -601,6 +461,17 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 websiteId={websiteId}
                 period={filters.dateRange}
                 domain={selectedWebsite?.domain}
+            />
+
+            <ChartActionModal
+                open={isActionModalOpen}
+                onClose={() => setIsActionModalOpen(false)}
+                chart={chart}
+                websiteId={websiteId}
+                filters={filters}
+                domain={selectedWebsite?.domain}
+                data={data}
+                dashboardTitle={dashboardTitle}
             />
         </>
     );
