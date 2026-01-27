@@ -22,7 +22,7 @@ interface DashboardWidgetProps {
         urlFilters: string[];
         dateRange: string;
         pathOperator: string;
-        metricType: 'visitors' | 'pageviews' | 'proportion';
+        metricType: 'visitors' | 'pageviews' | 'proportion' | 'visits';
         customStartDate?: Date;
         customEndDate?: Date;
     };
@@ -231,6 +231,15 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                     );
                     // Also replace any standalone references to Unike_besokende (e.g., in ORDER BY)
                     processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Andel');
+                } else if (filters.metricType === 'visits') {
+                    // Replace COUNT(DISTINCT session_id) with COUNT(DISTINCT visit_id)
+                    // And rename alias to "Antall økter"
+                    processedSql = processedSql.replace(
+                        /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_\.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
+                        'COUNT(DISTINCT visit_id) as `Antall økter`'
+                    );
+                    // Also replace any standalone references to Unike_besokende (e.g., in ORDER BY)
+                    processedSql = processedSql.replace(/\bUnike_besokende\b/g, '`Antall økter`');
                 }
 
 
@@ -575,7 +584,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                     </div>
                     {tableTotalValue !== null && (
                         <p className="text-lg text-[var(--ax-text-default)] mt-1">
-                            {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : 'besøk totalt'}
+                            {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : filters.metricType === 'visits' ? 'økter totalt' : 'besøk totalt'}
                         </p>
                     )}
                     {chart.description && (

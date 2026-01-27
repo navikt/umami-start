@@ -16,7 +16,7 @@ interface Filters {
     urlFilters: string[];
     dateRange: string;
     pathOperator: string;
-    metricType: 'visitors' | 'pageviews' | 'proportion';
+    metricType: 'visitors' | 'pageviews' | 'proportion' | 'visits';
     customStartDate?: Date;
     customEndDate?: Date;
 }
@@ -121,13 +121,16 @@ function buildCombinedSessionQuery(
     // For visitors: use DISTINCT to get unique sessions
     // For pageviews: don't use DISTINCT so we can count all events
     // For proportion: use DISTINCT since we're calculating percentage of unique visitors
+    // For visits: use DISTINCT to get unique visits (visit_id)
     const useDistinct = filters.metricType !== 'pageviews';
+    const includeVisitId = filters.metricType === 'visits';
 
     // Single scan query
     return `
 WITH base_query AS (
   SELECT
     ${tableName}.session_id,
+    ${includeVisitId ? `${tableName}.visit_id,` : ''}
     ${fieldsSelect}
   FROM ${tableName}
   LEFT JOIN ${sessionTable}
@@ -141,6 +144,7 @@ WITH base_query AS (
 
 SELECT${useDistinct ? ' DISTINCT' : ''}
   session_id,
+  ${includeVisitId ? 'visit_id,' : ''}
   ${fields.join(',\n  ')}
 FROM base_query
 LIMIT 100000
@@ -151,7 +155,7 @@ LIMIT 100000
  * Supports unique visitors (COUNT DISTINCT session_id), pageviews (COUNT *), and proportion (%)
  * For proportion mode, totalSiteVisitors should be provided to calculate percentage against all site visitors
  */
-function aggregateByField(rawData: any[], field: string, metricType: 'visitors' | 'pageviews' | 'proportion', totalSiteVisitors?: number): any[] {
+function aggregateByField(rawData: any[], field: string, metricType: 'visitors' | 'pageviews' | 'proportion' | 'visits', totalSiteVisitors?: number): any[] {
     if (metricType === 'pageviews') {
         // COUNT(*) - count total rows (events) per field value
         const counts = new Map<string, number>();
@@ -210,6 +214,34 @@ function aggregateByField(rawData: any[], field: string, metricType: 'visitors' 
         // Apply device filter if needed (device NOT LIKE '%x%')
         if (field === 'device') {
             return result.filter(row => !String(row[field]).includes('x'));
+        }
+
+        return result.slice(0, 1000); // Match original LIMIT
+    } else if (metricType === 'visits') {
+        // COUNT(DISTINCT visit_id) - count unique visits per field value
+        const counts = new Map<string, Set<string>>();
+
+        for (const row of rawData) {
+            const key = row[field] || 'Ukjent';
+            if (!counts.has(key)) {
+                counts.set(key, new Set());
+            }
+            if (row.visit_id) {
+                counts.get(key)!.add(row.visit_id);
+            }
+        }
+
+        // Convert to sorted array
+        const result = Array.from(counts.entries())
+            .map(([value, visits]) => ({
+                [field]: value,
+                'Antall økter': visits.size
+            }))
+            .sort((a, b) => b['Antall økter'] - a['Antall økter']);
+
+        // Apply device filter if needed (device NOT LIKE '%x%')
+        if (field === 'device') {
+            return result.filter(row => !String(row.device).includes('x'));
         }
 
         return result.slice(0, 1000); // Match original LIMIT

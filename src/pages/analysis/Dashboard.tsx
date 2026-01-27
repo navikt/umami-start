@@ -19,7 +19,7 @@ const Dashboard = () => {
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl : [];
     const pathOperator = searchParams.get("pathOperator");
     // Support both old 'metricType' and new 'metrikk' params
-    const metricTypeFromUrl = (searchParams.get("metrikk") || searchParams.get("metricType")) as 'visitors' | 'pageviews' | 'proportion' | null;
+    const metricTypeFromUrl = (searchParams.get("metrikk") || searchParams.get("metricType")) as 'visitors' | 'pageviews' | 'proportion' | 'visits' | null;
     // Support 'periode' param for date range
     // Support 'periode' param for date range
     const rawDateRangeFromUrl = searchParams.get("periode");
@@ -87,7 +87,7 @@ const Dashboard = () => {
     const [tempPathOperator, setTempPathOperator] = useState(defaultPathOperator);
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>(initialUrlPathsFromCustomFilter);
     const [tempDateRange, setTempDateRange] = useState(dateRangeFromUrl || "current_month");
-    const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews' | 'proportion'>(metricTypeFromUrl || 'visitors');
+    const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews' | 'proportion' | 'visits'>(metricTypeFromUrl || 'visitors');
 
     // Custom date state
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
@@ -102,7 +102,7 @@ const Dashboard = () => {
         dateRange: dateRangeFromUrl || "current_month",
         customStartDate: undefined as Date | undefined,
         customEndDate: undefined as Date | undefined,
-        metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion'
+        metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion' | 'visits'
     });
 
     // Active website state to ensure widget only updates on "Oppdater"
@@ -540,7 +540,7 @@ const Dashboard = () => {
                         label="Visning"
                         size="small"
                         value={tempMetricType}
-                        onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews' | 'proportion')}
+                        onChange={(e) => setTempMetricType(e.target.value as 'visitors' | 'pageviews' | 'proportion' | 'visits')}
                     >
                         {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('visitors')) && (
                             <option value="visitors">Unike besøkende</option>
@@ -550,6 +550,9 @@ const Dashboard = () => {
                         )}
                         {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('proportion')) && (
                             <option value="proportion">Andel (%)</option>
+                        )}
+                        {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('visits')) && (
+                            <option value="visits">Antall økter</option>
                         )}
                     </Select>
                 </div>

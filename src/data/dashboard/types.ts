@@ -58,5 +58,5 @@ export interface DashboardConfig {
     // Message to show when required custom filters are not selected
     customFilterRequiredMessage?: string;
     // Which metric types to show in the "Visning" filter (defaults to all if not specified)
-    metricTypeOptions?: ('visitors' | 'pageviews' | 'proportion')[];
+    metricTypeOptions?: ('visitors' | 'pageviews' | 'proportion' | 'visits')[];
 }
