@@ -30,6 +30,15 @@ const sections = [
     }
 ];
 
+// Content quality section
+const contentQualitySection = {
+    title: "Innholdskvalitet",
+    description: "Sjekk kvaliteten på innholdet",
+    bgColor: "var(--ax-bg-default)",
+    accentColor: "var(--ax-bg-accent-strong)",
+    ids: ['odelagte-lenker', 'stavekontroll']
+};
+
 function Home() {
     return (
         <>
@@ -176,33 +185,100 @@ function Home() {
                     ))}
                 </div>
 
-                {/* Grafbygger section */}
-                <div style={{
-                    border: '1px solid var(--ax-border-neutral-subtle)',
-                    marginTop: '32px',
-                    marginBottom: '40px',
-                    padding: '40px',
-                    backgroundColor: 'var(--ax-bg-default)',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '24px'
-                }}>
-                    <div>
-                        <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
-                            Lag tilpassede grafer og tabeller
-                        </Heading>
-                        <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
-                            Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
-                        </p>
-                    </div>
-                    <Link
-                        href="/grafbygger"
-                        className="primary-button"
+                {/* Bottom section: Innholdskvalitet + Grafbygger */}
+                <div
+                    className="bottom-grid"
+                    style={{
+                        display: 'grid',
+                        gap: '24px',
+                        marginTop: '25px',
+                        marginBottom: '40px'
+                    }}>
+                    {/* Innholdskvalitet Card */}
+                    <div
+                        style={{
+                            backgroundColor: contentQualitySection.bgColor,
+                            padding: '32px',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            border: `1px solid var(--ax-border-neutral-subtle)`,
+                        }}
                     >
-                        Gå til Grafbyggeren
-                    </Link>
+                        <div style={{
+                            borderLeft: `4px solid ${contentQualitySection.accentColor}`,
+                            paddingLeft: '16px',
+                            marginBottom: '24px'
+                        }}>
+                            <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
+                                {contentQualitySection.title}
+                            </Heading>
+                            <p style={{ fontSize: '16px', color: 'var(--ax-text-subtle)', margin: 0 }}>{contentQualitySection.description}</p>
+                        </div>
+
+                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {analyticsPages
+                                .filter(page => contentQualitySection.ids.includes(page.id))
+                                .map(page => (
+                                    <Link
+                                        key={page.id}
+                                        href={page.href}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '16px 20px',
+                                            backgroundColor: 'var(--ax-bg-default)',
+                                            borderRadius: '8px',
+                                            textDecoration: 'none',
+                                            color: 'var(--ax-text-default)',
+                                            border: '1px solid var(--ax-border-neutral-subtle)',
+                                            transition: 'all 0.2s ease',
+                                            fontWeight: 500
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
+                                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
+                                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
+                                        }}
+                                    >
+                                        <span>{page.label}</span>
+                                        <span style={{ color: contentQualitySection.accentColor, fontSize: '18px' }}>→</span>
+                                    </Link>
+                                ))}
+                        </nav>
+                    </div>
+
+                    {/* Grafbygger section */}
+                    <div style={{
+                        border: '1px solid var(--ax-border-neutral-subtle)',
+                        padding: '40px',
+                        backgroundColor: 'var(--ax-bg-default)',
+                        borderRadius: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
+                        gap: '24px'
+                    }}>
+                        <div>
+                            <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
+                                Lag tilpassede grafer og tabeller
+                            </Heading>
+                            <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
+                                Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
+                            </p>
+                        </div>
+                        <Link
+                            href="/grafbygger"
+                            className="primary-button"
+                        >
+                            Gå til Grafbyggeren
+                        </Link>
+                    </div>
                 </div>
             </Page.Block>
 

@@ -409,13 +409,13 @@ const BrokenLinks = () => {
                             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Antall sider med ødelagte lenker</div>
                                 <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                    {pagesWithBrokenLinks.length}
+                                    {pagesWithBrokenLinks.length.toLocaleString('nb-NO')}
                                 </div>
                             </div>
                             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall ødelagte lenker</div>
                                 <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                    {brokenLinks.length}
+                                    {brokenLinks.length.toLocaleString('nb-NO')}
                                 </div>
                             </div>
                             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
@@ -438,15 +438,9 @@ const BrokenLinks = () => {
                                                     {crawlInfo?.next_crawl ? new Date(crawlInfo.next_crawl).toLocaleString('nb-NO') : '-'}
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <div className="font-semibold text-sm">Scan aktivert</div>
-                                                    <div className="text-sm">{crawlInfo?.is_crawl_enabled ? 'Ja' : 'Nei'}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold text-sm">Kjører nå</div>
-                                                    <div className="text-sm">{crawlInfo?.is_crawl_running ? 'Ja' : 'Nei'}</div>
-                                                </div>
+                                            <div>
+                                                <div className="font-semibold text-sm">Kjører nå</div>
+                                                <div className="text-sm">{crawlInfo?.is_crawl_running ? 'Ja' : 'Nei'}</div>
                                             </div>
                                         </div>
                                     </HelpText>

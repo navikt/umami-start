@@ -78,3 +78,22 @@
 .dark [class*="legendContainer"] button {
   color: var(--ax-text-subtle) !important;
 }
+
+/* Home page bottom grid responsive */
+.bottom-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.bottom-grid>div:last-child {
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .bottom-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .bottom-grid>div:last-child {
+    grid-column: span 1;
+  }
+}

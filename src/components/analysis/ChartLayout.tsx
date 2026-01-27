@@ -31,7 +31,7 @@ const chartGroups = [
     },
     {
         title: "Innholdskvalitet",
-        ids: ['odelagte-lenker']
+        ids: ['odelagte-lenker', 'stavekontroll']
     }
 ];
 

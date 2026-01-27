@@ -30,7 +30,7 @@ import UserProfile from "./pages/analysis/UserProfile.tsx";
 import Dashboard from "./pages/analysis/Dashboard.tsx";
 import DashboardOverview from "./pages/topics/DashboardOverview.tsx";
 import BrokenLinks from "./pages/analysis/BrokenLinks.tsx";
-
+import Spellings from "./pages/analysis/Spellings.tsx";
 
 const routes = [
     { path: "/", component: <Home /> },
@@ -62,7 +62,8 @@ const routes = [
     { path: "/dashboards", component: <DashboardOverview /> },
     { path: "/dashboards", component: <DashboardOverview /> },
     { path: "/dashboard", component: <Dashboard /> },
-    { path: "/kvalitet/odelagte-lenker", component: <BrokenLinks /> }
+    { path: "/kvalitet/odelagte-lenker", component: <BrokenLinks /> },
+    { path: "/kvalitet/stavekontroll", component: <Spellings /> }
 ];
 
 export default routes;
