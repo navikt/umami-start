@@ -151,6 +151,7 @@ LIMIT 1000
       sql: `WITH base_query AS (
   SELECT
     \`team-researchops-prod-01d6.umami.public_website_event\`.session_id,
+    \`team-researchops-prod-01d6.umami.public_website_event\`.visit_id,
     \`team-researchops-prod-01d6.umami.public_website_event\`.url_path,
     \`team-researchops-prod-01d6.umami.public_website_event\`.created_at,
     LEAD(\`team-researchops-prod-01d6.umami.public_website_event\`.url_path) OVER (
