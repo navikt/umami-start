@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
-import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check } from 'lucide-react';
+import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check, SpellCheck, Unlink } from 'lucide-react';
 
 interface AnalysisActionModalProps {
     open: boolean;
@@ -157,19 +157,30 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                 Brukerlojalitet
                             </Button>
                         </div>
-                    </div>
 
-                    {/* Bottom row: Brukerreiser - 2 items side by side */}
-                    <div>
-                        <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-2">
-                            Brukerreiser
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Column 3: Brukerreiser */}
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
+                                Brukerreiser
+                            </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
                                 Sideflyt
                             </Button>
                             <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
                                 Hendelsesflyt
+                            </Button>
+                        </div>
+
+                        {/* Column 4: Innholdskvalitet */}
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
+                                Innholdskvalitet
+                            </div>
+                            <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className="justify-start">
+                                Stavekontroll
+                            </Button>
+                            <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/odelagte-lenker', 'urlPath')} icon={<Unlink aria-hidden />} className="justify-start">
+                                Ødelagte lenker
                             </Button>
                         </div>
                     </div>
