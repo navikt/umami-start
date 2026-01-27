@@ -1,4 +1,4 @@
-import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker } from "@navikt/ds-react";
+import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
@@ -94,6 +94,12 @@ const Dashboard = () => {
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
     const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
+
+    // Bulk URL modal state
+    const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+    const [urlPasteInput, setUrlPasteInput] = useState("");
+    const [urlPasteError, setUrlPasteError] = useState("");
+    const urlModalRef = useRef<HTMLDialogElement>(null);
 
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
@@ -400,6 +406,66 @@ const Dashboard = () => {
         return a.getTime() === b.getTime();
     };
 
+    const handleBulkAddUrls = () => {
+        if (!urlPasteInput.trim()) {
+            setIsUrlModalOpen(false);
+            return;
+        }
+
+        // Normalize line breaks and split
+        const rawLines = urlPasteInput
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .split(/[\n,;]+/) // Split by newlines, commas, semi-colons
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
+        const newPaths: string[] = [];
+        const invalidUrls: string[] = [];
+        const currentDomain = selectedWebsite?.domain ? normalizeDomain(selectedWebsite.domain) : null;
+
+        rawLines.forEach(line => {
+            // Check if it looks like a URL
+            if (line.match(/^https?:\/\//)) {
+                try {
+                    const url = new URL(line);
+                    // If we have a selected website context, validate domain
+                    if (currentDomain) {
+                        const lineDomain = normalizeDomain(url.hostname);
+                        // simple check: lineDomain ends with currentDomain or equals
+                        // normalizeDomain handles www stripping.
+                        if (lineDomain !== currentDomain && !lineDomain.endsWith('.' + currentDomain)) {
+                            invalidUrls.push(line);
+                            return;
+                        }
+                    }
+                    newPaths.push(url.pathname);
+                } catch (e) {
+                    invalidUrls.push(line);
+                }
+            } else {
+                // Assume it's a path
+                // Ensure it starts with /
+                const path = line.startsWith('/') ? line : '/' + line;
+                newPaths.push(path);
+            }
+        });
+
+        if (invalidUrls.length > 0) {
+            setUrlPasteError(`Noen URL-er tilhører ikke valgt nettside (${selectedWebsite?.domain}) eller er ugyldige. Sjekk: ${invalidUrls.slice(0, 3).join(', ')}${invalidUrls.length > 3 ? '...' : ''}`);
+            return;
+        }
+
+        // Add to tempUrlPaths (avoiding duplicates)
+        const uniqueNewPaths = new Set([...tempUrlPaths, ...newPaths]);
+        setTempUrlPaths(Array.from(uniqueNewPaths));
+
+        // Cleanup
+        setUrlPasteInput("");
+        setUrlPasteError("");
+        setIsUrlModalOpen(false);
+    };
+
     const hasChanges =
         tempDateRange !== activeFilters.dateRange ||
         !arraysEqual(tempUrlPaths, activeFilters.urlFilters) ||
@@ -464,9 +530,19 @@ const Dashboard = () => {
                         size="small"
                         isMultiSelect
                         allowNewValues
-                        options={tempUrlPaths.map(p => ({ label: p, value: p }))}
+                        options={[
+                            ...tempUrlPaths.map(p => ({ label: p, value: p })),
+                            { label: "➕ Lim inn flere URL-er...", value: "BULK_ADD_TRIGGER" }
+                        ]}
                         selectedOptions={tempUrlPaths}
                         onToggleSelected={(option, isSelected) => {
+                            if (option === "BULK_ADD_TRIGGER") {
+                                if (isSelected) {
+                                    setUrlPasteError("");
+                                    setIsUrlModalOpen(true);
+                                }
+                                return;
+                            }
                             if (isSelected) {
                                 const normalized = normalizeUrlToPath(option);
                                 setTempUrlPaths(prev => [...prev, normalized]);
@@ -613,6 +689,41 @@ const Dashboard = () => {
                         Bruk datoer
                     </Button>
                     <Button variant="secondary" onClick={() => setIsDateModalOpen(false)}>
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Bulk URL Modal */}
+            <Modal
+                ref={urlModalRef}
+                open={isUrlModalOpen}
+                onClose={() => setIsUrlModalOpen(false)}
+                header={{ heading: "Lim inn flere URL-er", closeButton: true }}
+            >
+                <Modal.Body>
+                    <div className="flex flex-col gap-4 min-w-[300px] max-w-[500px]">
+                        <Alert variant="info" size="small">
+                            Lim inn en liste med URL-er eller stier. Du kan skille dem med linjeskift, komma eller semikolon.
+                        </Alert>
+                        <Textarea
+                            label="URL-er eller stier"
+                            hideLabel
+                            rows={10}
+                            value={urlPasteInput}
+                            onChange={(e) => {
+                                setUrlPasteInput(e.target.value);
+                                if (urlPasteError) setUrlPasteError("");
+                            }}
+                            error={urlPasteError}
+                        />
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={handleBulkAddUrls}>
+                        Legg til
+                    </Button>
+                    <Button variant="secondary" onClick={() => setIsUrlModalOpen(false)}>
                         Avbryt
                     </Button>
                 </Modal.Footer>
