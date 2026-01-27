@@ -162,7 +162,7 @@ export default function SqlEditor() {
             toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
 
             // Detect likely table to apply date filter to
-            let tablePrefix = '`team-researchops-prod-01d6.umami.public_website_event`';
+            let tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
             if (processedSql.includes('umami_views.event')) {
                 tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
             } else if (processedSql.includes('umami_views.session')) {
@@ -177,8 +177,9 @@ export default function SqlEditor() {
 
         // If query joins partitioned public_session, mirror the date filter to enable partition pruning
         if (fromSql && toSql && /public_session/gi.test(processedSql) && !/public_session[^\n]*created_at/gi.test(processedSql)) {
-            const eventFilter = `\`team-researchops-prod-01d6.umami.public_website_event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
-            const sessionPredicate = `\`team-researchops-prod-01d6.umami.public_session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+            const eventFilter = `\`team-researchops-prod-01d6.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+            const sessionPredicate = `\`team-researchops-prod-01d6.umami_views.session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+
 
             if (processedSql.includes(eventFilter)) {
                 processedSql = processedSql.replace(eventFilter, `${eventFilter} AND ${sessionPredicate}`);
@@ -241,7 +242,7 @@ export default function SqlEditor() {
             return currentQuery;
         }
 
-        const table = '`team-researchops-prod-01d6.umami.public_website_event`';
+        const table = '`team-researchops-prod-01d6.umami_views.event`';
 
         if (/WHERE/i.test(currentQuery)) {
             return currentQuery.replace(/WHERE/i, (match) => `${match} ${table}.website_id = '{{website_id}}' AND`);

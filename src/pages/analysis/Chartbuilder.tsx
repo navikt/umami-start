@@ -264,7 +264,7 @@ const getRequiredTables = (
 
 const ChartsPage = () => {
   const [searchParams] = useSearchParams();
-  
+
   // Parse URL params for pre-populating from Dashboard
   const websiteIdFromUrl = searchParams.get('websiteId');
   const domainFromUrl = searchParams.get('domain');
@@ -275,12 +275,12 @@ const ChartsPage = () => {
   const dateRangeFromUrl = searchParams.get('dateRange');
   const configFromUrl = searchParams.get('config');
   const filtersFromUrl = searchParams.get('filters');
-  
+
   // Track if we've applied URL params (to avoid re-applying)
   const [hasAppliedUrlParams, setHasAppliedUrlParams] = useState(false);
   // Store pending filters to apply after events are loaded
   const [pendingFiltersFromUrl, setPendingFiltersFromUrl] = useState<Filter[] | null>(null);
-  
+
   const [config, setConfig] = useState<ChartConfig>({
     website: null,
     filters: [],
@@ -378,7 +378,7 @@ const ChartsPage = () => {
   // Apply URL params from Dashboard on initial load
   useEffect(() => {
     if (hasAppliedUrlParams) return;
-    
+
     // Check if we have URL params to apply
     const hasUrlParams = websiteIdFromUrl || configFromUrl || filtersFromUrl || urlPathFromUrl;
     if (!hasUrlParams) {
@@ -395,13 +395,13 @@ const ChartsPage = () => {
         teamId: '',
         createdAt: ''
       };
-      
+
       setConfig(prev => ({
         ...prev,
         website: websiteFromUrl
       }));
     }
-    
+
     // Apply config from URL if provided (from chartbuilder-created charts)
     if (configFromUrl) {
       try {
@@ -419,10 +419,10 @@ const ChartsPage = () => {
         console.error('Failed to parse config from URL:', e);
       }
     }
-    
+
     // Build filters to apply
     const filtersToApply: Filter[] = [];
-    
+
     // Apply filters from URL if provided
     if (filtersFromUrl) {
       try {
@@ -432,18 +432,18 @@ const ChartsPage = () => {
         console.error('Failed to parse filters from URL:', e);
       }
     }
-    
+
     // Apply URL path filter if provided (from dashboard)
     if (urlPathFromUrl && !filtersFromUrl) {
       const paths = urlPathFromUrl.split(',');
-      
+
       // Add event_type filter for pageviews
-      filtersToApply.push({ 
-        column: 'event_type', 
-        operator: '=', 
-        value: '1' 
+      filtersToApply.push({
+        column: 'event_type',
+        operator: '=',
+        value: '1'
       });
-      
+
       // Add URL path filter
       if (paths.length > 1) {
         filtersToApply.push({
@@ -466,13 +466,13 @@ const ChartsPage = () => {
         });
       }
     }
-    
+
     // Apply date range filter if provided
     if (dateRangeFromUrl) {
       // Calculate the date range based on the period
       let fromSQL = '';
       let toSQL = 'CURRENT_TIMESTAMP()';
-      
+
       if (dateRangeFromUrl === 'current_month') {
         fromSQL = "TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH)";
       } else if (dateRangeFromUrl === 'last_month') {
@@ -482,12 +482,12 @@ const ChartsPage = () => {
         // Default to last 30 days
         fromSQL = "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)";
       }
-      
+
       filtersToApply.push(
         { column: 'created_at', operator: '>=', value: fromSQL, dateRangeType: 'dynamic' },
         { column: 'created_at', operator: '<=', value: toSQL, dateRangeType: 'dynamic' }
       );
-      
+
       // Also update date range in days for WebsitePicker
       let days = 30;
       if (dateRangeFromUrl === 'current_month') {
@@ -498,12 +498,12 @@ const ChartsPage = () => {
       }
       setDateRangeInDays(days);
     }
-    
+
     // Store filters to be applied - they'll be set after EventFilter mounts
     if (filtersToApply.length > 0) {
       setPendingFiltersFromUrl(filtersToApply);
     }
-    
+
     setHasAppliedUrlParams(true);
   }, [hasAppliedUrlParams, websiteIdFromUrl, domainFromUrl, websiteNameFromUrl, configFromUrl, filtersFromUrl, urlPathFromUrl, pathOperatorFromUrl, dateRangeFromUrl]);
 
@@ -917,7 +917,7 @@ const ChartsPage = () => {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column}) 
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                FROM \`team-researchops-prod-01d6.umami_views.event\`
                 WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -925,7 +925,7 @@ const ChartsPage = () => {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column})
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                FROM \`team-researchops-prod-01d6.umami_views.event\`
                 WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -956,8 +956,8 @@ const ChartsPage = () => {
       f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
     );
 
-    const fullWebsiteTable = '`team-researchops-prod-01d6.umami.public_website_event`';
-    const fullSessionTable = '`team-researchops-prod-01d6.umami.public_session`';
+    const fullWebsiteTable = '`team-researchops-prod-01d6.umami_views.event`';
+    const fullSessionTable = '`team-researchops-prod-01d6.umami_views.session`';
 
     const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
 
@@ -1075,7 +1075,7 @@ const ChartsPage = () => {
       sql += '    visit_id,\n';
       sql += '    MIN(created_at) AS first_event_time,\n';
       sql += '    CASE WHEN COUNT(*) > 1 THEN TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) ELSE 0 END AS duration_seconds\n';
-      sql += `  FROM \`team-researchops-prod-01d6.umami.public_website_event\`\n`;
+      sql += `  FROM \`team-researchops-prod-01d6.umami_views.event\`\n`;
       sql += `  WHERE website_id = '${config.website.id}'\n`;
 
       if (hasInteractiveDateFilter) {

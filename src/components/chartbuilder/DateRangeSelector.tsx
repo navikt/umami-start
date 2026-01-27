@@ -804,7 +804,7 @@ const DateRangeSelector = forwardRef(({
                     <li>Velg <strong>Felt filter</strong> som variabeltype</li>
                     <li>Under "Felt å koble til":
                       <ul className="list-disc pl-5 mt-1">
-                        <li>Tabell: <code>public_website_event</code></li>
+                        <li>Tabell: <code>umami_views.event</code></li>
                         <li>Kolonne: <code>created_at</code></li>
                       </ul>
                     </li>
