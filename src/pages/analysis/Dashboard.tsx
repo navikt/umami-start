@@ -545,14 +545,14 @@ const Dashboard = () => {
                         {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('visitors')) && (
                             <option value="visitors">Unike besøkende</option>
                         )}
+                        {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('visits')) && (
+                            <option value="visits">Økter / besøk</option>
+                        )}
                         {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('pageviews')) && (
                             <option value="pageviews">Sidevisninger</option>
                         )}
                         {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('proportion')) && (
                             <option value="proportion">Andel (%)</option>
-                        )}
-                        {(!dashboard.metricTypeOptions || dashboard.metricTypeOptions.includes('visits')) && (
-                            <option value="visits">Antall økter</option>
                         )}
                     </Select>
                 </div>
