@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import Prism from "prismjs";
-import "prismjs/themes/prism.css";
+import "prismjs/themes/prism-tomorrow.css";
 
 // Languages - imports must be side-effectual to register with Prism
 import "prismjs/components/prism-javascript";
@@ -40,7 +40,6 @@ const SnippetBlock = ({ text, language, wrapLongLines = true }: SnippetBlockProp
                 .snippet-block pre {
                     margin: 0 !important;
                     padding: 1rem !important;
-                    background-color: #fbfbfb !important;
                     border-radius: 4px;
                     font-size: 14px;
                     overflow: auto;
@@ -53,7 +52,7 @@ const SnippetBlock = ({ text, language, wrapLongLines = true }: SnippetBlockProp
             <Box
                 className="overflow-hidden relative border border-border-subtle rounded-medium"
             >
-                <div className="absolute top-2 right-2 z-10 transition-opacity opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                <div className="absolute top-2 right-2 z-10">
                     <CopyButton copyText={text} text="Kopier" activeText="Kopiert!" size="small" />
                 </div>
                 <pre className={`language-${prismLang}`}>
