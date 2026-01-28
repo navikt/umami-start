@@ -425,7 +425,7 @@ const ResultsPanel = ({
         return "";
       case 'green':
       default:
-        return "bg-white";
+        return "bg-[var(--ax-bg-default)]";
     }
   };
 
@@ -904,7 +904,7 @@ const ResultsPanel = ({
                             /* Style the callout to be larger and more readable */
                             .pie-chart-wrapper .ms-Callout-main {
                               padding: 24px !important;
-                              background: white !important;
+                              background: var(--ax-bg-default) !important;
                               border: 3px solid #0067C5 !important;
                               border-radius: 8px !important;
                               box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
@@ -914,7 +914,7 @@ const ResultsPanel = ({
                               font-size: 24px !important;
                               line-height: 1.8 !important;
                               font-weight: 700 !important;
-                              color: #262626 !important;
+                              color: var(--ax-text-default) !important;
                             }
                           `}</style>
                           <div className="pie-chart-wrapper" style={{ width: '100%', height: '400px' }}>
