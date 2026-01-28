@@ -325,6 +325,15 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                                 Få Siteimprove tilgang
                                             </p>
                                         </a>
+                                        <a
+                                            href="https://my2.siteimprove.com/"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            <p className="text-base font-bold underline text-blue-700">
+                                                Logg inn
+                                            </p>
+                                        </a>
                                     </div>
                                 </div>
                             )}

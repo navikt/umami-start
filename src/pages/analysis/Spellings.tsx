@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Table, Alert, Loader, Tabs, TextField, HelpText, Button } from '@navikt/ds-react';
+import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink } from '@navikt/ds-react';
 
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
 import { getBaseUrl } from '../../lib/environment';
+import InfoCard from '../../components/InfoCard';
 
 interface SpellingIssue {
     id: number;
@@ -391,6 +392,34 @@ const Spellings = () => {
                                     </div>
                                 )}
                             </div>
+
+                            {siteimproveId && (
+                                <div className="mb-6">
+                                    <InfoCard data-color="info">
+                                        <InfoCard.Header>
+                                            <InfoCard.Title>Rett opp feil i Siteimprove</InfoCard.Title>
+                                        </InfoCard.Header>
+                                        <InfoCard.Content>
+                                            For å rette opp stavefeil må du logge inn på Siteimprove.
+                                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 mt-2">
+                                                <DsLink
+                                                    href={`https://my2.siteimprove.com/QualityAssurance/${siteimproveId}/Spelling/PagesWithSpellingIssues`}
+                                                    target="_blank"
+                                                    className="font-semibold"
+                                                >
+                                                    Gå til Siteimprove for å korrigere
+                                                </DsLink>
+                                                <DsLink
+                                                    href="https://jira.adeo.no/plugins/servlet/desk/portal/581/create/2641"
+                                                    target="_blank"
+                                                >
+                                                    Få tilgang til Siteimprove
+                                                </DsLink>
+                                            </div>
+                                        </InfoCard.Content>
+                                    </InfoCard>
+                                </div>
+                            )}
 
                             <Tabs value={activeTab} onChange={setActiveTab}>
                                 <Tabs.List>
