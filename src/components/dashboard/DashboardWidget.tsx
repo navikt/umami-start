@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Loader, Alert, Table, Pagination } from '@navikt/ds-react';
+import { Loader, Alert, Table, Pagination, Button } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, MoreVertical } from 'lucide-react';
 import { SavedChart } from '../../data/dashboard/types';
 import { format } from 'date-fns';
 import { getBaseUrl } from '../../lib/environment';
@@ -429,18 +429,18 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 <div className="flex flex-col mb-4">
                     <div className="flex items-center justify-between gap-3">
                         <h2 className="text-xl font-semibold text-[var(--ax-text-default)]">
-                            {chart.sql ? (
-                                <button
-                                    className="bg-transparent border-none p-0 hover:underline hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-[var(--ax-text-default)] rounded text-left"
-                                    onClick={() => setIsActionModalOpen(true)}
-                                >
-                                    {chart.title}
-                                </button>
-                            ) : (
-                                chart.title
-                            )}
+                            {chart.title}
                         </h2>
-
+                        {chart.sql && (
+                            <Button
+                                variant="tertiary"
+                                size="small"
+                                onClick={() => setIsActionModalOpen(true)}
+                                title={`Flere valg for ${chart.title}`}
+                                aria-label={`Flere valg for ${chart.title}`}
+                                icon={<MoreVertical aria-hidden="true" />}
+                            />
+                        )}
                     </div>
                     {tableTotalValue !== null && (
                         <p className="text-lg text-[var(--ax-text-default)] mt-1">
