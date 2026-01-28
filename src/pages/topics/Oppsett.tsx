@@ -25,9 +25,9 @@ function Oppsett() {
                     marginBottom: '48px'
                 }}>
                     {[
-                        { href: '/komigang', label: 'Kom i gang', description: 'Sett opp Umami for din nettside' },
+                        { href: '/komigang', label: 'Oppsett guide', description: 'Sett opp Umami for din nettside' },
+                        { href: 'https://navno.sharepoint.com/sites/intranett-utvikling/SitePages/Rutine-for-bruk-av-Umami.aspx', label: 'Retningslinjer', description: 'Rutine for bruk av Umami' },
                         { href: '/taksonomi', label: 'Taksonomi', description: 'Navngi hendelser og egenskaper' },
-                        { href: '/metabase', label: 'Metabase-guide', description: 'Lag dashbord i Metabase' }
                     ].map((article) => (
                         <Link
                             key={article.href}
