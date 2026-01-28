@@ -319,6 +319,11 @@ export default function SqlEditor() {
             to = new Date(now.getFullYear(), now.getMonth(), 0);
         }
         setDateRange({ from, to });
+
+        // Also update period state if present in URL
+        if (dateRangeFromUrl) {
+            setPeriod(dateRangeFromUrl);
+        }
     }, []);
 
     // Detect metabase placeholders and hardcoded website IDs
@@ -431,13 +436,26 @@ export default function SqlEditor() {
         }
     }, [hasHardcodedWebsiteId, query, availableWebsites, selectedWebsite?.id]);
 
+    // Helper to update URL params without losing others
+    const updateUrlParams = (updates: Record<string, string | null>) => {
+        const params = new URLSearchParams(window.location.search);
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+        });
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, '', newUrl);
+    };
+
     const estimateCost = async () => {
         setEstimating(true);
         setError(null);
 
         // Update URL with current query
-        const encodedSql = encodeURIComponent(query);
-        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+        updateUrlParams({ sql: query });
 
         const processedSql = applyUrlFiltersToSql(query);
         setLastProcessedSql(processedSql);
@@ -472,8 +490,7 @@ export default function SqlEditor() {
         setHasAttemptedFetch(true);
 
         // Update URL with current query
-        const encodedSql = encodeURIComponent(query);
-        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+        updateUrlParams({ sql: query });
 
         const processedSql = applyUrlFiltersToSql(query);
         setLastProcessedSql(processedSql);
@@ -540,8 +557,7 @@ export default function SqlEditor() {
     // Simple SQL validation: check for empty input and basic SELECT/statement
     const validateSQL = () => {
         // Update URL with current query
-        const encodedSql = encodeURIComponent(query);
-        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+        updateUrlParams({ sql: query });
 
         if (!query.trim()) {
             setValidateError('SQL kan ikke være tom.');
@@ -571,8 +587,7 @@ export default function SqlEditor() {
 
     const formatSQL = () => {
         // Update URL with current query
-        const encodedSql = encodeURIComponent(query);
-        window.history.replaceState({}, '', `/sql?sql=${encodedSql}`);
+        updateUrlParams({ sql: query });
 
         try {
             const { sanitized, placeholders } = sanitizePlaceholders(query);
@@ -977,27 +992,57 @@ export default function SqlEditor() {
                                             onPeriodChange={(newPeriod) => {
                                                 setPeriod(newPeriod);
                                                 const now = new Date();
+                                                let newFrom: Date | undefined;
+                                                let newTo: Date | undefined;
+
                                                 if (newPeriod === 'today') {
-                                                    setDateRange({
-                                                        from: now,
-                                                        to: now
-                                                    });
+                                                    newFrom = now;
+                                                    newTo = now;
                                                 } else if (newPeriod === 'current_month') {
-                                                    setDateRange({
-                                                        from: new Date(now.getFullYear(), now.getMonth(), 1),
-                                                        to: now
-                                                    });
+                                                    newFrom = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+                                                    newTo = now;
                                                 } else if (newPeriod === 'last_month') {
-                                                    setDateRange({
-                                                        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-                                                        to: new Date(now.getFullYear(), now.getMonth(), 0)
-                                                    });
+                                                    newFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                                    newTo = new Date(now.getFullYear(), now.getMonth(), 0);
                                                 }
+
+                                                if (newFrom && newTo) {
+                                                    setDateRange({ from: newFrom, to: newTo });
+                                                }
+
+                                                // Update URL
+                                                updateUrlParams({
+                                                    dateRange: newPeriod,
+                                                    customStartDate: null,
+                                                    customEndDate: null
+                                                });
                                             }}
                                             startDate={dateRange.from}
-                                            onStartDateChange={(date) => setDateRange(prev => ({ ...prev, from: date }))}
+                                            onStartDateChange={(date) => {
+                                                setDateRange(prev => {
+                                                    const newState = { ...prev, from: date };
+                                                    setPeriod('custom');
+                                                    updateUrlParams({
+                                                        dateRange: 'custom',
+                                                        customStartDate: date ? date.toISOString() : null,
+                                                        customEndDate: newState.to ? newState.to.toISOString() : null
+                                                    });
+                                                    return newState;
+                                                });
+                                            }}
                                             endDate={dateRange.to}
-                                            onEndDateChange={(date) => setDateRange(prev => ({ ...prev, to: date }))}
+                                            onEndDateChange={(date) => {
+                                                setDateRange(prev => {
+                                                    const newState = { ...prev, to: date };
+                                                    setPeriod('custom');
+                                                    updateUrlParams({
+                                                        dateRange: 'custom',
+                                                        customStartDate: newState.from ? newState.from.toISOString() : null,
+                                                        customEndDate: date ? date.toISOString() : null
+                                                    });
+                                                    return newState;
+                                                });
+                                            }}
                                             showToday={true}
                                         />
                                     </div>
