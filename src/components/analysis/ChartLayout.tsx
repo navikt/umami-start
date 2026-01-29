@@ -14,6 +14,7 @@ interface ChartLayoutProps {
     currentPage?: AnalyticsPage;
     wideSidebar?: boolean;
     hideSidebar?: boolean;
+    hideAnalysisSelector?: boolean;
 }
 
 const chartGroups = [
@@ -45,7 +46,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     children,
     currentPage,
     wideSidebar = false,
-    hideSidebar = false
+    hideSidebar = false,
+    hideAnalysisSelector = false
 }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(!hideSidebar);
     const navigate = useNavigate();
@@ -102,39 +104,41 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                             <>
                                 <div className={`bg-[var(--ax-bg-accent-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
                                     <div className="space-y-6">
-                                        <div className="pb-2">
-                                            <Select
-                                                size="small"
-                                                label="Type analyse"
-                                                value={currentPage || ''}
-                                                onChange={handleChartChange}
-                                            >
-                                                <option value="" disabled>Velg...</option>
-                                                {chartGroups.map((group) => (
-                                                    <optgroup label={group.title} key={group.title}>
-                                                        {group.ids.map(id => {
-                                                            const page = analyticsPages.find(p => p.id === id);
-                                                            if (!page) return null;
-                                                            return (
+                                        {!hideAnalysisSelector && (
+                                            <div className="pb-2">
+                                                <Select
+                                                    size="small"
+                                                    label="Type analyse"
+                                                    value={currentPage || ''}
+                                                    onChange={handleChartChange}
+                                                >
+                                                    <option value="" disabled>Velg...</option>
+                                                    {chartGroups.map((group) => (
+                                                        <optgroup label={group.title} key={group.title}>
+                                                            {group.ids.map(id => {
+                                                                const page = analyticsPages.find(p => p.id === id);
+                                                                if (!page) return null;
+                                                                return (
+                                                                    <option key={page.id} value={page.id}>
+                                                                        {page.label}
+                                                                    </option>
+                                                                );
+                                                            })}
+                                                        </optgroup>
+                                                    ))}
+                                                    <optgroup label="Tilpasset & datasjekk">
+                                                        {analyticsPages
+                                                            .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
+                                                            .map(page => (
                                                                 <option key={page.id} value={page.id}>
                                                                     {page.label}
                                                                 </option>
-                                                            );
-                                                        })}
+                                                            ))
+                                                        }
                                                     </optgroup>
-                                                ))}
-                                                <optgroup label="Tilpasset & datasjekk">
-                                                    {analyticsPages
-                                                        .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
-                                                        .map(page => (
-                                                            <option key={page.id} value={page.id}>
-                                                                {page.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </optgroup>
-                                            </Select>
-                                        </div>
+                                                </Select>
+                                            </div>
+                                        )}
                                         {filters}
                                     </div>
                                 </div>

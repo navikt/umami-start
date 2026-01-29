@@ -38,13 +38,19 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     if (!chart.sql) return null;
 
     // 1. Share: Open /grafdeling with fully processed SQL
-    // 1. Share: Open /grafdeling with fully processed SQL
     const handleShare = () => {
         const processedSql = processDashboardSql(chart.sql!, websiteId, filters);
         const encodedSql = encodeURIComponent(processedSql);
         const encodedDesc = encodeURIComponent(chart.title);
         const encodedDashboard = dashboardTitle ? encodeURIComponent(dashboardTitle) : '';
-        window.open(`/grafdeling?sql=${encodedSql}&desc=${encodedDesc}&dashboard=${encodedDashboard}`, '_blank');
+
+        // Map chart type to tab parameter
+        let tabParam = 'table';
+        if (chart.type === 'line') tabParam = 'linechart';
+        if (chart.type === 'bar') tabParam = 'barchart';
+        if (chart.type === 'pie') tabParam = 'piechart';
+
+        window.open(`/grafdeling?sql=${encodedSql}&desc=${encodedDesc}&dashboard=${encodedDashboard}&tab=${tabParam}`, '_blank');
         onClose();
     };
 
@@ -120,7 +126,7 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                             icon={<Share2 aria-hidden />}
                             className="justify-start"
                         >
-                            Del grafen
+                            Åpne i fullskjerm / Del grafen
                         </Button>
                         <Button
                             variant="secondary"
