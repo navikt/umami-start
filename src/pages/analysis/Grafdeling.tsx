@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Alert, BodyLong, Loader, TextField, Button } from '@navikt/ds-react';
@@ -495,16 +495,22 @@ export default function Grafdeling() {
 
     const hasFilters = hasMetabaseDateFilter || hasUrlPathFilter || hasWebsiteIdPlaceholder || hasNettsidePlaceholder || customVariables.length > 0;
 
-    // Auto-execute query when filters change (debounced)
-    useEffect(() => {
-        if (!query || !hasFilters) return;
+    // Auto-search ONLY on initial load
+    const hasRunInitialQuery = useRef(false);
 
+    useEffect(() => {
+        if (!query || hasRunInitialQuery.current) return;
+
+        // Waiting for state to settle from URL params
         const timer = setTimeout(() => {
-            executeQuery(query);
-        }, 800);
+            if (query && !hasRunInitialQuery.current) {
+                executeQuery(query);
+                hasRunInitialQuery.current = true;
+            }
+        }, 500);
 
         return () => clearTimeout(timer);
-    }, [websiteIdState, dateRange, urlPath, customVariableValues, hasFilters]);
+    }, [query]);
 
     const filtersContent = hasFilters ? (
         <div className="space-y-6">
