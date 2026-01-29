@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
-import { Share2, FileCode, Download } from 'lucide-react';
+import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
 import { SavedChart } from '../../data/dashboard/types';
 import { processDashboardSql } from '../dashboard/dashboardQueryUtils';
 import { translateValue } from '../../lib/translations';
@@ -33,12 +33,11 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     data,
     dashboardTitle
 }) => {
-
+    const [copyFeedback, setCopyFeedback] = useState(false);
 
     if (!chart.sql) return null;
 
-    // 1. Share: Open /grafdeling with fully processed SQL
-    const handleShare = () => {
+    const generateShareUrl = () => {
         const processedSql = processDashboardSql(chart.sql!, websiteId, filters);
         const encodedSql = encodeURIComponent(processedSql);
         const encodedDesc = encodeURIComponent(chart.title);
@@ -50,8 +49,24 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
         if (chart.type === 'bar') tabParam = 'barchart';
         if (chart.type === 'pie') tabParam = 'piechart';
 
-        window.open(`/grafdeling?sql=${encodedSql}&desc=${encodedDesc}&dashboard=${encodedDashboard}&tab=${tabParam}`, '_blank');
+        return `${window.location.origin}/grafdeling?sql=${encodedSql}&desc=${encodedDesc}&dashboard=${encodedDashboard}&tab=${tabParam}`;
+    };
+
+    // 1. Explore: Open /grafdeling fully processed
+    const handleOpenInNewTab = () => {
+        window.open(generateShareUrl(), '_blank');
         onClose();
+    };
+
+    // 1b. Share: Copy link
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(generateShareUrl());
+            setCopyFeedback(true);
+            setTimeout(() => setCopyFeedback(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy', err);
+        }
     };
 
     // 2. Open in Editor: Open /sql with raw SQL + params (so it remains editable/dynamic)
@@ -95,6 +110,7 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                         return stringValue;
                     })
                     .join(',')
+                ,
             ),
         ];
         const csvContent = csvRows.join('\n');
@@ -122,16 +138,24 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                     <div className="flex flex-col gap-2">
                         <Button
                             variant="secondary"
-                            onClick={handleShare}
-                            icon={<Share2 aria-hidden />}
+                            onClick={handleOpenInNewTab}
+                            icon={<ZoomPlusIcon aria-hidden />}
                             className="justify-start"
                         >
-                            Åpne i fullskjerm / Del grafen
+                            Utforsk grafen
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={handleCopyLink}
+                            icon={copyFeedback ? <CheckmarkIcon aria-hidden /> : <LinkIcon aria-hidden />}
+                            className="justify-start"
+                        >
+                            {copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}
                         </Button>
                         <Button
                             variant="secondary"
                             onClick={handleOpenInEditor}
-                            icon={<FileCode aria-hidden />}
+                            icon={<FileCodeIcon aria-hidden />}
                             className="justify-start"
                         >
                             Åpne i SQL-editor
@@ -140,7 +164,7 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                             <Button
                                 variant="secondary"
                                 onClick={handleDownloadCsv}
-                                icon={<Download aria-hidden />}
+                                icon={<DownloadIcon aria-hidden />}
                                 className="justify-start"
                             >
                                 Last ned CSV

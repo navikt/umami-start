@@ -548,12 +548,14 @@ export default function Grafdeling() {
             )}
 
             {hasUrlPathFilter && (
-                <TextField
-                    label="URL-sti"
-                    size="small"
-                    value={urlPath}
-                    onChange={(e) => setUrlPath(e.target.value)}
-                />
+                <div className="pt-4">
+                    <TextField
+                        label="URL-sti"
+                        size="small"
+                        value={urlPath}
+                        onChange={(e) => setUrlPath(e.target.value)}
+                    />
+                </div>
             )}
 
             {customVariables.map(varName => (
