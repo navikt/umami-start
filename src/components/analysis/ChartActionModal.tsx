@@ -39,17 +39,33 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
 
     const generateShareUrl = () => {
         const processedSql = processDashboardSql(chart.sql!, websiteId, filters);
-        const encodedSql = encodeURIComponent(processedSql);
-        const encodedDesc = encodeURIComponent(chart.title);
-        const encodedDashboard = dashboardTitle ? encodeURIComponent(dashboardTitle) : '';
 
-        // Map chart type to tab parameter
+        const params = new URLSearchParams();
+        params.set('sql', processedSql);
+        params.set('desc', chart.title);
+        if (dashboardTitle) params.set('dashboard', dashboardTitle);
+
+        // Map chart type
         let tabParam = 'table';
         if (chart.type === 'line') tabParam = 'linechart';
         if (chart.type === 'bar') tabParam = 'barchart';
         if (chart.type === 'pie') tabParam = 'piechart';
+        params.set('tab', tabParam);
 
-        return `${window.location.origin}/grafdeling?sql=${encodedSql}&desc=${encodedDesc}&dashboard=${encodedDashboard}&tab=${tabParam}`;
+        // Add context filters
+        if (websiteId) params.set('websiteId', websiteId);
+        if (domain) params.set('domain', domain);
+
+        if (filters.urlFilters?.length) {
+            params.set('urlPath', filters.urlFilters.join(','));
+            if (filters.pathOperator) params.set('pathOperator', filters.pathOperator);
+        }
+
+        if (filters.dateRange) params.set('dateRange', filters.dateRange);
+        if (filters.customStartDate) params.set('customStartDate', filters.customStartDate.toISOString());
+        if (filters.customEndDate) params.set('customEndDate', filters.customEndDate.toISOString());
+
+        return `${window.location.origin}/grafdeling?${params.toString()}`;
     };
 
     // 1. Explore: Open /grafdeling fully processed
