@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Button } from '@navikt/ds-react';
-import { Share2, FileCode, Copy, Download } from 'lucide-react';
+import { Share2, FileCode, Download } from 'lucide-react';
 import { SavedChart } from '../../data/dashboard/types';
 import { processDashboardSql } from '../dashboard/dashboardQueryUtils';
 import { translateValue } from '../../lib/translations';
@@ -67,22 +67,6 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
 
         // Use window.open for "Open in..." actions usually
         window.open(`/sql?${params.toString()}`, '_blank');
-        onClose();
-    };
-
-    // 3. Transfer to Metabase: Copy Processed SQL? Or Template SQL?
-    // "Overfør til Metabase" likely implies pasting into the actual Metabase tool.
-    // Metabase supports [[...]] syntax, so we should arguably copy the raw template SQL?
-    // BUT, usually people want the specific query for the current view.
-    // However, if we process it, we lose the interactive variables.
-    // Let's copy the processed SQL so it's guaranteed to work in BigQuery console / Metabase as a static query.
-    // Or, if the user wants to use the functionality of SqlEditor (as implied by prompt), they use "Open in Editor".
-    // I will copy Processed SQL for "Transfer to Metabase" to ensure it runs immediately.
-    // 3. Transfer to Metabase: Open /sql with processed SQL (ready for external tools)
-    const handleTransferToMetabase = () => {
-        const processedSql = processDashboardSql(chart.sql!, websiteId, filters);
-        const encodedSql = encodeURIComponent(processedSql);
-        window.open(`/sql?sql=${encodedSql}`, '_blank');
         onClose();
     };
 
