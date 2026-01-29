@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
@@ -21,8 +22,15 @@ const EventExplorer = () => {
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
+
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('usage');
     const [showAverage, setShowAverage] = useState<boolean>(false);
@@ -143,6 +151,15 @@ const EventExplorer = () => {
                 newParams.delete('pagePath');
             }
 
+            // Persist custom dates
+            if (period === 'custom' && customStartDate && customEndDate) {
+                newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+                newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+            } else {
+                newParams.delete('from');
+                newParams.delete('to');
+            }
+
             // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
         } catch (err) {
@@ -214,6 +231,15 @@ const EventExplorer = () => {
                 } else {
                     newParams.delete('urlPath');
                     newParams.delete('pagePath');
+                }
+
+                // Persist custom dates
+                if (period === 'custom' && customStartDate && customEndDate) {
+                    newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+                    newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+                } else {
+                    newParams.delete('from');
+                    newParams.delete('to');
                 }
 
                 // Update URL without navigation

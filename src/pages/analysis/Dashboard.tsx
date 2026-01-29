@@ -6,7 +6,7 @@ import { getDashboard } from "../../data/dashboard";
 import { DashboardWidget } from "../../components/dashboard/DashboardWidget";
 import DashboardWebsitePicker from "../../components/dashboard/DashboardWebsitePicker";
 import { fetchDashboardDataBatched, isBatchableChart } from "../../lib/batchedDashboardFetcher";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { normalizeUrlToPath } from "../../lib/utils";
 
 const Dashboard = () => {
@@ -27,6 +27,12 @@ const Dashboard = () => {
     const dateRangeFromUrl = rawDateRangeFromUrl === 'this-month' ? 'current_month'
         : rawDateRangeFromUrl === 'last-month' ? 'last_month'
             : rawDateRangeFromUrl;
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
 
     const dashboardId = searchParams.get("visning");
 
@@ -90,8 +96,8 @@ const Dashboard = () => {
     const [tempMetricType, setTempMetricType] = useState<'visitors' | 'pageviews' | 'proportion' | 'visits'>(metricTypeFromUrl || 'visitors');
 
     // Custom date state
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
 
@@ -109,8 +115,8 @@ const Dashboard = () => {
         pathOperator: defaultPathOperator,
         urlFilters: initialUrlPathsFromCustomFilter,
         dateRange: dateRangeFromUrl || "current_month",
-        customStartDate: undefined as Date | undefined,
-        customEndDate: undefined as Date | undefined,
+        customStartDate: initialCustomStartDate,
+        customEndDate: initialCustomEndDate,
         metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion' | 'visits'
     });
 
@@ -341,8 +347,17 @@ const Dashboard = () => {
         // Always update dateRange in URL (if not default)
         if (tempDateRange !== 'current_month') {
             url.searchParams.set('periode', tempDateRange);
+            if (tempDateRange === 'custom' && customStartDate && customEndDate) {
+                url.searchParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+                url.searchParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+            } else {
+                url.searchParams.delete('from');
+                url.searchParams.delete('to');
+            }
         } else {
             url.searchParams.delete('periode');
+            url.searchParams.delete('from');
+            url.searchParams.delete('to');
         }
 
         // Always update metricType in URL (if not default)

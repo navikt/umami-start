@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
@@ -19,8 +20,15 @@ const TrafficAnalysis = () => {
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
+
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('visits');
@@ -130,6 +138,15 @@ const TrafficAnalysis = () => {
                 newParams.set('urlPath', urlPath);
             } else {
                 newParams.delete('urlPath');
+            }
+
+            // Persist custom dates
+            if (period === 'custom' && customStartDate && customEndDate) {
+                newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+                newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+            } else {
+                newParams.delete('from');
+                newParams.delete('to');
             }
 
             // Update URL without navigation
