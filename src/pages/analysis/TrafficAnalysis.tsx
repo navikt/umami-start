@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack, Select, Label } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
+import { nb } from 'date-fns/locale';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
@@ -29,6 +30,7 @@ const TrafficAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('visits');
@@ -233,10 +235,47 @@ const TrafficAnalysis = () => {
     const chartData = useMemo(() => {
         if (!seriesData.length) return null;
 
+        let processedData = seriesData;
+
+        // Apply aggregation if granularity is not 'day'
+        if (granularity !== 'day') {
+            const aggregated = new Map<string, { time: Date, value: number, count: number }>();
+
+            seriesData.forEach((item: any) => {
+                const date = new Date(item.time);
+                if (!isValid(date)) return;
+
+                let key = '';
+                let displayTime = date;
+
+                if (granularity === 'week') {
+                    displayTime = startOfWeek(date, { weekStartsOn: 1 });
+                    key = format(displayTime, 'yyyy-MM-dd');
+                } else { // month
+                    displayTime = startOfMonth(date);
+                    key = format(displayTime, 'yyyy-MM');
+                }
+
+                if (!aggregated.has(key)) {
+                    aggregated.set(key, { time: displayTime, value: 0, count: 0 });
+                }
+                const entry = aggregated.get(key)!;
+                entry.value += Number(item.count) || 0;
+                entry.count += 1;
+            });
+
+            processedData = Array.from(aggregated.values())
+                .sort((a, b) => a.time.getTime() - b.time.getTime())
+                .map(entry => ({
+                    time: entry.time.toISOString(),
+                    count: submittedMetricType === 'proportion' ? entry.value / entry.count : entry.value // Average for proportion, Sum for others
+                }));
+        }
+
         const metricLabel = submittedMetricType === 'pageviews' ? 'sidevisninger' : (submittedMetricType === 'proportion' ? 'andel' : 'besøkende');
         const metricLabelCapitalized = submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende');
 
-        const points: ILineChartDataPoint[] = seriesData.map((item: any) => {
+        const points: ILineChartDataPoint[] = processedData.map((item: any) => {
             let val = Number(item.count) || 0; // Ensure it's a number, default to 0
 
             if (submittedMetricType === 'proportion') {
@@ -245,11 +284,20 @@ const TrafficAnalysis = () => {
                 if (val < 0) val = 0;
             }
 
+            let xAxisLabel = '';
+            if (granularity === 'week') {
+                xAxisLabel = `Uke ${format(new Date(item.time), 'w', { locale: nb })}`;
+            } else if (granularity === 'month') {
+                xAxisLabel = format(new Date(item.time), 'MMM yyyy', { locale: nb });
+            } else {
+                xAxisLabel = new Date(item.time).toLocaleDateString('nb-NO');
+            }
+
             return {
                 x: new Date(item.time),
                 y: submittedMetricType === 'proportion' ? Math.min(val * 100, 100) : val, // Hard cap visual at 100%
-                legend: new Date(item.time).toLocaleDateString('nb-NO'),
-                xAxisCalloutData: new Date(item.time).toLocaleDateString('nb-NO'),
+                legend: xAxisLabel,
+                xAxisCalloutData: xAxisLabel,
                 yAxisCalloutData: submittedMetricType === 'proportion'
                     ? `${(val * 100).toFixed(1)}%`
                     : `${val} ${metricLabel}`
@@ -299,7 +347,7 @@ const TrafficAnalysis = () => {
             yMax,
             yMin,
         };
-    }, [seriesData, showAverage, submittedMetricType]);
+    }, [seriesData, showAverage, submittedMetricType, granularity]);
 
     const copyShareLink = async () => {
         try {
@@ -564,9 +612,8 @@ const TrafficAnalysis = () => {
                             <Tabs.Panel value="visits" className="pt-4">
                                 <TrafficStats data={seriesData} metricType={submittedMetricType} />
                                 <div className="flex flex-col gap-8">
-                                    {/* Chart */}
                                     <div className="flex flex-col gap-4">
-                                        <div className="flex justify-end -mb-5">
+                                        <div className="flex justify-between items-center mb-2">
                                             <Switch
                                                 checked={showAverage}
                                                 onChange={(e) => setShowAverage(e.target.checked)}
@@ -574,6 +621,21 @@ const TrafficAnalysis = () => {
                                             >
                                                 Vis gjennomsnitt
                                             </Switch>
+                                            <div className="flex items-center gap-2">
+                                                <Label size="small" htmlFor="traffic-granularity">Tidsoppløsning</Label>
+                                                <Select
+                                                    id="traffic-granularity"
+                                                    label="Tidsoppløsning"
+                                                    hideLabel
+                                                    size="small"
+                                                    value={granularity}
+                                                    onChange={(e) => setGranularity(e.target.value as any)}
+                                                >
+                                                    <option value="day">Daglig</option>
+                                                    <option value="week">Ukentlig</option>
+                                                    <option value="month">Månedlig</option>
+                                                </Select>
+                                            </div>
                                         </div>
                                         <div style={{ width: '100%', height: '400px' }}>
                                             {chartData ? (
