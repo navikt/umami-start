@@ -11,6 +11,9 @@ interface FilterState {
 }
 
 export const processDashboardSql = (sql: string, websiteId: string, filters: FilterState): string => {
+    // 0. Define timezone (default to Europe/Oslo)
+    const timezone = 'Europe/Oslo';
+
     let processedSql = sql;
 
     // 1. Substitute website_id
@@ -66,8 +69,8 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
         startDate = subDays(now, 30);
     }
 
-    const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
-    const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
+    const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}', '${timezone}')`;
+    const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59', '${timezone}')`;
 
     // For newer queries using umami_views, we should use that table name. 
     // However, since this utility replaces a placeholder in existing SQL, we need to check which table calls for it or use a safer regex.

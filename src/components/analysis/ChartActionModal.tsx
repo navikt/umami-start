@@ -125,6 +125,10 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
         <Modal open={open} onClose={onClose} header={{ heading: 'Hva vil du gjøre med grafen?' }} width="small" >
             <Modal.Body>
                 <div className="p-2 pb-4 flex flex-col gap-4 text-left">
+                    <div className="pb-2">
+                        <p className="text-sm text-[var(--ax-text-subtle)]">Valgt graf</p>
+                        <p className="text-base font-medium text-[var(--ax-text-default)]">{chart.title}</p>
+                    </div>
                     <div className="flex flex-col gap-2">
                         <Button
                             variant="secondary"
@@ -133,14 +137,6 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                             className="justify-start"
                         >
                             Del grafen
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={handleTransferToMetabase}
-                            icon={<Copy aria-hidden />}
-                            className="justify-start"
-                        >
-                            Overfør til Metabase
                         </Button>
                         <Button
                             variant="secondary"

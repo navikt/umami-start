@@ -23,7 +23,7 @@ export const standardDashboard: DashboardConfig = {
 )
 
 SELECT
-  FORMAT_TIMESTAMP('%Y-%m-%d', base_query.created_at) AS dato,
+  DATE(base_query.created_at, 'Europe/Oslo') AS dato,
   COUNT(DISTINCT base_query.session_id) as Unike_besokende
 FROM base_query
 GROUP BY

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { format } from 'date-fns';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -249,14 +250,16 @@ const ResultsPanel = ({
                       ? translatedValue.toLocaleString('nb-NO')
                       : translatedValue !== null && translatedValue !== undefined
                         ? (typeof translatedValue === 'object'
-                          ? (translatedValue instanceof Date && !isNaN(translatedValue as any)
-                            ? translatedValue.toISOString()
+                          ? (translatedValue instanceof Date && !isNaN(translatedValue.getTime())
+                            ? format(translatedValue, 'yyyy-MM-dd')
                             : (Object.keys(translatedValue).length === 1 && 'value' in translatedValue
                               ? (typeof translatedValue.value === 'string' && !isNaN(Date.parse(translatedValue.value))
-                                ? new Date(translatedValue.value).toISOString()
+                                ? format(new Date(translatedValue.value), 'yyyy-MM-dd')
                                 : String(translatedValue.value))
                               : JSON.stringify(translatedValue)))
-                          : String(translatedValue))
+                          : (typeof translatedValue === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(translatedValue) && !isNaN(Date.parse(translatedValue))
+                            ? format(new Date(translatedValue), 'yyyy-MM-dd')
+                            : String(translatedValue)))
                         : '-';
 
                     return (
@@ -802,34 +805,23 @@ const ResultsPanel = ({
 
                     if (!hasValidBarData) {
                       return (
-                        <Alert variant="info">
-                          Klarer ikke å vise stolpediagram, egner seg trolig ikke for denne grafen
+                        <Alert variant="warning">
+                          Stolpediagrammet har ingen gyldige data å vise. Sjekk at du har valgt riktig kolonne for verdier (y-akse).
                         </Alert>
                       );
                     }
+
                     return (
-                      <div className="w-full">
+                      <div style={{ overflow: 'visible' }}>
                         {limitMessage}
-                        <div className="overflow-y-auto max-h-[500px]" style={{ overflow: 'visible' }}>
-                          <style>{`
-                            .bar-chart-hide-xaxis .ms-Chart-xAxis text,
-                            .bar-chart-hide-xaxis g[class*="xAxis"] text {
-                              display: none !important;
-                            }
-                          `}</style>
-                          <div className="bar-chart-hide-xaxis" style={{ width: '100%', height: '500px' }}>
-                            <ResponsiveContainer>
-                              <VerticalBarChart
-                                data={displayData}
-                                barWidth={chartData.barWidth}
-                                yAxisTickCount={chartData.yAxisTickCount}
-                                margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                              />
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
-                          Viser {displayData.length} kategorier (hold markøren over stolpene for detaljer)
+                        <div style={{ width: '100%', height: '400px' }}>
+                          <ResponsiveContainer>
+                            <VerticalBarChart
+                              data={displayData}
+                              yAxisTickCount={10}
+                              enablePerfOptimization={true}
+                            />
+                          </ResponsiveContainer>
                         </div>
                       </div>
                     );
@@ -843,106 +835,41 @@ const ResultsPanel = ({
                   {(() => {
                     const chartData = preparePieChartData();
                     console.log('Pie Chart Data:', chartData);
-                    // Check if too many items
-                    let displayData: any[] = [];
-                    let limitMessage = null;
 
-                    if (chartData && Array.isArray(chartData.data)) {
-                      if (chartData.data.length > 12) {
-                        const top11 = chartData.data.slice(0, 11);
-                        const others = chartData.data.slice(11);
-                        const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
-
-                        displayData = [
-                          ...top11,
-                          { x: 'Andre', y: otherSum }
-                        ];
-
-                        limitMessage = (
-                          <Alert variant="info" className="mb-4">
-                            Viser topp 11 kategorier, pluss "Andre" som samler de resterende {others.length} kategoriene.
-                          </Alert>
-                        );
-                      } else {
-                        displayData = chartData.data;
-                      }
-                    }
-
-                    if (!chartData || !chartData.data || (Array.isArray(chartData.data) && chartData.data.length === 0)) {
+                    if (!chartData || !chartData.data || chartData.data.length === 0) {
                       return (
                         <Alert variant="info">
-                          Kunne ikke lage sirkeldiagram fra dataene. Trenger minst to kolonner (kategori og verdi).
+                          Kunne ikke lage kakediagram fra dataene. Trenger minst to kolonner (kategori og verdi).
                         </Alert>
                       );
                     }
-                    // Check if all y values are NaN or if no valid values exist
-                    const hasValidY = Array.isArray(displayData) && displayData.some((item) => !Number.isNaN(item.y) && item.y !== 0);
 
-                    if (!hasValidY || (Array.isArray(displayData) && displayData.every((item) => Number.isNaN(item.y)))) {
-                      return (
-                        <Alert variant="info">
-                          Klarer ikke å vise sirkeldiagram, egner seg trolig ikke for denne grafen.
-                        </Alert>
-                      );
-                    }
+                    // For PieChart, we need to map to IChartProps
+                    // FluentUI PieChart takes { slices: [...] }
+                    const colors = [
+                      '#0067C5', '#FF9100', '#06893A', '#C30000', '#634689', '#A8874C', '#005B82', '#E18AAA'
+                    ];
+
+                    const pieChartData = {
+                      slices: chartData.data.map((item: any, index: number) => ({
+                        x: item.x,
+                        y: item.y,
+                        legend: item.x,
+                        color: colors[index % colors.length],
+                        xAxisCalloutData: item.x,
+                        yAxisCalloutData: `${item.y} (${Math.round((item.y / chartData.total) * 100)}%)`
+                      }))
+                    };
 
                     return (
-                      <div>
-                        {limitMessage}
-                        <div className="flex flex-col items-center">
-                          <style>{`
-                            /* Make the labels transparent but keep them for hover functionality */
-                            .pie-chart-wrapper text[class*="pieLabel"],
-                            .pie-chart-wrapper g[class*="arc"] text {
-                              opacity: 0 !important;
-                              pointer-events: none !important;
-                            }
-                            /* Make the pie slices hoverable */
-                            .pie-chart-wrapper path {
-                              cursor: pointer !important;
-                            }
-                            /* Style the callout to be larger and more readable */
-                            .pie-chart-wrapper .ms-Callout-main {
-                              padding: 24px !important;
-                              background: var(--ax-bg-default) !important;
-                              border: 3px solid #0067C5 !important;
-                              border-radius: 8px !important;
-                              box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
-                              min-width: 300px !important;
-                            }
-                            .pie-chart-wrapper .ms-Callout-main div {
-                              font-size: 24px !important;
-                              line-height: 1.8 !important;
-                              font-weight: 700 !important;
-                              color: var(--ax-text-default) !important;
-                            }
-                          `}</style>
-                          <div className="pie-chart-wrapper" style={{ width: '100%', height: '400px' }}>
-                            <ResponsiveContainer>
-                              <PieChart
-                                data={displayData}
-                                chartTitle=""
-                              />
-                            </ResponsiveContainer>
-                          </div>
-                          <div className="mt-4 text-lg text-[var(--ax-text-default)]">
-                            <p className="font-medium mb-3">Viser {displayData.length} kategorier med prosentandeler:</p>
-                            <div className="mt-2 flex flex-col gap-2">
-                              {displayData.map((item, idx) => {
-                                // Ensure chartData is not null before accessing total
-                                const total = chartData ? chartData.total : 0;
-                                const percentage = ((item.y / total) * 100).toFixed(1);
-                                // Skip displaying if percentage is NaN
-                                if (isNaN(parseFloat(percentage))) return null;
-                                return (
-                                  <div key={idx} className="flex justify-between items-center py-1 px-2 hover:bg-[var(--ax-bg-neutral-soft)] rounded">
-                                    <span>{item.x}</span>
-                                    <strong className="ml-4">{percentage}%</strong>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                      <div style={{ overflow: 'visible' }}>
+                        <div style={{ width: '100%', height: '400px' }}>
+                          <ResponsiveContainer>
+                            <PieChart
+                              data={pieChartData.slices}
+                              colors={colors}
+                            />
+                          </ResponsiveContainer>
                         </div>
                       </div>
                     );
@@ -950,127 +877,16 @@ const ResultsPanel = ({
                 </div>
               </Tabs.Panel>
             </Tabs>
-
-            {/* Download Options */}
-            <div className="pt-2">
-              <ReadMore header="Last ned resultater">
-                <div className="space-y-4 mt-2">
-                  {/* Download Section */}
-                  <div>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <Button
-                        onClick={downloadCSV}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        CSV
-                      </Button>
-
-                      <Button
-                        onClick={downloadExcel}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        Excel
-                      </Button>
-
-                      <Button
-                        onClick={downloadJSON}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        JSON
-                      </Button>
-
-                      <Button
-                        onClick={downloadTOON}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        TOON
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Copy Section */}
-                  <div>
-                    <p className="text-sm font-medium text-[var(--ax-text-subtle)] mb-2">Eller kopier dem:</p>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <CopyButton
-                        copyText={getCSVContent()}
-                        text="CSV"
-                        activeText="CSV kopiert!"
-                        size="small"
-                        variant="action"
-                      />
-
-                      <CopyButton
-                        copyText={getJSONContent()}
-                        text="JSON"
-                        activeText="JSON kopiert!"
-                        size="small"
-                        variant="action"
-                      />
-
-                      <CopyButton
-                        copyText={getTOONContent()}
-                        text="TOON"
-                        activeText="TOON kopiert!"
-                        size="small"
-                        variant="action"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </ReadMore>
-            </div>
-
-            {/* SQL Code Display */}
-            {showSqlCode && sql && (
-              <SqlViewer sql={sql} showEditButton={showEditButton} />
-            )}
-
-            {/* Share Button */}
-            {sql && result && result.data && result.data.length > 0 && (
-              <div className="mt-3 flex justify-end">
-                <Button
-                  onClick={() => setShowShareModal(true)}
-                  variant="secondary"
-                  size="small"
-                  icon={<Share2 size={18} />}
-                >
-                  Del tabell & graf
-                </Button>
-              </div>
-            )}
-
           </div>
-        )}
-
-
-        {result && result.data && result.data.length === 0 && (
-          <Alert variant="info" className="mt-3">
-            Spørringen returnerte ingen resultater.
-          </Alert>
         )}
       </div>
 
-      {/* Share Modal */}
-      {
-        sql && (
-          <ShareResultsModal
-            sql={sql}
-            open={showShareModal}
-            onClose={() => setShowShareModal(false)}
-          />
-        )
-      }
+      <ShareResultsModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        sql={sql || ''}
+      />
 
-      {/* Analysis Action Modal */}
       <AnalysisActionModal
         open={!!selectedUrl}
         onClose={() => setSelectedUrl(null)}
@@ -1078,7 +894,7 @@ const ResultsPanel = ({
         websiteId={websiteId}
         period={period}
       />
-    </div >
+    </div>
   );
 };
 
