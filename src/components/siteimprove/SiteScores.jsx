@@ -148,7 +148,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                             <h2 className="text-lg font-semibold mb-1 text-[var(--ax-text-default)]">
                                 Poengsum (av 100) fra Siteimprove
                             </h2>
-                            <hr className="my-4 border-t border-[var(--ax-border-neutral-subtle)]" />
+                            <hr className="mt-4 mb-6 border-t border-[var(--ax-border-neutral-subtle)]" />
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                                 {/* QA */}
                                 <div className="flex flex-row md:flex-col items-center md:items-center justify-start md:justify-center w-full p-2">
@@ -227,7 +227,7 @@ const SiteScores = ({ pageUrl, siteimproveSelectedDomain, baseUrl, className }) 
                                     </div>
                                 </div>
                             </div>
-                            <hr className="my-2 border-t border-[var(--ax-border-neutral-subtle)]" />
+                            <hr className="mt-0 mb-4 border-t border-[var(--ax-border-neutral-subtle)]" />
 
                             {pageDetails && pageDetails.summary && pageDetails.summary.quality_assurance && (
                                 <>
