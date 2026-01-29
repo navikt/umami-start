@@ -394,7 +394,8 @@ export default function Grafdeling() {
         const xKey = keys[0];
         const yKey = keys[1];
         const chartPoints = data.map((row: any, index: number) => {
-            const xValue = row[xKey];
+            const xValRaw = row[xKey];
+            const xValue = (xValRaw && typeof xValRaw === 'object' && 'value' in xValRaw) ? xValRaw.value : xValRaw;
             const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
             let x: number | Date;
             if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) x = new Date(xValue);

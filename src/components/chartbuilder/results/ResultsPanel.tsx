@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton } from '@navikt/ds-react';
+import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton, Select, Label } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../../lib/translations';
+import { format, startOfWeek, startOfMonth, isValid } from 'date-fns';
+import { nb } from 'date-fns/locale';
 import SqlViewer from './SqlViewer';
 import ShareResultsModal from './ShareResultsModal';
 import AnalysisActionModal from '../../analysis/AnalysisActionModal';
@@ -69,6 +71,7 @@ const ResultsPanel = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showAverage, setShowAverage] = useState<boolean>(false);
   const [isPercentageStacked, setIsPercentageStacked] = useState<boolean>(false);
+  const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [showShareModal, setShowShareModal] = useState<boolean>(false);
   const [rowLimit] = useState<number>(5000); // Limit rows for performance
   const [showAllRows, setShowAllRows] = useState<boolean>(false);
@@ -77,6 +80,62 @@ const ResultsPanel = ({
   // Helper to check if a value is a clickable URL path
   const isClickablePath = (val: any): boolean => {
     return typeof val === 'string' && val.startsWith('/') && val !== '/' && websiteId !== undefined;
+  };
+
+  // Helper to aggregate chart data by week or month
+  const aggregateChartData = (chartData: ILineChartProps, granularity: 'day' | 'week' | 'month'): ILineChartProps => {
+    if (granularity === 'day' || !chartData.data?.lineChartData) return chartData;
+
+    const newSeries = chartData.data.lineChartData.map((series: any) => {
+      const points = series.data;
+      const aggregatedPoints: Record<string, { x: Date, y: number, count: number }> = {};
+
+      points.forEach((point: any) => {
+        const date = point.x instanceof Date ? point.x : new Date(point.x);
+        if (!isValid(date)) return;
+
+        let key = '';
+        let displayDate: Date = date;
+
+        if (granularity === 'week') {
+          const start = startOfWeek(date, { weekStartsOn: 1 });
+          key = format(start, 'yyyy-MM-dd');
+          displayDate = start;
+        } else if (granularity === 'month') {
+          const start = startOfMonth(date);
+          key = format(start, 'yyyy-MM');
+          displayDate = start;
+        }
+
+        if (!aggregatedPoints[key]) {
+          aggregatedPoints[key] = { x: displayDate, y: 0, count: 0 };
+        }
+        aggregatedPoints[key].y += point.y;
+        aggregatedPoints[key].count += 1;
+      });
+
+      const newPoints = Object.values(aggregatedPoints)
+        .sort((a, b) => a.x.getTime() - b.x.getTime())
+        .map(p => ({
+          x: p.x,
+          y: p.y,
+          xAxisCalloutData: granularity === 'week' ? `Uke ${format(p.x, 'w', { locale: nb })}` : format(p.x, 'MMMM yyyy', { locale: nb }),
+          yAxisCalloutData: p.y.toLocaleString('nb-NO')
+        }));
+
+      return {
+        ...series,
+        data: newPoints
+      };
+    });
+
+    return {
+      ...chartData,
+      data: {
+        ...chartData.data,
+        lineChartData: newSeries
+      }
+    };
   };
 
   // Get hidden tabs from URL or props
@@ -107,9 +166,10 @@ const ResultsPanel = ({
     setActiveSearchQuery('');
   };
 
-  // Reset isPercentageStacked when result changes
+  // Reset visualization settings when result changes
   useEffect(() => {
     setIsPercentageStacked(false);
+    setGranularity('day');
   }, [result]);
 
   // For small datasets, auto-submit search as you type
@@ -609,7 +669,12 @@ const ResultsPanel = ({
               <Tabs.Panel value="linechart" className="pt-4">
                 <div className="border rounded-lg bg-[var(--ax-bg-default)] p-4">
                   {(() => {
-                    const chartData = prepareLineChartData(showAverage);
+                    let chartData = prepareLineChartData(showAverage);
+
+                    if (chartData && granularity !== 'day') {
+                      chartData = aggregateChartData(chartData, granularity);
+                    }
+
                     console.log('Line Chart Data:', chartData);
                     console.log('Raw Result Data:', result.data);
 
@@ -622,7 +687,7 @@ const ResultsPanel = ({
                     }
                     return (
                       <div style={{ overflow: 'visible' }}>
-                        <div className="mb-3">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                           <Switch
                             checked={showAverage}
                             onChange={(e) => setShowAverage(e.target.checked)}
@@ -630,6 +695,21 @@ const ResultsPanel = ({
                           >
                             Vis gjennomsnitt
                           </Switch>
+                          <div className="flex items-center gap-2">
+                            <Label size="small" htmlFor="line-granularity">Tidsoppløsning</Label>
+                            <Select
+                              id="line-granularity"
+                              label="Tidsoppløsning"
+                              hideLabel
+                              size="small"
+                              value={granularity}
+                              onChange={(e) => setGranularity(e.target.value as any)}
+                            >
+                              <option value="day">Daglig</option>
+                              <option value="week">Ukentlig</option>
+                              <option value="month">Månedlig</option>
+                            </Select>
+                          </div>
                         </div>
                         <div style={{ width: '100%', height: '400px' }}>
                           <ResponsiveContainer>
@@ -662,14 +742,19 @@ const ResultsPanel = ({
               <Tabs.Panel value="areachart" className="pt-4">
                 <div className="border rounded-lg bg-[var(--ax-bg-default)] p-4">
                   {(() => {
-                    const baseChartData = prepareLineChartData(false);
+                    let baseChartData = prepareLineChartData(false);
 
                     if (!baseChartData) {
                       return (
                         <Alert variant="info">
-                          Kunne ikke lage områdediagram fra dataene. Trenger minst til kolonner (x-akse og y-akse).
+                          Kunne ikke lage områdediagram fra dataene. Trenger minst to kolonner (x-akse og y-akse).
                         </Alert>
                       );
+                    }
+
+                    // Apply granularity aggregation
+                    if (granularity !== 'day') {
+                      baseChartData = aggregateChartData(baseChartData, granularity);
                     }
 
                     // Check if we have multiple series
@@ -717,8 +802,8 @@ const ResultsPanel = ({
 
                     return (
                       <div style={{ overflow: 'visible' }}>
-                        {hasMultipleSeries && (
-                          <div className="mb-3">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                          {hasMultipleSeries && (
                             <Switch
                               checked={isPercentageStacked}
                               onChange={(e) => setIsPercentageStacked(e.target.checked)}
@@ -726,8 +811,24 @@ const ResultsPanel = ({
                             >
                               Stablet 100%
                             </Switch>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Label size="small" htmlFor="area-granularity">Tidsoppløsning</Label>
+                            <Select
+                              id="area-granularity"
+                              label="Tidsoppløsning"
+                              hideLabel
+                              size="small"
+                              value={granularity}
+                              onChange={(e) => setGranularity(e.target.value as any)}
+                            >
+                              <option value="day">Daglig</option>
+                              <option value="week">Ukentlig</option>
+                              <option value="month">Månedlig</option>
+                            </Select>
                           </div>
-                        )}
+                        </div>
+
                         <div style={{ width: '100%', height: '400px' }}>
                           <ResponsiveContainer>
                             <AreaChart
