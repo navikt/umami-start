@@ -868,7 +868,7 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
 
         const query = `
             SELECT
-                TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                TIMESTAMP_TRUNC(created_at, ${timeTrunc}, 'Europe/Oslo') as time,
                 COUNT(*) as count
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
@@ -2635,7 +2635,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
     --Pre - normalize URL once(no regex in joins later)
                 SELECT
                     session_id,
-    DATE(created_at) AS event_date,
+                    DATE(created_at, 'Europe/Oslo') AS event_date,
     created_at,
     --lightweight URL normalization
                     IFNULL(
@@ -3394,7 +3394,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
                 COUNTIF(event_type = 2) as custom_events
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
-              AND created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH))
+              AND created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE('Europe/Oslo'), INTERVAL 6 MONTH))
             GROUP BY 1
             ORDER BY 1
         `;

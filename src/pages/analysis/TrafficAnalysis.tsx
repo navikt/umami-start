@@ -43,6 +43,7 @@ const TrafficAnalysis = () => {
     const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || 'visitors'); // 'visitors', 'sessions', 'pageviews'
     const [submittedMetricType, setSubmittedMetricType] = useState<string>('visitors'); // Track what was actually submitted
     const [showAverage, setShowAverage] = useState<boolean>(false);
+    const [showTable, setShowTable] = useState<boolean>(false);
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
@@ -709,13 +710,22 @@ const TrafficAnalysis = () => {
                                 <div className="flex flex-col gap-8">
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center mb-2">
-                                            <Switch
-                                                checked={showAverage}
-                                                onChange={(e) => setShowAverage(e.target.checked)}
-                                                size="small"
-                                            >
-                                                Vis gjennomsnitt
-                                            </Switch>
+                                            <div className="flex items-center gap-4">
+                                                <Switch
+                                                    checked={showAverage}
+                                                    onChange={(e) => setShowAverage(e.target.checked)}
+                                                    size="small"
+                                                >
+                                                    Vis gjennomsnitt
+                                                </Switch>
+                                                <Switch
+                                                    checked={showTable}
+                                                    onChange={(e) => setShowTable(e.target.checked)}
+                                                    size="small"
+                                                >
+                                                    Vis tabell
+                                                </Switch>
+                                            </div>
                                             <div className="flex items-center gap-2">
                                                 <Label size="small" htmlFor="traffic-granularity">Tidsoppløsning</Label>
                                                 <Select
@@ -762,46 +772,59 @@ const TrafficAnalysis = () => {
                                         </div>
                                     </div>
 
-                                    {/* Table */}
-                                    <div className="border rounded-lg overflow-x-auto">
-                                        <Table size="small">
-                                            <Table.Header>
-                                                <Table.Row>
-                                                    <Table.HeaderCell>Dato</Table.HeaderCell>
-                                                    <Table.HeaderCell align="right">
-                                                        {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende')}
-                                                    </Table.HeaderCell>
-                                                </Table.Row>
-                                            </Table.Header>
-                                            <Table.Body>
-                                                {seriesData.map((item, index) => (
-                                                    <Table.Row key={index}>
-                                                        <Table.DataCell>
-                                                            {new Date(item.time).toLocaleDateString('nb-NO')}
-                                                        </Table.DataCell>
-                                                        <Table.DataCell align="right">
-                                                            {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
-                                                        </Table.DataCell>
-                                                    </Table.Row>
-                                                ))}
-                                            </Table.Body>
-                                        </Table>
-                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="small"
-                                                    variant="secondary"
-                                                    onClick={downloadCSV}
-                                                    icon={<Download size={16} />}
-                                                >
-                                                    Last ned CSV
-                                                </Button>
+                                    <div className="flex flex-col md:flex-row gap-8 mt-8">
+                                        {/* Table */}
+                                        {showTable && (
+                                            <div className="border rounded-lg overflow-x-auto w-full md:w-1/2">
+                                                <Table size="small">
+                                                    <Table.Header>
+                                                        <Table.Row>
+                                                            <Table.HeaderCell>Dato</Table.HeaderCell>
+                                                            <Table.HeaderCell align="right">
+                                                                {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende')}
+                                                            </Table.HeaderCell>
+                                                        </Table.Row>
+                                                    </Table.Header>
+                                                    <Table.Body>
+                                                        {seriesData.map((item, index) => (
+                                                            <Table.Row key={index}>
+                                                                <Table.DataCell>
+                                                                    {new Date(item.time).toLocaleDateString('nb-NO')}
+                                                                </Table.DataCell>
+                                                                <Table.DataCell align="right">
+                                                                    {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
+                                                                </Table.DataCell>
+                                                            </Table.Row>
+                                                        ))}
+                                                    </Table.Body>
+                                                </Table>
+                                                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="small"
+                                                            variant="secondary"
+                                                            onClick={downloadCSV}
+                                                            icon={<Download size={16} />}
+                                                        >
+                                                            Last ned CSV
+                                                        </Button>
+                                                    </div>
+                                                    {seriesQueryStats && (
+                                                        <span className="text-sm text-[var(--ax-text-subtle)]">
+                                                            Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            {seriesQueryStats && (
-                                                <span className="text-sm text-[var(--ax-text-subtle)]">
-                                                    Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
-                                                </span>
-                                            )}
+                                        )}
+
+                                        {/* Pages Table - Always visible context */}
+                                        <div className={`w-full ${showTable ? 'md:w-1/2' : 'md:w-1/2'}`}>
+                                            <TrafficTable
+                                                title="Inkluderte sider"
+                                                data={internalPaths}
+                                                onRowClick={setSelectedInternalUrl}
+                                            />
                                         </div>
                                     </div>
                                 </div>
