@@ -3,9 +3,11 @@ import React from 'react';
 interface TrafficStatsProps {
     data: any[];
     metricType: string;
+    /** Optional: Override the total with actual unique count (e.g., from page metrics) */
+    totalOverride?: number;
 }
 
-const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType }) => {
+const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOverride }) => {
     if (!data || data.length === 0) return null;
 
     // Calculate stats
@@ -34,8 +36,9 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType }) => {
     };
 
     // Determine labels and values based on metric type
+    // Use totalOverride if provided (actual unique count), otherwise fall back to sum
     let box1Label = `Totalt ${metricType === 'pageviews' ? 'sidevisninger' : 'besøkende'}`;
-    let box1Value = sum;
+    let box1Value = totalOverride !== undefined ? totalOverride : sum;
 
     let box2Label = 'Gjennomsnitt per dag';
     let box2Value = avg;

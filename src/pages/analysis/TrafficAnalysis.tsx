@@ -67,6 +67,15 @@ const TrafficAnalysis = () => {
         }));
     }, [pageMetrics, submittedMetricType]);
 
+    // Calculate total from page metrics (actual unique count)
+    const pageMetricsTotal = useMemo(() => {
+        if (!pageMetrics.length) return undefined;
+        return pageMetrics.reduce((sum, item) => {
+            const value = submittedMetricType === 'pageviews' ? item.pageviews : item.visitors;
+            return sum + (value || 0);
+        }, 0);
+    }, [pageMetrics, submittedMetricType]);
+
 
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
     const [externalReferrerData, setExternalReferrerData] = useState<any[]>([]); // Data from marketing-stats API
@@ -838,7 +847,7 @@ const TrafficAnalysis = () => {
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
-                                <TrafficStats data={seriesData} metricType={submittedMetricType} />
+                                <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} />
                                 <div className="flex flex-col gap-8">
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center mb-2">
