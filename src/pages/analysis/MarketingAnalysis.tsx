@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Select, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Select, Table, Heading, Pagination, VStack, HelpText, Label } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -15,6 +15,7 @@ const MarketingAnalysis = () => {
 
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals'); // Default to 'equals' matching TrafficAnalysis
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
 
     // Support custom dates from URL
@@ -99,7 +100,7 @@ const MarketingAnalysis = () => {
         try {
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
 
-            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${metricType}`;
+            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
 
             const response = await fetch(url);
             if (!response.ok) throw new Error('Kunne ikke hente markedsdata');
@@ -114,14 +115,15 @@ const MarketingAnalysis = () => {
             }
 
             // Update URL with configuration for sharing
-            // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('metricType', metricType);
             if (urlPath) {
                 newParams.set('urlPath', urlPath);
+                newParams.set('pathOperator', pathOperator);
             } else {
                 newParams.delete('urlPath');
+                newParams.delete('pathOperator');
             }
 
             if (period === 'custom' && customStartDate && customEndDate) {
@@ -155,7 +157,7 @@ const MarketingAnalysis = () => {
 
 
 
-    const AnalysisTable = ({ title, data, metricLabel, queryStats }: { title: string, data: any[], metricLabel: string, queryStats: any }) => {
+    const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite }: { title: string, data: any[], metricLabel: string, queryStats: any, selectedWebsite: Website | null }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
@@ -199,6 +201,47 @@ const MarketingAnalysis = () => {
             URL.revokeObjectURL(url);
         };
 
+        const renderName = (name: string) => {
+            if (name === '(none)') {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Direkte / Ingen</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Besøk hvor det ikke er registrert noen henvisningskilde. Dette er ofte brukere som skriver inn nettadressen direkte, bruker bokmerker, eller kommer fra apper (som e-post eller Teams) som ikke sender data om hvor trafikken kommer fra.
+                        </HelpText>
+                    </div>
+                );
+            }
+
+            if (name === '(exit)') {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Utganger (Exit)</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Dette viser vanligvis til økter som ble avsluttet uten ny sidevisning, eller data som mangler kildeinformasjon ved utgang.
+                        </HelpText>
+                    </div>
+                );
+            }
+
+            if (name === '(not set)') { // Adding common GA term just in case
+                return "Ikke satt (not set)";
+            }
+
+            if (selectedWebsite && name === selectedWebsite.domain) {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Interntrafikk ({name})</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Trafikk som ser ut til å komme fra samme domene. Dette skjer ofte ved omdirigeringer, eller hvis sporingskoden mistet sesjonsdata mellom to sidevisninger.
+                        </HelpText>
+                    </div>
+                );
+            }
+
+            return <div className="truncate">{name}</div>;
+        };
+
         return (
             <VStack gap="space-4">
                 <div className="flex justify-between items-end">
@@ -225,7 +268,9 @@ const MarketingAnalysis = () => {
                         <Table.Body>
                             {paginatedData.map((row: any, i: number) => (
                                 <Table.Row key={i}>
-                                    <Table.DataCell className="truncate max-w-md" title={row.name}>{row.name}</Table.DataCell>
+                                    <Table.DataCell className="max-w-md" title={row.name}>
+                                        {renderName(row.name)}
+                                    </Table.DataCell>
                                     <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
                                 </Table.Row>
                             ))}
@@ -282,14 +327,32 @@ const MarketingAnalysis = () => {
             }
             filters={
                 <>
-                    <div className="w-full sm:w-[300px]">
+                    <div className="w-full sm:w-[350px]">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Label size="small" htmlFor="url-filter">URL-sti</Label>
+                            <select
+                                className="text-sm bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded text-[var(--ax-text-accent)] font-medium cursor-pointer focus:outline-none py-1 px-2"
+                                value={pathOperator}
+                                onChange={(e) => setPathOperator(e.target.value)}
+                            >
+                                <option value="equals">er lik</option>
+                                <option value="starts-with">starter med</option>
+                            </select>
+                        </div>
                         <TextField
-                            size="small"
+                            id="url-filter"
                             label="URL-sti"
+                            hideLabel
+                            size="small"
                             placeholder="URL-sti (valgfritt)"
                             value={urlPath}
                             onChange={(e) => setUrlPath(e.target.value)}
                             onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    fetchData();
+                                }
+                            }}
                         />
                     </div>
 
@@ -358,6 +421,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['source'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="medium" className="pt-4">
@@ -366,6 +430,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['medium'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="campaign" className="pt-4">
@@ -374,6 +439,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['campaign'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="content" className="pt-4">
@@ -382,6 +448,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['content'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="term" className="pt-4">
@@ -390,6 +457,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['term'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="referrer" className="pt-4">
@@ -398,6 +466,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['referrer'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                         <Tabs.Panel value="query" className="pt-4">
@@ -406,6 +475,7 @@ const MarketingAnalysis = () => {
                                 data={marketingData['query'] || []}
                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                 queryStats={queryStats}
+                                selectedWebsite={selectedWebsite}
                             />
                         </Tabs.Panel>
                     </Tabs>

@@ -8,7 +8,7 @@ export const sanitizeColumnName = (key: string): string => {
 };
 
 export const normalizeUrlToPath = (input: string): string => {
-  if (!input.trim()) return '/';
+  if (!input.trim()) return '';
   let trimmed = input.trim();
   try {
     if (trimmed.includes('://')) {

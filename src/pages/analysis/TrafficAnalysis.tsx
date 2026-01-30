@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker, HelpText } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
@@ -66,7 +66,9 @@ const TrafficAnalysis = () => {
 
 
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
+    const [externalReferrerData, setExternalReferrerData] = useState<any[]>([]); // Data from marketing-stats API
 
+    // Auto-submit when URL parameters are present (for shared links)
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
         // Only auto-submit if there are config params beyond just websiteId
@@ -75,6 +77,9 @@ const TrafficAnalysis = () => {
             fetchSeriesData();
         }
     }, [selectedWebsite]); // Only run when selectedWebsite changes
+
+    // Auto-fetch when filters change (after initial fetch) - Removed manual fetch enforcement
+    // No useEffect here for auto-fetch to save costs as per user request
 
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
@@ -90,6 +95,7 @@ const TrafficAnalysis = () => {
         setSeriesData([]);
         setPageMetrics([]);
         setBreakdownData({ sources: [], exits: [] });
+        setExternalReferrerData([]);
         setHasAttemptedFetch(true);
         setSubmittedMetricType(metricType);
 
@@ -135,16 +141,18 @@ const TrafficAnalysis = () => {
             const seriesResult = await seriesResponse.json();
 
             if (seriesResult.data) {
+                console.log('[TrafficAnalysis] Received series data:', seriesResult.data.length, 'records');
                 setSeriesData(seriesResult.data);
             }
             if (seriesResult.queryStats) {
                 setSeriesQueryStats(seriesResult.queryStats);
             }
 
-            // Fetch Breakdown Data and Page Metrics in parallel
+            // Fetch Breakdown Data, Page Metrics, and External Referrers in parallel
             await Promise.all([
                 fetchTrafficBreakdown(startDate, endDate),
-                fetchPageMetrics(startDate, endDate)
+                fetchPageMetrics(startDate, endDate),
+                fetchExternalReferrers(startDate, endDate)
             ]);
 
             // Update URL with configuration for sharing
@@ -182,7 +190,7 @@ const TrafficAnalysis = () => {
 
         try {
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}`;
+            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
 
             const response = await fetch(breakdownUrl);
             if (!response.ok) throw new Error('Kunne ikke hente trafikkdetaljer');
@@ -205,7 +213,7 @@ const TrafficAnalysis = () => {
 
         try {
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}`;
+            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
 
             const response = await fetch(metricsUrl);
             if (!response.ok) throw new Error('Kunne ikke hente sidemetrikker');
@@ -216,6 +224,26 @@ const TrafficAnalysis = () => {
             }
         } catch (err: any) {
             console.error('Error fetching page metrics:', err);
+        }
+    };
+
+    // Fetch external referrer data from marketing-stats API (same as MarketingAnalysis)
+    const fetchExternalReferrers = async (startDate: Date, endDate: Date) => {
+        if (!selectedWebsite) return;
+
+        try {
+            const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
+            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Kunne ikke hente eksterne trafikkilder');
+            const result = await response.json();
+
+            if (result.data && result.data.referrer) {
+                setExternalReferrerData(result.data.referrer);
+            }
+        } catch (err: any) {
+            console.error('Error fetching external referrers:', err);
         }
     };
 
@@ -376,13 +404,10 @@ const TrafficAnalysis = () => {
         URL.revokeObjectURL(url);
     };
 
-    // Process Flow/Breakdown Data for Tables
-    // Entrances: Included in 'sources' of breakdown, filter for startsWith('/')
-    // Exits: Included in 'exits' of breakdown
-    // Referrers: Included in 'sources' of breakdown, filter for !startsWith('/')
-    const { entrances, exits, referrers, channels } = useMemo(() => {
+    // Process Flow/Breakdown Data for Internal Tables (entrances/exits only)
+    const { entrances, exits } = useMemo(() => {
         if (!breakdownData.sources.length && !breakdownData.exits.length) {
-            return { entrances: [], exits: [], referrers: [], channels: [] };
+            return { entrances: [], exits: [] };
         }
 
         const sources = breakdownData.sources.map(s => ({
@@ -390,43 +415,21 @@ const TrafficAnalysis = () => {
             count: Number(s.visitors)
         }));
 
-        const exits = breakdownData.exits.map(e => ({
+        const exitsList = breakdownData.exits.map(e => ({
             name: e.name,
             count: Number(e.visitors)
         })).sort((a, b) => b.count - a.count);
 
-        // Filter Sources
-        const entrances = sources
+        // Filter Sources for internal entrances only
+        const entrancesList = sources
             .filter(s => s.name.startsWith('/'))
             .sort((a, b) => b.count - a.count);
 
-        const referrers = sources
-            .filter(s => !s.name.startsWith('/') && s.name !== 'Direkte / Annet')
-            .sort((a, b) => b.count - a.count);
-
-        // Channels (Grouped Referrers)
-        const channelMap = new Map<string, number>();
-        sources.forEach(item => {
-            if (item.name.startsWith('/')) return; // Ignore internal for channels
-
-            let channel = 'Andre nettsider';
-            const source = item.name.toLowerCase();
-
-            if (source === 'direkte / annet') channel = 'Direkte';
-            else if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo')) channel = 'Søkemotorer';
-            else if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) channel = 'Sosiale medier';
-
-            channelMap.set(channel, (channelMap.get(channel) || 0) + item.count);
-        });
-
-        const channels = Array.from(channelMap.entries())
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count);
-
-        return { entrances, exits, referrers, channels };
+        return { entrances: entrancesList, exits: exitsList };
     }, [breakdownData]);
 
-    const TrafficTable = ({ title, data, onRowClick }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void }) => {
+    // Simple table component for external traffic - similar to AnalysisTable in MarketingAnalysis
+    const ExternalTrafficTable = ({ title, data, metricLabel }: { title: string; data: { name: string; count: number }[]; metricLabel: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
@@ -435,7 +438,6 @@ const TrafficAnalysis = () => {
             row.name.toLowerCase().includes(search.toLowerCase())
         );
 
-        // Reset to page 1 when search changes
         useEffect(() => {
             setPage(1);
         }, [search]);
@@ -443,7 +445,19 @@ const TrafficAnalysis = () => {
         const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
-        const isClickableRow = (name: string) => name.startsWith('/') && onRowClick;
+        const renderName = (name: string) => {
+            if (name === '(none)' || name === 'Direkte / Annet') {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Direkte / Ingen</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Besøk hvor det ikke er registrert noen henvisningskilde. Dette er ofte brukere som skriver inn nettadressen direkte, bruker bokmerker, eller kommer fra apper (som e-post eller Teams) som ikke sender data om hvor trafikken kommer fra.
+                        </HelpText>
+                    </div>
+                );
+            }
+            return <div className="truncate">{name}</div>;
+        };
 
         return (
             <VStack gap="space-4">
@@ -465,9 +479,149 @@ const TrafficAnalysis = () => {
                         <Table.Header>
                             <Table.Row>
                                 <Table.HeaderCell>Navn</Table.HeaderCell>
+                                <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                            </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                            {paginatedData.map((row, i) => (
+                                <Table.Row key={i}>
+                                    <Table.DataCell className="max-w-md" title={row.name}>
+                                        {renderName(row.name)}
+                                    </Table.DataCell>
+                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                </Table.Row>
+                            ))}
+                            {filteredData.length === 0 && (
+                                <Table.Row>
+                                    <Table.DataCell colSpan={2} align="center">
+                                        {data.length > 0 ? 'Ingen treff' : 'Ingen data'}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            )}
+                        </Table.Body>
+                    </Table>
+                </div>
+                {totalPages > 1 && (
+                    <Pagination
+                        page={page}
+                        onPageChange={setPage}
+                        count={totalPages}
+                        size="small"
+                    />
+                )}
+            </VStack>
+        );
+    };
+
+    // Use external referrer data from marketing-stats API (same as MarketingAnalysis)
+    const externalReferrers = useMemo(() => {
+        return externalReferrerData
+            .filter(item => item.name !== '(none)') // Filter out direct traffic
+            .map(item => ({ name: item.name, count: item.count }));
+    }, [externalReferrerData]);
+
+    const externalChannels = useMemo(() => {
+        const channelMap = new Map<string, number>();
+        externalReferrerData.forEach(item => {
+            let channel = 'Andre nettsider';
+            const source = item.name.toLowerCase();
+
+            if (source === '(none)') channel = 'Direkte';
+            else if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo') || source.includes('ecosia') || source.includes('qwant')) channel = 'Søkemotorer';
+            else if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) channel = 'Sosiale medier';
+
+            channelMap.set(channel, (channelMap.get(channel) || 0) + item.count);
+        });
+
+        return Array.from(channelMap.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
+    }, [externalReferrerData]);
+
+    const TrafficTable = ({ title, data, onRowClick, selectedWebsite, metricLabel }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void; selectedWebsite: Website | null; metricLabel: string }) => {
+        const [search, setSearch] = useState('');
+        const [page, setPage] = useState(1);
+        const rowsPerPage = 20;
+
+        const filteredData = data.filter(row =>
+            row.name.toLowerCase().includes(search.toLowerCase())
+        );
+
+        // Reset to page 1 when search changes
+        useEffect(() => {
+            setPage(1);
+        }, [search]);
+
+        const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+        const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+        const isClickableRow = (name: string) => name.startsWith('/') && onRowClick;
+
+        const renderName = (name: string) => {
+            if (name === '(none)') {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Direkte / Ingen</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Besøk hvor det ikke er registrert noen henvisningskilde. Dette er ofte brukere som skriver inn nettadressen direkte, bruker bokmerker, eller kommer fra apper (som e-post eller Teams) som ikke sender data om hvor trafikken kommer fra.
+                        </HelpText>
+                    </div>
+                );
+            }
+
+            if (name === '(exit)' || name === 'Exit') {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Forlot nettstedet</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Vi kan ikke se om de klikket på en ekstern lenke, lukket fanen/nettleseren.
+                        </HelpText>
+                    </div>
+                );
+            }
+
+            if (name === '(not set)') {
+                return "Ikke satt (not set)";
+            }
+
+            if (selectedWebsite && name === selectedWebsite.domain) {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Interntrafikk ({name})</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Trafikk som ser ut til å komme fra samme domene. Dette skjer ofte ved omdirigeringer, eller hvis sporingskoden mistet sesjonsdata mellom to sidevisninger.
+                        </HelpText>
+                    </div>
+                );
+            }
+
+            return <div className="truncate">{name}</div>;
+        };
+
+
+        return (
+            <VStack gap="space-4">
+                <div className="flex justify-between items-end">
+                    <Heading level="3" size="small">{title}</Heading>
+                    <div className="w-64">
+                        <TextField
+                            label="Søk"
+                            hideLabel
+                            placeholder="Søk..."
+                            size="small"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="border rounded-lg overflow-x-auto">
+                    <Table size="small">
+                        <Table.Header>
+                            <Table.Row>
                                 <Table.HeaderCell align="right">
-                                    {submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')}
+                                    {metricLabel}
                                 </Table.HeaderCell>
+                                <Table.HeaderCell>Navn</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -477,17 +631,18 @@ const TrafficAnalysis = () => {
                                     className={isClickableRow(row.name) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
                                     onClick={() => isClickableRow(row.name) && onRowClick?.(row.name)}
                                 >
-                                    <Table.DataCell className="truncate max-w-md" title={row.name}>
+                                    <Table.DataCell align="right">
+                                        {row.count.toLocaleString('nb-NO')}
+                                    </Table.DataCell>
+                                    <Table.DataCell className="max-w-md" title={row.name}>
                                         {isClickableRow(row.name) ? (
-                                            <span className="text-blue-600 hover:underline flex items-center gap-1">
-                                                {row.name} <ExternalLink className="h-3 w-3" />
+                                            <span className="flex items-center gap-1 max-w-full">
+                                                <span className="truncate text-blue-600 hover:underline cursor-pointer" onClick={() => onRowClick?.(row.name)}>{row.name}</span>
+                                                <ExternalLink className="h-3 w-3 shrink-0 text-blue-600" />
                                             </span>
                                         ) : (
-                                            row.name
+                                            renderName(row.name)
                                         )}
-                                    </Table.DataCell>
-                                    <Table.DataCell align="right">
-                                        {submittedMetricType === 'proportion' ? `${(row.count * 100).toFixed(1)}%` : row.count.toLocaleString('nb-NO')}
                                     </Table.DataCell>
                                 </Table.Row>
                             ))}
@@ -545,7 +700,12 @@ const TrafficAnalysis = () => {
                             size="small"
                             value={urlPath}
                             onChange={(e) => setUrlPath(e.target.value)}
-                            onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
+                            onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val) {
+                                    setUrlPath(normalizeUrlToPath(val));
+                                }
+                            }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     fetchSeriesData();
@@ -689,7 +849,7 @@ const TrafficAnalysis = () => {
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
                                 <Tabs.Tab value="visits" label="Besøk over tid" />
-                                <Tabs.Tab value="internal" label="Intern trafikk" />
+                                <Tabs.Tab value="internal" label="Innganger og utganger" />
                                 <Tabs.Tab value="external" label="Eksterne trafikkilder" />
                             </Tabs.List>
 
@@ -812,6 +972,8 @@ const TrafficAnalysis = () => {
                                                 title="Inkluderte sider"
                                                 data={includedPagesData}
                                                 onRowClick={setSelectedInternalUrl}
+                                                selectedWebsite={selectedWebsite}
+                                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')}
                                             />
                                         </div>
                                     </div>
@@ -821,10 +983,10 @@ const TrafficAnalysis = () => {
                             <Tabs.Panel value="internal" className="pt-4">
                                 <div className="flex flex-col md:flex-row gap-8">
                                     <div className="w-full md:w-1/2">
-                                        <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} />
+                                        <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
                                     </div>
                                     <div className="w-full md:w-1/2">
-                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} />
+                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
                                     </div>
                                 </div>
 
@@ -838,9 +1000,21 @@ const TrafficAnalysis = () => {
                             </Tabs.Panel>
 
                             <Tabs.Panel value="external" className="pt-4">
-                                <div className="flex flex-col gap-8">
-                                    <TrafficTable title="Kanaler" data={channels} />
-                                    <TrafficTable title="Trafikkilder" data={referrers} />
+                                <div className="flex flex-col md:flex-row gap-8">
+                                    <div className="w-full md:w-1/2">
+                                        <ExternalTrafficTable
+                                            title="Kanaler"
+                                            data={externalChannels}
+                                            metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                        />
+                                    </div>
+                                    <div className="w-full md:w-1/2">
+                                        <ExternalTrafficTable
+                                            title="Trafikkilder"
+                                            data={externalReferrers}
+                                            metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                        />
+                                    </div>
                                 </div>
                             </Tabs.Panel>
                         </Tabs>

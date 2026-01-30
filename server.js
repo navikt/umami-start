@@ -1205,6 +1205,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits', pathOperator } = req.query;
+        console.log(`[Traffic Series] Request: metricType=${metricType}, urlPath=${urlPath}, pathOperator=${pathOperator}`);
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1300,6 +1301,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             const countExpression = metricType === 'pageviews'
                 ? 'COUNT(*)'
                 : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+            console.log(`[Traffic Series] Count Expression: ${countExpression}`);
 
             query = `
                 SELECT
@@ -1678,7 +1680,8 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
     try {
         const { websiteId } = req.params;
         const navIdent = req.user?.navIdent || 'UNKNOWN';
-        const { startAt, endAt, urlPath, pathOperator, limit = '1000' } = req.query;
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000', metricType = 'visits' } = req.query;
+        console.log(`[Traffic Breakdown] Request: metricType=${metricType}, pathOperator=${pathOperator}`);
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
@@ -1716,6 +1719,9 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             // If "All pages", sources = referrers, exits = exit pages.
             condition = '1=1';
         }
+
+        const countExpression = metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(session_id)';
+        console.log(`[Traffic Breakdown] Count Expression: ${countExpression}`);
 
         const query = `
             WITH session_events AS (
@@ -1755,14 +1761,14 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
                 WHERE ${condition}
             ),
             sources_agg AS (
-                SELECT source as name, APPROX_COUNT_DISTINCT(session_id) as visitors
+                SELECT source as name, ${countExpression} as visitors
                 FROM filtered_events
                 GROUP BY 1
                 ORDER BY visitors DESC
                 LIMIT @limit
             ),
             exits_agg AS (
-                SELECT next_page as name, APPROX_COUNT_DISTINCT(session_id) as visitors
+                SELECT next_page as name, ${countExpression} as visitors
                 FROM filtered_events
                 GROUP BY 1
                 ORDER BY visitors DESC
@@ -2445,7 +2451,7 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
 
-        const { startAt, endAt, urlPath, limit = '100', metricType = 'visits' } = req.query;
+        const { startAt, endAt, urlPath, limit = '100', metricType = 'visits', pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -2465,14 +2471,19 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
 
         let urlFilter = '';
         if (urlPath) {
-            urlFilter = `AND (
-                url_path = @urlPath 
-                OR url_path = @urlPathSlash 
-                OR url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         // Choose aggregation based on metric type
