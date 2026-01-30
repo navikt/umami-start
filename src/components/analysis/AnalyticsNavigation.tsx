@@ -25,7 +25,7 @@ export const analyticsPages = [
     {
         id: 'brukersammensetning',
         href: '/brukersammensetning',
-        label: 'Brukersammensetning',
+        label: 'Brukerdetaljer',
         description: 'Se informasjon om besøkende'
     },
     {

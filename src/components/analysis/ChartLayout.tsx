@@ -25,19 +25,24 @@ const chartGroups = [
         ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
     },
     {
+        title: "Brukere",
+        icon: <Users size={18} />,
+        ids: ['brukersammensetning', 'brukerprofiler', 'brukerlojalitet']
+    },
+    {
         title: "Brukerreiser",
         icon: <BarChart2 size={18} />,
         ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
     },
     {
-        title: "Brukere & lojalitet",
-        icon: <Users size={18} />,
-        ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
-    },
-    {
         title: "Innholdskvalitet",
         icon: <FileSearch size={18} />,
         ids: ['odelagte-lenker', 'stavekontroll']
+    },
+    {
+        title: "Datasjekk",
+        icon: <Layout size={18} />,
+        ids: ['diagnose', 'personvern']
     }
 ];
 
@@ -84,11 +89,6 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
         navigate(targetUrl);
     };
 
-    const otherPages = analyticsPages.filter(page =>
-        !chartGroups.some(g => g.ids.includes(page.id)) &&
-        !EXCLUDED_PAGES.includes(page.id)
-    );
-
     // Trigger resize for charts when sidebar widths change
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -131,35 +131,6 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                     </ul>
                 </div>
             ))}
-
-            {otherPages.length > 0 && (
-                <div>
-                    <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
-                        <Layout size={18} />
-                        <span>Datasjekk</span>
-                    </div>
-                    <ul className="space-y-0.5">
-                        {otherPages.map(page => {
-                            const isActive = currentPage === page.id;
-                            return (
-                                <li key={page.id}>
-                                    <a
-                                        href={page.href}
-                                        onClick={(e) => handleNavigation(e, page.href)}
-                                        className={`block px-3 py-2 text-base font-medium rounded-md transition-all duration-200 truncate ${isActive
-                                            ? 'bg-[var(--ax-bg-accent-strong)] text-white shadow-sm'
-                                            : 'text-[var(--ax-text-default)] hover:bg-[var(--ax-bg-neutral-moderate)] hover:text-[var(--ax-text-strong)]'
-                                            }`}
-                                        title={page.label}
-                                    >
-                                        {page.label}
-                                    </a>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </div>
-            )}
         </>
     );
 

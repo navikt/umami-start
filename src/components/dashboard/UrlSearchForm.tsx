@@ -150,9 +150,9 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             }, null);
 
             if (matchedWebsite) {
-                // Navigate to dashboard
+                // Navigate to traffic analysis
                 // Pass domain/path info if useful
-                navigate(`/dashboard?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&name=${encodeURIComponent(matchedWebsite.name)}&path=${encodeURIComponent(urlObj.pathname)}`);
+                navigate(`/trafikkanalyse?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&urlPath=${encodeURIComponent(urlObj.pathname)}`);
             } else {
                 setAlertVisible(true);
             }

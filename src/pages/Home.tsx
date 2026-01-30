@@ -54,6 +54,7 @@ function Home() {
                 <Page.Block width="xl" gutters>
                     <Heading spacing={true} as="h2" size="large">Mål brukeradferd med Umami</Heading>
                     <UrlSearchForm>
+                        {/* Shortcuts temporarily disabled
                         <div style={{ marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <RouterLink
                                 to="/dashboard?visning=fylkeskontor"
@@ -108,6 +109,7 @@ function Home() {
                                 Hjelpemiddelsentralene
                             </RouterLink>
                         </div>
+                        */}
                     </UrlSearchForm>
                 </Page.Block>
             </div>

@@ -138,8 +138,8 @@ const UserComposition = () => {
                 // Update URL with configuration for sharing
                 const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
-                if (pagePath.trim()) {
-                    newParams.set('urlPath', pagePath.trim());
+                if (urlPaths.length > 0) {
+                    newParams.set('urlPath', urlPaths[0]);
                     newParams.delete('pagePath');
                 } else {
                     newParams.delete('urlPath');
