@@ -53,6 +53,7 @@ const EventExplorer = () => {
     const [parameterValuesQueryStats, setParameterValuesQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+    const [eventSearch, setEventSearch] = useState<string>('');
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -448,50 +449,62 @@ const EventExplorer = () => {
                 </div>
             )}
             {
-                !selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (
-                    <div>
-                        {pagePath && (
-                            <BodyShort className="text-[var(--ax-text-subtle)] mb-4">
-                                Viser hendelser for URL-sti: {pagePath}
-                            </BodyShort>
-                        )}
-                        <div className="overflow-x-auto">
-                            <Table size="small">
-                                <Table.Header>
-                                    <Table.Row>
-                                        <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
-                                        <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                        <Table.HeaderCell></Table.HeaderCell>
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {events.map((event) => (
-                                        <Table.Row key={event.name}>
-                                            <Table.DataCell>{event.name}</Table.DataCell>
-                                            <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
-                                            <Table.DataCell>
-                                                <Button
-                                                    size="xsmall"
-                                                    variant="secondary"
-                                                    onClick={() => setSelectedEvent(event.name)}
-                                                >
-                                                    Utforsk
-                                                </Button>
-                                            </Table.DataCell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table>
-                        </div>
-                        {eventsQueryStats && (
-                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
-                                Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                !selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (() => {
+                    const filteredEvents = events.filter(event =>
+                        event.name.toLowerCase().includes(eventSearch.toLowerCase())
+                    );
+                    return (
+                        <div>
+                            <div className="flex justify-between items-end mb-4">
+                                <Heading level="3" size="small">Hendelser</Heading>
+                                <div className="w-64">
+                                    <TextField
+                                        label="Søk"
+                                        hideLabel
+                                        placeholder="Søk..."
+                                        size="small"
+                                        value={eventSearch}
+                                        onChange={(e) => setEventSearch(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )
+                            <div className="overflow-x-auto">
+                                <Table size="small">
+                                    <Table.Header>
+                                        <Table.Row>
+                                            <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
+                                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                            <Table.HeaderCell></Table.HeaderCell>
+                                        </Table.Row>
+                                    </Table.Header>
+                                    <Table.Body>
+                                        {filteredEvents.map((event) => (
+                                            <Table.Row key={event.name}>
+                                                <Table.DataCell>{event.name}</Table.DataCell>
+                                                <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                <Table.DataCell>
+                                                    <Button
+                                                        size="xsmall"
+                                                        variant="secondary"
+                                                        onClick={() => setSelectedEvent(event.name)}
+                                                    >
+                                                        Utforsk
+                                                    </Button>
+                                                </Table.DataCell>
+                                            </Table.Row>
+                                        ))}
+                                    </Table.Body>
+                                </Table>
+                            </div>
+                            {eventsQueryStats && (
+                                <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
+                                    Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()
             }
-
             {/* Event Details View */}
             {
                 selectedEvent && (

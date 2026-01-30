@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, BodyShort } from '@navikt/ds-react';
+import { Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -182,10 +182,7 @@ const UserProfiles = () => {
         }
     };
 
-    const handleSearch = (val: string) => {
-        setSearchQuery(val);
-        setPage(1); // Reset to first page on search
-    };
+
 
     const handleRowClick = (user: any) => {
         setSelectedSession(user);
@@ -255,19 +252,6 @@ const UserProfiles = () => {
                     />
 
                     <div className="w-full sm:w-auto min-w-[200px]">
-                        <Search
-                            size="small"
-                            id="user-search"
-                            label="Søk etter bruker ID"
-                            hideLabel={false}
-                            variant="simple"
-                            onChange={handleSearch}
-                            onKeyDown={handleKeyDown}
-                            value={searchQuery}
-                        />
-                    </div>
-
-                    <div className="w-full sm:w-auto min-w-[200px]">
                         <TextField
                             size="small"
                             label="Besøkt URL (valgfritt)"
@@ -301,99 +285,114 @@ const UserProfiles = () => {
 
             {!loading && selectedWebsite && users.length === 0 && (
                 <Alert variant="info" className="mb-4">
-                    {searchQuery
-                        ? `Ingen brukere funnet som matcher "${searchQuery}"`
-                        : (
-                            <>
-                                Ingen brukere funnet.{' '}
-                                <Link href="/diagnose">Sjekk diagnostikk</Link> for å se om data blir samlet inn.
-                            </>
-                        )}
+                    <>
+                        Ingen brukere funnet.{' '}
+                        <Link href="/diagnose">Sjekk diagnostikk</Link> for å se om data blir samlet inn.
+                    </>
                 </Alert>
             )}
 
-            {!loading && users.length > 0 && (
-                <>
-                    <div className="mb-4">
-                        <Heading level="2" size="medium" className="mb-2">
-                            {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'brukere'}
-                        </Heading>
-                        <BodyShort className="text-[var(--ax-text-subtle)] max-w-prose">
-                            Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.
-                        </BodyShort>
-                    </div>
+            {!loading && users.length > 0 && (() => {
+                const filteredUsers = users.filter(user =>
+                    user.sessionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (user.country && translateCountry(user.country).toLowerCase().includes(searchQuery.toLowerCase())) ||
+                    (user.browser && user.browser.toLowerCase().includes(searchQuery.toLowerCase()))
+                );
+                return (
+                    <>
+                        <div className="flex justify-between items-end mb-4">
+                            <div>
+                                <Heading level="2" size="medium" className="mb-2">
+                                    {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'brukere'}
+                                </Heading>
+                                <BodyShort className="text-[var(--ax-text-subtle)] max-w-prose">
+                                    Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.
+                                </BodyShort>
+                            </div>
+                            <div className="w-64">
+                                <TextField
+                                    label="Søk"
+                                    hideLabel
+                                    placeholder="Søk..."
+                                    size="small"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
 
-                    <div className="overflow-x-auto">
-                        <Table size="medium" zebraStripes>
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.HeaderCell>Bruker ID</Table.HeaderCell>
-                                    <Table.HeaderCell>Sist sett</Table.HeaderCell>
-                                    <Table.HeaderCell>Land</Table.HeaderCell>
-                                    <Table.HeaderCell>Enhet</Table.HeaderCell>
-                                    <Table.HeaderCell>Nettleser</Table.HeaderCell>
-                                    <Table.HeaderCell>Handling</Table.HeaderCell>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {users.map((user) => (
-                                    <Table.Row
-                                        key={user.sessionId}
-                                        onClick={() => handleRowClick(user)}
-                                        className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]"
-                                    >
-                                        <Table.DataCell>
-                                            <Link href="#" onClick={(e) => { e.preventDefault(); handleRowClick(user); }}>
-                                                {user.sessionId.substring(0, 8)}...
-                                            </Link>
-                                        </Table.DataCell>
-                                        <Table.DataCell>{formatDate(user.lastSeen)}</Table.DataCell>
-                                        <Table.DataCell>{translateCountry(user.country)}</Table.DataCell>
-                                        <Table.DataCell>
-                                            <div className="flex items-center gap-2">
-                                                {getDeviceIcon(user.device)}
-                                                {translateDevice(user.device)}
-                                            </div>
-                                        </Table.DataCell>
-                                        <Table.DataCell>{user.browser || '-'}</Table.DataCell>
-                                        <Table.DataCell>
-                                            <Button
-                                                size="small"
-                                                variant="tertiary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRowClick(user);
-                                                }}
-                                            >
-                                                Vis profil
-                                            </Button>
-                                        </Table.DataCell>
+                        <div className="overflow-x-auto">
+                            <Table size="medium" zebraStripes>
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.HeaderCell>Bruker ID</Table.HeaderCell>
+                                        <Table.HeaderCell>Sist sett</Table.HeaderCell>
+                                        <Table.HeaderCell>Land</Table.HeaderCell>
+                                        <Table.HeaderCell>Enhet</Table.HeaderCell>
+                                        <Table.HeaderCell>Nettleser</Table.HeaderCell>
+                                        <Table.HeaderCell>Handling</Table.HeaderCell>
                                     </Table.Row>
-                                ))}
-                            </Table.Body>
-                        </Table>
-                    </div>
-
-                    {totalUsers > ROWS_PER_PAGE && (
-                        <div className="mt-4 flex justify-center">
-                            <Pagination
-                                page={page}
-                                onPageChange={setPage}
-                                count={Math.ceil(totalUsers / ROWS_PER_PAGE)}
-                                size="small"
-                            />
+                                </Table.Header>
+                                <Table.Body>
+                                    {filteredUsers.map((user) => (
+                                        <Table.Row
+                                            key={user.sessionId}
+                                            onClick={() => handleRowClick(user)}
+                                            className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]"
+                                        >
+                                            <Table.DataCell>
+                                                <Link href="#" onClick={(e) => { e.preventDefault(); handleRowClick(user); }}>
+                                                    {user.sessionId.substring(0, 8)}...
+                                                </Link>
+                                            </Table.DataCell>
+                                            <Table.DataCell>{formatDate(user.lastSeen)}</Table.DataCell>
+                                            <Table.DataCell>{translateCountry(user.country)}</Table.DataCell>
+                                            <Table.DataCell>
+                                                <div className="flex items-center gap-2">
+                                                    {getDeviceIcon(user.device)}
+                                                    {translateDevice(user.device)}
+                                                </div>
+                                            </Table.DataCell>
+                                            <Table.DataCell>{user.browser || '-'}</Table.DataCell>
+                                            <Table.DataCell>
+                                                <Button
+                                                    size="small"
+                                                    variant="tertiary"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRowClick(user);
+                                                    }}
+                                                >
+                                                    Vis profil
+                                                </Button>
+                                            </Table.DataCell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table>
                         </div>
-                    )}
 
-                    {queryStats && (
-                        <div className="mt-8 pt-4 border-t border-[var(--ax-border-neutral-subtle)] text-sm text-gray-500 flex justify-end">
-                            <p>
-                                Data prosessert: <strong>{queryStats.totalBytesProcessedGB} GB</strong>
-                            </p>
-                        </div>
-                    )}
-                </>
-            )}
+                        {totalUsers > ROWS_PER_PAGE && (
+                            <div className="mt-4 flex justify-center">
+                                <Pagination
+                                    page={page}
+                                    onPageChange={setPage}
+                                    count={Math.ceil(totalUsers / ROWS_PER_PAGE)}
+                                    size="small"
+                                />
+                            </div>
+                        )}
+
+                        {queryStats && (
+                            <div className="mt-8 pt-4 border-t border-[var(--ax-border-neutral-subtle)] text-sm text-gray-500 flex justify-end">
+                                <p>
+                                    Data prosessert: <strong>{queryStats.totalBytesProcessedGB} GB</strong>
+                                </p>
+                            </div>
+                        )}
+                    </>
+                );
+            })()}
 
             <Modal
                 open={isModalOpen}
@@ -533,7 +532,7 @@ const UserProfiles = () => {
                 websiteId={selectedWebsite?.id}
                 period={period}
             />
-        </ChartLayout>
+        </ChartLayout >
     );
 };
 
