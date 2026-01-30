@@ -601,6 +601,10 @@ const TrafficAnalysis = () => {
                 return "Ikke satt (not set)";
             }
 
+            if (name === '/') {
+                return "/ (forside)";
+            }
+
             if (selectedWebsite && name === selectedWebsite.domain) {
                 return (
                     <div className="flex items-center gap-2 max-w-full">
@@ -638,7 +642,7 @@ const TrafficAnalysis = () => {
                                 <Table.HeaderCell align="right">
                                     {metricLabel}
                                 </Table.HeaderCell>
-                                <Table.HeaderCell>Navn</Table.HeaderCell>
+                                <Table.HeaderCell>URL-sti</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -654,7 +658,15 @@ const TrafficAnalysis = () => {
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {isClickableRow(row.name) ? (
                                             <span className="flex items-center gap-1 max-w-full">
-                                                <span className="truncate text-blue-600 hover:underline cursor-pointer" onClick={() => onRowClick?.(row.name)}>{row.name}</span>
+                                                <span 
+                                                    className="truncate text-blue-600 hover:underline cursor-pointer" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onRowClick?.(row.name);
+                                                    }}
+                                                >
+                                                    {row.name === '/' ? '/ (forside)' : row.name}
+                                                </span>
                                                 <ExternalLink className="h-3 w-3 shrink-0 text-blue-600" />
                                             </span>
                                         ) : (
@@ -982,14 +994,6 @@ const TrafficAnalysis = () => {
                                         <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
                                     </div>
                                 </div>
-
-                                <AnalysisActionModal
-                                    open={!!selectedInternalUrl}
-                                    onClose={() => setSelectedInternalUrl(null)}
-                                    urlPath={selectedInternalUrl}
-                                    websiteId={selectedWebsite?.id}
-                                    period={period}
-                                />
                             </Tabs.Panel>
 
                             <Tabs.Panel value="external" className="pt-4">
@@ -1011,6 +1015,15 @@ const TrafficAnalysis = () => {
                                 </div>
                             </Tabs.Panel>
                         </Tabs>
+
+                        <AnalysisActionModal
+                            open={!!selectedInternalUrl}
+                            onClose={() => setSelectedInternalUrl(null)}
+                            urlPath={selectedInternalUrl}
+                            websiteId={selectedWebsite?.id}
+                            period={period}
+                        />
+
                         <div className="flex justify-end mt-8">
                             <Button
                                 size="small"
