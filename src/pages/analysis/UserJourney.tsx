@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, Heading, InfoCard, Modal, DatePicker } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, Heading, InfoCard } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
+import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UmamiJourneyView from '../../components/analysis/journey/UmamiJourneyView';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
@@ -19,9 +21,15 @@ const UserJourney = () => {
     // Initialize state from URL params
     const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('startUrl') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
+
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [steps, setSteps] = useState<number>(() => {
         const stepsParam = searchParams.get('steps');
         return stepsParam ? parseInt(stepsParam) : 7;
@@ -334,23 +342,14 @@ const UserJourney = () => {
                         />
                     </div>
 
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                if (e.target.value === 'custom') {
-                                    setIsCustomDateModalOpen(true);
-                                }
-                                setPeriod(e.target.value);
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            <option value="custom">Egendefinert</option>
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="w-full sm:w-auto min-w-[150px]">
                         <Select
@@ -658,37 +657,7 @@ const UserJourney = () => {
                     Ingen data funnet for valgt periode og start-URL.
                 </div>
             )}
-            <Modal open={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} aria-label="Velg periode">
-                <Modal.Header closeButton>Velg periode</Modal.Header>
-                <Modal.Body>
-                    <div className="min-h-[300px]">
-                        <DatePicker
-                            mode="range"
-                            onSelect={(range) => {
-                                if (range) {
-                                    setCustomStartDate(range.from);
-                                    setCustomEndDate(range.to);
-                                }
-                            }}
-                            selected={{ from: customStartDate, to: customEndDate }}
-                        >
-                            <div className="flex gap-4">
-                                <DatePicker.Input
-                                    label="Fra"
-                                    size="small"
-                                />
-                                <DatePicker.Input
-                                    label="Til"
-                                    size="small"
-                                />
-                            </div>
-                        </DatePicker>
-                    </div>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button size="small" onClick={() => setIsCustomDateModalOpen(false)}>Ferdig</Button>
-                </Modal.Footer>
-            </Modal>
+
         </ChartLayout>
     );
 };

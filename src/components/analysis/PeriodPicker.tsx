@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { RadioGroup, Radio, DatePicker } from '@navikt/ds-react';
-import { format, parse, isValid } from 'date-fns';
+import { useState, useRef } from 'react';
+import { Select, Modal, DatePicker, Button } from '@navikt/ds-react'; // Added Button import
+import { format } from 'date-fns';
 
 interface PeriodPickerProps {
     period: string;
@@ -25,81 +25,97 @@ export const PeriodPicker = ({
     lastMonthLabel = 'Forrige måned',
     currentMonthLabel = 'Denne måneden'
 }: PeriodPickerProps) => {
-    const [fromInputValue, setFromInputValue] = useState<string>('');
-    const [toInputValue, setToInputValue] = useState<string>('');
+    const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+    const dateModalRef = useRef<HTMLDialogElement>(null);
 
-    // Sync inputs when dates change externally (e.g. from calendar click)
-    useEffect(() => {
-        if (startDate) {
-            setFromInputValue(format(startDate, 'dd.MM.yyyy'));
-        } else {
-            setFromInputValue('');
-        }
-    }, [startDate]);
+    // Helper to format date range for display
+    const formatDateRange = (start?: Date, end?: Date) => {
+        if (!start || !end) return '';
+        return `${format(start, 'dd.MM.yy')} - ${format(end, 'dd.MM.yy')}`;
+    };
 
-    useEffect(() => {
-        if (endDate) {
-            setToInputValue(format(endDate, 'dd.MM.yyyy'));
+    const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value;
+        if (value === 'custom' || value === 'custom-edit') {
+            onPeriodChange('custom'); // Ensure parent state is 'custom'
+            setIsDateModalOpen(true);
         } else {
-            setToInputValue('');
+            onPeriodChange(value);
         }
-    }, [endDate]);
+    };
 
     return (
         <>
-            <RadioGroup
-                legend="Periode"
-                value={period}
-                onChange={onPeriodChange}
-                size="small"
-            >
-                {showToday && <Radio value="today">I dag</Radio>}
-                <Radio value="current_month">{currentMonthLabel}</Radio>
-                <Radio value="last_month">{lastMonthLabel}</Radio>
-                <Radio value="custom">Egendefinert</Radio>
-            </RadioGroup>
+            <div className="w-full sm:w-auto min-w-[200px]">
+                <Select
+                    label="Periode"
+                    size="small"
+                    value={period === 'custom' && startDate && endDate ? 'custom' : period}
+                    onChange={handlePeriodChange}
+                >
+                    {showToday && <option value="today">I dag</option>}
+                    <option value="current_month">{currentMonthLabel}</option>
+                    <option value="last_month">{lastMonthLabel}</option>
+                    {period === 'custom' && startDate && endDate ? (
+                        <>
+                            <option value="custom">
+                                {formatDateRange(startDate, endDate)}
+                            </option>
+                            <option value="custom-edit">Endre datoer</option>
+                        </>
+                    ) : (
+                        <option value="custom">Egendefinert</option>
+                    )}
+                </Select>
+            </div>
 
-            {period === 'custom' && (
-                <div className="mb-4 mt-2">
-                    <DatePicker
-                        mode="range"
-                        onSelect={(range) => {
-                            if (range) {
-                                onStartDateChange(range.from);
-                                onEndDateChange(range.to);
-                            }
-                        }}
-                        selected={{ from: startDate, to: endDate }}
+            <Modal
+                ref={dateModalRef}
+                open={isDateModalOpen}
+                onClose={() => setIsDateModalOpen(false)}
+                header={{ heading: "Velg datoperiode", closeButton: true }}
+            >
+                <Modal.Body>
+                    <div className="flex flex-col gap-4 min-h-[300px]">
+                        <DatePicker
+                            mode="range"
+                            selected={{ from: startDate, to: endDate }}
+                            onSelect={(range) => {
+                                if (range) {
+                                    onStartDateChange(range.from);
+                                    onEndDateChange(range.to);
+                                }
+                            }}
+                        >
+                            <div className="flex gap-4">
+                                <DatePicker.Input
+                                    label="Fra dato"
+                                    value={startDate ? format(startDate, 'dd.MM.yyyy') : ''}
+                                />
+                                <DatePicker.Input
+                                    label="Til dato"
+                                    value={endDate ? format(endDate, 'dd.MM.yyyy') : ''}
+                                />
+                            </div>
+                        </DatePicker>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        type="button"
+                        onClick={() => setIsDateModalOpen(false)}
                     >
-                        <div className="flex flex-col gap-2">
-                            <DatePicker.Input
-                                id="custom-date-from"
-                                label="Fra dato"
-                                value={fromInputValue}
-                                onChange={(e) => {
-                                    setFromInputValue(e.target.value);
-                                    const date = parse(e.target.value, 'dd.MM.yyyy', new Date());
-                                    if (isValid(date) && e.target.value.length === 10) {
-                                        onStartDateChange(date);
-                                    }
-                                }}
-                            />
-                            <DatePicker.Input
-                                id="custom-date-to"
-                                label="Til dato"
-                                value={toInputValue}
-                                onChange={(e) => {
-                                    setToInputValue(e.target.value);
-                                    const date = parse(e.target.value, 'dd.MM.yyyy', new Date());
-                                    if (isValid(date) && e.target.value.length === 10) {
-                                        onEndDateChange(date);
-                                    }
-                                }}
-                            />
-                        </div>
-                    </DatePicker>
-                </div>
-            )}
+                        Bruk datoer
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setIsDateModalOpen(false)}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </>
     );
 };

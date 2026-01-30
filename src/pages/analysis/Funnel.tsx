@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal, DatePicker } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check, Code2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import FunnelChart from '../../components/analysis/funnel/FunnelChart';
 import HorizontalFunnelChart from '../../components/analysis/funnel/HorizontalFunnelChart';
 import FunnelStats from '../../components/analysis/funnel/FunnelStats';
@@ -65,9 +66,15 @@ const Funnel = () => {
     });
 
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
+
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
 
     const [onlyDirectEntry, setOnlyDirectEntry] = useState<boolean>(() => {
         const param = searchParams.get('strict');
@@ -814,29 +821,14 @@ FROM timing_data`;
             }
             filters={
                 <>
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                if (e.target.value === 'custom') {
-                                    setIsCustomDateModalOpen(true);
-                                }
-                                setPeriod(e.target.value);
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            {period === 'custom' && customStartDate && customEndDate ? (
-                                <option value="custom">
-                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
-                                </option>
-                            ) : (
-                                <option value="custom">Egendefinert</option>
-                            )}
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <RadioGroup
                         size="small"
@@ -849,34 +841,6 @@ FROM timing_data`;
                             <Radio value="loose">Tillat andre steg imellom</Radio>
                         </div>
                     </RadioGroup>
-
-                    <Modal
-                        open={isCustomDateModalOpen}
-                        onClose={() => setIsCustomDateModalOpen(false)}
-                        header={{ heading: "Velg periode" }}
-                        width="small"
-                    >
-                        <Modal.Body>
-                            <div className="space-y-4">
-                                <DatePicker.Standalone
-                                    selected={
-                                        customStartDate && customEndDate
-                                            ? { from: customStartDate, to: customEndDate }
-                                            : undefined
-                                    }
-                                    mode="range"
-                                    onSelect={(val) => {
-                                        if (val?.from && val?.to) {
-                                            setCustomStartDate(val.from);
-                                            setCustomEndDate(val.to);
-                                            setIsCustomDateModalOpen(false);
-                                            setPeriod('custom');
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </Modal.Body>
-                    </Modal>
                 </>
             }
         >

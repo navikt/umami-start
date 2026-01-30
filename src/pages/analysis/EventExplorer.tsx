@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch, Select, Modal, DatePicker } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
 import { normalizeUrlToPath } from '../../lib/utils';
@@ -30,7 +31,6 @@ const EventExplorer = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('usage');
     const [showAverage, setShowAverage] = useState<boolean>(false);
@@ -414,23 +414,14 @@ const EventExplorer = () => {
                         />
                     </div>
 
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                if (e.target.value === 'custom') {
-                                    setIsCustomDateModalOpen(true);
-                                }
-                                setPeriod(e.target.value);
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            <option value="custom">Egendefinert</option>
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
@@ -445,56 +436,17 @@ const EventExplorer = () => {
                 </>
             }
         >
-            <Modal open={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} aria-label="Velg periode">
-                <Modal.Header closeButton>Velg periode</Modal.Header>
-                <Modal.Body>
-                    <div className="min-h-[300px]">
-                        <DatePicker
-                            mode="range"
-                            onSelect={(range) => {
-                                if (range) {
-                                    setCustomStartDate(range.from);
-                                    setCustomEndDate(range.to);
-                                }
-                            }}
-                            selected={{ from: customStartDate, to: customEndDate }}
-                        >
-                            <div className="flex gap-4">
-                                <DatePicker.Input
-                                    label="Fra"
-                                    size="small"
-                                />
-                                <DatePicker.Input
-                                    label="Til"
-                                    size="small"
-                                />
-                            </div>
-                        </DatePicker>
-                    </div>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button size="small" onClick={() => setIsCustomDateModalOpen(false)}>Ferdig</Button>
-                </Modal.Footer>
-            </Modal>
-            {
-                error && (
-                    <Alert variant="error" className="mb-4">
-                        {error}
-                    </Alert>
-                )
-            }
+            {error && (
+                <Alert variant="error" className="mb-4">
+                    {error}
+                </Alert>
+            )}
 
-            {
-                loadingEvents && (
-                    <div className="flex justify-center items-center h-full">
-                        <Loader size="xlarge" title="Henter hendelser..." />
-                    </div>
-                )
-            }
-
-
-
-            {/* Event List View */}
+            {loadingEvents && (
+                <div className="flex justify-center items-center h-full">
+                    <Loader size="xlarge" title="Henter hendelser..." />
+                </div>
+            )}
             {
                 !selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (
                     <div>

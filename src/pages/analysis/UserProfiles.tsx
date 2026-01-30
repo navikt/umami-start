@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, BodyShort, Select, DatePicker } from '@navikt/ds-react';
+import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, BodyShort } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink } from 'lucide-react';
-import { format } from 'date-fns';
+import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
@@ -17,9 +18,15 @@ const UserProfiles = () => {
 
     // State
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
+
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [users, setUsers] = useState<any[]>([]);
@@ -235,30 +242,17 @@ const UserProfiles = () => {
             }
             filters={
                 <>
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                if (e.target.value === 'custom') {
-                                    setIsCustomDateModalOpen(true);
-                                }
-                                setPeriod(e.target.value);
-                                setPage(1);
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            {period === 'custom' && customStartDate && customEndDate ? (
-                                <option value="custom">
-                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
-                                </option>
-                            ) : (
-                                <option value="custom">Egendefinert</option>
-                            )}
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={(newPeriod) => {
+                            setPeriod(newPeriod);
+                            setPage(1);
+                        }}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="w-full sm:w-auto min-w-[200px]">
                         <Search
@@ -294,35 +288,6 @@ const UserProfiles = () => {
                             Vis brukerprofiler
                         </Button>
                     </div>
-
-                    <Modal
-                        open={isCustomDateModalOpen}
-                        onClose={() => setIsCustomDateModalOpen(false)}
-                        header={{ heading: "Velg periode" }}
-                        width="small"
-                    >
-                        <Modal.Body>
-                            <div className="space-y-4">
-                                <DatePicker.Standalone
-                                    selected={
-                                        customStartDate && customEndDate
-                                            ? { from: customStartDate, to: customEndDate }
-                                            : undefined
-                                    }
-                                    mode="range"
-                                    onSelect={(val) => {
-                                        if (val?.from && val?.to) {
-                                            setCustomStartDate(val.from);
-                                            setCustomEndDate(val.to);
-                                            setIsCustomDateModalOpen(false);
-                                            setPeriod('custom');
-                                            setPage(1);
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </Modal.Body>
-                    </Modal>
                 </>
             }
         >

@@ -44,7 +44,7 @@ const chartGroups = [
 // Pages to exclude from the automatic list (SqlEditor and Chartbuilder)
 const EXCLUDED_PAGES = ['sql', 'grafbygger'];
 
-const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate', 'websiteId', 'domain'];
+const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate', 'from', 'to', 'websiteId', 'domain'];
 
 
 

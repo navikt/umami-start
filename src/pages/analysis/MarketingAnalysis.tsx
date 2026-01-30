@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Select, Modal, DatePicker, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Select, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { normalizeUrlToPath } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
@@ -11,11 +13,20 @@ const MarketingAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
 
+    // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
-    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
+
+    // Support custom dates from URL
+    const fromDateFromUrl = searchParams.get("from");
+    const toDateFromUrl = searchParams.get("to");
+    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
+    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
+
+    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+
+
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('source');
@@ -103,6 +114,7 @@ const MarketingAnalysis = () => {
             }
 
             // Update URL with configuration for sharing
+            // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('metricType', metricType);
@@ -110,6 +122,14 @@ const MarketingAnalysis = () => {
                 newParams.set('urlPath', urlPath);
             } else {
                 newParams.delete('urlPath');
+            }
+
+            if (period === 'custom' && customStartDate && customEndDate) {
+                newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+                newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+            } else {
+                newParams.delete('from');
+                newParams.delete('to');
             }
 
             // Update URL without navigation
@@ -273,23 +293,14 @@ const MarketingAnalysis = () => {
                         />
                     </div>
 
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                if (e.target.value === 'custom') {
-                                    setIsCustomDateModalOpen(true);
-                                }
-                                setPeriod(e.target.value);
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            <option value="custom">Egendefinert</option>
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="w-full sm:w-auto min-w-[150px]">
                         <Select
@@ -411,37 +422,7 @@ const MarketingAnalysis = () => {
                     </Tabs>
                 </>
             )}
-            <Modal open={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} aria-label="Velg periode">
-                <Modal.Header closeButton>Velg periode</Modal.Header>
-                <Modal.Body>
-                    <div className="min-h-[300px]">
-                        <DatePicker
-                            mode="range"
-                            onSelect={(range) => {
-                                if (range) {
-                                    setCustomStartDate(range.from);
-                                    setCustomEndDate(range.to);
-                                }
-                            }}
-                            selected={{ from: customStartDate, to: customEndDate }}
-                        >
-                            <div className="flex gap-4">
-                                <DatePicker.Input
-                                    label="Fra"
-                                    size="small"
-                                />
-                                <DatePicker.Input
-                                    label="Til"
-                                    size="small"
-                                />
-                            </div>
-                        </DatePicker>
-                    </div>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button size="small" onClick={() => setIsCustomDateModalOpen(false)}>Ferdig</Button>
-                </Modal.Footer>
-            </Modal>
+
         </ChartLayout>
     );
 };

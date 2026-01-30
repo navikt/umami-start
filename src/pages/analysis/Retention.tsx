@@ -1,12 +1,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Heading, BodyShort, Select, Modal, Label, DatePicker } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Heading, BodyShort } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
+import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath } from '../../lib/utils';
 
@@ -27,7 +28,6 @@ const Retention = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
 
     const [retentionData, setRetentionData] = useState<any[]>([]);
     const [chartData, setChartData] = useState<ILineChartProps | null>(null);
@@ -317,29 +317,14 @@ const Retention = () => {
                         />
                     </div>
 
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                if (e.target.value === 'custom') {
-                                    setIsCustomDateModalOpen(true);
-                                }
-                                setPeriod(e.target.value);
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            {period === 'custom' && customStartDate && customEndDate ? (
-                                <option value="custom">
-                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
-                                </option>
-                            ) : (
-                                <option value="custom">Egendefinert</option>
-                            )}
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="flex items-end pb-[2px]">
                         <Button
@@ -351,34 +336,6 @@ const Retention = () => {
                             Vis brukerlojalitet
                         </Button>
                     </div>
-
-                    <Modal
-                        open={isCustomDateModalOpen}
-                        onClose={() => setIsCustomDateModalOpen(false)}
-                        header={{ heading: "Velg periode" }}
-                        width="small"
-                    >
-                        <Modal.Body>
-                            <div className="space-y-4">
-                                <DatePicker.Standalone
-                                    selected={
-                                        customStartDate && customEndDate
-                                            ? { from: customStartDate, to: customEndDate }
-                                            : undefined
-                                    }
-                                    mode="range"
-                                    onSelect={(val) => {
-                                        if (val?.from && val?.to) {
-                                            setCustomStartDate(val.from);
-                                            setCustomEndDate(val.to);
-                                            setIsCustomDateModalOpen(false);
-                                            setPeriod('custom');
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </Modal.Body>
-                    </Modal>
                 </>
             }
         >
