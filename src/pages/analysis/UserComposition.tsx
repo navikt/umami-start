@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Tabs, Heading } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Tabs, Heading, Select, Modal, DatePicker } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
+import { format } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath } from '../../lib/utils';
@@ -19,6 +19,7 @@ const UserComposition = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -204,42 +205,85 @@ const UserComposition = () => {
             title="Brukersammensetning"
             description="Se informasjon om besøkende."
             currentPage="brukersammensetning"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                    variant="minimal"
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
-
                     <TextField
                         size="small"
                         label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
                         value={pagePath}
                         onChange={(e) => setPagePath(e.target.value)}
                         onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
                     />
 
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            {period === 'custom' && customStartDate && customEndDate ? (
+                                <option value="custom">
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                </option>
+                            ) : (
+                                <option value="custom">Egendefinert</option>
+                            )}
+                        </Select>
+                    </div>
 
-                    <div className="mt-8">
+                    <div className="flex items-end pb-[2px] mt-8 sm:mt-0">
                         <Button
                             onClick={fetchData}
                             disabled={!selectedWebsite || loading}
                             loading={loading}
-                            className="w-full"
+                            size="small"
                         >
                             Vis brukersammensetning
                         </Button>
                     </div>
+
+                    <Modal
+                        open={isCustomDateModalOpen}
+                        onClose={() => setIsCustomDateModalOpen(false)}
+                        header={{ heading: "Velg periode" }}
+                        width="small"
+                    >
+                        <Modal.Body>
+                            <div className="space-y-4">
+                                <DatePicker.Standalone
+                                    selected={
+                                        customStartDate && customEndDate
+                                            ? { from: customStartDate, to: customEndDate }
+                                            : undefined
+                                    }
+                                    mode="range"
+                                    onSelect={(val) => {
+                                        if (val?.from && val?.to) {
+                                            setCustomStartDate(val.from);
+                                            setCustomEndDate(val.to);
+                                            setIsCustomDateModalOpen(false);
+                                            setPeriod('custom');
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </Modal.Body>
+                    </Modal>
                 </>
             }
         >

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import QueryPreview from '../../components/chartbuilder/results/QueryPreview';
 import EventFilter from '../../components/chartbuilder/EventFilter';
-import ChartLayout from '../../components/analysis/ChartLayout';
+import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import MetricSelector from '../../components/chartbuilder/MetricSelector';
 // EventParameterSelector import removed as per user request
 import GroupingOptions from '../../components/chartbuilder/GroupingOptions';

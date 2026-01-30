@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Table, Heading, Tabs, Switch, ReadMore, Pagination, VStack } from '@navikt/ds-react';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
+import { Button, Alert, Loader, Table, Heading, Tabs, Switch, ReadMore, Pagination, VStack, Select, Modal, DatePicker } from '@navikt/ds-react';
+import { format } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import { Website } from '../../types/chart';
@@ -113,6 +113,7 @@ const PrivacyCheck = () => {
     const [searchParams] = useSearchParams();
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [data, setData] = useState<any[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -314,33 +315,77 @@ const PrivacyCheck = () => {
             currentPage="personvern" // Assuming we might add this to AnalyticsPage type later, or just use a dummy
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="today">I dag</option>
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            {period === 'custom' && customStartDate && customEndDate ? (
+                                <option value="custom">
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                </option>
+                            ) : (
+                                <option value="custom">Egendefinert</option>
+                            )}
+                        </Select>
+                    </div>
 
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                        showToday={true}
-                    />
-
-                    <div className="mt-8">
+                    <div className="flex items-end pb-[2px] mt-8 sm:mt-0">
                         <Button
                             onClick={() => fetchData(false)}
                             disabled={loading}
                             loading={loading}
-                            className="w-full"
+                            size="small"
                         >
                             {selectedWebsite ? 'Kjør personvernssjekk' : 'Søk i alle nettsteder'}
                         </Button>
                     </div>
+
+                    <Modal
+                        open={isCustomDateModalOpen}
+                        onClose={() => setIsCustomDateModalOpen(false)}
+                        header={{ heading: "Velg periode" }}
+                        width="small"
+                    >
+                        <Modal.Body>
+                            <div className="space-y-4">
+                                <DatePicker.Standalone
+                                    selected={
+                                        customStartDate && customEndDate
+                                            ? { from: customStartDate, to: customEndDate }
+                                            : undefined
+                                    }
+                                    mode="range"
+                                    onSelect={(val) => {
+                                        if (val?.from && val?.to) {
+                                            setCustomStartDate(val.from);
+                                            setCustomEndDate(val.to);
+                                            setIsCustomDateModalOpen(false);
+                                            setPeriod('custom');
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </Modal.Body>
+                    </Modal>
                 </>
+            }
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                    variant="minimal"
+                />
             }
         >
             {error && (

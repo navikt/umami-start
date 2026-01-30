@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from '@navikt/ds-react';
+import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs, Select, Modal, DatePicker } from '@navikt/ds-react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalyticsNavigation from '../../components/analysis/AnalyticsNavigation';
 import { Website } from '../../types/chart';
 import { format } from 'date-fns';
@@ -29,6 +28,7 @@ const Diagnosis = () => {
     const [period, setPeriod] = useState<string>('current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [data, setData] = useState<DiagnosisData[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -272,22 +272,38 @@ const Diagnosis = () => {
             title="Diagnoseverktøy"
             description="Oversikt over aktivitet på alle nettsteder og apper."
             currentPage="diagnose"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsiteFilter}
+                    onWebsiteChange={setSelectedWebsiteFilter}
+                    variant="minimal"
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsiteFilter}
-                        onWebsiteChange={setSelectedWebsiteFilter}
-                        variant="minimal"
-                    />
-
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            {period === 'custom' && customStartDate && customEndDate ? (
+                                <option value="custom">
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                </option>
+                            ) : (
+                                <option value="custom">Egendefinert</option>
+                            )}
+                        </Select>
+                    </div>
 
                     <RadioGroup
                         size="small"
@@ -295,10 +311,40 @@ const Diagnosis = () => {
                         value={environment}
                         onChange={(val: string) => setEnvironment(val)}
                     >
-                        <Radio value="all">Alle miljø</Radio>
-                        <Radio value="prod">Prod-miljø</Radio>
-                        <Radio value="dev">Dev-miljø</Radio>
+                        <div className="flex gap-4">
+                            <Radio value="all">Alle miljø</Radio>
+                            <Radio value="prod">Prod-miljø</Radio>
+                            <Radio value="dev">Dev-miljø</Radio>
+                        </div>
                     </RadioGroup>
+
+                    <Modal
+                        open={isCustomDateModalOpen}
+                        onClose={() => setIsCustomDateModalOpen(false)}
+                        header={{ heading: "Velg periode" }}
+                        width="small"
+                    >
+                        <Modal.Body>
+                            <div className="space-y-4">
+                                <DatePicker.Standalone
+                                    selected={
+                                        customStartDate && customEndDate
+                                            ? { from: customStartDate, to: customEndDate }
+                                            : undefined
+                                    }
+                                    mode="range"
+                                    onSelect={(val) => {
+                                        if (val?.from && val?.to) {
+                                            setCustomStartDate(val.from);
+                                            setCustomEndDate(val.to);
+                                            setIsCustomDateModalOpen(false);
+                                            setPeriod('custom');
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </Modal.Body>
+                    </Modal>
                 </>
             }
         >

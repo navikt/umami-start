@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { subDays, format } from 'date-fns';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
-import ChartLayout from '../../components/analysis/ChartLayout';
+import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import { Button, Alert, Heading, BodyLong, TextField, Link } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';

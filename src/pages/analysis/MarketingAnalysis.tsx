@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Select, Modal, DatePicker, Table, Heading, Pagination, VStack } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { normalizeUrlToPath } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
@@ -16,6 +15,7 @@ const MarketingAnalysis = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('source');
@@ -254,50 +254,61 @@ const MarketingAnalysis = () => {
             title="Markedsanalyse"
             description="Analyser trafikk basert på UTM-parametere og referanser."
             currentPage="markedsanalyse"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
-
-                    <TextField
-                        size="small"
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={urlPath}
-                        onChange={(e) => setUrlPath(e.target.value)}
-                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
-                    />
-
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
-
-                    <div className="mt-8">
-                        <RadioGroup
+                    <div className="w-full sm:w-[300px]">
+                        <TextField
                             size="small"
-                            legend="Visning"
-                            value={metricType}
-                            onChange={(val: string) => setMetricType(val)}
-                        >
-                            <Radio value="visitors">Besøkende</Radio>
-                            <Radio value="pageviews">Sidevisninger</Radio>
-                        </RadioGroup>
+                            label="URL-sti"
+                            placeholder="URL-sti (valgfritt)"
+                            value={urlPath}
+                            onChange={(e) => setUrlPath(e.target.value)}
+                            onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
+                        />
                     </div>
 
-                    <div className="mt-8">
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            <option value="custom">Egendefinert</option>
+                        </Select>
+                    </div>
+
+                    <div className="w-full sm:w-auto min-w-[150px]">
+                        <Select
+                            label="Visning"
+                            size="small"
+                            value={metricType}
+                            onChange={(e) => setMetricType(e.target.value)}
+                        >
+                            <option value="visitors">Besøkende</option>
+                            <option value="pageviews">Sidevisninger</option>
+                        </Select>
+                    </div>
+
+                    <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
                             onClick={fetchData}
                             disabled={!selectedWebsite || loading}
                             loading={loading}
-                            className="w-full"
+                            size="small"
                         >
                             Vis analyse
                         </Button>
@@ -400,6 +411,37 @@ const MarketingAnalysis = () => {
                     </Tabs>
                 </>
             )}
+            <Modal open={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} aria-label="Velg periode">
+                <Modal.Header closeButton>Velg periode</Modal.Header>
+                <Modal.Body>
+                    <div className="min-h-[300px]">
+                        <DatePicker
+                            mode="range"
+                            onSelect={(range) => {
+                                if (range) {
+                                    setCustomStartDate(range.from);
+                                    setCustomEndDate(range.to);
+                                }
+                            }}
+                            selected={{ from: customStartDate, to: customEndDate }}
+                        >
+                            <div className="flex gap-4">
+                                <DatePicker.Input
+                                    label="Fra"
+                                    size="small"
+                                />
+                                <DatePicker.Input
+                                    label="Til"
+                                    size="small"
+                                />
+                            </div>
+                        </DatePicker>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button size="small" onClick={() => setIsCustomDateModalOpen(false)}>Ferdig</Button>
+                </Modal.Footer>
+            </Modal>
         </ChartLayout>
     );
 };

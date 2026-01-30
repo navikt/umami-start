@@ -351,17 +351,18 @@ const BrokenLinks = () => {
             title="Ødelagte lenker"
             description="Oversikt over ødelagte lenker fra Siteimprove."
             currentPage="odelagte-lenker"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                    variant="minimal"
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
                     <TextField
                         size="small"
                         label="URL-sti (valgfritt)"
-                        description="Filtrer på url-sti (f.eks /sok)"
                         value={urlPath}
                         onChange={(e) => {
                             const val = e.target.value;

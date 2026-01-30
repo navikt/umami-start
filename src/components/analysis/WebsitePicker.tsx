@@ -558,7 +558,7 @@ const WebsitePicker = ({
   });
 
   return (
-    <div className={`${variant === 'minimal' ? 'pb-2' : ''}`}>
+    <div className={`${variant === 'minimal' ? '' : ''}`}>
       <div>
         {error && (
           <Alert variant="error" className="mb-4">

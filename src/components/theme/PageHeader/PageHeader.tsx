@@ -6,6 +6,7 @@ interface PageHeaderProps {
     subtitle?: string;
     description?: React.ReactNode;
     variant?: "regular" | "article";
+    width?: "xl" | "2xl";
 }
 
 export const PageHeader = ({
@@ -13,6 +14,7 @@ export const PageHeader = ({
     subtitle,
     description,
     variant = "regular",
+    width = "xl",
 }: PageHeaderProps) => {
     const isArticle = variant === "article";
     const padding = isArticle ? "64px" : "32px";
@@ -28,7 +30,7 @@ export const PageHeader = ({
                 marginBottom: "24px",
             }}
         >
-            <Page.Block width="xl" gutters>
+            <Page.Block width={width} gutters>
                 <div
                     className={`flex flex-col gap-[10px] ${isArticle ? "max-w-[800px] mx-auto" : ""
                         }`}

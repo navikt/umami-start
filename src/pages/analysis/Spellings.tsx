@@ -246,17 +246,18 @@ const Spellings = () => {
             title="Stavekontroll"
             description="Oversikt over stavefeil fra Siteimprove."
             currentPage="stavekontroll"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                    variant="minimal"
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
                     <TextField
                         size="small"
                         label="URL-sti (valgfritt)"
-                        description="Filtrer på url-sti for å se detaljer"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
                     />
@@ -267,6 +268,7 @@ const Spellings = () => {
                             disabled={!selectedWebsite || loading}
                             loading={loading}
                             className="w-full"
+                            size="small"
                         >
                             Vis stavefeil
                         </Button>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Select, Page } from "@navikt/ds-react";
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Page, Accordion } from "@navikt/ds-react";
+import { BarChart2, Users, FileSearch, Activity, Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
@@ -12,32 +12,41 @@ interface ChartLayoutProps {
     filters?: React.ReactNode;
     children: React.ReactNode;
     currentPage?: AnalyticsPage;
-    wideSidebar?: boolean;
-    hideSidebar?: boolean;
+    wideSidebar?: boolean; // Deprecated but kept for compatibility
+    hideSidebar?: boolean; // Now hides the top filter bar
     hideAnalysisSelector?: boolean;
+    sidebarContent?: React.ReactNode;
 }
 
 const chartGroups = [
     {
         title: "Trafikk & hendelser",
+        icon: <Activity size={18} />,
         ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
     },
     {
         title: "Brukerreiser",
+        icon: <BarChart2 size={18} />,
         ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
     },
     {
         title: "Brukere & lojalitet",
+        icon: <Users size={18} />,
         ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
     },
     {
         title: "Innholdskvalitet",
+        icon: <FileSearch size={18} />,
         ids: ['odelagte-lenker', 'stavekontroll']
     }
 ];
 
-// These URL params are shared across analysis pages and should be preserved when navigating
-const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate'];
+// Pages to exclude from the automatic list (SqlEditor and Chartbuilder)
+const EXCLUDED_PAGES = ['sql', 'grafbygger'];
+
+const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate', 'websiteId', 'domain'];
+
+
 
 const ChartLayout: React.FC<ChartLayoutProps> = ({
     title,
@@ -45,133 +54,181 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     filters,
     children,
     currentPage,
-    wideSidebar = false,
     hideSidebar = false,
-    hideAnalysisSelector = false
+    hideAnalysisSelector = false,
+    sidebarContent
 }) => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(!hideSidebar);
+    // State for Sidebars
+    const isNavOpen = !hideAnalysisSelector;
+
     const navigate = useNavigate();
 
-    const handleChartChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedId = event.target.value;
-        const page = analyticsPages.find(p => p.id === selectedId);
-        if (page) {
-            // Read current URL params directly from window.location
-            // (pages use window.history.replaceState which doesn't sync with React Router's useSearchParams)
-            const currentParams = new URLSearchParams(window.location.search);
-            const preservedParams = new URLSearchParams();
+    const getTargetUrl = (href: string) => {
+        const currentParams = new URLSearchParams(window.location.search);
+        const preservedParams = new URLSearchParams();
 
-            SHARED_PARAMS.forEach(param => {
-                const value = currentParams.get(param);
-                if (value) {
-                    preservedParams.set(param, value);
-                }
-            });
+        SHARED_PARAMS.forEach(param => {
+            const value = currentParams.get(param);
+            if (value) {
+                preservedParams.set(param, value);
+            }
+        });
 
-            const queryString = preservedParams.toString();
-            const targetUrl = queryString ? `${page.href}?${queryString}` : page.href;
-            navigate(targetUrl);
-        }
+        const queryString = preservedParams.toString();
+        return queryString ? `${href}?${queryString}` : href;
     };
 
-    // Trigger window resize event when sidebar toggles to help charts resize
+    const handleNavigation = (e: React.MouseEvent, href: string) => {
+        e.preventDefault();
+        const targetUrl = getTargetUrl(href);
+        navigate(targetUrl);
+    };
+
+    const otherPages = analyticsPages.filter(page =>
+        !chartGroups.some(g => g.ids.includes(page.id)) &&
+        !EXCLUDED_PAGES.includes(page.id)
+    );
+
+    // Trigger resize for charts when sidebar widths change
     useEffect(() => {
-        // Small delay to ensure DOM has updated
         const timer = setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
         }, 100);
         return () => clearTimeout(timer);
-    }, [isSidebarOpen]);
+    }, [isNavOpen]);
 
-    // Define width classes based on wideSidebar prop
-    const sidebarWidth = wideSidebar ? 'md:w-1/2' : 'md:w-1/3';
-    const contentWidth = wideSidebar ? 'md:w-1/2' : 'md:w-2/3';
-    const buttonPosition = wideSidebar ? 'left-1/2' : 'left-1/3';
+    // Calculate closed/open states for showing the "Expand" buttons on the left edge
+
+    const SidebarNavigationContent = () => (
+        <>
+            {chartGroups.map((group) => (
+                <div key={group.title}>
+                    <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
+                        {group.icon}
+                        <span>{group.title}</span>
+                    </div>
+                    <ul className="space-y-0.5">
+                        {group.ids.map(id => {
+                            const page = analyticsPages.find(p => p.id === id);
+                            if (!page) return null;
+                            const isActive = currentPage === page.id;
+                            return (
+                                <li key={page.id}>
+                                    <a
+                                        href={page.href}
+                                        onClick={(e) => handleNavigation(e, page.href)}
+                                        className={`block px-3 py-2 text-base font-medium rounded-md transition-all duration-200 truncate ${isActive
+                                            ? 'bg-[var(--ax-bg-accent-strong)] text-white shadow-sm'
+                                            : 'text-[var(--ax-text-default)] hover:bg-[var(--ax-bg-neutral-moderate)] hover:text-[var(--ax-text-strong)]'
+                                            }`}
+                                        title={page.label}
+                                    >
+                                        {page.label}
+                                    </a>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            ))}
+
+            {otherPages.length > 0 && (
+                <div>
+                    <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
+                        <Layout size={18} />
+                        <span>Datasjekk</span>
+                    </div>
+                    <ul className="space-y-0.5">
+                        {otherPages.map(page => {
+                            const isActive = currentPage === page.id;
+                            return (
+                                <li key={page.id}>
+                                    <a
+                                        href={page.href}
+                                        onClick={(e) => handleNavigation(e, page.href)}
+                                        className={`block px-3 py-2 text-base font-medium rounded-md transition-all duration-200 truncate ${isActive
+                                            ? 'bg-[var(--ax-bg-accent-strong)] text-white shadow-sm'
+                                            : 'text-[var(--ax-text-default)] hover:bg-[var(--ax-bg-neutral-moderate)] hover:text-[var(--ax-text-strong)]'
+                                            }`}
+                                        title={page.label}
+                                    >
+                                        {page.label}
+                                    </a>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
+        </>
+    );
 
     return (
         <>
             <PageHeader
                 title={title}
                 description={description}
+                width="2xl"
             />
 
-            <Page.Block width="xl" gutters className="pb-16">
+            <Page.Block width="2xl" gutters className="pb-16">
+                <div className="rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)] overflow-hidden">
 
-
-                <div className={hideSidebar ? 'mb-8' : 'rounded-lg shadow-sm border border-[var(--ax-border-neutral-subtle)] mb-8 bg-[var(--ax-bg-default)]'}>
-                    <div className={hideSidebar ? '' : 'flex flex-col md:flex-row min-h-[600px] relative'}>
-                        {isSidebarOpen && (
-                            <>
-                                <div className={`bg-[var(--ax-bg-accent-soft)] w-full ${sidebarWidth} p-6 border-b border-[var(--ax-border-neutral-subtle)] md:border-0 md:shadow-[inset_-1px_0_0_var(--ax-border-neutral-subtle)]`}>
-                                    <div className="space-y-6">
-                                        {!hideAnalysisSelector && (
-                                            <div className="pb-2">
-                                                <Select
-                                                    size="small"
-                                                    label="Type analyse"
-                                                    value={currentPage || ''}
-                                                    onChange={handleChartChange}
-                                                >
-                                                    <option value="" disabled>Velg...</option>
-                                                    {chartGroups.map((group) => (
-                                                        <optgroup label={group.title} key={group.title}>
-                                                            {group.ids.map(id => {
-                                                                const page = analyticsPages.find(p => p.id === id);
-                                                                if (!page) return null;
-                                                                return (
-                                                                    <option key={page.id} value={page.id}>
-                                                                        {page.label}
-                                                                    </option>
-                                                                );
-                                                            })}
-                                                        </optgroup>
-                                                    ))}
-                                                    <optgroup label="Tilpasset & datasjekk">
-                                                        {analyticsPages
-                                                            .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
-                                                            .map(page => (
-                                                                <option key={page.id} value={page.id}>
-                                                                    {page.label}
-                                                                </option>
-                                                            ))
-                                                        }
-                                                    </optgroup>
-                                                </Select>
-                                            </div>
-                                        )}
-                                        {filters}
-                                    </div>
-                                </div>
-                                {/* Collapse button on divider - hidden on mobile */}
-                                <button
-                                    onClick={() => setIsSidebarOpen(false)}
-                                    className={`hidden md:flex absolute top-3 ${buttonPosition} -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] hover:border-[var(--ax-border-accent)] transition-colors z-10`}
-                                    title="Minimer filter"
-                                    aria-label="Minimer filter"
+                    {/* Unified Top Bar */}
+                    {(sidebarContent || (!hideSidebar && filters)) && (
+                        <div className="border-b border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-accent-soft)] flex flex-col md:flex-row min-h-[0px] md:min-h-[80px]">
+                            {/* Left Column Header (Sidebar Content) */}
+                            {!hideAnalysisSelector && (
+                                <div
+                                    className="w-full md:w-[250px] flex-shrink-0 border-b md:border-b-0 p-4 flex flex-col justify-end transition-all duration-300"
                                 >
-                                    <ChevronLeft size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
-                                </button>
-                            </>
-                        )}
-                        {!isSidebarOpen && !hideSidebar && (
-                            /* Expand button on left edge - hidden on mobile */
-                            <button
-                                onClick={() => setIsSidebarOpen(true)}
-                                className="hidden md:flex absolute top-3 left-0 -translate-x-1/2 items-center justify-center w-6 h-12 bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-strong)] rounded-md shadow-sm hover:bg-[var(--ax-bg-neutral-soft)] transition-colors z-10"
-                                title="Vis filter"
-                                aria-label="Vis filter"
-                            >
-                                <ChevronRight size={16} className="text-[var(--ax-text-accent)]" aria-hidden />
-                            </button>
-                        )}
-                        <div className={`w-full ${isSidebarOpen ? contentWidth : ''} ${hideSidebar ? '' : 'p-6'}`}>
-                            {children}
+                                    {sidebarContent}
+                                </div>
+                            )}
+
+                            {/* Right Column Header (Filters) */}
+                            <div className="w-full md:flex-1 p-4 flex flex-wrap items-end gap-4 border-b md:border-b-0 border-[var(--ax-border-neutral-subtle)] md:border-none">
+                                {!hideSidebar && filters}
+                            </div>
                         </div>
+                    )}
+
+                    <div className="flex flex-col md:flex-row min-h-[800px] relative transition-all duration-300">
+
+                        {/* ================= COL 1: NAVIGATION ================= */}
+                        {!hideAnalysisSelector && (
+                            <div className="md:w-[250px] bg-[var(--ax-bg-neutral-soft)] border-b md:border-b-0 md:border-r border-[var(--ax-border-neutral-subtle)] flex-shrink-0">
+
+                                {/* Mobile: Accordion View */}
+                                <div className="md:hidden">
+                                    <Accordion size="small" headingSize="xsmall" className="border-b border-[var(--ax-border-neutral-subtle)] md:border-none">
+                                        <Accordion.Item>
+                                            <Accordion.Header>Velg analyse</Accordion.Header>
+                                            <Accordion.Content className="p-0 border-t border-[var(--ax-border-neutral-subtle)]">
+                                                <div className="p-4 bg-[var(--ax-bg-neutral-soft)]">
+                                                    <SidebarNavigationContent />
+                                                </div>
+                                            </Accordion.Content>
+                                        </Accordion.Item>
+                                    </Accordion>
+                                </div>
+
+                                {/* Desktop: Standard View */}
+                                <div className="hidden md:flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-[250px] p-4 space-y-6">
+                                    <SidebarNavigationContent />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= COL 2: CONTENT ================= */}
+                        <div className="flex-1 min-w-0 bg-[var(--ax-bg-default)] flex flex-col z-0 relative">
+                            <div className="p-6 md:p-8 flex-1 overflow-x-auto">
+                                {children}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-
-                {/* {currentPage && <AnalyticsNavigation currentPage={currentPage} />} */}
-
             </Page.Block>
             <KontaktSeksjon showMarginBottom={true} />
         </>

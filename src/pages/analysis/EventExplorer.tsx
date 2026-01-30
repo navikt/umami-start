@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
+import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch, Select, Modal, DatePicker } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
 import { normalizeUrlToPath } from '../../lib/utils';
@@ -31,6 +30,7 @@ const EventExplorer = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('usage');
     const [showAverage, setShowAverage] = useState<boolean>(false);
@@ -395,38 +395,49 @@ const EventExplorer = () => {
             title="Egendefinerte hendelser"
             description="Utforsk egendefinerte hendelser."
             currentPage="event-explorer"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
+                    <div className="w-full sm:w-[300px]">
+                        <TextField
+                            size="small"
+                            label="URL-sti"
+                            placeholder="URL-sti (valgfritt)"
+                            value={pagePath}
+                            onChange={(e) => setPagePath(e.target.value)}
+                            onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
+                        />
+                    </div>
 
-                    <TextField
-                        size="small"
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={pagePath}
-                        onChange={(e) => setPagePath(e.target.value)}
-                        onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            <option value="custom">Egendefinert</option>
+                        </Select>
+                    </div>
 
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
-
-                    <div className="mt-8">
+                    <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
                             onClick={fetchEvents}
                             disabled={!selectedWebsite || loadingEvents}
                             loading={loadingEvents}
-                            className="w-full"
+                            size="small"
                         >
                             Vis hendelser
                         </Button>
@@ -434,440 +445,483 @@ const EventExplorer = () => {
                 </>
             }
         >
-            {error && (
-                <Alert variant="error" className="mb-4">
-                    {error}
-                </Alert>
-            )}
+            <Modal open={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} aria-label="Velg periode">
+                <Modal.Header closeButton>Velg periode</Modal.Header>
+                <Modal.Body>
+                    <div className="min-h-[300px]">
+                        <DatePicker
+                            mode="range"
+                            onSelect={(range) => {
+                                if (range) {
+                                    setCustomStartDate(range.from);
+                                    setCustomEndDate(range.to);
+                                }
+                            }}
+                            selected={{ from: customStartDate, to: customEndDate }}
+                        >
+                            <div className="flex gap-4">
+                                <DatePicker.Input
+                                    label="Fra"
+                                    size="small"
+                                />
+                                <DatePicker.Input
+                                    label="Til"
+                                    size="small"
+                                />
+                            </div>
+                        </DatePicker>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button size="small" onClick={() => setIsCustomDateModalOpen(false)}>Ferdig</Button>
+                </Modal.Footer>
+            </Modal>
+            {
+                error && (
+                    <Alert variant="error" className="mb-4">
+                        {error}
+                    </Alert>
+                )
+            }
 
-            {loadingEvents && (
-                <div className="flex justify-center items-center h-full">
-                    <Loader size="xlarge" title="Henter hendelser..." />
-                </div>
-            )}
+            {
+                loadingEvents && (
+                    <div className="flex justify-center items-center h-full">
+                        <Loader size="xlarge" title="Henter hendelser..." />
+                    </div>
+                )
+            }
 
-            {/* Share button at top level when data is available */}
-            {!loadingEvents && hasSearched && (events.length > 0 || selectedEvent) && (
-                <div className="flex justify-between items-center mb-4">
-                    <Heading level="2" size="medium">Resultater</Heading>
-                    <Button
-                        size="small"
-                        variant="secondary"
-                        icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-                        onClick={copyShareLink}
-                    >
-                        {copySuccess ? 'Kopiert!' : 'Del analyse'}
-                    </Button>
-                </div>
-            )}
+
 
             {/* Event List View */}
-            {!selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (
-                <div>
-                    {pagePath && (
-                        <BodyShort className="text-[var(--ax-text-subtle)] mb-4">
-                            Viser hendelser for URL-sti: {pagePath}
-                        </BodyShort>
-                    )}
-                    <div className="overflow-x-auto">
-                        <Table size="small">
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
-                                    <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                    <Table.HeaderCell></Table.HeaderCell>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {events.map((event) => (
-                                    <Table.Row key={event.name}>
-                                        <Table.DataCell>{event.name}</Table.DataCell>
-                                        <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
-                                        <Table.DataCell>
-                                            <Button
-                                                size="xsmall"
-                                                variant="secondary"
-                                                onClick={() => setSelectedEvent(event.name)}
-                                            >
-                                                Utforsk
-                                            </Button>
-                                        </Table.DataCell>
+            {
+                !selectedEvent && !loadingEvents && hasSearched && events.length > 0 && (
+                    <div>
+                        {pagePath && (
+                            <BodyShort className="text-[var(--ax-text-subtle)] mb-4">
+                                Viser hendelser for URL-sti: {pagePath}
+                            </BodyShort>
+                        )}
+                        <div className="overflow-x-auto">
+                            <Table size="small">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
+                                        <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                        <Table.HeaderCell></Table.HeaderCell>
                                     </Table.Row>
-                                ))}
-                            </Table.Body>
-                        </Table>
-                    </div>
-                    {eventsQueryStats && (
-                        <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
-                            Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                                </Table.Header>
+                                <Table.Body>
+                                    {events.map((event) => (
+                                        <Table.Row key={event.name}>
+                                            <Table.DataCell>{event.name}</Table.DataCell>
+                                            <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                            <Table.DataCell>
+                                                <Button
+                                                    size="xsmall"
+                                                    variant="secondary"
+                                                    onClick={() => setSelectedEvent(event.name)}
+                                                >
+                                                    Utforsk
+                                                </Button>
+                                            </Table.DataCell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table>
                         </div>
-                    )}
-                </div>
-            )}
+                        {eventsQueryStats && (
+                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
+                                Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                            </div>
+                        )}
+                    </div>
+                )
+            }
 
             {/* Event Details View */}
-            {selectedEvent && (
-                <div className="space-y-6">
-                    <div className="flex items-center gap-4 mb-4">
-                        <Button
-                            variant="tertiary"
-                            size="small"
-                            icon={<ArrowLeft aria-hidden />}
-                            onClick={handleBackToEvents}
-                        >
-                            Alle hendelser
-                        </Button>
-                    </div>
-
-                    <Heading level="2" size="medium">Hendelse: {selectedEvent}</Heading>
-
-                    {loadingData && (
-                        <div className="flex justify-center items-center h-64">
-                            <Loader size="xlarge" title="Henter data..." />
+            {
+                selectedEvent && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 mb-4">
+                            <Button
+                                variant="tertiary"
+                                size="small"
+                                icon={<ArrowLeft aria-hidden />}
+                                onClick={handleBackToEvents}
+                            >
+                                Alle hendelser
+                            </Button>
                         </div>
-                    )}
 
-                    {!loadingData && seriesData.length > 0 && (
-                        <Tabs value={activeTab} onChange={setActiveTab}>
-                            <Tabs.List>
-                                <Tabs.Tab value="usage" label="Bruk av hendelse" />
-                                <Tabs.Tab value="parameters" label="Hendelsdetaljer" />
-                            </Tabs.List>
+                        <Heading level="2" size="medium">Hendelse: {selectedEvent}</Heading>
 
-                            {/* Usage Tab */}
-                            <Tabs.Panel value="usage" className="pt-6">
-                                <div className="flex flex-col gap-8">
-                                    {/* Chart */}
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex justify-end -mb-5">
-                                            <Switch
-                                                checked={showAverage}
-                                                onChange={(e) => setShowAverage(e.target.checked)}
-                                                size="small"
-                                            >
-                                                Vis gjennomsnitt
-                                            </Switch>
-                                        </div>
-                                        <div style={{ width: '100%', height: '400px' }}>
-                                            {(() => {
-                                                const chartData = prepareLineChartData(showAverage);
-                                                return chartData ? (
-                                                    <ResponsiveContainer>
-                                                        <LineChart
-                                                            data={chartData.data}
-                                                            legendsOverflowText={'Overflow Items'}
-                                                            yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
-                                                            yAxisTickCount={10}
-                                                            allowMultipleShapesForPoints={false}
-                                                            enablePerfOptimization={true}
-                                                            margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                                                            legendProps={{
-                                                                allowFocusOnLegends: true,
-                                                                styles: {
-                                                                    text: { color: 'var(--ax-text-default)' },
-                                                                }
-                                                            }}
-                                                        />
-                                                    </ResponsiveContainer>
-                                                ) : (
-                                                    <div className="flex items-center justify-center h-full text-gray-500">
-                                                        Ingen data tilgjengelig for diagram
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    </div>
+                        {loadingData && (
+                            <div className="flex justify-center items-center h-64">
+                                <Loader size="xlarge" title="Henter data..." />
+                            </div>
+                        )}
 
-                                    {/* Table */}
-                                    <div className="border rounded-lg overflow-hidden">
-                                        <div className="overflow-x-auto">
-                                            <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
-                                                <thead className="bg-[var(--ax-bg-neutral-soft)]">
-                                                    <tr>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Dato</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
-                                                    {seriesData.map((item, index) => (
-                                                        <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
-                                                                {new Date(item.time).toLocaleDateString('nb-NO')}
-                                                            </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
-                                                                {item.count.toLocaleString('nb-NO')}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                                            <div className="flex gap-2">
-                                                <Button
+                        {!loadingData && seriesData.length > 0 && (
+                            <Tabs value={activeTab} onChange={setActiveTab}>
+                                <Tabs.List>
+                                    <Tabs.Tab value="usage" label="Bruk av hendelse" />
+                                    <Tabs.Tab value="parameters" label="Hendelsdetaljer" />
+                                </Tabs.List>
+
+                                {/* Usage Tab */}
+                                <Tabs.Panel value="usage" className="pt-6">
+                                    <div className="flex flex-col gap-8">
+                                        {/* Chart */}
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex justify-end -mb-5">
+                                                <Switch
+                                                    checked={showAverage}
+                                                    onChange={(e) => setShowAverage(e.target.checked)}
                                                     size="small"
-                                                    variant="secondary"
-                                                    onClick={() => {
-                                                        const headers = ['Dato', 'Antall'];
-                                                        const csvRows = [
-                                                            headers.join(','),
-                                                            ...seriesData.map((item) => {
-                                                                return [
-                                                                    new Date(item.time).toLocaleDateString('nb-NO'),
-                                                                    item.count
-                                                                ].join(',');
-                                                            })
-                                                        ];
-                                                        const csvContent = csvRows.join('\n');
-                                                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                                                        const link = document.createElement('a');
-                                                        const url = URL.createObjectURL(blob);
-                                                        link.setAttribute('href', url);
-                                                        link.setAttribute('download', `${selectedEvent}_${new Date().toISOString().slice(0, 10)}.csv`);
-                                                        link.style.visibility = 'hidden';
-                                                        document.body.appendChild(link);
-                                                        link.click();
-                                                        document.body.removeChild(link);
-                                                        URL.revokeObjectURL(url);
-                                                    }}
-                                                    icon={<Download size={16} />}
                                                 >
-                                                    Last ned CSV
-                                                </Button>
+                                                    Vis gjennomsnitt
+                                                </Switch>
                                             </div>
-                                            {queryStats && (
-                                                <span className="text-sm text-[var(--ax-text-subtle)]">
-                                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                                </span>
-                                            )}
+                                            <div style={{ width: '100%', height: '400px' }}>
+                                                {(() => {
+                                                    const chartData = prepareLineChartData(showAverage);
+                                                    return chartData ? (
+                                                        <ResponsiveContainer>
+                                                            <LineChart
+                                                                data={chartData.data}
+                                                                legendsOverflowText={'Overflow Items'}
+                                                                yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                                yAxisTickCount={10}
+                                                                allowMultipleShapesForPoints={false}
+                                                                enablePerfOptimization={true}
+                                                                margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                                legendProps={{
+                                                                    allowFocusOnLegends: true,
+                                                                    styles: {
+                                                                        text: { color: 'var(--ax-text-default)' },
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </ResponsiveContainer>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-gray-500">
+                                                            Ingen data tilgjengelig for diagram
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </Tabs.Panel>
 
-                            {/* Parameters Tab */}
-                            <Tabs.Panel value="parameters" className="pt-6">
-                                <div>
-                                    {!selectedParameterForDrilldown ? (
-                                        <>
-                                            <Heading level="3" size="small" className="mb-4">Hendelsesdetaljer</Heading>
-
-                                            {!hasLoadedValues && propertiesData.length > 0 && (
-                                                <div className="mb-4">
+                                        {/* Table */}
+                                        <div className="border rounded-lg overflow-hidden">
+                                            <div className="overflow-x-auto">
+                                                <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                                    <thead className="bg-[var(--ax-bg-neutral-soft)]">
+                                                        <tr>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Dato</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                                        {seriesData.map((item, index) => (
+                                                            <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
+                                                                    {new Date(item.time).toLocaleDateString('nb-NO')}
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
+                                                                    {item.count.toLocaleString('nb-NO')}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                                <div className="flex gap-2">
                                                     <Button
                                                         size="small"
                                                         variant="secondary"
-                                                        onClick={fetchAllParameterValues}
-                                                        loading={loadingValues}
+                                                        onClick={() => {
+                                                            const headers = ['Dato', 'Antall'];
+                                                            const csvRows = [
+                                                                headers.join(','),
+                                                                ...seriesData.map((item) => {
+                                                                    return [
+                                                                        new Date(item.time).toLocaleDateString('nb-NO'),
+                                                                        item.count
+                                                                    ].join(',');
+                                                                })
+                                                            ];
+                                                            const csvContent = csvRows.join('\n');
+                                                            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                            const link = document.createElement('a');
+                                                            const url = URL.createObjectURL(blob);
+                                                            link.setAttribute('href', url);
+                                                            link.setAttribute('download', `${selectedEvent}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                                            link.style.visibility = 'hidden';
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            URL.revokeObjectURL(url);
+                                                        }}
+                                                        icon={<Download size={16} />}
                                                     >
-                                                        Vis utsnitt av verdier
+                                                        Last ned CSV
                                                     </Button>
                                                 </div>
-                                            )}
-                                            {propertiesData.length > 0 ? (
-                                                <div className="overflow-x-auto">
-                                                    <Table size="small">
-                                                        <Table.Header>
-                                                            <Table.Row>
-                                                                <Table.HeaderCell>Navn</Table.HeaderCell>
-                                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                                <Table.HeaderCell></Table.HeaderCell>
-                                                            </Table.Row>
-                                                        </Table.Header>
-                                                        <Table.Body>
-                                                            {propertiesData.map((prop, idx) => (
-                                                                <Table.Row key={idx}>
-                                                                    <Table.DataCell>{prop.propertyName}</Table.DataCell>
-                                                                    <Table.DataCell align="right">{prop.total.toLocaleString('nb-NO')}</Table.DataCell>
-                                                                    <Table.DataCell>
-                                                                        <Button
-                                                                            size="xsmall"
-                                                                            variant="secondary"
-                                                                            onClick={() => setSelectedParameterForDrilldown(prop.propertyName)}
-                                                                        >
-                                                                            Utforsk
-                                                                        </Button>
-                                                                    </Table.DataCell>
-                                                                </Table.Row>
-                                                            ))}
-                                                        </Table.Body>
-                                                    </Table>
-                                                </div>
-                                            ) : (
-                                                <BodyShort>Ingen parametere funnet for denne hendelsen.</BodyShort>
-                                            )}
-
-                                            {loadingValues && (
-                                                <div className="flex justify-center items-center py-8">
-                                                    <Loader size="large" title="Henter verdier..." />
-                                                </div>
-                                            )}
-
-                                            {hasLoadedValues && (Object.keys(allParameterValues).length > 0 || latestEvents.length > 0) && (
-                                                <div className="mt-6 pt-6 border-t">
-                                                    <Tabs value={parameterValuesTab} onChange={setParameterValuesTab}>
-                                                        <Tabs.List>
-                                                            <Tabs.Tab value="latest" label="Siste 20" />
-                                                            <Tabs.Tab value="top" label="Topp verdier" />
-                                                        </Tabs.List>
-
-                                                        {/* Latest Events Tab */}
-                                                        <Tabs.Panel value="latest" className="pt-4">
-                                                            <Heading level="4" size="small" className="mb-4">
-                                                                Siste 20 registrerte hendelser
-                                                            </Heading>
-                                                            {latestEvents.length > 0 ? (
-                                                                <div className="overflow-x-auto max-w-full">
-                                                                    <Table size="small" className="min-w-full">
-                                                                        <Table.Header>
-                                                                            <Table.Row>
-                                                                                <Table.HeaderCell>Tidspunkt</Table.HeaderCell>
-                                                                                {propertiesData.map((prop, idx) => (
-                                                                                    <Table.HeaderCell key={idx}>{prop.propertyName}</Table.HeaderCell>
-                                                                                ))}
-                                                                            </Table.Row>
-                                                                        </Table.Header>
-                                                                        <Table.Body>
-                                                                            {latestEvents.map((event, eventIdx) => (
-                                                                                <Table.Row key={eventIdx}>
-                                                                                    <Table.DataCell className="whitespace-nowrap">
-                                                                                        {new Date(event.created_at).toLocaleString('nb-NO')}
-                                                                                    </Table.DataCell>
-                                                                                    {propertiesData.map((prop, propIdx) => (
-                                                                                        <Table.DataCell key={propIdx} className="max-w-xs truncate" title={event.properties?.[prop.propertyName] || '-'}>
-                                                                                            {event.properties?.[prop.propertyName] || '-'}
-                                                                                        </Table.DataCell>
-                                                                                    ))}
-                                                                                </Table.Row>
-                                                                            ))}
-                                                                        </Table.Body>
-                                                                    </Table>
-                                                                </div>
-                                                            ) : (
-                                                                <BodyShort>Ingen hendelser funnet.</BodyShort>
-                                                            )}
-                                                        </Tabs.Panel>
-
-                                                        {/* Top Values Tab */}
-                                                        <Tabs.Panel value="top" className="pt-4">
-                                                            <Heading level="4" size="small" className="mb-4">
-                                                                Topp 20 verdier per hendelsesdetaljer
-                                                            </Heading>
-                                                            <div className="space-y-6">
-                                                                {propertiesData.map((prop, propIdx) => {
-                                                                    const values = allParameterValues[prop.propertyName]?.slice(0, 20) || [];
-                                                                    if (values.length === 0) return null;
-
-                                                                    return (
-                                                                        <div key={propIdx} className="border rounded-lg p-4">
-                                                                            <Heading level="5" size="xsmall" className="mb-3">
-                                                                                {prop.propertyName}
-                                                                            </Heading>
-                                                                            <div className="overflow-x-auto">
-                                                                                <Table size="small">
-                                                                                    <Table.Header>
-                                                                                        <Table.Row>
-                                                                                            <Table.HeaderCell>Verdi</Table.HeaderCell>
-                                                                                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                                                        </Table.Row>
-                                                                                    </Table.Header>
-                                                                                    <Table.Body>
-                                                                                        {values.map((val, valIdx) => (
-                                                                                            <Table.Row key={valIdx}>
-                                                                                                <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
-                                                                                                    {val.value || '(tom)'}
-                                                                                                </Table.DataCell>
-                                                                                                <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
-                                                                                            </Table.Row>
-                                                                                        ))}
-                                                                                    </Table.Body>
-                                                                                </Table>
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </Tabs.Panel>
-                                                    </Tabs>
-                                                    {parameterValuesQueryStats && (
-                                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                                                            Data prosessert: {parameterValuesQueryStats.totalBytesProcessedGB} GB
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-4 mb-4">
-                                                <Button
-                                                    variant="tertiary"
-                                                    size="small"
-                                                    icon={<ArrowLeft aria-hidden />}
-                                                    onClick={() => setSelectedParameterForDrilldown(null)}
-                                                >
-                                                    Alle hendelsesdetaljer
-                                                </Button>
+                                                {queryStats && (
+                                                    <span className="text-sm text-[var(--ax-text-subtle)]">
+                                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                                    </span>
+                                                )}
                                             </div>
+                                        </div>
+                                    </div>
+                                </Tabs.Panel>
 
-                                            <Heading level="3" size="medium" className="mb-6">
-                                                {selectedParameterForDrilldown}
-                                            </Heading>
+                                {/* Parameters Tab */}
+                                <Tabs.Panel value="parameters" className="pt-6">
+                                    <div>
+                                        {!selectedParameterForDrilldown ? (
+                                            <>
+                                                <Heading level="3" size="small" className="mb-4">Hendelsesdetaljer</Heading>
 
-                                            <div className="border rounded-lg p-4">
-                                                <Heading level="4" size="small" className="mb-4">
-                                                    Topp 20 verdier
-                                                </Heading>
-                                                {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).length > 0 ? (
+                                                {!hasLoadedValues && propertiesData.length > 0 && (
+                                                    <div className="mb-4">
+                                                        <Button
+                                                            size="small"
+                                                            variant="secondary"
+                                                            onClick={fetchAllParameterValues}
+                                                            loading={loadingValues}
+                                                        >
+                                                            Vis utsnitt av verdier
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                                {propertiesData.length > 0 ? (
                                                     <div className="overflow-x-auto">
                                                         <Table size="small">
                                                             <Table.Header>
                                                                 <Table.Row>
-                                                                    <Table.HeaderCell>Verdi</Table.HeaderCell>
+                                                                    <Table.HeaderCell>Navn</Table.HeaderCell>
                                                                     <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                                    <Table.HeaderCell></Table.HeaderCell>
                                                                 </Table.Row>
                                                             </Table.Header>
                                                             <Table.Body>
-                                                                {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).map((val, idx) => (
+                                                                {propertiesData.map((prop, idx) => (
                                                                     <Table.Row key={idx}>
-                                                                        <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
-                                                                            {val.value || '(tom)'}
+                                                                        <Table.DataCell>{prop.propertyName}</Table.DataCell>
+                                                                        <Table.DataCell align="right">{prop.total.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                        <Table.DataCell>
+                                                                            <Button
+                                                                                size="xsmall"
+                                                                                variant="secondary"
+                                                                                onClick={() => setSelectedParameterForDrilldown(prop.propertyName)}
+                                                                            >
+                                                                                Utforsk
+                                                                            </Button>
                                                                         </Table.DataCell>
-                                                                        <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
                                                                     </Table.Row>
                                                                 ))}
                                                             </Table.Body>
                                                         </Table>
                                                     </div>
                                                 ) : (
-                                                    <>
-                                                        <Skeleton variant="text" width={80} height={20} />
-                                                        <Skeleton variant="text" width={100} height={20} />
-                                                    </>
+                                                    <BodyShort>Ingen parametere funnet for denne hendelsen.</BodyShort>
                                                 )}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </Tabs.Panel>
-                        </Tabs>
-                    )}
 
-                    {!loadingData && !seriesData.length && !error && (
-                        <div className="flex justify-center items-center h-full text-gray-500">
-                            Ingen data funnet for denne hendelsen.
-                        </div>
-                    )}
-                </div>
-            )}
+                                                {loadingValues && (
+                                                    <div className="flex justify-center items-center py-8">
+                                                        <Loader size="large" title="Henter verdier..." />
+                                                    </div>
+                                                )}
+
+                                                {hasLoadedValues && (Object.keys(allParameterValues).length > 0 || latestEvents.length > 0) && (
+                                                    <div className="mt-6 pt-6 border-t">
+                                                        <Tabs value={parameterValuesTab} onChange={setParameterValuesTab}>
+                                                            <Tabs.List>
+                                                                <Tabs.Tab value="latest" label="Siste 20" />
+                                                                <Tabs.Tab value="top" label="Topp verdier" />
+                                                            </Tabs.List>
+
+                                                            {/* Latest Events Tab */}
+                                                            <Tabs.Panel value="latest" className="pt-4">
+                                                                <Heading level="4" size="small" className="mb-4">
+                                                                    Siste 20 registrerte hendelser
+                                                                </Heading>
+                                                                {latestEvents.length > 0 ? (
+                                                                    <div className="overflow-x-auto max-w-full">
+                                                                        <Table size="small" className="min-w-full">
+                                                                            <Table.Header>
+                                                                                <Table.Row>
+                                                                                    <Table.HeaderCell>Tidspunkt</Table.HeaderCell>
+                                                                                    {propertiesData.map((prop, idx) => (
+                                                                                        <Table.HeaderCell key={idx}>{prop.propertyName}</Table.HeaderCell>
+                                                                                    ))}
+                                                                                </Table.Row>
+                                                                            </Table.Header>
+                                                                            <Table.Body>
+                                                                                {latestEvents.map((event, eventIdx) => (
+                                                                                    <Table.Row key={eventIdx}>
+                                                                                        <Table.DataCell className="whitespace-nowrap">
+                                                                                            {new Date(event.created_at).toLocaleString('nb-NO')}
+                                                                                        </Table.DataCell>
+                                                                                        {propertiesData.map((prop, propIdx) => (
+                                                                                            <Table.DataCell key={propIdx} className="max-w-xs truncate" title={event.properties?.[prop.propertyName] || '-'}>
+                                                                                                {event.properties?.[prop.propertyName] || '-'}
+                                                                                            </Table.DataCell>
+                                                                                        ))}
+                                                                                    </Table.Row>
+                                                                                ))}
+                                                                            </Table.Body>
+                                                                        </Table>
+                                                                    </div>
+                                                                ) : (
+                                                                    <BodyShort>Ingen hendelser funnet.</BodyShort>
+                                                                )}
+                                                            </Tabs.Panel>
+
+                                                            {/* Top Values Tab */}
+                                                            <Tabs.Panel value="top" className="pt-4">
+                                                                <Heading level="4" size="small" className="mb-4">
+                                                                    Topp 20 verdier per hendelsesdetaljer
+                                                                </Heading>
+                                                                <div className="space-y-6">
+                                                                    {propertiesData.map((prop, propIdx) => {
+                                                                        const values = allParameterValues[prop.propertyName]?.slice(0, 20) || [];
+                                                                        if (values.length === 0) return null;
+
+                                                                        return (
+                                                                            <div key={propIdx} className="border rounded-lg p-4">
+                                                                                <Heading level="5" size="xsmall" className="mb-3">
+                                                                                    {prop.propertyName}
+                                                                                </Heading>
+                                                                                <div className="overflow-x-auto">
+                                                                                    <Table size="small">
+                                                                                        <Table.Header>
+                                                                                            <Table.Row>
+                                                                                                <Table.HeaderCell>Verdi</Table.HeaderCell>
+                                                                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                                                            </Table.Row>
+                                                                                        </Table.Header>
+                                                                                        <Table.Body>
+                                                                                            {values.map((val, valIdx) => (
+                                                                                                <Table.Row key={valIdx}>
+                                                                                                    <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
+                                                                                                        {val.value || '(tom)'}
+                                                                                                    </Table.DataCell>
+                                                                                                    <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                                                </Table.Row>
+                                                                                            ))}
+                                                                                        </Table.Body>
+                                                                                    </Table>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </Tabs.Panel>
+                                                        </Tabs>
+                                                        {parameterValuesQueryStats && (
+                                                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
+                                                                Data prosessert: {parameterValuesQueryStats.totalBytesProcessedGB} GB
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <Button
+                                                        variant="tertiary"
+                                                        size="small"
+                                                        icon={<ArrowLeft aria-hidden />}
+                                                        onClick={() => setSelectedParameterForDrilldown(null)}
+                                                    >
+                                                        Alle hendelsesdetaljer
+                                                    </Button>
+                                                </div>
+
+                                                <Heading level="3" size="medium" className="mb-6">
+                                                    {selectedParameterForDrilldown}
+                                                </Heading>
+
+                                                <div className="border rounded-lg p-4">
+                                                    <Heading level="4" size="small" className="mb-4">
+                                                        Topp 20 verdier
+                                                    </Heading>
+                                                    {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).length > 0 ? (
+                                                        <div className="overflow-x-auto">
+                                                            <Table size="small">
+                                                                <Table.Header>
+                                                                    <Table.Row>
+                                                                        <Table.HeaderCell>Verdi</Table.HeaderCell>
+                                                                        <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                                    </Table.Row>
+                                                                </Table.Header>
+                                                                <Table.Body>
+                                                                    {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).map((val, idx) => (
+                                                                        <Table.Row key={idx}>
+                                                                            <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
+                                                                                {val.value || '(tom)'}
+                                                                            </Table.DataCell>
+                                                                            <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                        </Table.Row>
+                                                                    ))}
+                                                                </Table.Body>
+                                                            </Table>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <Skeleton variant="text" width={80} height={20} />
+                                                            <Skeleton variant="text" width={100} height={20} />
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </Tabs.Panel>
+                            </Tabs>
+                        )}
+
+                        {!loadingData && !seriesData.length && !error && (
+                            <div className="flex justify-center items-center h-full text-gray-500">
+                                Ingen data funnet for denne hendelsen.
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+
+            {
+                !loadingEvents && hasSearched && (events.length > 0 || selectedEvent) && (
+                    <div className="flex justify-end mt-8">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
+                )
+            }
 
             {/* Empty States */}
-            {!selectedEvent && !loadingEvents && hasSearched && events.length === 0 && !error && (
-                <div className="flex justify-center items-center h-full text-gray-500">
-                    Ingen egendefinerte hendelser funnet for valgt periode og filter.
-                </div>
-            )}
-        </ChartLayout>
+            {
+                !selectedEvent && !loadingEvents && hasSearched && events.length === 0 && !error && (
+                    <div className="flex justify-center items-center h-full text-gray-500">
+                        Ingen egendefinerte hendelser funnet for valgt periode og filter.
+                    </div>
+                )
+            }
+        </ChartLayout >
     );
 };
 

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select, UNSAFE_Combobox, Tabs } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select, UNSAFE_Combobox, Tabs, DatePicker } from '@navikt/ds-react';
 import { Share2, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { format } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath, isDecoratorEvent } from '../../lib/utils';
 
@@ -18,6 +18,7 @@ const EventJourney = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
 
     // Client-side filter state
     const [filterText, setFilterText] = useState<string>('');
@@ -602,42 +603,85 @@ const EventJourney = () => {
             title="Hendelsesflyt"
             description="Se rekkefølgen av hendelser brukere gjør på en spesifikk side."
             currentPage="hendelsesreiser" // Need to update type in AnalyticsNavigation probably
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                    variant="minimal"
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
-
                     <TextField
                         size="small"
                         label="URL-sti"
-                        description="Hvilken side vil du analysere?"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
                         onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
                     />
 
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            {period === 'custom' && customStartDate && customEndDate ? (
+                                <option value="custom">
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                </option>
+                            ) : (
+                                <option value="custom">Egendefinert</option>
+                            )}
+                        </Select>
+                    </div>
 
-                    <div className="mt-8">
+                    <div className="flex items-end pb-[2px]">
                         <Button
                             onClick={fetchData}
                             disabled={!selectedWebsite || loading || !urlPath}
                             loading={loading}
-                            className="w-full"
+                            size="small"
                         >
                             Vis reiser
                         </Button>
                     </div>
+
+                    <Modal
+                        open={isCustomDateModalOpen}
+                        onClose={() => setIsCustomDateModalOpen(false)}
+                        header={{ heading: "Velg periode" }}
+                        width="small"
+                    >
+                        <Modal.Body>
+                            <div className="space-y-4">
+                                <DatePicker.Standalone
+                                    selected={
+                                        customStartDate && customEndDate
+                                            ? { from: customStartDate, to: customEndDate }
+                                            : undefined
+                                    }
+                                    mode="range"
+                                    onSelect={(val) => {
+                                        if (val?.from && val?.to) {
+                                            setCustomStartDate(val.from);
+                                            setCustomEndDate(val.to);
+                                            setIsCustomDateModalOpen(false);
+                                            setPeriod('custom');
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </Modal.Body>
+                    </Modal>
                 </>
             }
         >

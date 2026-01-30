@@ -1,13 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Radio, RadioGroup, Switch, Table, Heading, Pagination, VStack, Select, Label } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker, UNSAFE_Combobox } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import TrafficStats from '../../components/analysis/traffic/TrafficStats';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
@@ -20,7 +19,9 @@ const TrafficAnalysis = () => {
 
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -30,6 +31,9 @@ const TrafficAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+    const dateModalRef = useRef<HTMLDialogElement>(null);
+
     const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
 
     // Tab states
@@ -117,7 +121,7 @@ const TrafficAnalysis = () => {
 
         try {
             // Fetch Series Data
-            const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&urlPath=${encodeURIComponent(urlPath)}&metricType=${metricType}`);
+            const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&urlPath=${encodeURIComponent(urlPath)}&pathOperator=${pathOperator}&metricType=${metricType}`);
             if (!seriesResponse.ok) throw new Error('Kunne ikke hente trafikkdata');
             const seriesResult = await seriesResponse.json();
 
@@ -138,8 +142,10 @@ const TrafficAnalysis = () => {
             newParams.set('metricType', metricType);
             if (urlPath) {
                 newParams.set('urlPath', urlPath);
+                newParams.set('pathOperator', pathOperator);
             } else {
                 newParams.delete('urlPath');
+                newParams.delete('pathOperator');
             }
 
             // Persist custom dates
@@ -213,7 +219,7 @@ const TrafficAnalysis = () => {
         try {
             // Fetch Flow Data
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=10000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&metricType=${metricToUse}`;
+            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=10000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricToUse}`;
             const flowResponse = await fetch(flowUrl);
             if (!flowResponse.ok) throw new Error('Kunne ikke hente trafikkflyt');
             const flowResult = await flowResponse.json();
@@ -523,54 +529,152 @@ const TrafficAnalysis = () => {
             title="Trafikkanalyse"
             description="Se besøk over tid og trafikkilder."
             currentPage="trafikkanalyse"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
-
-                    <TextField
-                        size="small"
-                        label="URL-sti (valgfritt)"
-                        description="F.eks. / for forsiden"
-                        value={urlPath}
-                        onChange={(e) => setUrlPath(e.target.value)}
-                        onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
-                    />
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
-
-                    <div className="mt-8">
-                        <RadioGroup
+                    <div className="w-full sm:w-[350px]">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Label size="small" htmlFor="url-filter">URL-sti</Label>
+                            <select
+                                className="text-sm bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded text-[var(--ax-text-accent)] font-medium cursor-pointer focus:outline-none py-1 px-2"
+                                value={pathOperator}
+                                onChange={(e) => setPathOperator(e.target.value)}
+                            >
+                                <option value="equals">er lik</option>
+                                <option value="starts-with">starter med</option>
+                            </select>
+                        </div>
+                        <TextField
+                            id="url-filter"
+                            label="URL-sti"
+                            hideLabel
                             size="small"
-                            legend="Visning"
-                            value={metricType}
-                            onChange={(val: string) => setMetricType(val)}
-                        >
-                            <Radio value="visitors">Besøkende</Radio>
-                            <Radio value="pageviews">Sidevisninger</Radio>
-                            <Radio value="proportion">Andel (av besøkende)</Radio>
-                        </RadioGroup>
+                            value={urlPath}
+                            onChange={(e) => setUrlPath(e.target.value)}
+                            onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    fetchSeriesData();
+                                }
+                            }}
+                            placeholder="Velg eller skriv sti..."
+                        />
                     </div>
 
-                    <div className="mt-8">
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === 'custom') {
+                                    setIsDateModalOpen(true);
+                                } else if (value === 'custom-edit') {
+                                    setCustomStartDate(undefined);
+                                    setCustomEndDate(undefined);
+                                    setIsDateModalOpen(true);
+                                } else {
+                                    setPeriod(value);
+                                }
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            {period === 'custom' && customStartDate && customEndDate ? (
+                                <>
+                                    <option value="custom">
+                                        {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')} `}
+                                    </option>
+                                    <option value="custom-edit">Endre datoer</option>
+                                </>
+                            ) : (
+                                <option value="custom">Egendefinert</option>
+                            )}
+                        </Select>
+                    </div>
+
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Visning"
+                            size="small"
+                            value={metricType}
+                            onChange={(e) => setMetricType(e.target.value)}
+                        >
+                            <option value="visitors">Besøkende</option>
+                            <option value="pageviews">Sidevisninger</option>
+                            <option value="proportion">Andel (av besøkende)</option>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-end pb-[2px]">
                         <Button
                             onClick={fetchSeriesData}
                             disabled={!selectedWebsite || loading}
                             loading={loading}
-                            className="w-full"
+                            size="small"
                         >
                             Vis trafikk
                         </Button>
                     </div>
+
+                    <Modal
+                        ref={dateModalRef}
+                        open={isDateModalOpen}
+                        onClose={() => setIsDateModalOpen(false)}
+                        header={{ heading: "Velg datoperiode", closeButton: true }}
+                    >
+                        <Modal.Body>
+                            <div className="flex flex-col gap-4">
+                                <DatePicker
+                                    mode="range"
+                                    selected={{ from: customStartDate, to: customEndDate }}
+                                    onSelect={(range) => {
+                                        if (range) {
+                                            setCustomStartDate(range.from);
+                                            setCustomEndDate(range.to);
+                                        }
+                                    }}
+                                >
+                                    <div className="flex flex-col gap-2">
+                                        <DatePicker.Input
+                                            id="custom-start-date"
+                                            label="Fra dato"
+                                            size="small"
+                                            value={customStartDate ? format(customStartDate, 'dd.MM.yyyy') : ''}
+                                        />
+                                        <DatePicker.Input
+                                            id="custom-end-date"
+                                            label="Til dato"
+                                            size="small"
+                                            value={customEndDate ? format(customEndDate, 'dd.MM.yyyy') : ''}
+                                        />
+                                    </div>
+                                </DatePicker>
+                            </div>
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button
+                                onClick={() => {
+                                    if (customStartDate && customEndDate) {
+                                        setPeriod('custom');
+                                        setIsDateModalOpen(false);
+                                    }
+                                }}
+                                disabled={!customStartDate || !customEndDate}
+                            >
+                                Bruk datoer
+                            </Button>
+                            <Button variant="secondary" onClick={() => setIsDateModalOpen(false)}>
+                                Avbryt
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>
                 </>
             }
         >
@@ -591,17 +695,8 @@ const TrafficAnalysis = () => {
             {
                 !loading && hasAttemptedFetch && !error && (
                     <>
-                        <div className="flex justify-between items-center mb-4">
-                            <Heading level="2" size="medium">Resultater</Heading>
-                            <Button
-                                size="small"
-                                variant="secondary"
-                                icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-                                onClick={copyShareLink}
-                            >
-                                {copySuccess ? 'Kopiert!' : 'Del analyse'}
-                            </Button>
-                        </div>
+
+
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
                                 <Tabs.Tab value="visits" label="Besøk over tid" />
@@ -641,7 +736,7 @@ const TrafficAnalysis = () => {
                                             {chartData ? (
                                                 <ResponsiveContainer>
                                                     <LineChart
-                                                        key={`${submittedMetricType}-${period}-${urlPath}-${seriesData.length}`}
+                                                        key={`${submittedMetricType}-${period}-${seriesData.length}`}
                                                         data={chartData.data}
                                                         legendsOverflowText={'Overflow Items'}
                                                         yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
@@ -745,6 +840,16 @@ const TrafficAnalysis = () => {
                                 </div>
                             </Tabs.Panel>
                         </Tabs>
+                        <div className="flex justify-end mt-8">
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                                onClick={copyShareLink}
+                            >
+                                {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                            </Button>
+                        </div>
                     </>
                 )
             }

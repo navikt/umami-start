@@ -1204,7 +1204,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
 
-        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits' } = req.query;
+        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits', pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1222,15 +1222,30 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         };
 
         let urlFilter = '';
+        let urlFilterCondition = 'FALSE'; // Default for proportion if no path (shouldn't happen if validated)
+
         if (urlPath) {
-            urlFilter = `AND (
-                url_path = @urlPath 
-                OR url_path = @urlPathSlash 
-                OR url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                const condition = 'LOWER(url_path) LIKE @urlPathPattern';
+                urlFilter = `AND ${condition}`;
+                urlFilterCondition = condition;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                const condition = `(
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+                urlFilter = `AND ${condition}`;
+                urlFilterCondition = `
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                `;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         // Determine time truncation based on interval
@@ -1249,11 +1264,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
                         TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
                         session_id,
                         CASE
-                            WHEN (
-                                url_path = @urlPath 
-                                OR url_path = @urlPathSlash 
-                                OR url_path LIKE @urlPathQuery
-                            ) THEN TRUE
+                            WHEN (${urlFilterCondition}) THEN TRUE
                             ELSE FALSE
                         END AS has_visited
                     FROM \`team-researchops-prod-01d6.umami_views.event\`
@@ -1402,7 +1413,19 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
 
         if (req.query.urlPath) {
             // Page-centric flow: Source -> Specific Page -> Next
-            params.urlPath = req.query.urlPath;
+
+            // Check operator
+            const pathOperator = req.query.pathOperator;
+            let condition = 'url_path = @urlPath';
+            params.urlPath = req.query.urlPath; // Set urlPath for both cases
+
+            if (pathOperator === 'starts-with') {
+                condition = 'LOWER(url_path) LIKE @urlPathPattern';
+                params.urlPathPattern = req.query.urlPath.toLowerCase() + '%';
+            } else {
+                // params.urlPath is already set above to req.query.urlPath
+            }
+
 
             const countExpr = metricType === 'proportion'
                 ? 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(session_id), (SELECT total_count FROM total_site_visitors))'
@@ -1443,7 +1466,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     COALESCE(next_page, 'Exit') as next_page,
                     ${countExpr} as count
                 FROM events_with_context
-                WHERE url_path = @urlPath
+                WHERE ${condition}
                 GROUP BY 1, 2, 3
                 ORDER BY 4 DESC
                 LIMIT @limit

@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, Radio, RadioGroup, Heading, InfoCard } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, Heading, InfoCard, Modal, DatePicker } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UmamiJourneyView from '../../components/analysis/journey/UmamiJourneyView';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
@@ -22,6 +21,7 @@ const UserJourney = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [steps, setSteps] = useState<number>(() => {
         const stepsParam = searchParams.get('steps');
         return stepsParam ? parseInt(stepsParam) : 7;
@@ -309,94 +309,108 @@ const UserJourney = () => {
             title="Sideflyt"
             description="Se hvilke veier folk tar på nettsiden."
             currentPage="brukerreiser"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
+                    <div className="w-full sm:w-[300px]">
+                        <TextField
+                            size="small"
+                            label="Start URL-sti"
+                            placeholder="Start URL-sti"
+                            value={startUrl}
+                            onChange={(e) => setStartUrl(e.target.value)}
+                            onBlur={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}
+                        />
+                    </div>
 
-                    <TextField
-                        size="small"
-                        label="Start URL-sti"
-                        description="F.eks. / for forsiden"
-                        value={startUrl}
-                        onChange={(e) => setStartUrl(e.target.value)}
-                        onBlur={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            <option value="custom">Egendefinert</option>
+                        </Select>
+                    </div>
 
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
+                    <div className="w-full sm:w-auto min-w-[150px]">
+                        <Select
+                            label="Reiseretning"
+                            size="small"
+                            value={journeyDirection}
+                            onChange={(e) => setJourneyDirection(e.target.value)}
+                        >
+                            <option value="forward">Fremover</option>
+                            <option value="backward">Bakover</option>
+                        </Select>
+                    </div>
 
-                    <RadioGroup
-                        size="small"
-                        legend="Reiseretning"
-                        description="Hvilken vei vil du se?"
-                        value={journeyDirection}
-                        onChange={(val: string) => {
-                            setJourneyDirection(val);
-                        }}
-                    >
-                        <Radio value="forward">Fremover (hva skjer etter)</Radio>
-                        <Radio value="backward">Bakover (hvordan kom de hit)</Radio>
-                    </RadioGroup>
+                    <div className="w-full sm:w-auto min-w-[100px]">
+                        <Select
+                            size="small"
+                            label="Antall steg"
+                            value={steps}
+                            onChange={(e) => setSteps(Number(e.target.value))}
+                        >
+                            <option value={1}>1 steg</option>
+                            <option value={2}>2 steg</option>
+                            <option value={3}>3 steg</option>
+                            <option value={4}>4 steg</option>
+                            <option value={5}>5 steg</option>
+                            <option value={6}>6 steg</option>
+                            <option value={7}>7 steg</option>
+                            <option value={8}>8 steg</option>
+                            <option value={9}>9 steg</option>
+                            <option value={10}>10 steg</option>
+                            <option value={11}>11 steg</option>
+                            <option value={12}>12 steg</option>
+                            <option value={13}>13 steg</option>
+                            <option value={14}>14 steg</option>
+                            <option value={15}>15 steg</option>
+                        </Select>
+                    </div>
 
-                    <Select
-                        size="small"
-                        label="Antall steg"
-                        description="Hvor mange steg vil du se?"
-                        value={steps}
-                        onChange={(e) => setSteps(Number(e.target.value))}
-                    >
-                        <option value={1}>1 steg</option>
-                        <option value={2}>2 steg</option>
-                        <option value={3}>3 steg</option>
-                        <option value={4}>4 steg</option>
-                        <option value={5}>5 steg</option>
-                        <option value={6}>6 steg</option>
-                        <option value={7}>7 steg</option>
-                        <option value={8}>8 steg</option>
-                        <option value={9}>9 steg</option>
-                        <option value={10}>10 steg</option>
-                        <option value={11}>11 steg</option>
-                        <option value={12}>12 steg</option>
-                        <option value={13}>13 steg</option>
-                        <option value={14}>14 steg</option>
-                        <option value={15}>15 steg</option>
-                    </Select>
+                    <div className="w-full sm:w-[100px]">
+                        <TextField
+                            size="small"
+                            label="Maks sider"
+                            type="number"
+                            value={limitInput}
+                            onChange={(e) => setLimitInput(e.target.value)}
+                            onBlur={() => {
+                                const val = parseInt(limitInput);
+                                if (!isNaN(val) && val > 0) {
+                                    setLimit(val);
+                                } else {
+                                    setLimitInput(limit.toString());
+                                }
+                            }}
+                        />
+                    </div>
 
-                    <TextField
-                        size="small"
-                        label="Maks antall sider"
-                        description="Viser de mest besøkte sidene"
-                        type="number"
-                        value={limitInput}
-                        onChange={(e) => setLimitInput(e.target.value)}
-                        onBlur={() => {
-                            const val = parseInt(limitInput);
-                            if (!isNaN(val) && val > 0) {
-                                setLimit(val);
-                            } else {
-                                setLimitInput(limit.toString());
-                            }
-                        }}
-                    />
-
-                    <Button
-                        onClick={() => fetchData()}
-                        disabled={!selectedWebsite || loading}
-                        loading={loading}
-                        className="w-full mt-8"
-                    >
-                        Vis brukerreiser
-                    </Button>
+                    <div className="w-full sm:w-auto self-end pb-[2px]">
+                        <Button
+                            onClick={() => fetchData()}
+                            disabled={!selectedWebsite || loading}
+                            loading={loading}
+                            size="small"
+                        >
+                            Vis
+                        </Button>
+                    </div>
                 </>
             }
         >
@@ -638,6 +652,37 @@ const UserJourney = () => {
                     Ingen data funnet for valgt periode og start-URL.
                 </div>
             )}
+            <Modal open={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} aria-label="Velg periode">
+                <Modal.Header closeButton>Velg periode</Modal.Header>
+                <Modal.Body>
+                    <div className="min-h-[300px]">
+                        <DatePicker
+                            mode="range"
+                            onSelect={(range) => {
+                                if (range) {
+                                    setCustomStartDate(range.from);
+                                    setCustomEndDate(range.to);
+                                }
+                            }}
+                            selected={{ from: customStartDate, to: customEndDate }}
+                        >
+                            <div className="flex gap-4">
+                                <DatePicker.Input
+                                    label="Fra"
+                                    size="small"
+                                />
+                                <DatePicker.Input
+                                    label="Til"
+                                    size="small"
+                                />
+                            </div>
+                        </DatePicker>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button size="small" onClick={() => setIsCustomDateModalOpen(false)}>Ferdig</Button>
+                </Modal.Footer>
+            </Modal>
         </ChartLayout>
     );
 };

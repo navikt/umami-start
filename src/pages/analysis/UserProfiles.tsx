@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, Label, BodyShort } from '@navikt/ds-react';
+import { Button, Alert, Loader, Heading, Table, Pagination, Search, Modal, Link, BodyShort, Select, DatePicker } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink } from 'lucide-react';
+import { format } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
@@ -19,6 +19,7 @@ const UserProfiles = () => {
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+    const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
     const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [users, setUsers] = useState<any[]>([]);
@@ -225,61 +226,103 @@ const UserProfiles = () => {
             title="Brukerprofiler"
             description="Se individuelle brukere og deres aktivitetslogg."
             currentPage="brukerprofiler"
+            sidebarContent={
+                <WebsitePicker
+                    selectedWebsite={selectedWebsite}
+                    onWebsiteChange={setSelectedWebsite}
+                    variant="minimal"
+                />
+            }
             filters={
                 <>
-                    <WebsitePicker
-                        selectedWebsite={selectedWebsite}
-                        onWebsiteChange={setSelectedWebsite}
-                        variant="minimal"
-                    />
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <Select
+                            label="Periode"
+                            size="small"
+                            value={period}
+                            onChange={(e) => {
+                                if (e.target.value === 'custom') {
+                                    setIsCustomDateModalOpen(true);
+                                }
+                                setPeriod(e.target.value);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="current_month">Denne måneden</option>
+                            <option value="last_month">Forrige måned</option>
+                            {period === 'custom' && customStartDate && customEndDate ? (
+                                <option value="custom">
+                                    {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')}`}
+                                </option>
+                            ) : (
+                                <option value="custom">Egendefinert</option>
+                            )}
+                        </Select>
+                    </div>
 
-                    <PeriodPicker
-                        period={period}
-                        onPeriodChange={(val) => {
-                            setPeriod(val);
-                            setPage(1);
-                        }}
-                        startDate={customStartDate}
-                        onStartDateChange={setCustomStartDate}
-                        endDate={customEndDate}
-                        onEndDateChange={setCustomEndDate}
-                    />
-
-                    <div className="mt-4">
-                        <Label htmlFor="user-search" size="small" spacing>Søk etter bruker ID</Label>
+                    <div className="w-full sm:w-auto min-w-[200px]">
                         <Search
                             size="small"
                             id="user-search"
                             label="Søk etter bruker ID"
-                            hideLabel={true}
+                            hideLabel={false}
                             variant="simple"
                             onChange={handleSearch}
-                            onKeyDown={handleKeyDown} // Trigger search on Enter
-                            value={searchQuery} // Bind value
+                            onKeyDown={handleKeyDown}
+                            value={searchQuery}
                         />
-
-                        <div className="mt-4">
-                            <TextField
-                                size="small"
-                                label="Besøkt URL (valgfritt)"
-                                description="Filtrer på brukere som har besøkt denne siden"
-                                value={pagePath}
-                                onChange={(e) => setPagePath(e.target.value)}
-                                onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
-                                onKeyDown={handleKeyDown}
-                            />
-                        </div>
-
-                        <div className="mt-8">
-                            <Button
-                                className="w-full"
-                                onClick={handleSearchClick}
-                                disabled={!selectedWebsite}
-                            >
-                                Vis brukerprofiler
-                            </Button>
-                        </div>
                     </div>
+
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <TextField
+                            size="small"
+                            label="Besøkt URL (valgfritt)"
+                            value={pagePath}
+                            onChange={(e) => setPagePath(e.target.value)}
+                            onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </div>
+
+                    <div className="flex items-end pb-[2px]">
+                        <Button
+                            className="w-full sm:w-auto"
+                            size="small"
+                            onClick={handleSearchClick}
+                            disabled={!selectedWebsite}
+                        >
+                            Vis brukerprofiler
+                        </Button>
+                    </div>
+
+                    <Modal
+                        open={isCustomDateModalOpen}
+                        onClose={() => setIsCustomDateModalOpen(false)}
+                        header={{ heading: "Velg periode" }}
+                        width="small"
+                    >
+                        <Modal.Body>
+                            <div className="space-y-4">
+                                <DatePicker.Standalone
+                                    selected={
+                                        customStartDate && customEndDate
+                                            ? { from: customStartDate, to: customEndDate }
+                                            : undefined
+                                    }
+                                    mode="range"
+                                    onSelect={(val) => {
+                                        if (val?.from && val?.to) {
+                                            setCustomStartDate(val.from);
+                                            setCustomEndDate(val.to);
+                                            setIsCustomDateModalOpen(false);
+                                            setPeriod('custom');
+                                            setPage(1);
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </Modal.Body>
+                    </Modal>
                 </>
             }
         >
