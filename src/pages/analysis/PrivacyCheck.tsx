@@ -393,10 +393,6 @@ const PrivacyCheck = () => {
 
             {!loading && data && (
                 <>
-                    <div className="flex justify-between items-center mb-4">
-                        <Heading level="2" size="medium">Resultater</Heading>
-                    </div>
-
                     {data.length === 0 || (matchTypes.length === 0 && !hasRedactions) ? (
                         <Alert variant="success">Ingen treff funnet i valgt periode.</Alert>
                     ) : (

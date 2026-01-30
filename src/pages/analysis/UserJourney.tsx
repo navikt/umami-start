@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, Heading, InfoCard } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, InfoCard } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -433,17 +433,6 @@ const UserJourney = () => {
 
             {!loading && data && (data as any).SankeyChartData?.nodes?.length > 0 && (
                 <>
-                    <div className="flex justify-between items-center mb-4">
-                        <Heading level="2" size="medium">Resultater</Heading>
-                        <Button
-                            size="small"
-                            variant="secondary"
-                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-                            onClick={copyShareLink}
-                        >
-                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
-                        </Button>
-                    </div>
                     <Tabs value={activeTab} onChange={setActiveTab}>
                         <Tabs.List>
                             <Tabs.Tab value="steps" label="Stegvisning" />
@@ -649,6 +638,16 @@ const UserJourney = () => {
                             />
                         </Tabs.Panel>
                     </Tabs>
+                    <div className="flex justify-end mt-8">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
                 </>
             )}
 

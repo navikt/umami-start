@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Tabs, Heading } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Tabs } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -265,17 +265,6 @@ const UserComposition = () => {
 
             {!loading && data && (
                 <>
-                    <div className="flex justify-between items-center mb-4">
-                        <Heading level="2" size="medium">Resultater</Heading>
-                        <Button
-                            size="small"
-                            variant="secondary"
-                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-                            onClick={copyShareLink}
-                        >
-                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
-                        </Button>
-                    </div>
                     <Tabs value={activeCategory} onChange={setActiveCategory}>
                         <Tabs.List>
                             <Tabs.Tab value="browser" label="Nettleser" />
@@ -307,6 +296,16 @@ const UserComposition = () => {
                             />
                         </div>
                     </Tabs>
+                    <div className="flex justify-end mt-8">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
                 </>
             )}
         </ChartLayout>

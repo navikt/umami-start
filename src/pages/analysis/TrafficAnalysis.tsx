@@ -377,21 +377,12 @@ const TrafficAnalysis = () => {
     };
 
     // Process Flow/Breakdown Data for Tables
-    // Internal Paths (Excluded from breakdown, use accurate page metrics)
     // Entrances: Included in 'sources' of breakdown, filter for startsWith('/')
     // Exits: Included in 'exits' of breakdown
     // Referrers: Included in 'sources' of breakdown, filter for !startsWith('/')
-    const { internalPaths, entrances, exits, referrers, channels } = useMemo(() => {
-        // Internal Paths - use accurate page metrics
-        const internalPaths = pageMetrics
-            .map(p => ({
-                name: p.urlPath,
-                count: submittedMetricType === 'pageviews' ? p.pageviews : (submittedMetricType === 'proportion' ? p.proportion : p.visitors)
-            }))
-            .sort((a, b) => b.count - a.count);
-
+    const { entrances, exits, referrers, channels } = useMemo(() => {
         if (!breakdownData.sources.length && !breakdownData.exits.length) {
-            return { internalPaths, entrances: [], exits: [], referrers: [], channels: [] };
+            return { entrances: [], exits: [], referrers: [], channels: [] };
         }
 
         const sources = breakdownData.sources.map(s => ({
@@ -432,8 +423,8 @@ const TrafficAnalysis = () => {
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count);
 
-        return { internalPaths, entrances, exits, referrers, channels };
-    }, [breakdownData, pageMetrics, submittedMetricType]);
+        return { entrances, exits, referrers, channels };
+    }, [breakdownData]);
 
     const TrafficTable = ({ title, data, onRowClick }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void }) => {
         const [search, setSearch] = useState('');
@@ -828,10 +819,13 @@ const TrafficAnalysis = () => {
                             </Tabs.Panel>
 
                             <Tabs.Panel value="internal" className="pt-4">
-                                <div className="flex flex-col gap-8">
-                                    <TrafficTable title="Sti" data={internalPaths} onRowClick={setSelectedInternalUrl} />
-                                    <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} />
-                                    <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} />
+                                <div className="flex flex-col md:flex-row gap-8">
+                                    <div className="w-full md:w-1/2">
+                                        <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} />
+                                    </div>
+                                    <div className="w-full md:w-1/2">
+                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} />
+                                    </div>
                                 </div>
 
                                 <AnalysisActionModal

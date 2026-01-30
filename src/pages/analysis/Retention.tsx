@@ -353,17 +353,6 @@ const Retention = () => {
 
             {!loading && retentionData.length > 0 && (
                 <>
-                    <div className="flex justify-between items-center mb-4">
-                        <Heading level="2" size="medium">Resultater</Heading>
-                        <Button
-                            size="small"
-                            variant="secondary"
-                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-                            onClick={copyShareLink}
-                        >
-                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
-                        </Button>
-                    </div>
 
                     {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && (
                         <Alert variant="warning" className="mb-4">
@@ -467,6 +456,16 @@ const Retention = () => {
                             </div>
                         </Tabs.Panel>
                     </Tabs>
+                    <div className="flex justify-end mt-8">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
                 </>
             )}
 
