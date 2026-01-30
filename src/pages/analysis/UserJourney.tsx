@@ -253,12 +253,18 @@ const UserJourney = () => {
             }
 
             if (result.nodes && result.links) {
-                setRawData({ nodes: result.nodes, links: result.links });
+                // Add default color to links for better dark mode support
+                const styledLinks = result.links.map((link: any) => ({
+                    ...link,
+                    color: '#666666' // Neutral gray that works in both modes
+                }));
+
+                setRawData({ nodes: result.nodes, links: styledLinks });
                 setData({
                     chartTitle: "Brukerreiser",
                     SankeyChartData: {
                         nodes: result.nodes,
-                        links: result.links,
+                        links: styledLinks,
                     }
                 } as unknown as IChartProps);
 

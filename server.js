@@ -1261,7 +1261,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             query = `
                 WITH base_query AS (
                     SELECT
-                        TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                        TIMESTAMP_TRUNC(created_at, ${timeTrunc}, 'Europe/Oslo') as time,
                         session_id,
                         CASE
                             WHEN (${urlFilterCondition}) THEN TRUE
@@ -1303,7 +1303,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 
             query = `
                 SELECT
-                    TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                    TIMESTAMP_TRUNC(created_at, ${timeTrunc}, 'Europe/Oslo') as time,
                     ${countExpression} as count
                 FROM \`team-researchops-prod-01d6.umami_views.event\`
                 WHERE website_id = @websiteId
