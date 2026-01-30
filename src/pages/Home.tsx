@@ -1,6 +1,4 @@
 import { Heading, Link, Page } from "@navikt/ds-react";
-import { Link as RouterLink } from "react-router-dom";
-import { Buildings3Icon, WheelchairIcon } from "@navikt/aksel-icons";
 import UrlSearchForm from "../components/dashboard/UrlSearchForm";
 import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
 import { KontaktSeksjon } from "../components/theme/Kontakt/KontaktSeksjon";
