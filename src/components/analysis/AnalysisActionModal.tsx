@@ -148,7 +148,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                 Brukere & lojalitet
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
-                                Brukersammensetning
+                                Brukerdetaljer
                             </Button>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerprofiler', 'pagePath')} icon={<UserSearch aria-hidden />} className="justify-start">
                                 Brukerprofiler

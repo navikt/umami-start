@@ -216,7 +216,7 @@ const UserComposition = () => {
 
     return (
         <ChartLayout
-            title="Brukersammensetning"
+            title="Brukerdetaljer"
             description="Se informasjon om besøkende."
             currentPage="brukersammensetning"
             sidebarContent={
@@ -255,7 +255,7 @@ const UserComposition = () => {
                             loading={loading}
                             size="small"
                         >
-                            Vis brukersammensetning
+                            Vis brukerdetaljer
                         </Button>
                     </div>
                 </>
