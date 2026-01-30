@@ -1577,6 +1577,226 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
     }
 });
 
+// Get page metrics (accurate visitors/pageviews/proportion per page)
+app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            limit: parseInt(limit)
+        };
+
+        let urlFilter = '';
+
+        if (urlPath) {
+            if (pathOperator === 'starts-with') {
+                urlFilter = 'AND LOWER(url_path) LIKE @urlPathPattern';
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
+        }
+
+        const query = `
+            WITH total_stats AS (
+                SELECT APPROX_COUNT_DISTINCT(session_id) as total_visitors
+                FROM \`team-researchops-prod-01d6.umami_views.event\`
+                WHERE website_id = @websiteId
+                AND created_at BETWEEN @startDate AND @endDate
+                AND event_type = 1
+            ),
+            page_stats AS (
+                SELECT
+                    CASE 
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END as url_path,
+                    APPROX_COUNT_DISTINCT(session_id) as visitors,
+                    COUNT(*) as pageviews
+                FROM \`team-researchops-prod-01d6.umami_views.event\`
+                WHERE website_id = @websiteId
+                AND created_at BETWEEN @startDate AND @endDate
+                AND event_type = 1 -- Pageview
+                ${urlFilter}
+                GROUP BY 1
+            )
+            SELECT
+                p.url_path,
+                p.visitors,
+                p.pageviews,
+                SAFE_DIVIDE(p.visitors, t.total_visitors) as proportion
+            FROM page_stats p
+            CROSS JOIN total_stats t
+            ORDER BY p.visitors DESC
+            LIMIT @limit
+        `;
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        }, navIdent, 'Side-metrikker'));
+
+        const [rows] = await job.getQueryResults();
+
+        const data = rows.map(row => ({
+            urlPath: row.url_path,
+            visitors: Number(row.visitors),
+            pageviews: Number(row.pageviews),
+            proportion: Number(row.proportion || 0)
+        }));
+
+        res.json({ data });
+    } catch (error) {
+        console.error('BigQuery page metrics error:', error);
+        res.status(500).json({ error: error.message || 'Failed to fetch page metrics' });
+    }
+});
+
+// Get traffic breakdown (accurate sources/exits)
+app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000' } = req.query;
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            limit: parseInt(limit)
+        };
+
+        let condition = 'url_path = @urlPath';
+        params.urlPath = urlPath || '/'; // Default to root if missing, though typically required
+
+        if (urlPath) {
+            if (pathOperator === 'starts-with') {
+                condition = 'LOWER(url_path) LIKE @urlPathPattern';
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPathQuery = urlPath + '?%';
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                condition = `(
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+            }
+        } else {
+            // If no URL path provided, flow breakdown is less meaningful or implies "Any page". 
+            // But for traffic analysis page, we usually have a context. 
+            // If "All pages", sources = referrers, exits = exit pages.
+            condition = '1=1';
+        }
+
+        const query = `
+            WITH session_events AS (
+                SELECT
+                    session_id,
+                    referrer_domain,
+                    CASE 
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END as url_path,
+                    created_at
+                FROM \`team-researchops-prod-01d6.umami_views.event\`
+                WHERE website_id = @websiteId
+                  AND created_at BETWEEN @startDate AND @endDate
+                  AND event_type = 1 -- Pageview
+            ),
+            events_with_context AS (
+                SELECT
+                    session_id,
+                    url_path,
+                    referrer_domain,
+                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_page,
+                    LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as next_page
+                FROM session_events
+            ),
+            filtered_events AS (
+                SELECT
+                    CASE
+                        WHEN prev_page IS NOT NULL THEN prev_page
+                        ELSE COALESCE(referrer_domain, 'Direkte / Annet')
+                    END as source,
+                    url_path as landing_page,
+                    COALESCE(next_page, 'Exit') as next_page,
+                    session_id
+                FROM events_with_context
+                WHERE ${condition}
+            ),
+            sources_agg AS (
+                SELECT source as name, APPROX_COUNT_DISTINCT(session_id) as visitors
+                FROM filtered_events
+                GROUP BY 1
+                ORDER BY visitors DESC
+                LIMIT @limit
+            ),
+            exits_agg AS (
+                SELECT next_page as name, APPROX_COUNT_DISTINCT(session_id) as visitors
+                FROM filtered_events
+                GROUP BY 1
+                ORDER BY visitors DESC
+                LIMIT @limit
+            )
+            SELECT 'source' as type, name, visitors FROM sources_agg
+            UNION ALL
+            SELECT 'exit' as type, name, visitors FROM exits_agg
+        `;
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        }, navIdent, 'Trafikk-breakdown'));
+
+        const [rows] = await job.getQueryResults();
+
+        const sources = [];
+        const exits = [];
+
+        rows.forEach(row => {
+            const item = { name: row.name, visitors: Number(row.visitors) };
+            if (row.type === 'source') sources.push(item);
+            else if (row.type === 'exit') exits.push(item);
+        });
+
+        res.json({ sources, exits });
+    } catch (error) {
+        console.error('BigQuery traffic breakdown error:', error);
+        res.status(500).json({ error: error.message || 'Failed to fetch traffic breakdown' });
+    }
+});
+
 // Get websites from BigQuery
 app.get('/api/bigquery/websites', async (req, res) => {
     try {

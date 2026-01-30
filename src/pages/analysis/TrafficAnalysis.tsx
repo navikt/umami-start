@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
@@ -47,15 +47,25 @@ const TrafficAnalysis = () => {
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
-    const [flowData, setFlowData] = useState<any[]>([]);
+    const [pageMetrics, setPageMetrics] = useState<any[]>([]);
     const [seriesQueryStats, setSeriesQueryStats] = useState<any>(null);
-    const [flowQueryStats, setFlowQueryStats] = useState<any>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [selectedInternalUrl, setSelectedInternalUrl] = useState<string | null>(null);
+
+    const includedPagesData = useMemo(() => {
+        if (!pageMetrics.length) return [];
+        return pageMetrics.map(item => ({
+            name: item.urlPath,
+            count: submittedMetricType === 'pageviews' ? item.pageviews : (submittedMetricType === 'proportion' ? item.proportion : item.visitors)
+        }));
+    }, [pageMetrics, submittedMetricType]);
+
+
+    const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -78,9 +88,10 @@ const TrafficAnalysis = () => {
         setLoading(true);
         setError(null);
         setSeriesData([]);
-        setFlowData([]); // Clear flow data when fetching new series data
+        setPageMetrics([]);
+        setBreakdownData({ sources: [], exits: [] });
         setHasAttemptedFetch(true);
-        setSubmittedMetricType(metricType); // Store the submitted metric type
+        setSubmittedMetricType(metricType);
 
         // Calculate date range based on period
         const now = new Date();
@@ -88,7 +99,6 @@ const TrafficAnalysis = () => {
         let endDate: Date;
 
         if (period === 'current_month') {
-            // Use UTC to avoid timezone issues where local midnight is previous month in UTC
             startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
             endDate = now;
         } else if (period === 'last_month') {
@@ -103,7 +113,6 @@ const TrafficAnalysis = () => {
             startDate = new Date(customStartDate);
             startDate.setHours(0, 0, 0, 0);
 
-            // Set to end of the selected day (23:59:59.999) if needed, or if end date is today use current time
             const isToday = customEndDate.getDate() === now.getDate() &&
                 customEndDate.getMonth() === now.getMonth() &&
                 customEndDate.getFullYear() === now.getFullYear();
@@ -115,7 +124,6 @@ const TrafficAnalysis = () => {
                 endDate.setHours(23, 59, 59, 999);
             }
         } else {
-            // Default to current month
             startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
             endDate = now;
         }
@@ -130,12 +138,14 @@ const TrafficAnalysis = () => {
                 setSeriesData(seriesResult.data);
             }
             if (seriesResult.queryStats) {
-                console.log('[TrafficAnalysis] Series queryStats:', seriesResult.queryStats);
                 setSeriesQueryStats(seriesResult.queryStats);
             }
 
-            // Always fetch flow data as it's needed for the tabs
-            await fetchFlowData(startDate, endDate, metricType);
+            // Fetch Breakdown Data and Page Metrics in parallel
+            await Promise.all([
+                fetchTrafficBreakdown(startDate, endDate),
+                fetchPageMetrics(startDate, endDate)
+            ]);
 
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
@@ -149,7 +159,6 @@ const TrafficAnalysis = () => {
                 newParams.delete('pathOperator');
             }
 
-            // Persist custom dates
             if (period === 'custom' && customStartDate && customEndDate) {
                 newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
                 newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
@@ -158,9 +167,7 @@ const TrafficAnalysis = () => {
                 newParams.delete('to');
             }
 
-            // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-
 
         } catch (err: any) {
             console.error('Error fetching traffic data:', err);
@@ -170,71 +177,45 @@ const TrafficAnalysis = () => {
         }
     };
 
-    const fetchFlowData = async (providedStartDate?: Date, providedEndDate?: Date, metricTypeOverride?: string) => {
+    const fetchTrafficBreakdown = async (startDate: Date, endDate: Date) => {
         if (!selectedWebsite) return;
 
-        // Use provided dates or calculate them
-        let startDate: Date;
-        let endDate: Date;
-
-        if (providedStartDate && providedEndDate) {
-            startDate = providedStartDate;
-            endDate = providedEndDate;
-        } else {
-            const now = new Date();
-            if (period === 'current_month') {
-                // Use UTC to avoid timezone issues where local midnight is previous month in UTC
-                startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                endDate = now;
-            } else if (period === 'last_month') {
-                startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-            } else if (period === 'custom') {
-                if (customStartDate && customEndDate) {
-                    startDate = new Date(customStartDate);
-                    startDate.setHours(0, 0, 0, 0);
-                    // Same logic as main series data
-                    const isToday = customEndDate.getDate() === now.getDate() &&
-                        customEndDate.getMonth() === now.getMonth() &&
-                        customEndDate.getFullYear() === now.getFullYear();
-                    if (isToday) {
-                        endDate = now;
-                    } else {
-                        endDate = new Date(customEndDate);
-                        endDate.setHours(23, 59, 59, 999);
-                    }
-                } else {
-                    // Fallbacks if somehow called without dates
-                    startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                    endDate = now;
-                }
-            } else {
-                // Default to current month
-                startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                endDate = now;
-            }
-        }
-
-        const metricToUse = metricTypeOverride || submittedMetricType;
-
         try {
-            // Fetch Flow Data
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const flowUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-flow?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=10000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricToUse}`;
-            const flowResponse = await fetch(flowUrl);
-            if (!flowResponse.ok) throw new Error('Kunne ikke hente trafikkflyt');
-            const flowResult = await flowResponse.json();
+            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}`;
 
-            if (flowResult.data) {
-                setFlowData(flowResult.data);
-            }
-            if (flowResult.queryStats) {
-                console.log('[TrafficAnalysis] Flow queryStats:', flowResult.queryStats);
-                setFlowQueryStats(flowResult.queryStats);
+            const response = await fetch(breakdownUrl);
+            if (!response.ok) throw new Error('Kunne ikke hente trafikkdetaljer');
+            const result = await response.json();
+
+            if (result.sources || result.exits) {
+                setBreakdownData({
+                    sources: result.sources || [],
+                    exits: result.exits || []
+                });
             }
         } catch (err: any) {
-            console.error('Error fetching traffic flow data:', err);
-            // Don't set main error here to avoid blocking the chart if flow fails
+            console.error('Error fetching traffic breakdown:', err);
+        }
+    };
+
+
+    const fetchPageMetrics = async (startDate: Date, endDate: Date) => {
+        if (!selectedWebsite) return;
+
+        try {
+            const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
+            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}`;
+
+            const response = await fetch(metricsUrl);
+            if (!response.ok) throw new Error('Kunne ikke hente sidemetrikker');
+            const result = await response.json();
+
+            if (result.data) {
+                setPageMetrics(result.data);
+            }
+        } catch (err: any) {
+            console.error('Error fetching page metrics:', err);
         }
     };
 
@@ -395,48 +376,64 @@ const TrafficAnalysis = () => {
         URL.revokeObjectURL(url);
     };
 
-    // Process Flow Data for Tables
+    // Process Flow/Breakdown Data for Tables
+    // Internal Paths (Excluded from breakdown, use accurate page metrics)
+    // Entrances: Included in 'sources' of breakdown, filter for startsWith('/')
+    // Exits: Included in 'exits' of breakdown
+    // Referrers: Included in 'sources' of breakdown, filter for !startsWith('/')
     const { internalPaths, entrances, exits, referrers, channels } = useMemo(() => {
-        if (!flowData.length) {
-            return { internalPaths: [], entrances: [], exits: [], referrers: [], channels: [] };
+        // Internal Paths - use accurate page metrics
+        const internalPaths = pageMetrics
+            .map(p => ({
+                name: p.urlPath,
+                count: submittedMetricType === 'pageviews' ? p.pageviews : (submittedMetricType === 'proportion' ? p.proportion : p.visitors)
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        if (!breakdownData.sources.length && !breakdownData.exits.length) {
+            return { internalPaths, entrances: [], exits: [], referrers: [], channels: [] };
         }
 
-        const groupAndSum = (data: any[], keySelector: (item: any) => string, filter?: (item: any) => boolean) => {
-            const map = new Map<string, number>();
-            data.forEach(item => {
-                if (filter && !filter(item)) return;
-                const key = keySelector(item);
-                map.set(key, (map.get(key) || 0) + item.count);
-            });
-            return Array.from(map.entries())
-                .map(([name, count]) => ({ name, count }))
-                .sort((a, b) => b.count - a.count);
-        };
+        const sources = breakdownData.sources.map(s => ({
+            name: s.name,
+            count: Number(s.visitors)
+        }));
 
-        // Internal: Path (Landing Page)
-        const internalPaths = groupAndSum(flowData, item => item.landingPage);
+        const exits = breakdownData.exits.map(e => ({
+            name: e.name,
+            count: Number(e.visitors)
+        })).sort((a, b) => b.count - a.count);
 
-        // Internal: Entrances (Source starts with /)
-        const entrances = groupAndSum(flowData, item => item.source, item => item.source.startsWith('/'));
+        // Filter Sources
+        const entrances = sources
+            .filter(s => s.name.startsWith('/'))
+            .sort((a, b) => b.count - a.count);
 
-        // Internal: Exits (Next Page starts with / or is Exit)
-        const exits = groupAndSum(flowData, item => item.nextPage, item => item.nextPage.startsWith('/') || item.nextPage === 'Exit');
+        const referrers = sources
+            .filter(s => !s.name.startsWith('/') && s.name !== 'Direkte / Annet')
+            .sort((a, b) => b.count - a.count);
 
-        // Sources: Referrers (Source does not start with / and not Direct)
-        const referrers = groupAndSum(flowData, item => item.source, item => !item.source.startsWith('/') && item.source !== 'Direkte / Annet');
+        // Channels (Grouped Referrers)
+        const channelMap = new Map<string, number>();
+        sources.forEach(item => {
+            if (item.name.startsWith('/')) return; // Ignore internal for channels
 
-        // Sources: Channels (Simple mapping)
-        const channels = groupAndSum(flowData, item => {
-            const source = item.source;
-            if (source.startsWith('/')) return 'Intern';
-            if (source === 'Direkte / Annet') return 'Direkte';
-            if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo')) return 'Søkemotorer';
-            if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) return 'Sosiale medier';
-            return 'Andre nettsider';
-        }, item => !item.source.startsWith('/')); // Exclude internal from channels list? Or include? User asked for "Sources (trafikkilder) - channels". Usually excludes internal.
+            let channel = 'Andre nettsider';
+            const source = item.name.toLowerCase();
+
+            if (source === 'direkte / annet') channel = 'Direkte';
+            else if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo')) channel = 'Søkemotorer';
+            else if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) channel = 'Sosiale medier';
+
+            channelMap.set(channel, (channelMap.get(channel) || 0) + item.count);
+        });
+
+        const channels = Array.from(channelMap.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
 
         return { internalPaths, entrances, exits, referrers, channels };
-    }, [flowData]);
+    }, [breakdownData, pageMetrics, submittedMetricType]);
 
     const TrafficTable = ({ title, data, onRowClick }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void }) => {
         const [search, setSearch] = useState('');
@@ -822,7 +819,7 @@ const TrafficAnalysis = () => {
                                         <div className={`w-full ${showTable ? 'md:w-1/2' : 'md:w-1/2'}`}>
                                             <TrafficTable
                                                 title="Inkluderte sider"
-                                                data={internalPaths}
+                                                data={includedPagesData}
                                                 onRowClick={setSelectedInternalUrl}
                                             />
                                         </div>
@@ -835,11 +832,6 @@ const TrafficAnalysis = () => {
                                     <TrafficTable title="Sti" data={internalPaths} onRowClick={setSelectedInternalUrl} />
                                     <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} />
                                     <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} />
-                                    {flowQueryStats && (
-                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right">
-                                            Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
-                                        </div>
-                                    )}
                                 </div>
 
                                 <AnalysisActionModal
@@ -855,11 +847,6 @@ const TrafficAnalysis = () => {
                                 <div className="flex flex-col gap-8">
                                     <TrafficTable title="Kanaler" data={channels} />
                                     <TrafficTable title="Trafikkilder" data={referrers} />
-                                    {flowQueryStats && (
-                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right">
-                                            Data prosessert: {flowQueryStats.totalBytesProcessedGB} GB
-                                        </div>
-                                    )}
                                 </div>
                             </Tabs.Panel>
                         </Tabs>
