@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Select, Table, Heading, Pagination, VStack, HelpText, Label } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, Select, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { normalizeUrlToPath } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
@@ -13,9 +14,11 @@ const MarketingAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
 
-    // Initialize state from URL params
-    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
-    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals'); // Default to 'equals' matching TrafficAnalysis
+    // Initialize state from URL params - support multiple paths
+    const pathsFromUrl = searchParams.getAll('urlPath');
+    const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) : [];
+    const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
 
     // Support custom dates from URL
@@ -98,6 +101,7 @@ const MarketingAnalysis = () => {
         }
 
         try {
+            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
 
             const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
@@ -118,11 +122,12 @@ const MarketingAnalysis = () => {
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('metricType', metricType);
-            if (urlPath) {
-                newParams.set('urlPath', urlPath);
+            // Handle multiple paths in URL
+            newParams.delete('urlPath');
+            if (urlPaths.length > 0) {
+                urlPaths.forEach(p => newParams.append('urlPath', p));
                 newParams.set('pathOperator', pathOperator);
             } else {
-                newParams.delete('urlPath');
                 newParams.delete('pathOperator');
             }
 
@@ -327,34 +332,15 @@ const MarketingAnalysis = () => {
             }
             filters={
                 <>
-                    <div className="w-full sm:w-[350px]">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Label size="small" htmlFor="url-filter">URL-sti</Label>
-                            <select
-                                className="text-sm bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded text-[var(--ax-text-accent)] font-medium cursor-pointer focus:outline-none py-1 px-2"
-                                value={pathOperator}
-                                onChange={(e) => setPathOperator(e.target.value)}
-                            >
-                                <option value="equals">er lik</option>
-                                <option value="starts-with">starter med</option>
-                            </select>
-                        </div>
-                        <TextField
-                            id="url-filter"
-                            label="URL-sti"
-                            hideLabel
-                            size="small"
-                            placeholder="URL-sti (valgfritt)"
-                            value={urlPath}
-                            onChange={(e) => setUrlPath(e.target.value)}
-                            onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    fetchData();
-                                }
-                            }}
-                        />
-                    </div>
+                    <UrlPathFilter
+                        urlPaths={urlPaths}
+                        onUrlPathsChange={setUrlPaths}
+                        pathOperator={pathOperator}
+                        onPathOperatorChange={setPathOperator}
+                        selectedWebsiteDomain={selectedWebsite?.domain}
+                        className="w-full sm:w-[350px]"
+                        placeholder="URL-sti (valgfritt)"
+                    />
 
                     <PeriodPicker
                         period={period}

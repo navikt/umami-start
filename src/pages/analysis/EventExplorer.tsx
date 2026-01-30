@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Heading, TextField, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch } from '@navikt/ds-react';
+import { Heading, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch, TextField } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
 import { normalizeUrlToPath } from '../../lib/utils';
@@ -16,8 +17,14 @@ const EventExplorer = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
 
-    // Initialize state from URL params
-    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
+    // Initialize state from URL params - support multiple paths
+    const pathsFromUrl = searchParams.getAll('urlPath');
+    const legacyPath = searchParams.get('pagePath');
+    const initialPaths = pathsFromUrl.length > 0 
+        ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) 
+        : (legacyPath ? [normalizeUrlToPath(legacyPath)].filter(Boolean) : []);
+    const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
+    const [pathOperator, setPathOperator] = useState<string>('equals');
     const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
@@ -58,7 +65,7 @@ const EventExplorer = () => {
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
         // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('pagePath') || searchParams.has('event');
+        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath') || searchParams.has('event');
         if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loadingEvents) {
             setHasAutoSubmitted(true);
             fetchEvents();
@@ -129,6 +136,7 @@ const EventExplorer = () => {
                 startAt: startAt.getTime().toString(),
                 endAt: endAt.getTime().toString()
             });
+            const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
             if (pagePath) params.append('urlPath', pagePath);
 
             const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/events?${params.toString()}`);
@@ -143,13 +151,11 @@ const EventExplorer = () => {
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
-            if (pagePath) {
-                newParams.set('urlPath', pagePath);
-                // Clean up legacy param if present
-                newParams.delete('pagePath');
-            } else {
-                newParams.delete('urlPath');
-                newParams.delete('pagePath');
+            // Handle multiple paths in URL
+            newParams.delete('urlPath');
+            newParams.delete('pagePath');
+            if (urlPaths.length > 0) {
+                urlPaths.forEach(p => newParams.append('urlPath', p));
             }
 
             // Persist custom dates
@@ -194,6 +200,7 @@ const EventExplorer = () => {
                     startAt: startAt.getTime().toString(),
                     endAt: endAt.getTime().toString()
                 });
+                const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
                 if (pagePath) seriesParams.append('urlPath', pagePath);
 
                 const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-series?${seriesParams.toString()}`);
@@ -226,12 +233,11 @@ const EventExplorer = () => {
                 const newParams = new URLSearchParams(window.location.search);
                 newParams.set('period', period);
                 newParams.set('event', selectedEvent);
-                if (pagePath) {
-                    newParams.set('urlPath', pagePath);
-                    newParams.delete('pagePath');
-                } else {
-                    newParams.delete('urlPath');
-                    newParams.delete('pagePath');
+                // Handle multiple paths in URL
+                newParams.delete('urlPath');
+                newParams.delete('pagePath');
+                if (urlPaths.length > 0) {
+                    urlPaths.forEach(p => newParams.append('urlPath', p));
                 }
 
                 // Persist custom dates
@@ -276,6 +282,7 @@ const EventExplorer = () => {
                     startAt: startAt.getTime().toString(),
                     endAt: endAt.getTime().toString()
                 });
+                const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
                 if (pagePath) params.append('urlPath', pagePath);
 
                 const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-parameter-values?${params.toString()}`);
@@ -312,7 +319,8 @@ const EventExplorer = () => {
                 endAt: endAt.getTime().toString(),
                 limit: '20'
             });
-            if (pagePath) latestParams.append('urlPath', pagePath);
+            const latestPagePath = urlPaths.length > 0 ? urlPaths[0] : '';
+            if (latestPagePath) latestParams.append('urlPath', latestPagePath);
 
             console.log('Fetching latest events with params:', latestParams.toString());
             const latestResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-latest?${latestParams.toString()}`);
@@ -404,16 +412,17 @@ const EventExplorer = () => {
             }
             filters={
                 <>
-                    <div className="w-full sm:w-[300px]">
-                        <TextField
-                            size="small"
-                            label="URL-sti"
-                            placeholder="URL-sti (valgfritt)"
-                            value={pagePath}
-                            onChange={(e) => setPagePath(e.target.value)}
-                            onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
-                        />
-                    </div>
+                    <UrlPathFilter
+                        urlPaths={urlPaths}
+                        onUrlPathsChange={setUrlPaths}
+                        pathOperator={pathOperator}
+                        onPathOperatorChange={setPathOperator}
+                        selectedWebsiteDomain={selectedWebsite?.domain}
+                        className="w-full sm:w-[300px]"
+                        label="URL-sti (valgfritt)"
+                        showOperator={false}
+                        placeholder="Skriv og trykk enter"
+                    />
 
                     <PeriodPicker
                         period={period}

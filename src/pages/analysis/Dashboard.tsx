@@ -424,6 +424,72 @@ const Dashboard = () => {
         return a.getTime() === b.getTime();
     };
 
+    // Parse input that may contain multiple URLs/paths (newlines, commas, semicolons)
+    const parseMultipleUrls = (input: string): { paths: string[], invalid: string[] } => {
+        const rawLines = input
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .split(/[\n,;]+/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
+        const paths: string[] = [];
+        const invalid: string[] = [];
+        const currentDomain = selectedWebsite?.domain ? normalizeDomain(selectedWebsite.domain) : null;
+
+        rawLines.forEach(line => {
+            if (line.match(/^https?:\/\//)) {
+                try {
+                    const url = new URL(line);
+                    if (currentDomain) {
+                        const lineDomain = normalizeDomain(url.hostname);
+                        if (lineDomain !== currentDomain && !lineDomain.endsWith('.' + currentDomain)) {
+                            invalid.push(line);
+                            return;
+                        }
+                    }
+                    paths.push(url.pathname);
+                } catch (e) {
+                    invalid.push(line);
+                }
+            } else {
+                const path = line.startsWith('/') ? line : '/' + line;
+                paths.push(path);
+            }
+        });
+
+        return { paths, invalid };
+    };
+
+    // Check if input contains multiple values (has separators)
+    const hasMultipleValues = (input: string): boolean => {
+        return /[\n,;]/.test(input);
+    };
+
+    // Handle pasting multiple URLs directly into combobox
+    const handleUrlPaste = (e: React.ClipboardEvent) => {
+        const pastedText = e.clipboardData.getData('text');
+        
+        if (hasMultipleValues(pastedText)) {
+            e.preventDefault();
+            
+            const { paths, invalid } = parseMultipleUrls(pastedText);
+            
+            if (invalid.length > 0) {
+                setUrlPasteInput(pastedText);
+                setUrlPasteError(`Noen URL-er tilhører ikke valgt nettside eller er ugyldige. Sjekk: ${invalid.slice(0, 3).join(', ')}${invalid.length > 3 ? '...' : ''}`);
+                setIsUrlModalOpen(true);
+                return;
+            }
+            
+            if (paths.length > 0) {
+                const uniqueNewPaths = new Set([...tempUrlPaths, ...paths]);
+                setTempUrlPaths(Array.from(uniqueNewPaths));
+                setComboInputValue("");
+            }
+        }
+    };
+
     const handleBulkAddUrls = () => {
         if (!urlPasteInput.trim()) {
             setIsUrlModalOpen(false);
@@ -541,53 +607,44 @@ const Dashboard = () => {
                             <option value="starts-with">starter med</option>
                         </select>
                     </div>
-                    <UNSAFE_Combobox
-                        id="url-filter"
-                        label="URL-stier"
-                        hideLabel
-                        size="small"
-                        isMultiSelect
-                        allowNewValues
-                        options={[
-                            ...tempUrlPaths.map(p => ({ label: p, value: p })),
-                            { label: "➕ Lim inn flere URL-er...", value: "BULK_ADD_TRIGGER" }
-                        ]}
-                        selectedOptions={tempUrlPaths}
-                        onToggleSelected={(option, isSelected) => {
-                            // Clear input on selection
-                            setComboInputValue("");
-
-                            if (option === "BULK_ADD_TRIGGER") {
-                                if (isSelected) {
-                                    setUrlPasteError("");
-                                    setIsUrlModalOpen(true);
-                                }
-                                return;
-                            }
-                            if (isSelected) {
-                                const normalized = normalizeUrlToPath(option);
-                                setTempUrlPaths(prev => {
-                                    if (prev.includes(normalized)) return prev;
-                                    return [...prev, normalized];
-                                });
-                            } else {
-                                setTempUrlPaths(prev => prev.filter(p => p !== option));
-                            }
-                        }}
-                        value={comboInputValue}
-                        onChange={(val) => setComboInputValue(val)}
-                        onBlur={() => {
-                            if (comboInputValue.trim()) {
-                                const normalized = normalizeUrlToPath(comboInputValue.trim());
-                                setTempUrlPaths(prev => {
-                                    if (prev.includes(normalized)) return prev;
-                                    return [...prev, normalized];
-                                });
+                    <div onPaste={handleUrlPaste}>
+                        <UNSAFE_Combobox
+                            id="url-filter"
+                            label="URL-stier"
+                            hideLabel
+                            size="small"
+                            isMultiSelect
+                            allowNewValues
+                            options={tempUrlPaths.map(p => ({ label: p, value: p }))}
+                            selectedOptions={tempUrlPaths}
+                            onToggleSelected={(option, isSelected) => {
+                                // Clear input on selection
                                 setComboInputValue("");
-                            }
-                        }}
-                        placeholder="Skriv og trykk enter"
-                    />
+
+                                if (isSelected) {
+                                    let normalized = normalizeUrlToPath(option);
+                                    // Ensure path starts with / if it has content
+                                    if (normalized && !normalized.startsWith('/')) {
+                                        normalized = '/' + normalized;
+                                    }
+                                    setTempUrlPaths(prev => {
+                                        if (!normalized || prev.includes(normalized)) return prev;
+                                        return [...prev, normalized];
+                                    });
+                                } else {
+                                    // When removing, match against both the raw option and the normalized version
+                                    let normalized = normalizeUrlToPath(option);
+                                    if (normalized && !normalized.startsWith('/')) {
+                                        normalized = '/' + normalized;
+                                    }
+                                    setTempUrlPaths(prev => prev.filter(p => p !== option && p !== normalized));
+                                }
+                            }}
+                            value={comboInputValue}
+                            onChange={(val) => setComboInputValue(val)}
+                            placeholder="Skriv og trykk enter"
+                        />
+                    </div>
                 </div>
             )}
 

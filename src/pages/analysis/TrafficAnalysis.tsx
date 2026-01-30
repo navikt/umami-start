@@ -9,6 +9,7 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import TrafficStats from '../../components/analysis/traffic/TrafficStats';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
+import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath } from '../../lib/utils';
 
@@ -17,8 +18,10 @@ const TrafficAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
 
-    // Initialize state from URL params
-    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
+    // Initialize state from URL params - support multiple paths
+    const pathsFromUrl = searchParams.getAll('urlPath');
+    const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) : [];
+    const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
 
@@ -85,7 +88,7 @@ const TrafficAnalysis = () => {
         if (!selectedWebsite) return;
 
         // Validation for proportion view
-        if (metricType === 'proportion' && !urlPath) {
+        if (metricType === 'proportion' && urlPaths.length === 0) {
             setError('Du må oppgi en URL-sti for å se andel.');
             return;
         }
@@ -135,7 +138,8 @@ const TrafficAnalysis = () => {
         }
 
         try {
-            // Fetch Series Data
+            // Fetch Series Data - use first path if multiple
+            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&urlPath=${encodeURIComponent(urlPath)}&pathOperator=${pathOperator}&metricType=${metricType}`);
             if (!seriesResponse.ok) throw new Error('Kunne ikke hente trafikkdata');
             const seriesResult = await seriesResponse.json();
@@ -159,11 +163,12 @@ const TrafficAnalysis = () => {
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('metricType', metricType);
-            if (urlPath) {
-                newParams.set('urlPath', urlPath);
+            // Handle multiple paths in URL
+            newParams.delete('urlPath');
+            if (urlPaths.length > 0) {
+                urlPaths.forEach(p => newParams.append('urlPath', p));
                 newParams.set('pathOperator', pathOperator);
             } else {
-                newParams.delete('urlPath');
                 newParams.delete('pathOperator');
             }
 
@@ -189,6 +194,7 @@ const TrafficAnalysis = () => {
         if (!selectedWebsite) return;
 
         try {
+            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
             const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
 
@@ -212,6 +218,7 @@ const TrafficAnalysis = () => {
         if (!selectedWebsite) return;
 
         try {
+            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
             const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
 
@@ -232,6 +239,7 @@ const TrafficAnalysis = () => {
         if (!selectedWebsite) return;
 
         try {
+            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
             const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
 
@@ -681,39 +689,15 @@ const TrafficAnalysis = () => {
             }
             filters={
                 <>
-                    <div className="w-full sm:w-[350px]">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Label size="small" htmlFor="url-filter">URL-sti</Label>
-                            <select
-                                className="text-sm bg-[var(--ax-bg-default)] border border-[var(--ax-border-neutral-subtle)] rounded text-[var(--ax-text-accent)] font-medium cursor-pointer focus:outline-none py-1 px-2"
-                                value={pathOperator}
-                                onChange={(e) => setPathOperator(e.target.value)}
-                            >
-                                <option value="equals">er lik</option>
-                                <option value="starts-with">starter med</option>
-                            </select>
-                        </div>
-                        <TextField
-                            id="url-filter"
-                            label="URL-sti"
-                            hideLabel
-                            size="small"
-                            value={urlPath}
-                            onChange={(e) => setUrlPath(e.target.value)}
-                            onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val) {
-                                    setUrlPath(normalizeUrlToPath(val));
-                                }
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    fetchSeriesData();
-                                }
-                            }}
-                            placeholder="Velg eller skriv sti..."
-                        />
-                    </div>
+                    <UrlPathFilter
+                        urlPaths={urlPaths}
+                        onUrlPathsChange={setUrlPaths}
+                        pathOperator={pathOperator}
+                        onPathOperatorChange={setPathOperator}
+                        selectedWebsiteDomain={selectedWebsite?.domain}
+                        className="w-full sm:w-[350px]"
+                        placeholder="Skriv og trykk enter"
+                    />
 
                     <div className="w-full sm:w-auto min-w-[200px]">
                         <Select

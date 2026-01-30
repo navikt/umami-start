@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Tabs } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath } from '../../lib/utils';
@@ -15,8 +16,14 @@ const UserComposition = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
 
-    // Initialize state from URL params
-    const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
+    // Initialize state from URL params - support multiple paths
+    const pathsFromUrl = searchParams.getAll('urlPath');
+    const legacyPath = searchParams.get('pagePath');
+    const initialPaths = pathsFromUrl.length > 0 
+        ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) 
+        : (legacyPath ? [normalizeUrlToPath(legacyPath)].filter(Boolean) : []);
+    const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
+    const [pathOperator, setPathOperator] = useState<string>('equals');
     const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
 
     // Support custom dates from URL
@@ -108,7 +115,7 @@ const UserComposition = () => {
                     websiteId: selectedWebsite.id,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
-                    urlPath: pagePath.trim() || undefined
+                    urlPath: urlPaths.length > 0 ? urlPaths[0] : undefined
                 }),
             });
 
@@ -221,12 +228,15 @@ const UserComposition = () => {
             }
             filters={
                 <>
-                    <TextField
-                        size="small"
+                    <UrlPathFilter
+                        urlPaths={urlPaths}
+                        onUrlPathsChange={setUrlPaths}
+                        pathOperator={pathOperator}
+                        onPathOperatorChange={setPathOperator}
+                        selectedWebsiteDomain={selectedWebsite?.domain}
                         label="URL-sti (valgfritt)"
-                        value={pagePath}
-                        onChange={(e) => setPagePath(e.target.value)}
-                        onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
+                        showOperator={false}
+                        placeholder="Skriv og trykk enter"
                     />
 
                     <PeriodPicker
