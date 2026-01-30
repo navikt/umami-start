@@ -135,9 +135,10 @@ const Funnel = () => {
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
-        // Only auto-submit if there are config params beyond just websiteId
+        // and at least 2 steps have meaningful values (not empty)
         const hasConfigParams = searchParams.has('period') || searchParams.has('strict') || searchParams.has('step');
-        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+        const stepsWithValues = steps.filter(s => s.value.trim() !== '').length;
+        if (selectedWebsite && hasConfigParams && stepsWithValues >= 2 && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
             fetchData();
         }
@@ -870,7 +871,7 @@ FROM timing_data`;
                         </button>
 
                         <div className="bg-[var(--ax-bg-neutral-soft)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)]">
-                            <Heading level="2" size="small" className="mb-4">Steg i trakten</Heading>
+                            <Heading level="2" size="small" style={{ marginBottom: '1.5rem' }}>Steg i trakten</Heading>
                             <div className="space-y-3">
                                 {steps.map((step, index) => (
                                     <div key={index} className="border border-gray-300 rounded-lg p-3 bg-[var(--ax-bg-default)] relative shadow-sm">
@@ -899,9 +900,8 @@ FROM timing_data`;
                                                         label={`URL-sti`}
                                                         value={step.value}
                                                         onChange={(e) => updateStepValue(index, e.target.value)}
-                                                        onBlur={(e) => normalizeUrlToPath(e.target.value) && updateStepValue(index, normalizeUrlToPath(e.target.value))}
+                                                        onBlur={(e) => e.target.value.trim() && updateStepValue(index, normalizeUrlToPath(e.target.value))}
                                                         size="small"
-                                                        placeholder="/eksempel"
                                                     />
                                                 ) : (
                                                     <Combobox
@@ -1030,9 +1030,10 @@ FROM timing_data`;
 
                             <Button
                                 onClick={fetchData}
-                                disabled={!selectedWebsite || loading}
+                                disabled={!selectedWebsite || loading || steps.filter(s => s.value.trim() !== '').length < 2}
                                 loading={loading}
-                                className="w-full mt-6"
+                                className="w-full"
+                                style={{ marginTop: '2rem' }}
                             >
                                 Lag trakt
                             </Button>
