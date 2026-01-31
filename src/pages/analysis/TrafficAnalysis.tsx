@@ -437,16 +437,20 @@ const TrafficAnalysis = () => {
             count: Number(e.visitors)
         })).sort((a, b) => b.count - a.count);
 
-        // Filter Sources for internal entrances only
+        // Filter Sources for internal entrances only, excluding the current URL path(s) being analyzed
         const entrancesList = sources
-            .filter(s => s.name.startsWith('/'))
+            .filter(s => s.name.startsWith('/') && !urlPaths.some(path => {
+                const normalizedPath = path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path;
+                const normalizedName = s.name !== '/' && s.name.endsWith('/') ? s.name.slice(0, -1) : s.name;
+                return normalizedName === normalizedPath;
+            }))
             .sort((a, b) => b.count - a.count);
 
         return { entrances: entrancesList, exits: exitsList };
-    }, [breakdownData]);
+    }, [breakdownData, urlPaths]);
 
     // Simple table component for external traffic - similar to AnalysisTable in MarketingAnalysis
-    const ExternalTrafficTable = ({ title, data, metricLabel }: { title: string; data: { name: string; count: number }[]; metricLabel: string }) => {
+    const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain }: { title: string; data: { name: string; count: number }[]; metricLabel: string; websiteDomain?: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
@@ -469,6 +473,20 @@ const TrafficAnalysis = () => {
                         <span className="truncate">Direkte / Ingen</span>
                         <HelpText title="Hva betyr dette?" strategy="fixed">
                             Besøk hvor det ikke er registrert noen henvisningskilde. Dette er ofte brukere som skriver inn nettadressen direkte, bruker bokmerker, eller kommer fra apper (som e-post eller Teams) som ikke sender data om hvor trafikken kommer fra.
+                        </HelpText>
+                    </div>
+                );
+            }
+            // Check if this is the website's own domain (internal traffic)
+            // Compare without www prefix to handle both cases
+            const normalizedName = name.toLowerCase().replace(/^www\./, '');
+            const normalizedDomain = websiteDomain?.toLowerCase().replace(/^www\./, '');
+            if (normalizedDomain && normalizedName === normalizedDomain) {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">{name} (interntrafikk)</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Besøkende som kom fra andre sider på samme nettsted. For eksempel brukere som klikket på en lenke fra forsiden eller en annen underside.
                         </HelpText>
                     </div>
                 );
@@ -853,9 +871,9 @@ const TrafficAnalysis = () => {
 
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
-                                <Tabs.Tab value="visits" label="Besøk over tid" />
-                                <Tabs.Tab value="internal" label="Innganger og utganger" />
-                                <Tabs.Tab value="external" label="Eksterne trafikkilder" />
+                                <Tabs.Tab value="visits" label="Trend" />
+                                <Tabs.Tab value="sources" label="Trafikkilder" />
+                                <Tabs.Tab value="navigation" label="Navigasjon" />
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
@@ -985,19 +1003,8 @@ const TrafficAnalysis = () => {
                                 </div>
                             </Tabs.Panel>
 
-                            <Tabs.Panel value="internal" className="pt-4">
-                                <div className="flex flex-col md:flex-row gap-8">
-                                    <div className="w-full md:w-1/2">
-                                        <TrafficTable title="Innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
-                                    </div>
-                                    <div className="w-full md:w-1/2">
-                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
-                                    </div>
-                                </div>
-                            </Tabs.Panel>
-
-                            <Tabs.Panel value="external" className="pt-4">
-                                <div className="flex flex-col md:flex-row gap-8">
+                            <Tabs.Panel value="sources" className="pt-4">
+                                <div className="flex flex-col gap-8">
                                     <div className="w-full md:w-1/2">
                                         <ExternalTrafficTable
                                             title="Kanaler"
@@ -1005,13 +1012,25 @@ const TrafficAnalysis = () => {
                                             metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                         />
                                     </div>
-                                    <div className="w-full md:w-1/2">
-                                        <ExternalTrafficTable
-                                            title="Trafikkilder"
-                                            data={externalReferrers}
-                                            metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
-                                        />
+                                    <div className="flex flex-col md:flex-row gap-8">
+                                        <div className="w-full md:w-1/2">
+                                            <ExternalTrafficTable
+                                                title="Eksterne kilder"
+                                                data={externalReferrers}
+                                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                                websiteDomain={selectedWebsite?.domain}
+                                            />
+                                        </div>
+                                        <div className="w-full md:w-1/2">
+                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
+                                        </div>
                                     </div>
+                                </div>
+                            </Tabs.Panel>
+
+                            <Tabs.Panel value="navigation" className="pt-4">
+                                <div className="w-full md:w-1/2">
+                                    <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
                                 </div>
                             </Tabs.Panel>
                         </Tabs>
