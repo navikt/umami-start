@@ -241,6 +241,17 @@ const UserProfiles = () => {
             }
             filters={
                 <>
+                    <div className="w-full sm:w-auto min-w-[200px]">
+                        <TextField
+                            size="small"
+                            label="URL-sti (valgfritt)"
+                            value={pagePath}
+                            onChange={(e) => setPagePath(e.target.value)}
+                            onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </div>
+
                     <PeriodPicker
                         period={period}
                         onPeriodChange={(newPeriod) => {
@@ -252,17 +263,6 @@ const UserProfiles = () => {
                         endDate={customEndDate}
                         onEndDateChange={setCustomEndDate}
                     />
-
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <TextField
-                            size="small"
-                            label="Besøkt URL (valgfritt)"
-                            value={pagePath}
-                            onChange={(e) => setPagePath(e.target.value)}
-                            onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
-                            onKeyDown={handleKeyDown}
-                        />
-                    </div>
 
                     <div className="flex items-end pb-[2px]">
                         <Button
