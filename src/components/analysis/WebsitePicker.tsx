@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { UNSAFE_Combobox, Alert, Button } from '@navikt/ds-react';
 
-interface Website {
+export interface Website {
   id: string;
   name: string;
   domain: string;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check, SpellCheck, Unlink } from 'lucide-react';
+import { useSiteimproveSupport } from '../../hooks/useSiteimproveSupport';
 
 interface AnalysisActionModalProps {
     open: boolean;
@@ -21,6 +22,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
 }) => {
     const [copySuccess, setCopySuccess] = useState(false);
     const [domain, setDomain] = useState<string>(propDomain || 'nav.no');
+    const hasSiteimprove = useSiteimproveSupport(domain);
 
     useEffect(() => {
         if (propDomain) {
@@ -171,18 +173,20 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             </Button>
                         </div>
 
-                        {/* Column 4: Innholdskvalitet */}
-                        <div className="flex flex-col gap-2">
-                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
-                                Innholdskvalitet
+                        {/* Column 4: Innholdskvalitet - Only show if Siteimprove is supported */}
+                        {hasSiteimprove && (
+                            <div className="flex flex-col gap-2">
+                                <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
+                                    Innholdskvalitet
+                                </div>
+                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className="justify-start">
+                                    Stavekontroll
+                                </Button>
+                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/odelagte-lenker', 'urlPath')} icon={<Unlink aria-hidden />} className="justify-start">
+                                    Ødelagte lenker
+                                </Button>
                             </div>
-                            <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className="justify-start">
-                                Stavekontroll
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/odelagte-lenker', 'urlPath')} icon={<Unlink aria-hidden />} className="justify-start">
-                                Ødelagte lenker
-                            </Button>
-                        </div>
+                        )}
                     </div>
                 </div>
             </Modal.Body>

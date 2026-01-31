@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Page, Accordion } from "@navikt/ds-react";
 import { BarChart2, Users, FileSearch, Activity, Layout } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
 import { PageHeader } from '../theme/PageHeader/PageHeader';
+import { hasSiteimproveSupport } from '../../hooks/useSiteimproveSupport';
 
 interface ChartLayoutProps {
     title: string;
@@ -64,6 +65,17 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     const isNavOpen = !hideAnalysisSelector;
 
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    // Get domain from URL params and check Siteimprove support
+    const domain = searchParams.get('domain');
+    const showSiteimproveSection = useMemo(() => hasSiteimproveSupport(domain), [domain]);
+
+    // Filter chart groups based on Siteimprove support
+    const filteredChartGroups = useMemo(() => {
+        if (showSiteimproveSection) return chartGroups;
+        return chartGroups.filter(group => group.title !== "Innholdskvalitet");
+    }, [showSiteimproveSection]);
 
     const getTargetUrl = (href: string) => {
         const currentParams = new URLSearchParams(window.location.search);
@@ -98,7 +110,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
     const SidebarNavigationContent = () => (
         <>
-            {chartGroups.map((group) => (
+            {filteredChartGroups.map((group) => (
                 <div key={group.title}>
                     <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
                         {group.icon}

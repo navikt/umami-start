@@ -2,6 +2,9 @@ import { Heading, Link, Page } from "@navikt/ds-react";
 import UrlSearchForm from "../components/dashboard/UrlSearchForm";
 import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
 import { KontaktSeksjon } from "../components/theme/Kontakt/KontaktSeksjon";
+import WebsitePicker, { Website } from "../components/analysis/WebsitePicker";
+import { useState } from "react";
+import { useSiteimproveSupport } from "../hooks/useSiteimproveSupport";
 
 // Section configuration for the 3-column layout
 const sections = [
@@ -38,6 +41,9 @@ const contentQualitySection = {
 };
 
 function Home() {
+    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+    const hasSiteimprove = useSiteimproveSupport(selectedWebsite?.domain);
+
     return (
         <>
             {/* Hero section */}
@@ -115,6 +121,13 @@ function Home() {
             <Page.Block width="xl" gutters>
                 <div style={{ marginTop: "38px", marginBottom: "32px" }}>
                     <Heading as="h3" size="medium">Hva ønsker du å analysere?</Heading>
+                    <div style={{ marginTop: '16px', maxWidth: '400px' }}>
+                        <WebsitePicker
+                            selectedWebsite={selectedWebsite}
+                            onWebsiteChange={setSelectedWebsite}
+                            variant="minimal"
+                        />
+                    </div>
                 </div>
 
                 {/* 3-Column Analysis Cards */}
@@ -194,63 +207,65 @@ function Home() {
                         marginTop: '25px',
                         marginBottom: '40px'
                     }}>
-                    {/* Innholdskvalitet Card */}
-                    <div
-                        style={{
-                            backgroundColor: contentQualitySection.bgColor,
-                            padding: '32px',
-                            borderRadius: '12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            border: `1px solid var(--ax-border-neutral-subtle)`,
-                        }}
-                    >
-                        <div style={{
-                            borderLeft: `4px solid ${contentQualitySection.accentColor}`,
-                            paddingLeft: '16px',
-                            marginBottom: '24px'
-                        }}>
-                            <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
-                                {contentQualitySection.title}
-                            </Heading>
-                            <p style={{ fontSize: '16px', color: 'var(--ax-text-subtle)', margin: 0 }}>{contentQualitySection.description}</p>
-                        </div>
+                    {/* Innholdskvalitet Card - Only show if Siteimprove is supported */}
+                    {hasSiteimprove && (
+                        <div
+                            style={{
+                                backgroundColor: contentQualitySection.bgColor,
+                                padding: '32px',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                border: `1px solid var(--ax-border-neutral-subtle)`,
+                            }}
+                        >
+                            <div style={{
+                                borderLeft: `4px solid ${contentQualitySection.accentColor}`,
+                                paddingLeft: '16px',
+                                marginBottom: '24px'
+                            }}>
+                                <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
+                                    {contentQualitySection.title}
+                                </Heading>
+                                <p style={{ fontSize: '16px', color: 'var(--ax-text-subtle)', margin: 0 }}>{contentQualitySection.description}</p>
+                            </div>
 
-                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {analyticsPages
-                                .filter(page => contentQualitySection.ids.includes(page.id))
-                                .map(page => (
-                                    <Link
-                                        key={page.id}
-                                        href={page.href}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '16px 20px',
-                                            backgroundColor: 'var(--ax-bg-default)',
-                                            borderRadius: '8px',
-                                            textDecoration: 'none',
-                                            color: 'var(--ax-text-default)',
-                                            border: '1px solid var(--ax-border-neutral-subtle)',
-                                            transition: 'all 0.2s ease',
-                                            fontWeight: 500
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
-                                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
-                                            e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
-                                        }}
-                                    >
-                                        <span>{page.label}</span>
-                                        <span style={{ color: contentQualitySection.accentColor, fontSize: '18px' }}>→</span>
-                                    </Link>
-                                ))}
-                        </nav>
-                    </div>
+                            <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {analyticsPages
+                                    .filter(page => contentQualitySection.ids.includes(page.id))
+                                    .map(page => (
+                                        <Link
+                                            key={page.id}
+                                            href={page.href}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '16px 20px',
+                                                backgroundColor: 'var(--ax-bg-default)',
+                                                borderRadius: '8px',
+                                                textDecoration: 'none',
+                                                color: 'var(--ax-text-default)',
+                                                border: '1px solid var(--ax-border-neutral-subtle)',
+                                                transition: 'all 0.2s ease',
+                                                fontWeight: 500
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
+                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
+                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
+                                            }}
+                                        >
+                                            <span>{page.label}</span>
+                                            <span style={{ color: contentQualitySection.accentColor, fontSize: '18px' }}>→</span>
+                                        </Link>
+                                    ))}
+                            </nav>
+                        </div>
+                    )}
 
                     {/* Grafbygger section */}
                     <div style={{
