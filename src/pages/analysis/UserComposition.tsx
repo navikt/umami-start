@@ -19,8 +19,8 @@ const UserComposition = () => {
     // Initialize state from URL params - support multiple paths
     const pathsFromUrl = searchParams.getAll('urlPath');
     const legacyPath = searchParams.get('pagePath');
-    const initialPaths = pathsFromUrl.length > 0 
-        ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) 
+    const initialPaths = pathsFromUrl.length > 0
+        ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean)
         : (legacyPath ? [normalizeUrlToPath(legacyPath)].filter(Boolean) : []);
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>('equals');
@@ -42,11 +42,9 @@ const UserComposition = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
 
-    // Auto-submit when URL parameters are present (for shared links)
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
-        // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath') || searchParams.has('pagePath');
-        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+        if (selectedWebsite && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
             fetchData();
         }

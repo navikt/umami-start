@@ -39,11 +39,9 @@ const Retention = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
 
-    // Auto-submit when URL parameters are present (for shared links)
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
-        // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath');
-        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
+        if (selectedWebsite && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
             fetchData();
         }
