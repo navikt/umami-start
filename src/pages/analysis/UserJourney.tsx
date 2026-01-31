@@ -427,6 +427,12 @@ const UserJourney = () => {
                 </Alert>
             )}
 
+            {!startUrl && !loading && !data && (
+                <Alert variant="info" className="mb-4">
+                    Skriv inn en URL-sti for å analysere hendelsesflyt på en spesifikk side.
+                </Alert>
+            )}
+
             {loading && (
                 <div className="flex justify-center items-center h-full">
                     <Loader size="xlarge" title="Laster brukerreiser..." />
