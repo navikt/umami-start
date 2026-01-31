@@ -47,7 +47,7 @@ const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
     currentPage,
     wideSidebar = false,
     hideSidebar = false,
-    hideAnalysisSelector = false
+    hideAnalysisSelector = true
 }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(!hideSidebar);
     const navigate = useNavigate();
