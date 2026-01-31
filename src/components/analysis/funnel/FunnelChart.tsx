@@ -30,7 +30,6 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
     }
 
     const maxCount = Math.max(...data.map(d => d.count));
-    const themeColor = 'rgb(19, 17, 54)';
 
     const handleUrlClick = (e: React.MouseEvent, urlPath: string) => {
         if (!websiteId) return;
@@ -77,9 +76,9 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
 
                                     {/* Center: Connector line */}
                                     <div className="flex flex-col items-center">
-                                        <div className="w-0.5 h-3 bg-gray-300"></div>
-                                        <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                                        <div className="w-0.5 h-3 bg-gray-300"></div>
+                                        <div className="w-0.5 h-3 bg-[var(--ax-border-neutral-moderate)]"></div>
+                                        <div className="w-2 h-2 rounded-full bg-[var(--ax-border-neutral-strong)]"></div>
+                                        <div className="w-0.5 h-3 bg-[var(--ax-border-neutral-moderate)]"></div>
                                     </div>
 
                                     {/* Right side: falt fra (dropoff) */}
@@ -104,12 +103,11 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
                             {/* The Step Card */}
                             <div className="w-full flex justify-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
                                 <div
-                                    className="relative flex flex-col items-center justify-center py-3 px-4 rounded-lg shadow-sm transition-all duration-300 hover:shadow-md"
+                                    className="relative flex flex-col items-center justify-center py-3 px-4 rounded-lg shadow-sm transition-all duration-300 hover:shadow-md text-white border border-transparent dark:border-[var(--ax-border-neutral-subtle)]"
                                     style={{
                                         width: `${widthPercentage}%`,
-                                        backgroundColor: themeColor,
-                                        color: 'white',
-                                        minWidth: '180px'
+                                        minWidth: '180px',
+                                        backgroundColor: 'var(--funnel-box-bg, rgb(19, 17, 54))'
                                     }}
                                 >
                                     <div className="text-[11px] font-bold opacity-80 uppercase tracking-wider mb-0.5">

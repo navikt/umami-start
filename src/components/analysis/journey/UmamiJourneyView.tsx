@@ -318,7 +318,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                             <path
                                 key={i}
                                 d={path.d}
-                                stroke="#0067c5"
+                                stroke="var(--journey-line-color, #0067c5)"
                                 strokeWidth="2"
                                 fill="none"
                                 opacity={path.opacity}
@@ -331,7 +331,7 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                             <div key={stepData.step} className="flex-shrink-0 w-60 flex flex-col gap-4">
                                 {/* Step Header */}
                                 <div className="flex flex-col items-center mb-2">
-                                    <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm">
+                                    <div className="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-sm mb-2 shadow-sm border border-transparent dark:border-[var(--ax-border-neutral-subtle)]" style={{ backgroundColor: 'var(--funnel-box-bg, rgb(19, 17, 54))' }}>
                                         {stepData.displayStep}
                                     </div>
                                     <div className="text-sm font-semibold text-[var(--ax-text-default)]">
@@ -357,14 +357,14 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
                                                 onClick={() => setSelectedNodeId(isSelected ? null : item.nodeId)}
                                                 className={`
                                                 relative overflow-hidden rounded-md border transition-all duration-200 cursor-pointer group
-                                                ${isSelected ? 'ring-2 ring-blue-600 border-blue-600 shadow-md' : 'border-transparent hover:border-gray-400 shadow-sm'}
-                                                ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500 bg-gray-900' : ''}
+                                                ${isSelected ? 'ring-2 ring-blue-600 border-blue-600 shadow-md' : 'border-transparent dark:border-[var(--ax-border-neutral-subtle)] hover:border-gray-400 dark:hover:border-[var(--ax-border-neutral-strong)] shadow-sm'}
+                                                ${isFunnelStep ? 'ring-2 ring-green-500 border-green-500' : ''}
                                                 ${isDimmed && !isFunnelStep ? 'opacity-30 grayscale' : 'opacity-100'}
                                                 text-white
                                             `}
                                                 style={{
                                                     minHeight: '40px',
-                                                    backgroundColor: 'rgb(19, 17, 54)'
+                                                    backgroundColor: 'var(--funnel-box-bg, rgb(19, 17, 54))'
                                                 }}
                                             >
                                                 {/* Content */}
