@@ -320,7 +320,7 @@ const UserJourney = () => {
 
     return (
         <ChartLayout
-            title="Sideflyt"
+            title="Navigasjonsflyt"
             description="Se hvilke veier folk tar på nettsiden."
             currentPage="brukerreiser"
             sidebarContent={

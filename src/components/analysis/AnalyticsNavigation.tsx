@@ -31,7 +31,7 @@ export const analyticsPages = [
     {
         id: 'brukerreiser',
         href: '/brukerreiser',
-        label: 'Sideflyt',
+        label: 'Navigasjonsflyt',
         description: 'Se hvilke veier folk tar på nettsiden'
     },
     {

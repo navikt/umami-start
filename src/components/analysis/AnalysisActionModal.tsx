@@ -164,7 +164,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                 Brukerreiser
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
-                                Sideflyt
+                                Navigasjonsflyt
                             </Button>
                             <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
                                 Hendelsesflyt

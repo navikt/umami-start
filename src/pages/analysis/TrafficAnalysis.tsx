@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker, HelpText } from '@navikt/ds-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker, HelpText, Box, Link } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download, Share2, Check, ExternalLink } from 'lucide-react';
+import { Download, Share2, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -17,6 +17,7 @@ import { normalizeUrlToPath } from '../../lib/utils';
 const TrafficAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
     // Initialize state from URL params - support multiple paths
     const pathsFromUrl = searchParams.getAll('urlPath');
@@ -513,17 +514,17 @@ const TrafficAnalysis = () => {
                     <Table size="small">
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell>Navn</Table.HeaderCell>
                                 <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                                <Table.HeaderCell>Navn</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
                             {paginatedData.map((row, i) => (
                                 <Table.Row key={i}>
+                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {renderName(row.name)}
                                     </Table.DataCell>
-                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
                                 </Table.Row>
                             ))}
                             {filteredData.length === 0 && (
@@ -1029,8 +1030,34 @@ const TrafficAnalysis = () => {
                             </Tabs.Panel>
 
                             <Tabs.Panel value="navigation" className="pt-4">
-                                <div className="w-full md:w-1/2">
-                                    <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
+                                <div className="flex flex-col md:flex-row gap-8">
+                                    <div className="w-full md:w-1/2">
+                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
+                                    </div>
+                                    <div className="w-full md:w-1/2">
+                                        <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">
+                                            <Heading level="3" size="small" className="mb-2">Se vanlige veier gjennom nettstedet</Heading>
+                                            <p className="text-[var(--ax-text-subtle)] mb-4">
+                                                Navigasjonsflyt viser hvordan brukerne navigerer mellom flere sider i samme besøk.
+                                            </p>
+                                            <Button
+                                                variant="secondary"
+                                                size="small"
+                                                icon={<ArrowRight size={16} />}
+                                                iconPosition="right"
+                                                onClick={() => {
+                                                    const params = new URLSearchParams();
+                                                    if (selectedWebsite?.id) params.set('websiteId', selectedWebsite.id);
+                                                    if (period) params.set('period', period);
+                                                    if (urlPaths.length > 0) params.set('urlPath', urlPaths[0]);
+                                                    navigate(`/brukerreiser?${params.toString()}`);
+                                                }}
+                                                disabled={!selectedWebsite}
+                                            >
+                                                Gå til navigasjonsflyt
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             </Tabs.Panel>
                         </Tabs>
