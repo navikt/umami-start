@@ -5,7 +5,6 @@ import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
-import AnalyticsNavigation from '../../components/analysis/AnalyticsNavigation';
 import { Website } from '../../types/chart';
 import { format, parseISO } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -367,7 +366,7 @@ const Diagnosis = () => {
                                         <div className="text-xl font-semibold">
                                             {highlightedWebsite.last_event_at
                                                 ? format(new Date(highlightedWebsite.last_event_at), 'd. MMM yyyy', { locale: nb })
-                                                : <span className="text-red-600">Ingen</span>
+                                                : <span className="text-red-600">Ingen for valgt periode</span>
                                             }
                                         </div>
                                     </div>
@@ -580,8 +579,6 @@ const Diagnosis = () => {
                     </div>
                 </div>
             )}
-
-            <AnalyticsNavigation currentPage="diagnose" />
         </ChartLayout>
     );
 };
