@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Label, UNSAFE_Combobox, Modal, Textarea, Button } from "@navikt/ds-react";
+import { Label, UNSAFE_Combobox, Modal, Textarea, Button, TextField } from "@navikt/ds-react";
 import { normalizeUrlToPath } from "../../lib/utils";
 
 interface UrlPathFilterProps {
@@ -48,6 +48,12 @@ export const UrlPathFilter = ({
     const [urlPasteInput, setUrlPasteInput] = useState("");
     const [urlPasteError, setUrlPasteError] = useState("");
     const urlModalRef = useRef<HTMLDialogElement>(null);
+
+    // Unsaved input modal state (shown when user blurs with typed text)
+    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
+    const [unsavedValue, setUnsavedValue] = useState("");
+    const unsavedModalRef = useRef<HTMLDialogElement>(null);
+    const isSelectingRef = useRef(false); // Track if user is selecting from dropdown
 
     // Helper function to normalize domain for comparison
     const normalizeDomain = (domain: string) => {
@@ -155,6 +161,9 @@ export const UrlPathFilter = ({
     const handleToggleSelected = (option: string, isSelected: boolean) => {
         console.log('[UrlPathFilter] handleToggleSelected called:', { option, isSelected, currentPaths: urlPaths });
         
+        // Mark that we're in a selection process
+        isSelectingRef.current = true;
+        
         if (isSelected) {
             let normalized = normalizeUrlToPath(option);
             console.log('[UrlPathFilter] normalizeUrlToPath result:', normalized);
@@ -180,6 +189,45 @@ export const UrlPathFilter = ({
         
         // Clear input after handling toggle
         setComboInputValue("");
+        
+        // Reset selection flag after a short delay
+        setTimeout(() => {
+            isSelectingRef.current = false;
+        }, 100);
+    };
+
+    // Handle blur - show modal if there's unsaved input
+    const handleBlur = () => {
+        // Use a small delay to allow toggle selection to complete first
+        setTimeout(() => {
+            const trimmedValue = comboInputValue.trim();
+            // Only show modal if there's actual input and we're not in the middle of selecting
+            if (trimmedValue && !isSelectingRef.current) {
+                setUnsavedValue(trimmedValue);
+                setIsUnsavedModalOpen(true);
+            }
+        }, 150);
+    };
+
+    // Handle adding the unsaved value
+    const handleAddUnsavedValue = () => {
+        let normalized = normalizeUrlToPath(unsavedValue);
+        if (normalized && !normalized.startsWith('/')) {
+            normalized = '/' + normalized;
+        }
+        if (normalized && !urlPaths.includes(normalized)) {
+            onUrlPathsChange([...urlPaths, normalized]);
+        }
+        setComboInputValue("");
+        setUnsavedValue("");
+        setIsUnsavedModalOpen(false);
+    };
+
+    // Handle discarding the unsaved value
+    const handleDiscardUnsavedValue = () => {
+        setComboInputValue("");
+        setUnsavedValue("");
+        setIsUnsavedModalOpen(false);
     };
 
     return (
@@ -197,7 +245,7 @@ export const UrlPathFilter = ({
                     </select>
                 </div>
             )}
-            <div onPaste={handlePaste}>
+            <div onPaste={handlePaste} onBlur={handleBlur}>
                 <UNSAFE_Combobox
                     id="url-filter"
                     label={label}
@@ -213,6 +261,35 @@ export const UrlPathFilter = ({
                     placeholder={placeholder}
                 />
             </div>
+
+            {/* Unsaved input confirmation modal */}
+            <Modal
+                ref={unsavedModalRef}
+                open={isUnsavedModalOpen}
+                onClose={handleDiscardUnsavedValue}
+                header={{ heading: "Lagre URL-sti?", closeButton: true }}
+            >
+                <Modal.Body>
+                    <p className="mb-4">
+                        Du har skrevet inn en verdi som ikke ble lagt til. Rediger om nødvendig:
+                    </p>
+                    <TextField
+                        label="URL-sti"
+                        hideLabel
+                        size="small"
+                        value={unsavedValue.startsWith('/') ? unsavedValue : '/' + unsavedValue}
+                        onChange={(e) => setUnsavedValue(e.target.value)}
+                    />
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={handleAddUnsavedValue}>
+                        Legg til
+                    </Button>
+                    <Button variant="secondary" onClick={handleDiscardUnsavedValue}>
+                        Forkast
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             {/* Bulk URL paste modal */}
             <Modal

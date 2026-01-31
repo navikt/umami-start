@@ -1,4 +1,4 @@
-import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea } from "@navikt/ds-react";
+import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea, TextField } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
@@ -109,6 +109,12 @@ const Dashboard = () => {
 
     // Combobox input state
     const [comboInputValue, setComboInputValue] = useState("");
+
+    // Unsaved input modal state (shown when user blurs with typed text)
+    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
+    const [unsavedValue, setUnsavedValue] = useState("");
+    const unsavedModalRef = useRef<HTMLDialogElement>(null);
+    const isSelectingRef = useRef(false); // Track if user is selecting from dropdown
 
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
@@ -490,6 +496,40 @@ const Dashboard = () => {
         }
     };
 
+    // Handle blur on combobox - show modal if there's unsaved input
+    const handleComboBlur = () => {
+        // Use a small delay to allow toggle selection to complete first
+        setTimeout(() => {
+            const trimmedValue = comboInputValue.trim();
+            // Only show modal if there's actual input and we're not in the middle of selecting
+            if (trimmedValue && !isSelectingRef.current) {
+                setUnsavedValue(trimmedValue);
+                setIsUnsavedModalOpen(true);
+            }
+        }, 150);
+    };
+
+    // Handle adding the unsaved value
+    const handleAddUnsavedValue = () => {
+        let normalized = normalizeUrlToPath(unsavedValue);
+        if (normalized && !normalized.startsWith('/')) {
+            normalized = '/' + normalized;
+        }
+        if (normalized && !tempUrlPaths.includes(normalized)) {
+            setTempUrlPaths(prev => [...prev, normalized]);
+        }
+        setComboInputValue("");
+        setUnsavedValue("");
+        setIsUnsavedModalOpen(false);
+    };
+
+    // Handle discarding the unsaved value
+    const handleDiscardUnsavedValue = () => {
+        setComboInputValue("");
+        setUnsavedValue("");
+        setIsUnsavedModalOpen(false);
+    };
+
     const handleBulkAddUrls = () => {
         if (!urlPasteInput.trim()) {
             setIsUrlModalOpen(false);
@@ -607,7 +647,7 @@ const Dashboard = () => {
                             <option value="starts-with">starter med</option>
                         </select>
                     </div>
-                    <div onPaste={handleUrlPaste}>
+                    <div onPaste={handleUrlPaste} onBlur={handleComboBlur}>
                         <UNSAFE_Combobox
                             id="url-filter"
                             label="URL-stier"
@@ -618,6 +658,9 @@ const Dashboard = () => {
                             options={tempUrlPaths.map(p => ({ label: p, value: p }))}
                             selectedOptions={tempUrlPaths}
                             onToggleSelected={(option, isSelected) => {
+                                // Mark that we're in a selection process
+                                isSelectingRef.current = true;
+                                
                                 // Clear input on selection
                                 setComboInputValue("");
 
@@ -639,6 +682,11 @@ const Dashboard = () => {
                                     }
                                     setTempUrlPaths(prev => prev.filter(p => p !== option && p !== normalized));
                                 }
+                                
+                                // Reset selection flag after a short delay
+                                setTimeout(() => {
+                                    isSelectingRef.current = false;
+                                }, 100);
                             }}
                             value={comboInputValue}
                             onChange={(val) => setComboInputValue(val)}
@@ -783,6 +831,35 @@ const Dashboard = () => {
                     </Button>
                     <Button variant="secondary" onClick={() => setIsDateModalOpen(false)}>
                         Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Unsaved input confirmation modal */}
+            <Modal
+                ref={unsavedModalRef}
+                open={isUnsavedModalOpen}
+                onClose={handleDiscardUnsavedValue}
+                header={{ heading: "Lagre URL-sti?", closeButton: true }}
+            >
+                <Modal.Body>
+                    <p className="mb-4">
+                        Du har skrevet inn en verdi som ikke ble lagt til. Rediger om nødvendig:
+                    </p>
+                    <TextField
+                        label="URL-sti"
+                        hideLabel
+                        size="small"
+                        value={unsavedValue.startsWith('/') ? unsavedValue : '/' + unsavedValue}
+                        onChange={(e) => setUnsavedValue(e.target.value)}
+                    />
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={handleAddUnsavedValue}>
+                        Legg til
+                    </Button>
+                    <Button variant="secondary" onClick={handleDiscardUnsavedValue}>
+                        Forkast
                     </Button>
                 </Modal.Footer>
             </Modal>
