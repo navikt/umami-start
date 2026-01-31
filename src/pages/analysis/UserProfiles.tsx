@@ -230,6 +230,7 @@ const UserProfiles = () => {
             title="Brukerprofiler"
             description="Se individuelle brukere og deres aktivitetslogg."
             currentPage="brukerprofiler"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

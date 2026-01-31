@@ -3,8 +3,8 @@ import UrlSearchForm from "../components/dashboard/UrlSearchForm";
 import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
 import { KontaktSeksjon } from "../components/theme/Kontakt/KontaktSeksjon";
 import WebsitePicker, { Website } from "../components/analysis/WebsitePicker";
-import { useState } from "react";
-import { useSiteimproveSupport } from "../hooks/useSiteimproveSupport";
+import { useState, useMemo } from "react";
+import { useSiteimproveSupport, useMarketingSupport } from "../hooks/useSiteimproveSupport";
 
 // Section configuration for the 3-column layout
 const sections = [
@@ -43,6 +43,20 @@ const contentQualitySection = {
 function Home() {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const hasSiteimprove = useSiteimproveSupport(selectedWebsite?.domain);
+    const hasMarketing = useMarketingSupport(selectedWebsite?.domain);
+
+    // Filter sections based on feature support
+    const filteredSections = useMemo(() => {
+        return sections.map(section => {
+            if (section.title === "Trafikk & hendelser" && !hasMarketing) {
+                return {
+                    ...section,
+                    ids: section.ids.filter(id => id !== 'markedsanalyse')
+                };
+            }
+            return section;
+        });
+    }, [hasMarketing]);
 
     return (
         <>
@@ -137,7 +151,7 @@ function Home() {
                     gap: '24px',
                     marginBottom: '25px'
                 }}>
-                    {sections.map((section) => (
+                    {filteredSections.map((section) => (
                         <div
                             key={section.title}
                             style={{

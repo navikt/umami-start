@@ -718,6 +718,7 @@ const TrafficAnalysis = () => {
             title="Trafikkanalyse"
             description="Se besøk over tid og trafikkilder."
             currentPage="trafikkanalyse"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

@@ -323,6 +323,7 @@ const UserJourney = () => {
             title="Navigasjonsflyt"
             description="Se hvilke veier folk tar på nettsiden."
             currentPage="brukerreiser"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

@@ -283,6 +283,7 @@ const Diagnosis = () => {
             title="Diagnoseverktøy"
             description="Oversikt over aktivitet på alle nettsteder og apper."
             currentPage="diagnose"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsiteFilter}

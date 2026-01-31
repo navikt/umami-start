@@ -813,6 +813,7 @@ FROM timing_data`;
             title="Traktanalyse"
             description="Se hvor folk faller fra i en prosess."
             currentPage="trakt"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

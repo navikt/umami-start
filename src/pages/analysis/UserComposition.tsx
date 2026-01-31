@@ -219,6 +219,7 @@ const UserComposition = () => {
             title="Brukerdetaljer"
             description="Se informasjon om besøkende."
             currentPage="brukersammensetning"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

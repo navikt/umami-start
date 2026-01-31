@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
 import { PageHeader } from '../theme/PageHeader/PageHeader';
-import { hasSiteimproveSupport } from '../../hooks/useSiteimproveSupport';
+import { hasSiteimproveSupport, hasMarketingSupport } from '../../hooks/useSiteimproveSupport';
 
 interface ChartLayoutProps {
     title: string;
@@ -17,6 +17,7 @@ interface ChartLayoutProps {
     hideSidebar?: boolean; // Now hides the top filter bar
     hideAnalysisSelector?: boolean;
     sidebarContent?: React.ReactNode;
+    websiteDomain?: string; // Domain for feature support checks
 }
 
 const chartGroups = [
@@ -59,7 +60,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     currentPage,
     hideSidebar = false,
     hideAnalysisSelector = false,
-    sidebarContent
+    sidebarContent,
+    websiteDomain
 }) => {
     // State for Sidebars
     const isNavOpen = !hideAnalysisSelector;
@@ -67,15 +69,35 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
-    // Get domain from URL params and check Siteimprove support
-    const domain = searchParams.get('domain');
+    // Get domain from prop or URL params and check feature support
+    const domain = websiteDomain || searchParams.get('domain');
     const showSiteimproveSection = useMemo(() => hasSiteimproveSupport(domain), [domain]);
+    const showMarketingAnalysis = useMemo(() => hasMarketingSupport(domain), [domain]);
 
-    // Filter chart groups based on Siteimprove support
+    // Filter chart groups based on feature support
     const filteredChartGroups = useMemo(() => {
-        if (showSiteimproveSection) return chartGroups;
-        return chartGroups.filter(group => group.title !== "Innholdskvalitet");
-    }, [showSiteimproveSection]);
+        let groups = chartGroups;
+
+        // Filter out Innholdskvalitet if Siteimprove not supported
+        if (!showSiteimproveSection) {
+            groups = groups.filter(group => group.title !== "Innholdskvalitet");
+        }
+
+        // Filter out markedsanalyse from "Trafikk & hendelser" if marketing not supported
+        if (!showMarketingAnalysis) {
+            groups = groups.map(group => {
+                if (group.title === "Trafikk & hendelser") {
+                    return {
+                        ...group,
+                        ids: group.ids.filter(id => id !== 'markedsanalyse')
+                    };
+                }
+                return group;
+            });
+        }
+
+        return groups;
+    }, [showSiteimproveSection, showMarketingAnalysis]);
 
     const getTargetUrl = (href: string) => {
         const currentParams = new URLSearchParams(window.location.search);

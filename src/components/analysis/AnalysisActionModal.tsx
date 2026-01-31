@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check, SpellCheck, Unlink } from 'lucide-react';
-import { useSiteimproveSupport } from '../../hooks/useSiteimproveSupport';
+import { useSiteimproveSupport, useMarketingSupport } from '../../hooks/useSiteimproveSupport';
 
 interface AnalysisActionModalProps {
     open: boolean;
@@ -23,6 +23,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     const [copySuccess, setCopySuccess] = useState(false);
     const [domain, setDomain] = useState<string>(propDomain || 'nav.no');
     const hasSiteimprove = useSiteimproveSupport(domain);
+    const hasMarketing = useMarketingSupport(domain);
 
     useEffect(() => {
         if (propDomain) {
@@ -136,9 +137,11 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                             <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
                                 Trafikkanalyse
                             </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className="justify-start">
-                                Markedsanalyse
-                            </Button>
+                            {hasMarketing && (
+                                <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className="justify-start">
+                                    Markedsanalyse
+                                </Button>
+                            )}
                             <Button variant="secondary" onClick={() => openAnalysis('/utforsk-hendelser', 'pagePath')} icon={<Search aria-hidden />} className="justify-start">
                                 Hendelse-utforsker
                             </Button>

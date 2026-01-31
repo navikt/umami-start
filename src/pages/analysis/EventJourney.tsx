@@ -610,6 +610,7 @@ const EventJourney = () => {
             title="Hendelsesflyt"
             description="Se rekkefølgen av hendelser brukere gjør på en spesifikk side."
             currentPage="hendelsesreiser" // Need to update type in AnalyticsNavigation probably
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

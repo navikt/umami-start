@@ -351,6 +351,7 @@ const BrokenLinks = () => {
             title="Ødelagte lenker"
             description="Oversikt over ødelagte lenker fra Siteimprove."
             currentPage="odelagte-lenker"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

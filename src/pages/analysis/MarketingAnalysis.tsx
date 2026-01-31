@@ -324,6 +324,7 @@ const MarketingAnalysis = () => {
             title="Markedsanalyse"
             description="Analyser trafikk basert på UTM-parametere og referanser."
             currentPage="markedsanalyse"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

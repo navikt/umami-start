@@ -404,6 +404,7 @@ const EventExplorer = () => {
             title="Egendefinerte hendelser"
             description="Utforsk egendefinerte hendelser."
             currentPage="event-explorer"
+            websiteDomain={selectedWebsite?.domain}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}
