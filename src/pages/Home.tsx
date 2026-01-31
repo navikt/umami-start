@@ -214,9 +214,10 @@ function Home() {
 
                 {/* Bottom section: Innholdskvalitet + Grafbygger */}
                 <div
-                    className="bottom-grid"
+                    className={`bottom-grid${hasSiteimprove ? '' : ' single-item'}`}
                     style={{
                         display: 'grid',
+                        gridTemplateColumns: hasSiteimprove ? 'repeat(2, 1fr)' : '1fr',
                         gap: '24px',
                         marginTop: '25px',
                         marginBottom: '40px'

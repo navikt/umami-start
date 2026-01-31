@@ -88,6 +88,15 @@
   grid-column: span 2;
 }
 
+/* When only one item (grafbygger) is shown, make it full width */
+.bottom-grid.single-item {
+  grid-template-columns: 1fr !important;
+}
+
+.bottom-grid.single-item>div:last-child {
+  grid-column: span 1;
+}
+
 @media (max-width: 768px) {
   .bottom-grid {
     grid-template-columns: 1fr !important;
