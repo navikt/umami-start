@@ -1019,7 +1019,6 @@ const TrafficAnalysis = () => {
                                                 data={externalReferrers}
                                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                                 websiteDomain={selectedWebsite?.domain}
-            websiteName={selectedWebsite?.name}
                                             />
                                         </div>
                                         <div className="w-full md:w-1/2">
