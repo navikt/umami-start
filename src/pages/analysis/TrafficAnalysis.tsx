@@ -47,7 +47,7 @@ const TrafficAnalysis = () => {
     const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || 'visitors'); // 'visitors', 'sessions', 'pageviews'
     const [submittedMetricType, setSubmittedMetricType] = useState<string>('visitors'); // Track what was actually submitted
     const [showAverage, setShowAverage] = useState<boolean>(false);
-    const [showTable, setShowTable] = useState<boolean>(false);
+
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
@@ -713,6 +713,95 @@ const TrafficAnalysis = () => {
         );
     };
 
+    const ChartDataTable = ({ data, metricLabel }: { data: any[]; metricLabel: string }) => {
+        const [search, setSearch] = useState('');
+        const [page, setPage] = useState(1);
+        const rowsPerPage = 20;
+
+        const filteredData = data.filter(item =>
+            new Date(item.time).toLocaleDateString('nb-NO').includes(search)
+        );
+
+        useEffect(() => {
+            setPage(1);
+        }, [search]);
+
+        const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+        const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+        return (
+            <VStack gap="space-4">
+                <div className="flex justify-between items-end">
+                    <Heading level="3" size="small">Trend</Heading>
+                    <div className="w-64">
+                        <TextField
+                            label="Søk etter dato"
+                            hideLabel
+                            placeholder="Søk etter dato..."
+                            size="small"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="border rounded-lg overflow-x-auto">
+                    <Table size="small">
+                        <Table.Header>
+                            <Table.Row>
+                                <Table.HeaderCell>Dato</Table.HeaderCell>
+                                <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                            </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                            {paginatedData.map((item, index) => (
+                                <Table.Row key={index}>
+                                    <Table.DataCell>
+                                        {new Date(item.time).toLocaleDateString('nb-NO')}
+                                    </Table.DataCell>
+                                    <Table.DataCell align="right">
+                                        {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            ))}
+                            {filteredData.length === 0 && (
+                                <Table.Row>
+                                    <Table.DataCell colSpan={2} align="center">
+                                        {data.length > 0 ? 'Ingen treff' : 'Ingen data'}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            )}
+                        </Table.Body>
+                    </Table>
+                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                        <div className="flex gap-2">
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={downloadCSV}
+                                icon={<Download size={16} />}
+                            >
+                                Last ned CSV
+                            </Button>
+                        </div>
+                        {seriesQueryStats && (
+                            <span className="text-sm text-[var(--ax-text-subtle)]">
+                                Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
+                            </span>
+                        )}
+                    </div>
+                </div>
+                {totalPages > 1 && (
+                    <Pagination
+                        page={page}
+                        onPageChange={setPage}
+                        count={totalPages}
+                        size="small"
+                    />
+                )}
+            </VStack>
+        );
+    };
+
     return (
         <ChartLayout
             title="Trafikkanalyse"
@@ -889,13 +978,6 @@ const TrafficAnalysis = () => {
                                                 >
                                                     Vis gjennomsnitt
                                                 </Switch>
-                                                <Switch
-                                                    checked={showTable}
-                                                    onChange={(e) => setShowTable(e.target.checked)}
-                                                    size="small"
-                                                >
-                                                    Vis tabell
-                                                </Switch>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Label size="small" htmlFor="traffic-granularity">Tidsoppløsning</Label>
@@ -944,59 +1026,22 @@ const TrafficAnalysis = () => {
                                     </div>
 
                                     <div className="flex flex-col md:flex-row gap-8 mt-8">
-                                        {/* Table */}
-                                        {showTable && (
-                                            <div className="border rounded-lg overflow-x-auto w-full md:w-1/2">
-                                                <Table size="small">
-                                                    <Table.Header>
-                                                        <Table.Row>
-                                                            <Table.HeaderCell>Dato</Table.HeaderCell>
-                                                            <Table.HeaderCell align="right">
-                                                                {submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende')}
-                                                            </Table.HeaderCell>
-                                                        </Table.Row>
-                                                    </Table.Header>
-                                                    <Table.Body>
-                                                        {seriesData.map((item, index) => (
-                                                            <Table.Row key={index}>
-                                                                <Table.DataCell>
-                                                                    {new Date(item.time).toLocaleDateString('nb-NO')}
-                                                                </Table.DataCell>
-                                                                <Table.DataCell align="right">
-                                                                    {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
-                                                                </Table.DataCell>
-                                                            </Table.Row>
-                                                        ))}
-                                                    </Table.Body>
-                                                </Table>
-                                                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="small"
-                                                            variant="secondary"
-                                                            onClick={downloadCSV}
-                                                            icon={<Download size={16} />}
-                                                        >
-                                                            Last ned CSV
-                                                        </Button>
-                                                    </div>
-                                                    {seriesQueryStats && (
-                                                        <span className="text-sm text-[var(--ax-text-subtle)]">
-                                                            Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Pages Table - Always visible context */}
-                                        <div className={`w-full ${showTable ? 'md:w-1/2' : 'md:w-1/2'}`}>
+                                        {/* Pages Table - Always visible context - Moved to first position */}
+                                        <div className="w-full md:w-1/2">
                                             <TrafficTable
                                                 title="Inkluderte sider"
                                                 data={includedPagesData}
                                                 onRowClick={setSelectedInternalUrl}
                                                 selectedWebsite={selectedWebsite}
                                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')}
+                                            />
+                                        </div>
+
+                                        {/* Chart Data Table - Moved to second position with pagination/search */}
+                                        <div className="w-full md:w-1/2">
+                                            <ChartDataTable
+                                                data={seriesData}
+                                                metricLabel={submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende')}
                                             />
                                         </div>
                                     </div>
