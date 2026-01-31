@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Table, Heading, Tabs, Switch, ReadMore, Pagination, VStack } from '@navikt/ds-react';
 import { parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout';
+import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
@@ -319,9 +319,15 @@ const PrivacyCheck = () => {
         <ChartLayout
             title="Personvernssjekk"
             description="Søk etter potensielle personopplysninger."
-            currentPage="personvern" // Assuming we might add this to AnalyticsPage type later, or just use a dummy
+            currentPage="personvern"
             filters={
                 <>
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsite}
+                        onWebsiteChange={setSelectedWebsite}
+                        variant="minimal"
+                    />
+
                     <PeriodPicker
                         period={period}
                         onPeriodChange={setPeriod}
@@ -343,15 +349,6 @@ const PrivacyCheck = () => {
                         </Button>
                     </div>
                 </>
-            }
-            websiteDomain={selectedWebsite?.domain}
-            websiteName={selectedWebsite?.name}
-            sidebarContent={
-                <WebsitePicker
-                    selectedWebsite={selectedWebsite}
-                    onWebsiteChange={setSelectedWebsite}
-                    variant="minimal"
-                />
             }
         >
             {error && (

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from '@navikt/ds-react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
-import ChartLayout from '../../components/analysis/ChartLayout';
+import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalyticsNavigation from '../../components/analysis/AnalyticsNavigation';
@@ -283,17 +283,14 @@ const Diagnosis = () => {
             title="Diagnoseverktøy"
             description="Oversikt over aktivitet på alle nettsteder og apper."
             currentPage="diagnose"
-            websiteDomain={selectedWebsite?.domain ?? undefined}
-            websiteName={selectedWebsite?.website_name}
-            sidebarContent={
-                <WebsitePicker
-                    selectedWebsite={selectedWebsiteFilter}
-                    onWebsiteChange={setSelectedWebsiteFilter}
-                    variant="minimal"
-                />
-            }
             filters={
                 <>
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsiteFilter}
+                        onWebsiteChange={setSelectedWebsiteFilter}
+                        variant="minimal"
+                    />
+
                     <PeriodPicker
                         period={period}
                         onPeriodChange={setPeriod}

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Alert, BodyLong, Loader, TextField, Button } from '@navikt/ds-react';
 import { translateValue } from '../../lib/translations';
-import ChartLayout from '../../components/analysis/ChartLayout';
+import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { subDays, format } from 'date-fns';

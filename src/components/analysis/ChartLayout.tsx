@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Page, Accordion } from "@navikt/ds-react";
-import { BarChart2, Users, FileSearch, Activity, Layout } from 'lucide-react';
+import { BarChart2, Users, FileSearch, Activity } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
@@ -41,11 +41,6 @@ const chartGroups = [
         title: "Innholdskvalitet",
         icon: <FileSearch size={18} />,
         ids: ['odelagte-lenker', 'stavekontroll']
-    },
-    {
-        title: "Datasjekk",
-        icon: <Layout size={18} />,
-        ids: ['diagnose', 'personvern']
     }
 ];
 
