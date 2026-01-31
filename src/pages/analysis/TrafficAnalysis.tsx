@@ -81,12 +81,9 @@ const TrafficAnalysis = () => {
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
     const [externalReferrerData, setExternalReferrerData] = useState<any[]>([]); // Data from marketing-stats API
 
-    // Auto-submit when URL parameters are present (for shared links)
-    // Auto-submit when URL parameters are present (for shared links)
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
-        // Only auto-submit if there are config params beyond just websiteId
-        const hasConfigParams = searchParams.has('period') || searchParams.has('metricType') || searchParams.has('urlPath');
-        if (selectedWebsite && hasConfigParams && !hasAttemptedFetch) {
+        if (selectedWebsite && !hasAttemptedFetch) {
             fetchSeriesData();
         }
     }, [selectedWebsite]); // Only run when selectedWebsite changes
@@ -677,8 +674,8 @@ const TrafficAnalysis = () => {
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {isClickableRow(row.name) ? (
                                             <span className="flex items-center gap-1 max-w-full">
-                                                <span 
-                                                    className="truncate text-blue-600 hover:underline cursor-pointer" 
+                                                <span
+                                                    className="truncate text-blue-600 hover:underline cursor-pointer"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         onRowClick?.(row.name);
