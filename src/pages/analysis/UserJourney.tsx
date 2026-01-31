@@ -324,6 +324,7 @@ const UserJourney = () => {
             description="Se hvilke veier folk tar på nettsiden."
             currentPage="brukerreiser"
             websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

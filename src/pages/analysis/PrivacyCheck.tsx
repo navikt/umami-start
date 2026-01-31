@@ -345,6 +345,7 @@ const PrivacyCheck = () => {
                 </>
             }
             websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

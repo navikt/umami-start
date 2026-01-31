@@ -247,6 +247,7 @@ const Spellings = () => {
             description="Oversikt over stavefeil fra Siteimprove."
             currentPage="stavekontroll"
             websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

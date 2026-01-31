@@ -1,10 +1,5 @@
 [
   {
-    "teamName": "Memu",
-    "teamDomain": "https://memu.no",
-    "teamSiteimproveSite": 25048207726
-  },
-  {
     "teamName": "Aksel",
     "teamDomain": "https://aksel.nav.no",
     "teamSiteimproveSite": 30048105178
@@ -78,6 +73,7 @@
   {
     "teamName": "navno",
     "teamDomain": "https://navno.sharepoint.com",
-    "teamSiteimproveSite": false
+    "teamSiteimproveSite": false,
+    "supportsMarketing": false
   }
 ]

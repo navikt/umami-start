@@ -18,6 +18,7 @@ interface ChartLayoutProps {
     hideAnalysisSelector?: boolean;
     sidebarContent?: React.ReactNode;
     websiteDomain?: string; // Domain for feature support checks
+    websiteName?: string;   // Website name for dev environment detection
 }
 
 const chartGroups = [
@@ -61,7 +62,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     hideSidebar = false,
     hideAnalysisSelector = false,
     sidebarContent,
-    websiteDomain
+    websiteDomain,
+    websiteName
 }) => {
     // State for Sidebars
     const isNavOpen = !hideAnalysisSelector;
@@ -72,7 +74,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     // Get domain from prop or URL params and check feature support
     const domain = websiteDomain || searchParams.get('domain');
     const showSiteimproveSection = useMemo(() => hasSiteimproveSupport(domain), [domain]);
-    const showMarketingAnalysis = useMemo(() => hasMarketingSupport(domain), [domain]);
+    const showMarketingAnalysis = useMemo(() => hasMarketingSupport(domain, websiteName), [domain, websiteName]);
 
     // Filter chart groups based on feature support
     const filteredChartGroups = useMemo(() => {

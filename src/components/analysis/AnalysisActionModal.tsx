@@ -10,6 +10,7 @@ interface AnalysisActionModalProps {
     websiteId?: string;
     period?: string;
     domain?: string;
+    websiteName?: string;  // Website name for dev environment detection
 }
 
 const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
@@ -18,12 +19,14 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     urlPath,
     websiteId,
     period = 'current_month',
-    domain: propDomain
+    domain: propDomain,
+    websiteName: propWebsiteName
 }) => {
     const [copySuccess, setCopySuccess] = useState(false);
     const [domain, setDomain] = useState<string>(propDomain || 'nav.no');
+    const [websiteName, setWebsiteName] = useState<string | undefined>(propWebsiteName);
     const hasSiteimprove = useSiteimproveSupport(domain);
-    const hasMarketing = useMarketingSupport(domain);
+    const hasMarketing = useMarketingSupport(domain, websiteName);
 
     useEffect(() => {
         if (propDomain) {
@@ -43,6 +46,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                         const website = parsed.data.find((w: any) => w.id === websiteId);
                         if (website && website.domain) {
                             setDomain(website.domain);
+                            setWebsiteName(website.name);
                             return;
                         }
                     }
@@ -59,6 +63,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                     const website = result.data.find((w: any) => w.id === websiteId);
                     if (website && website.domain) {
                         setDomain(website.domain);
+                        setWebsiteName(website.name);
                     }
                 }
             } catch (e) {

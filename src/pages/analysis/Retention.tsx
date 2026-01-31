@@ -300,6 +300,7 @@ const Retention = () => {
             description="Se hvor mange som kommer tilbake etter sitt første besøk."
             currentPage="brukerlojalitet"
             websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

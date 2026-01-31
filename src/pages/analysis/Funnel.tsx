@@ -814,6 +814,7 @@ FROM timing_data`;
             description="Se hvor folk faller fra i en prosess."
             currentPage="trakt"
             websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}

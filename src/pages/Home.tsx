@@ -43,7 +43,7 @@ const contentQualitySection = {
 function Home() {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const hasSiteimprove = useSiteimproveSupport(selectedWebsite?.domain);
-    const hasMarketing = useMarketingSupport(selectedWebsite?.domain);
+    const hasMarketing = useMarketingSupport(selectedWebsite?.domain, selectedWebsite?.name);
 
     // Filter sections based on feature support
     const filteredSections = useMemo(() => {

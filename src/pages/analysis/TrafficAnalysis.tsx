@@ -719,6 +719,7 @@ const TrafficAnalysis = () => {
             description="Se besøk over tid og trafikkilder."
             currentPage="trafikkanalyse"
             websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
             sidebarContent={
                 <WebsitePicker
                     selectedWebsite={selectedWebsite}
@@ -1018,6 +1019,7 @@ const TrafficAnalysis = () => {
                                                 data={externalReferrers}
                                                 metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
                                                 websiteDomain={selectedWebsite?.domain}
+            websiteName={selectedWebsite?.name}
                                             />
                                         </div>
                                         <div className="w-full md:w-1/2">
