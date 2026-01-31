@@ -16,18 +16,18 @@ const sections = [
         ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
     },
     {
+        title: "Brukere",
+        description: "Forstå hvem de besøkende er",
+        bgColor: "var(--ax-bg-default)",
+        accentColor: "var(--ax-bg-accent-strong)",
+        ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
+    },
+    {
         title: "Brukerreiser",
         description: "Se hvordan besøkende navigerer",
         bgColor: "var(--ax-bg-default)",
         accentColor: "var(--ax-bg-accent-strong)",
         ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
-    },
-    {
-        title: "Brukere & lojalitet",
-        description: "Forstå hvem de besøkende er",
-        bgColor: "var(--ax-bg-default)",
-        accentColor: "var(--ax-bg-accent-strong)",
-        ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
     }
 ];
 
