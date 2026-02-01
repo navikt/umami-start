@@ -5,13 +5,18 @@
     "teamSiteimproveSite": 30048105178
   },
   {
+    "teamName": "Idebanken",
+    "teamDomain": "https://www.idebanken.org",
+    "teamSiteimproveSite": 21766831756
+  },
+  {
     "teamName": "Idebanken Beta",
     "teamDomain": "https://beta.idebanken.no",
     "teamSiteimproveSite": 43000776390
   },
   {
-    "teamName": "Idebanken Ekstern",
-    "teamDomain": "https://idebanken.nav.no",
+    "teamName": "Idebanken Dev",
+    "teamDomain": "https://idebanken.ekstern.dev.nav.no",
     "teamSiteimproveSite": 41890665972
   },
   {
@@ -70,6 +75,12 @@
     "teamName": "innblikk",
     "teamDomain": "https://innblikk.nav.no",
     "teamSiteimproveSite": false
+  },
+  {
+    "teamName": "uurapport",
+    "teamDomain": "a11y-statement-ny.ansatt.nav.no",
+    "teamSiteimproveSite": false,
+    "supportsMarketing": false
   },
   {
     "teamName": "navno",
