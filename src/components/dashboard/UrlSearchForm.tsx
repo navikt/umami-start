@@ -152,7 +152,7 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             if (matchedWebsite) {
                 // Navigate to traffic analysis
                 // Pass domain/path info if useful
-                navigate(`/trafikkanalyse?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&urlPath=${encodeURIComponent(urlObj.pathname)}`);
+                navigate(`/trafikkanalyse?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&urlPath=${encodeURIComponent(decodeURIComponent(urlObj.pathname))}`);
             } else {
                 setAlertVisible(true);
             }

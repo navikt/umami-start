@@ -10,10 +10,17 @@ export const sanitizeColumnName = (key: string): string => {
 export const normalizeUrlToPath = (input: string): string => {
   if (!input.trim()) return '';
   let trimmed = input.trim();
+
+  // Strip query parameters if present
+  const queryIndex = trimmed.indexOf('?');
+  if (queryIndex !== -1) {
+    trimmed = trimmed.substring(0, queryIndex);
+  }
+
   try {
     if (trimmed.includes('://')) {
       const url = new URL(trimmed);
-      return url.pathname;
+      return decodeURIComponent(url.pathname);
     }
     if (trimmed.startsWith('/') && trimmed.includes('.')) {
       const withoutLeadingSlash = trimmed.substring(1);
@@ -28,7 +35,7 @@ export const normalizeUrlToPath = (input: string): string => {
     }
     if (!trimmed.startsWith('/') && trimmed.includes('.') && trimmed.includes('/')) {
       const url = new URL('https://' + trimmed);
-      return url.pathname;
+      return decodeURIComponent(url.pathname);
     }
   } catch (e) {
     // Ignore

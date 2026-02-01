@@ -87,12 +87,19 @@ export const UrlPathFilter = ({
                             return;
                         }
                     }
-                    paths.push(url.pathname);
+                    paths.push(decodeURIComponent(url.pathname));
                 } catch (e) {
                     invalid.push(line);
                 }
             } else {
-                const path = line.startsWith('/') ? line : '/' + line;
+                // Strip query parameters from relative paths
+                let path = line;
+                const queryIndex = path.indexOf('?');
+                if (queryIndex !== -1) {
+                    path = path.substring(0, queryIndex);
+                }
+
+                path = path.startsWith('/') ? path : '/' + path;
                 paths.push(path);
             }
         });
