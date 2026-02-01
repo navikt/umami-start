@@ -17,13 +17,13 @@ const sections = [
     },
     {
         title: "Brukere",
-        description: "Forstå hvem de besøkende er",
+        description: "Lær om de besøkende",
         bgColor: "var(--ax-bg-default)",
         accentColor: "var(--ax-bg-accent-strong)",
         ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
     },
     {
-        title: "Brukerreiser",
+        title: "Navigasjon",
         description: "Se hvordan besøkende navigerer",
         bgColor: "var(--ax-bg-default)",
         accentColor: "var(--ax-bg-accent-strong)",
@@ -134,7 +134,7 @@ function Home() {
 
             <Page.Block width="xl" gutters>
                 <div style={{ marginTop: "50px", marginBottom: "32px" }}>
-                    <Heading as="h2" size="large">Hva ønsker du å analysere?</Heading>
+                    <Heading as="h2" size="large">Hva vil du se nærmere på?</Heading>
                     <div style={{ marginTop: '24px', maxWidth: '400px' }}>
                         <WebsitePicker
                             selectedWebsite={selectedWebsite}

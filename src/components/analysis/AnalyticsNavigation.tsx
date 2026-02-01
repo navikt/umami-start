@@ -37,7 +37,7 @@ export const analyticsPages = [
     {
         id: 'hendelsesreiser',
         href: '/hendelsesreiser',
-        label: 'Hendelsesflyt',
+        label: 'Hendelsesforløp',
         description: 'Se rekkefølgen av hendelser på en side'
     },
     {

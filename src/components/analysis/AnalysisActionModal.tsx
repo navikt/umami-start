@@ -171,13 +171,13 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                         {/* Column 3: Brukerreiser */}
                         <div className="flex flex-col gap-2">
                             <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
-                                Brukerreiser
+                                Navigasjon
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
                                 Navigasjonsflyt
                             </Button>
                             <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
-                                Hendelsesflyt
+                                Hendelsesforløp
                             </Button>
                         </div>
 

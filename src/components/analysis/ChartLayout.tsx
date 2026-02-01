@@ -33,7 +33,7 @@ const chartGroups = [
         ids: ['brukersammensetning', 'brukerprofiler', 'brukerlojalitet']
     },
     {
-        title: "Brukerreiser",
+        title: "Navigasjon",
         icon: <BarChart2 size={18} />,
         ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
     },
