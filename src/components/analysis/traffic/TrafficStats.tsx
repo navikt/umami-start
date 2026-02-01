@@ -37,7 +37,14 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
 
     // Determine labels and values based on metric type
     // Use totalOverride if provided (actual unique count), otherwise fall back to sum
-    let box1Label = `Totalt ${metricType === 'pageviews' ? 'sidevisninger' : 'besøkende'}`;
+    const getMetricLabel = (type: string) => {
+        switch (type) {
+            case 'pageviews': return 'sidevisninger';
+            case 'visits': return 'økter';
+            default: return 'unike besøkende';
+        }
+    };
+    let box1Label = `Totalt ${getMetricLabel(metricType)}`;
     let box1Value = totalOverride !== undefined ? totalOverride : sum;
 
     let box2Label = 'Gjennomsnitt per dag';

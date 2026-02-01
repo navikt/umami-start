@@ -14,6 +14,24 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD, DEFAULT_ANALYSIS_METRIC_TYPE } from '../../lib/utils';
 
+// Helper functions for metric labels
+const getMetricLabelCapitalized = (type: string): string => {
+    switch (type) {
+        case 'pageviews': return 'Sidevisninger';
+        case 'proportion': return 'Andel';
+        case 'visits': return 'Økter';
+        default: return 'Unike besøkende';
+    }
+};
+
+const getMetricLabelWithCount = (type: string): string => {
+    switch (type) {
+        case 'pageviews': return 'Antall sidevisninger';
+        case 'proportion': return 'Andel';
+        case 'visits': return 'Antall økter';
+        default: return 'Antall unike besøkende';
+    }
+};
 
 const TrafficAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -283,8 +301,24 @@ const TrafficAnalysis = () => {
                 }));
         }
 
-        const metricLabel = submittedMetricType === 'pageviews' ? 'sidevisninger' : (submittedMetricType === 'proportion' ? 'andel' : 'besøkende');
-        const metricLabelCapitalized = submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende');
+        const getMetricLabel = (type: string) => {
+            switch (type) {
+                case 'pageviews': return 'sidevisninger';
+                case 'proportion': return 'andel';
+                case 'visits': return 'økter';
+                default: return 'unike besøkende';
+            }
+        };
+        const getMetricLabelCapitalized = (type: string) => {
+            switch (type) {
+                case 'pageviews': return 'Sidevisninger';
+                case 'proportion': return 'Andel';
+                case 'visits': return 'Økter';
+                default: return 'Unike besøkende';
+            }
+        };
+        const metricLabel = getMetricLabel(submittedMetricType);
+        const metricLabelCapitalized = getMetricLabelCapitalized(submittedMetricType);
 
         const points: ILineChartDataPoint[] = processedData.map((item: any) => {
             let val = Number(item.count) || 0; // Ensure it's a number, default to 0
@@ -374,7 +408,15 @@ const TrafficAnalysis = () => {
     const downloadCSV = () => {
         if (!seriesData.length) return;
 
-        const metricLabel = submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende');
+        const getCSVMetricLabel = (type: string) => {
+            switch (type) {
+                case 'pageviews': return 'Antall sidevisninger';
+                case 'proportion': return 'Andel';
+                case 'visits': return 'Antall økter';
+                default: return 'Antall unike besøkende';
+            }
+        };
+        const metricLabel = getCSVMetricLabel(submittedMetricType);
         const headers = ['Dato', metricLabel];
         const csvRows = [
             headers.join(','),
@@ -901,7 +943,8 @@ const TrafficAnalysis = () => {
                             value={metricType}
                             onChange={(e) => setMetricType(e.target.value)}
                         >
-                            <option value="visitors">Besøkende</option>
+                            <option value="visitors">Unike besøkende</option>
+                            <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>
                             <option value="proportion">Andel (av besøkende)</option>
                         </Select>
@@ -1014,7 +1057,7 @@ const TrafficAnalysis = () => {
                                                 data={includedPagesData}
                                                 onRowClick={setSelectedInternalUrl}
                                                 selectedWebsite={selectedWebsite}
-                                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')}
+                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                             />
                                         </div>
 
@@ -1022,7 +1065,7 @@ const TrafficAnalysis = () => {
                                         <div className="w-full md:w-1/2">
                                             <ChartDataTable
                                                 data={seriesData}
-                                                metricLabel={submittedMetricType === 'pageviews' ? 'Antall sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Antall besøkende')}
+                                                metricLabel={getMetricLabelWithCount(submittedMetricType)}
                                             />
                                         </div>
                                     </div>
@@ -1035,7 +1078,7 @@ const TrafficAnalysis = () => {
                                         <ExternalTrafficTable
                                             title="Kanaler"
                                             data={externalChannels}
-                                            metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                            metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                         />
                                     </div>
                                     <div className="flex flex-col md:flex-row gap-8">
@@ -1043,12 +1086,12 @@ const TrafficAnalysis = () => {
                                             <ExternalTrafficTable
                                                 title="Eksterne kilder"
                                                 data={externalReferrers}
-                                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                                 websiteDomain={selectedWebsite?.domain}
                                             />
                                         </div>
                                         <div className="w-full md:w-1/2">
-                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
+                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
                                         </div>
                                     </div>
                                 </div>
@@ -1057,7 +1100,7 @@ const TrafficAnalysis = () => {
                             <Tabs.Panel value="navigation" className="pt-4">
                                 <div className="flex flex-col md:flex-row gap-8">
                                     <div className="w-full md:w-1/2">
-                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : (submittedMetricType === 'proportion' ? 'Andel' : 'Besøkende')} />
+                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
                                     </div>
                                     <div className="w-full md:w-1/2">
                                         <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">

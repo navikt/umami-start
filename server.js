@@ -1298,11 +1298,16 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
                 ORDER BY totals.time
             `;
         } else {
-            // Standard query (Visitors or Pageviews)
+            // Standard query (Visitors, Visits, or Pageviews)
             // Choose aggregation based on metric type
-            const countExpression = metricType === 'pageviews'
-                ? 'COUNT(*)'
-                : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+            let countExpression;
+            if (metricType === 'pageviews') {
+                countExpression = 'COUNT(*)';
+            } else if (metricType === 'visits') {
+                countExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // økter / besøk
+            } else {
+                countExpression = 'APPROX_COUNT_DISTINCT(session_id)'; // visitors (unike besøkende)
+            }
             console.log(`[Traffic Series] Count Expression: ${countExpression}`);
 
             query = `
@@ -1722,13 +1727,21 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             condition = '1=1';
         }
 
-        const countExpression = metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(session_id)';
+        let countExpression;
+        if (metricType === 'pageviews') {
+            countExpression = 'COUNT(*)';
+        } else if (metricType === 'visits') {
+            countExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // økter / besøk
+        } else {
+            countExpression = 'APPROX_COUNT_DISTINCT(session_id)'; // visitors (unike besøkende)
+        }
         console.log(`[Traffic Breakdown] Count Expression: ${countExpression}`);
 
         const query = `
             WITH session_events AS (
                 SELECT
                     session_id,
+                    visit_id,
                     referrer_domain,
                     CASE 
                         WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
@@ -1744,6 +1757,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             events_with_context AS (
                 SELECT
                     session_id,
+                    visit_id,
                     url_path,
                     referrer_domain,
                     LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_page,
@@ -1758,7 +1772,8 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
                     END as source,
                     url_path as landing_page,
                     COALESCE(next_page, 'Exit') as next_page,
-                    session_id
+                    session_id,
+                    visit_id
                 FROM events_with_context
                 WHERE ${condition}
             ),
