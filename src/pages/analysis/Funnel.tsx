@@ -66,7 +66,7 @@ const Funnel = () => {
     });
 
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -540,7 +540,7 @@ FROM timing_data`;
         newSteps[index].value = '';
         // Set default eventScope when switching to event type
         if (type === 'event') {
-            newSteps[index].eventScope = 'current-path';
+            newSteps[index].eventScope = index === 0 ? 'anywhere' : 'current-path';
         }
         setSteps(newSteps);
     };
@@ -877,7 +877,7 @@ FROM timing_data`;
                                                 )}
 
                                                 {/* Event scope options */}
-                                                {step.type === 'event' && index > 0 && (
+                                                {step.type === 'event' && (
                                                     <RadioGroup
                                                         legend="Hendelsens plassering"
                                                         size="small"
