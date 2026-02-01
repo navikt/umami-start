@@ -48,8 +48,8 @@ export const isDecoratorEvent = (eventName: string): boolean => {
 };
 
 // ============================================
-// ANALYSIS DEFAULTS
-// Centralized defaults for analysis pages
+// ANALYSIS DEFAULTS & PERSISTENCE
+// Centralized defaults and localStorage helpers for analysis pages
 // ============================================
 
 /** Default period for analysis pages: "Siste 7 dager" */
@@ -57,6 +57,59 @@ export const DEFAULT_ANALYSIS_PERIOD = 'last_7_days';
 
 /** Default metric type for analysis pages: "Sidevisninger" (pageviews) */
 export const DEFAULT_ANALYSIS_METRIC_TYPE = 'pageviews';
+
+// LocalStorage keys for user preferences
+const PERIOD_STORAGE_KEY = 'umami_analysis_period';
+const METRIC_TYPE_STORAGE_KEY = 'umami_analysis_metric_type';
+
+/** Get period from localStorage, falling back to URL param or default */
+export const getStoredPeriod = (urlParam?: string | null): string => {
+  // URL param takes priority (for shared links)
+  if (urlParam) return urlParam;
+  
+  try {
+    const stored = localStorage.getItem(PERIOD_STORAGE_KEY);
+    if (stored) return stored;
+  } catch (error) {
+    console.error('Error reading period from localStorage:', error);
+  }
+  return DEFAULT_ANALYSIS_PERIOD;
+};
+
+/** Save period to localStorage */
+export const savePeriodPreference = (period: string): void => {
+  try {
+    // Don't save 'custom' as it requires dates
+    if (period !== 'custom') {
+      localStorage.setItem(PERIOD_STORAGE_KEY, period);
+    }
+  } catch (error) {
+    console.error('Error saving period to localStorage:', error);
+  }
+};
+
+/** Get metric type from localStorage, falling back to URL param or default */
+export const getStoredMetricType = (urlParam?: string | null): string => {
+  // URL param takes priority (for shared links)
+  if (urlParam) return urlParam;
+  
+  try {
+    const stored = localStorage.getItem(METRIC_TYPE_STORAGE_KEY);
+    if (stored) return stored;
+  } catch (error) {
+    console.error('Error reading metric type from localStorage:', error);
+  }
+  return DEFAULT_ANALYSIS_METRIC_TYPE;
+};
+
+/** Save metric type to localStorage */
+export const saveMetricTypePreference = (metricType: string): void => {
+  try {
+    localStorage.setItem(METRIC_TYPE_STORAGE_KEY, metricType);
+  } catch (error) {
+    console.error('Error saving metric type to localStorage:', error);
+  }
+};
 
 /** Available metric types for analysis */
 export type MetricType = 'pageviews' | 'visitors' | 'visits' | 'proportion';

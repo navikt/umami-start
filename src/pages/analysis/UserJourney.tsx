@@ -11,7 +11,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UmamiJourneyView from '../../components/analysis/journey/UmamiJourneyView';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
 
 const UserJourney = () => {
@@ -20,7 +20,13 @@ const UserJourney = () => {
 
     // Initialize state from URL params
     const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('startUrl') || '');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");

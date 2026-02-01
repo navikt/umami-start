@@ -9,7 +9,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
 
 const UserComposition = () => {
@@ -24,7 +24,13 @@ const UserComposition = () => {
         : (legacyPath ? [normalizeUrlToPath(legacyPath)].filter(Boolean) : []);
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>('equals');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");

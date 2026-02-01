@@ -11,7 +11,7 @@ import HorizontalFunnelChart from '../../components/analysis/funnel/HorizontalFu
 import FunnelStats from '../../components/analysis/funnel/FunnelStats';
 import SqlViewer from '../../components/chartbuilder/results/SqlViewer';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
-import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
 
@@ -65,7 +65,13 @@ const Funnel = () => {
         });
     });
 
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");

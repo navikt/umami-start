@@ -12,7 +12,7 @@ import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD, DEFAULT_ANALYSIS_METRIC_TYPE } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference } from '../../lib/utils';
 
 // Helper functions for metric labels
 const getMetricLabelCapitalized = (type: string): string => {
@@ -43,7 +43,13 @@ const TrafficAnalysis = () => {
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) : [];
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
 
     // Support custom dates from URL
@@ -61,8 +67,14 @@ const TrafficAnalysis = () => {
     const [activeTab, setActiveTab] = useState<string>('visits');
 
     // View options
-    const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || DEFAULT_ANALYSIS_METRIC_TYPE);
-    const [submittedMetricType, setSubmittedMetricType] = useState<string>(DEFAULT_ANALYSIS_METRIC_TYPE); // Track what was actually submitted
+    const [metricType, setMetricTypeState] = useState<string>(() => getStoredMetricType(searchParams.get('metricType')));
+    const [submittedMetricType, setSubmittedMetricType] = useState<string>(() => getStoredMetricType(searchParams.get('metricType'))); // Track what was actually submitted
+    
+    // Wrap setMetricType to also save to localStorage
+    const setMetricType = (newMetricType: string) => {
+        setMetricTypeState(newMetricType);
+        saveMetricTypePreference(newMetricType);
+    };
     const [showAverage, setShowAverage] = useState<boolean>(false);
 
 

@@ -9,7 +9,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
-import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 import { TextField } from '@navikt/ds-react';
 
 const UserProfiles = () => {
@@ -17,7 +17,13 @@ const UserProfiles = () => {
     const [searchParams] = useSearchParams();
 
     // State
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");

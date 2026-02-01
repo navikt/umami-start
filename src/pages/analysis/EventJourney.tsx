@@ -7,7 +7,7 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, isDecoratorEvent } from '../../lib/utils';
+import { normalizeUrlToPath, isDecoratorEvent, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
 
 const EventJourney = () => {
@@ -16,7 +16,13 @@ const EventJourney = () => {
 
     // Initialize state from URL params - check both urlPath and pagePath for compatibility
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");

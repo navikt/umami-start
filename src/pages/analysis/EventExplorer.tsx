@@ -10,7 +10,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
-import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
 
 const EventExplorer = () => {
@@ -28,7 +28,13 @@ const EventExplorer = () => {
     const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
+    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    
+    // Wrap setPeriod to also save to localStorage
+    const setPeriod = (newPeriod: string) => {
+        setPeriodState(newPeriod);
+        savePeriodPreference(newPeriod);
+    };
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
