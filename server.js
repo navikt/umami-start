@@ -2504,9 +2504,21 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
         }
 
         // Choose aggregation based on metric type
-        const countExpression = metricType === 'pageviews'
-            ? 'COUNT(*)'
-            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        let countExpression;
+        switch (metricType) {
+            case 'pageviews':
+                countExpression = 'COUNT(*)';
+                break;
+            case 'visits':
+                countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
+                break;
+            case 'proportion':
+                // For proportion, we count unique visitors but will calculate ratio in response
+                countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
+                break;
+            default: // visitors
+                countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
+        }
 
         const dimensions = [
             { key: 'utm_source', label: 'source' },
@@ -2594,6 +2606,20 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
                 });
             }
         });
+
+        // For proportion metric, calculate percentages based on total visitors per dimension
+        if (metricType === 'proportion') {
+            Object.keys(responseData).forEach(dimension => {
+                const items = responseData[dimension];
+                const total = items.reduce((sum, item) => sum + item.count, 0);
+                if (total > 0) {
+                    items.forEach(item => {
+                        // Keep count as percentage (0-100)
+                        item.count = Math.round((item.count / total) * 1000) / 10; // Round to 1 decimal
+                    });
+                }
+            });
+        }
 
         res.json({ data: responseData, queryStats });
     } catch (error) {

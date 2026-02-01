@@ -10,6 +10,16 @@ import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
+// Helper function for metric labels
+const getMetricLabel = (type: string): string => {
+    switch (type) {
+        case 'pageviews': return 'Sidevisninger';
+        case 'proportion': return 'Andel';
+        case 'visits': return 'Økter';
+        default: return 'Besøkende';
+    }
+};
+
 const MarketingAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
@@ -148,7 +158,7 @@ const MarketingAnalysis = () => {
 
 
 
-    const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite }: { title: string, data: any[], metricLabel: string, queryStats: any, selectedWebsite: Website | null }) => {
+    const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, metricType }: { title: string, data: any[], metricLabel: string, queryStats: any, selectedWebsite: Website | null, metricType: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
@@ -165,6 +175,14 @@ const MarketingAnalysis = () => {
         const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
+        // Format value based on metric type
+        const formatValue = (count: number) => {
+            if (metricType === 'proportion') {
+                return `${count.toFixed(1)}%`;
+            }
+            return count.toLocaleString('nb-NO');
+        };
+
         const downloadCSV = () => {
             if (!data.length) return;
 
@@ -174,7 +192,7 @@ const MarketingAnalysis = () => {
                 ...data.map((item: any) => {
                     return [
                         `"${item.name}"`,
-                        item.count
+                        metricType === 'proportion' ? `${item.count.toFixed(1)}%` : item.count
                     ].join(',');
                 })
             ];
@@ -262,7 +280,7 @@ const MarketingAnalysis = () => {
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {renderName(row.name)}
                                     </Table.DataCell>
-                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell align="right">{formatValue(row.count)}</Table.DataCell>
                                 </Table.Row>
                             ))}
                             {filteredData.length === 0 && (
@@ -338,15 +356,17 @@ const MarketingAnalysis = () => {
                         onEndDateChange={setCustomEndDate}
                     />
 
-                    <div className="w-full sm:w-auto min-w-[150px]">
+                    <div className="w-full sm:w-auto min-w-[200px]">
                         <Select
                             label="Visning"
                             size="small"
                             value={metricType}
                             onChange={(e) => setMetricType(e.target.value)}
                         >
-                            <option value="visitors">Besøkende</option>
+                            <option value="visitors">Unike besøkende</option>
+                            <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>
+                            <option value="proportion">Andel (av besøkende)</option>
                         </Select>
                     </div>
 
@@ -392,7 +412,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="Kilde"
                                 data={marketingData['source'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
@@ -401,7 +422,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="Medium"
                                 data={marketingData['medium'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
@@ -410,7 +432,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="Kampanje"
                                 data={marketingData['campaign'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
@@ -419,7 +442,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="Innhold"
                                 data={marketingData['content'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
@@ -428,7 +452,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="Nøkkelord"
                                 data={marketingData['term'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
@@ -437,7 +462,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="Henvisningsdomene"
                                 data={marketingData['referrer'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
@@ -446,7 +472,8 @@ const MarketingAnalysis = () => {
                             <AnalysisTable
                                 title="URL Parametere"
                                 data={marketingData['query'] || []}
-                                metricLabel={submittedMetricType === 'pageviews' ? 'Sidevisninger' : 'Besøkende'}
+                                metricLabel={getMetricLabel(submittedMetricType)}
+                                metricType={submittedMetricType}
                                 queryStats={queryStats}
                                 selectedWebsite={selectedWebsite}
                             />
