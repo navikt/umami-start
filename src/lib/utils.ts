@@ -39,3 +39,121 @@ export const normalizeUrlToPath = (input: string): string => {
 export const isDecoratorEvent = (eventName: string): boolean => {
   return eventName.startsWith('dekorator-');
 };
+
+// ============================================
+// ANALYSIS DEFAULTS
+// Centralized defaults for analysis pages
+// ============================================
+
+/** Default period for analysis pages: "Siste 7 dager" */
+export const DEFAULT_ANALYSIS_PERIOD = 'last_7_days';
+
+/** Default metric type for analysis pages: "Sidevisninger" (pageviews) */
+export const DEFAULT_ANALYSIS_METRIC_TYPE = 'pageviews';
+
+/** Available metric types for analysis */
+export type MetricType = 'pageviews' | 'visitors' | 'visits' | 'proportion';
+
+/** Available period options with labels */
+export const PERIOD_OPTIONS = [
+  { value: 'today', label: 'I dag' },
+  { value: 'yesterday', label: 'I går' },
+  { value: 'this_week', label: 'Denne uken' },
+  { value: 'last_7_days', label: 'Siste 7 dager' },
+  { value: 'last_week', label: 'Forrige uke' },
+  { value: 'last_28_days', label: 'Siste 28 dager' },
+  { value: 'current_month', label: 'Denne måneden' },
+  { value: 'last_month', label: 'Forrige måned' },
+] as const;
+
+/**
+ * Get start and end dates from a period string.
+ * Supports: today, yesterday, this_week, last_7_days, last_week, last_28_days, 
+ * current_month, last_month, and custom (requires customStartDate/customEndDate).
+ */
+export const getDateRangeFromPeriod = (
+  period: string,
+  customStartDate?: Date,
+  customEndDate?: Date
+): { startDate: Date; endDate: Date } | null => {
+  const now = new Date();
+  let startDate: Date;
+  let endDate: Date;
+
+  switch (period) {
+    case 'today':
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = now;
+      break;
+
+    case 'yesterday':
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+      break;
+
+    case 'this_week': {
+      // Get Monday of current week
+      const dayOfWeek = now.getDay();
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Monday start
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff, 0, 0, 0, 0);
+      endDate = now;
+      break;
+    }
+
+    case 'last_7_days':
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+      endDate = now;
+      break;
+
+    case 'last_week': {
+      // Get Monday and Sunday of previous week
+      const dayOfWeek = now.getDay();
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+      startDate = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7, 0, 0, 0, 0);
+      endDate = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 1, 23, 59, 59, 999);
+      break;
+    }
+
+    case 'last_28_days':
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 27, 0, 0, 0, 0);
+      endDate = now;
+      break;
+
+    case 'current_month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      endDate = now;
+      break;
+
+    case 'last_month':
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      break;
+
+    case 'custom':
+      if (!customStartDate || !customEndDate) {
+        return null;
+      }
+      startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+
+      const isToday = customEndDate.getDate() === now.getDate() &&
+        customEndDate.getMonth() === now.getMonth() &&
+        customEndDate.getFullYear() === now.getFullYear();
+
+      if (isToday) {
+        endDate = now;
+      } else {
+        endDate = new Date(customEndDate);
+        endDate.setHours(23, 59, 59, 999);
+      }
+      break;
+
+    default:
+      // Default to current month if period is not recognized
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      endDate = now;
+  }
+
+  return { startDate, endDate };
+};

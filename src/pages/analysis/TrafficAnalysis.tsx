@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, Modal, DatePicker, HelpText } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, HelpText } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
@@ -10,8 +10,9 @@ import WebsitePicker from '../../components/analysis/WebsitePicker';
 import TrafficStats from '../../components/analysis/traffic/TrafficStats';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
+import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD, DEFAULT_ANALYSIS_METRIC_TYPE } from '../../lib/utils';
 
 
 const TrafficAnalysis = () => {
@@ -24,7 +25,7 @@ const TrafficAnalysis = () => {
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) : [];
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
 
 
     // Support custom dates from URL
@@ -35,8 +36,6 @@ const TrafficAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const [isDateModalOpen, setIsDateModalOpen] = useState(false);
-    const dateModalRef = useRef<HTMLDialogElement>(null);
 
     const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
 
@@ -44,8 +43,8 @@ const TrafficAnalysis = () => {
     const [activeTab, setActiveTab] = useState<string>('visits');
 
     // View options
-    const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || 'visitors'); // 'visitors', 'sessions', 'pageviews'
-    const [submittedMetricType, setSubmittedMetricType] = useState<string>('visitors'); // Track what was actually submitted
+    const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || DEFAULT_ANALYSIS_METRIC_TYPE);
+    const [submittedMetricType, setSubmittedMetricType] = useState<string>(DEFAULT_ANALYSIS_METRIC_TYPE); // Track what was actually submitted
     const [showAverage, setShowAverage] = useState<boolean>(false);
 
 
@@ -109,41 +108,14 @@ const TrafficAnalysis = () => {
         setHasAttemptedFetch(true);
         setSubmittedMetricType(metricType);
 
-        // Calculate date range based on period
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-            endDate.setHours(23, 59, 59, 999);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
+        // Calculate date range based on period using centralized utility
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            setError('Vennligst velg en gyldig periode.');
+            setLoading(false);
+            return;
         }
+        const { startDate, endDate } = dateRange;
 
         try {
             // Fetch Series Data - use first path if multiple
@@ -339,7 +311,7 @@ const TrafficAnalysis = () => {
                 xAxisCalloutData: xAxisLabel,
                 yAxisCalloutData: submittedMetricType === 'proportion'
                     ? `${(val * 100).toFixed(1)}%`
-                    : `${val} ${metricLabel}`
+                    : `${val.toLocaleString('nb-NO')} ${metricLabel}`
             };
         });
 
@@ -369,7 +341,7 @@ const TrafficAnalysis = () => {
                 y: avg,
                 yAxisCalloutData: submittedMetricType === 'proportion'
                     ? `Gjennomsnitt: ${avg.toFixed(1)}%`
-                    : `Gjennomsnitt: ${Math.round(avg)}`
+                    : `Gjennomsnitt: ${Math.round(avg).toLocaleString('nb-NO')}`
             }));
 
             lines.push({
@@ -913,38 +885,14 @@ const TrafficAnalysis = () => {
                         placeholder="Skriv og trykk enter"
                     />
 
-                    <div className="w-full sm:w-auto min-w-[200px]">
-                        <Select
-                            label="Periode"
-                            size="small"
-                            value={period}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === 'custom') {
-                                    setIsDateModalOpen(true);
-                                } else if (value === 'custom-edit') {
-                                    setCustomStartDate(undefined);
-                                    setCustomEndDate(undefined);
-                                    setIsDateModalOpen(true);
-                                } else {
-                                    setPeriod(value);
-                                }
-                            }}
-                        >
-                            <option value="current_month">Denne måneden</option>
-                            <option value="last_month">Forrige måned</option>
-                            {period === 'custom' && customStartDate && customEndDate ? (
-                                <>
-                                    <option value="custom">
-                                        {`${format(customStartDate, 'dd.MM.yy')} - ${format(customEndDate, 'dd.MM.yy')} `}
-                                    </option>
-                                    <option value="custom-edit">Endre datoer</option>
-                                </>
-                            ) : (
-                                <option value="custom">Egendefinert</option>
-                            )}
-                        </Select>
-                    </div>
+                    <PeriodPicker
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        startDate={customStartDate}
+                        onStartDateChange={setCustomStartDate}
+                        endDate={customEndDate}
+                        onEndDateChange={setCustomEndDate}
+                    />
 
                     <div className="w-full sm:w-auto min-w-[200px]">
                         <Select
@@ -969,59 +917,6 @@ const TrafficAnalysis = () => {
                             Vis trafikk
                         </Button>
                     </div>
-
-                    <Modal
-                        ref={dateModalRef}
-                        open={isDateModalOpen}
-                        onClose={() => setIsDateModalOpen(false)}
-                        header={{ heading: "Velg datoperiode", closeButton: true }}
-                    >
-                        <Modal.Body>
-                            <div className="flex flex-col gap-4">
-                                <DatePicker
-                                    mode="range"
-                                    selected={{ from: customStartDate, to: customEndDate }}
-                                    onSelect={(range) => {
-                                        if (range) {
-                                            setCustomStartDate(range.from);
-                                            setCustomEndDate(range.to);
-                                        }
-                                    }}
-                                >
-                                    <div className="flex flex-col gap-2">
-                                        <DatePicker.Input
-                                            id="custom-start-date"
-                                            label="Fra dato"
-                                            size="small"
-                                            value={customStartDate ? format(customStartDate, 'dd.MM.yyyy') : ''}
-                                        />
-                                        <DatePicker.Input
-                                            id="custom-end-date"
-                                            label="Til dato"
-                                            size="small"
-                                            value={customEndDate ? format(customEndDate, 'dd.MM.yyyy') : ''}
-                                        />
-                                    </div>
-                                </DatePicker>
-                            </div>
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button
-                                onClick={() => {
-                                    if (customStartDate && customEndDate) {
-                                        setPeriod('custom');
-                                        setIsDateModalOpen(false);
-                                    }
-                                }}
-                                disabled={!customStartDate || !customEndDate}
-                            >
-                                Bruk datoer
-                            </Button>
-                            <Button variant="secondary" onClick={() => setIsDateModalOpen(false)}>
-                                Avbryt
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
                 </>
             }
         >
@@ -1094,7 +989,7 @@ const TrafficAnalysis = () => {
                                                         yMinValue={chartData.yMin}
                                                         allowMultipleShapesForPoints={false}
                                                         enablePerfOptimization={true}
-                                                        margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                        margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
                                                         legendProps={{
                                                             allowFocusOnLegends: true,
                                                             styles: {

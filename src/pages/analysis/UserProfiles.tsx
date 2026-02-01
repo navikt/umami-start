@@ -9,7 +9,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
-import { normalizeUrlToPath } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
 import { TextField } from '@navikt/ds-react';
 
 const UserProfiles = () => {
@@ -17,7 +17,7 @@ const UserProfiles = () => {
     const [searchParams] = useSearchParams();
 
     // State
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -65,38 +65,11 @@ const UserProfiles = () => {
     };
 
     const getDateRange = () => {
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                throw new Error('Vennligst velg en gyldig periode.');
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            throw new Error('Vennligst velg en gyldig periode.');
         }
-        return { startDate, endDate };
+        return dateRange;
     };
 
     const fetchUsers = async () => {

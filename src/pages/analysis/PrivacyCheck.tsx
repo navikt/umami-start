@@ -335,7 +335,6 @@ const PrivacyCheck = () => {
                         onStartDateChange={setCustomStartDate}
                         endDate={customEndDate}
                         onEndDateChange={setCustomEndDate}
-                        showToday={true}
                     />
 
                     <div className="flex items-end pb-[2px] mt-8 sm:mt-0">

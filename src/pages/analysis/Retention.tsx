@@ -139,7 +139,7 @@ const Retention = () => {
                     x: item.day,
                     y: item.percentage,
                     legend: `Dag ${item.day} `,
-                    xAxisCalloutData: `Dag ${item.day}: ${item.percentage}% (${item.returning_users} brukere)`,
+                    xAxisCalloutData: `Dag ${item.day}: ${item.percentage}% (${item.returning_users.toLocaleString('nb-NO')} brukere)`,
                     yAxisCalloutData: `${item.percentage}% `
                 }));
 

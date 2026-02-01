@@ -11,7 +11,7 @@ import HorizontalFunnelChart from '../../components/analysis/funnel/HorizontalFu
 import FunnelStats from '../../components/analysis/funnel/FunnelStats';
 import SqlViewer from '../../components/chartbuilder/results/SqlViewer';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
-import { normalizeUrlToPath } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
 
@@ -65,7 +65,7 @@ const Funnel = () => {
         });
     });
 
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -595,41 +595,14 @@ FROM timing_data`;
         setFunnelData([]);
         setFunnelSql(null);
 
-        // Calculate date range based on period
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            // Default to current month
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
+        // Calculate date range based on period using centralized utility
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            setError('Vennligst velg en gyldig periode.');
+            setLoading(false);
+            return;
         }
+        const { startDate, endDate } = dateRange;
 
         try {
             const response = await fetch('/api/bigquery/funnel', {
@@ -708,41 +681,14 @@ FROM timing_data`;
         setTimingError(null);
         setTimingSql(null);
 
-        // Calculate date range based on period (same as main funnel query)
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setTimingError('Vennligst velg en gyldig periode.');
-                setTimingLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            // Default to current month
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
+        // Calculate date range based on period using centralized utility
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            setTimingError('Vennligst velg en gyldig periode.');
+            setTimingLoading(false);
+            return;
         }
+        const { startDate, endDate } = dateRange;
 
         const normalizedSteps = steps.map(s => {
             if (s.type === 'url') {

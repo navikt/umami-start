@@ -10,7 +10,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { ILineChartProps } from '@fluentui/react-charting';
-import { normalizeUrlToPath } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
 
 
 const EventExplorer = () => {
@@ -28,7 +28,7 @@ const EventExplorer = () => {
     const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -80,40 +80,13 @@ const EventExplorer = () => {
         }
     };
 
-    // Calculate dates based on selection
-    // Calculate dates based on selection
+    // Calculate dates based on selection using centralized utility
     const getDates = () => {
-        const now = new Date();
-        let startAt, endAt;
-
-        if (period === 'current_month') {
-            startAt = new Date(now.getFullYear(), now.getMonth(), 1);
-            endAt = now;
-        } else if (period === 'last_month') {
-            startAt = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endAt = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                throw new Error('Vennligst velg en gyldig periode.');
-            }
-            startAt = new Date(customStartDate);
-            startAt.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endAt = now;
-            } else {
-                endAt = new Date(customEndDate);
-                endAt.setHours(23, 59, 59, 999);
-            }
-        } else {
-            startAt = new Date(now.getFullYear(), now.getMonth(), 1);
-            endAt = now;
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            throw new Error('Vennligst velg en gyldig periode.');
         }
-        return { startAt, endAt };
+        return { startAt: dateRange.startDate, endAt: dateRange.endDate };
     };
 
     // Fetch available events (triggered by button)

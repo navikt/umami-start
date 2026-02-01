@@ -9,7 +9,6 @@ interface PeriodPickerProps {
     onStartDateChange: (date: Date | undefined) => void;
     endDate: Date | undefined;
     onEndDateChange: (date: Date | undefined) => void;
-    showToday?: boolean;
     lastMonthLabel?: string;
     currentMonthLabel?: string;
 }
@@ -21,7 +20,6 @@ export const PeriodPicker = ({
     onStartDateChange,
     endDate,
     onEndDateChange,
-    showToday = false,
     lastMonthLabel = 'Forrige måned',
     currentMonthLabel = 'Denne måneden'
 }: PeriodPickerProps) => {
@@ -53,7 +51,13 @@ export const PeriodPicker = ({
                     value={period === 'custom' && startDate && endDate ? 'custom' : period}
                     onChange={handlePeriodChange}
                 >
-                    {showToday && <option value="today">I dag</option>}
+                    {/* Period options in requested order */}
+                    <option value="today">I dag</option>
+                    <option value="yesterday">I går</option>
+                    <option value="this_week">Denne uken</option>
+                    <option value="last_7_days">Siste 7 dager</option>
+                    <option value="last_week">Forrige uke</option>
+                    <option value="last_28_days">Siste 28 dager</option>
                     <option value="current_month">{currentMonthLabel}</option>
                     <option value="last_month">{lastMonthLabel}</option>
                     {period === 'custom' && startDate && endDate ? (

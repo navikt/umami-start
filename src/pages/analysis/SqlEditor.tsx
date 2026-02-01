@@ -1043,7 +1043,6 @@ export default function SqlEditor() {
                                                     return newState;
                                                 });
                                             }}
-                                            showToday={true}
                                         />
                                     </div>
                                 )}

@@ -7,7 +7,7 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
-import { normalizeUrlToPath } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD, DEFAULT_ANALYSIS_METRIC_TYPE } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
 const MarketingAnalysis = () => {
@@ -19,7 +19,7 @@ const MarketingAnalysis = () => {
     const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean) : [];
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -36,8 +36,8 @@ const MarketingAnalysis = () => {
     const [activeTab, setActiveTab] = useState<string>('referrer');
 
     // View options
-    const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || 'visitors'); // 'visitors', 'pageviews'
-    const [submittedMetricType, setSubmittedMetricType] = useState<string>('visitors'); // Track what was actually submitted
+    const [metricType, setMetricType] = useState<string>(() => searchParams.get('metricType') || DEFAULT_ANALYSIS_METRIC_TYPE);
+    const [submittedMetricType, setSubmittedMetricType] = useState<string>(DEFAULT_ANALYSIS_METRIC_TYPE); // Track what was actually submitted
 
     // Data states
     const [marketingData, setMarketingData] = useState<any>({});
@@ -65,41 +65,14 @@ const MarketingAnalysis = () => {
         setHasAttemptedFetch(true);
         setSubmittedMetricType(metricType);
 
-        // Calculate date range based on period
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-            endDate.setHours(23, 59, 59, 999);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        // Calculate date range based on period using centralized utility
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            setError('Vennligst velg en gyldig periode.');
+            setLoading(false);
+            return;
         }
+        const { startDate, endDate } = dateRange;
 
         try {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
