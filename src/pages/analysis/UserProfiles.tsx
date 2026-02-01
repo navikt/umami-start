@@ -223,7 +223,7 @@ const UserProfiles = () => {
                     <div className="w-full sm:w-auto min-w-[200px]">
                         <TextField
                             size="small"
-                            label="Side eller URL (valgfritt)"
+                            label="Side eller URL"
                             value={pagePath}
                             onChange={(e) => setPagePath(e.target.value)}
                             onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}

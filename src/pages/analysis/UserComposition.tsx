@@ -214,7 +214,7 @@ const UserComposition = () => {
                         pathOperator={pathOperator}
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
-                        label="Side eller URL (valgfritt)"
+                        label="Side eller URL"
                         showOperator={false}
 
                     />

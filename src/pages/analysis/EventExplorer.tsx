@@ -24,12 +24,12 @@ const EventExplorer = () => {
         ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean)
         : (legacyPath ? [normalizeUrlToPath(legacyPath)].filter(Boolean) : []);
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
-    const [pathOperator, setPathOperator] = useState<string>('equals');
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [selectedEvent, setSelectedEvent] = useState<string>(() => searchParams.get('event') || '');
     const [events, setEvents] = useState<{ name: string; count: number }[]>([]);
     const [loadingEvents, setLoadingEvents] = useState<boolean>(false);
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -114,7 +114,10 @@ const EventExplorer = () => {
                 endAt: endAt.getTime().toString()
             });
             const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
-            if (pagePath) params.append('urlPath', pagePath);
+            if (pagePath) {
+                params.append('urlPath', pagePath);
+                params.append('pathOperator', pathOperator);
+            }
 
             const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/events?${params.toString()}`);
             if (!response.ok) throw new Error('Failed to fetch events');
@@ -133,6 +136,9 @@ const EventExplorer = () => {
             newParams.delete('pagePath');
             if (urlPaths.length > 0) {
                 urlPaths.forEach(p => newParams.append('urlPath', p));
+                newParams.set('pathOperator', pathOperator);
+            } else {
+                newParams.delete('pathOperator');
             }
 
             // Persist custom dates
@@ -178,7 +184,10 @@ const EventExplorer = () => {
                     endAt: endAt.getTime().toString()
                 });
                 const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
-                if (pagePath) seriesParams.append('urlPath', pagePath);
+                if (pagePath) {
+                    seriesParams.append('urlPath', pagePath);
+                    seriesParams.append('pathOperator', pathOperator);
+                }
 
                 const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-series?${seriesParams.toString()}`);
                 if (!seriesResponse.ok) throw new Error('Failed to fetch event series');
@@ -192,7 +201,10 @@ const EventExplorer = () => {
                     startAt: startAt.getTime().toString(),
                     endAt: endAt.getTime().toString()
                 });
-                if (pagePath) propsParams.append('urlPath', pagePath);
+                if (pagePath) {
+                    propsParams.append('urlPath', pagePath);
+                    propsParams.append('pathOperator', pathOperator);
+                }
 
                 const propsResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-properties?${propsParams.toString()}`);
                 if (!propsResponse.ok) throw new Error('Failed to fetch event properties');
@@ -215,6 +227,9 @@ const EventExplorer = () => {
                 newParams.delete('pagePath');
                 if (urlPaths.length > 0) {
                     urlPaths.forEach(p => newParams.append('urlPath', p));
+                    newParams.set('pathOperator', pathOperator);
+                } else {
+                    newParams.delete('pathOperator');
                 }
 
                 // Persist custom dates
@@ -260,7 +275,10 @@ const EventExplorer = () => {
                     endAt: endAt.getTime().toString()
                 });
                 const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
-                if (pagePath) params.append('urlPath', pagePath);
+                if (pagePath) {
+                    params.append('urlPath', pagePath);
+                    params.append('pathOperator', pathOperator);
+                }
 
                 const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-parameter-values?${params.toString()}`);
                 if (!response.ok) throw new Error(`Failed to fetch values for ${prop.propertyName}`);
@@ -297,7 +315,10 @@ const EventExplorer = () => {
                 limit: '20'
             });
             const latestPagePath = urlPaths.length > 0 ? urlPaths[0] : '';
-            if (latestPagePath) latestParams.append('urlPath', latestPagePath);
+            if (latestPagePath) {
+                latestParams.append('urlPath', latestPagePath);
+                latestParams.append('pathOperator', pathOperator);
+            }
 
             console.log('Fetching latest events with params:', latestParams.toString());
             const latestResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-latest?${latestParams.toString()}`);
@@ -398,8 +419,8 @@ const EventExplorer = () => {
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
                         className="w-full sm:w-[300px]"
-                        label="Side eller URL (valgfritt)"
-                        showOperator={false}
+                        label="Side eller URL"
+                        showOperator={true}
 
                     />
 
