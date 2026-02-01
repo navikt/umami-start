@@ -82,17 +82,18 @@ function buildCombinedSessionQuery(
     if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
         startDate = filters.customStartDate;
         endDate = filters.customEndDate;
-    } else if (filters.dateRange === 'this-month') {
-        startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-    } else if (filters.dateRange === 'last-month') {
+    } else if (filters.dateRange === 'this-month' || filters.dateRange === 'current_month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (filters.dateRange === 'last-month' || filters.dateRange === 'last_month') {
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         endDate = new Date(now.getFullYear(), now.getMonth(), 0);
     } else {
         startDate = subDays(now, 30);
     }
 
-    const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
-    const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
+    const timezone = 'Europe/Oslo';
+    const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}', '${timezone}')`;
+    const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59', '${timezone}')`;
 
     // Build URL filter - returns either a simple condition or a complex OR expression
     let urlFilterClause: string;
@@ -344,17 +345,18 @@ export async function fetchDashboardDataBatched(
                 if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
                     startDate = filters.customStartDate;
                     endDate = filters.customEndDate;
-                } else if (filters.dateRange === 'this-month') {
-                    startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                } else if (filters.dateRange === 'last-month') {
+                } else if (filters.dateRange === 'this-month' || filters.dateRange === 'current_month') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                } else if (filters.dateRange === 'last-month' || filters.dateRange === 'last_month') {
                     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
                     endDate = new Date(now.getFullYear(), now.getMonth(), 0);
                 } else {
                     startDate = subDays(now, 30);
                 }
 
-                const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}')`;
-                const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59')`;
+                const timezone = 'Europe/Oslo';
+                const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}', '${timezone}')`;
+                const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59', '${timezone}')`;
 
                 const totalVisitorsSql = `
                     SELECT COUNT(DISTINCT session_id) as total

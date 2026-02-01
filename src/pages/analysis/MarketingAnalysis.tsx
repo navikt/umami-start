@@ -71,11 +71,12 @@ const MarketingAnalysis = () => {
         let endDate: Date;
 
         if (period === 'current_month') {
-            startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
         } else if (period === 'last_month') {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+            endDate.setHours(23, 59, 59, 999);
         } else if (period === 'custom') {
             if (!customStartDate || !customEndDate) {
                 setError('Vennligst velg en gyldig periode.');

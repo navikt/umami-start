@@ -70,7 +70,7 @@ function Home() {
                 paddingBottom: "70px",
             }}>
                 <Page.Block width="xl" gutters>
-                    <Heading spacing={true} as="h2" size="large">Mål brukeradferd med Umami</Heading>
+                    <Heading spacing={true} as="h1" size="xlarge">Mål brukeradferd med Umami</Heading>
                     <UrlSearchForm>
                         {/* Shortcuts temporarily disabled
                         <div style={{ marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -133,9 +133,9 @@ function Home() {
             </div>
 
             <Page.Block width="xl" gutters>
-                <div style={{ marginTop: "38px", marginBottom: "32px" }}>
-                    <Heading as="h3" size="medium">Hva ønsker du å analysere?</Heading>
-                    <div style={{ marginTop: '16px', maxWidth: '400px' }}>
+                <div style={{ marginTop: "50px", marginBottom: "32px" }}>
+                    <Heading as="h2" size="large">Hva ønsker du å analysere?</Heading>
+                    <div style={{ marginTop: '24px', maxWidth: '400px' }}>
                         <WebsitePicker
                             selectedWebsite={selectedWebsite}
                             onWebsiteChange={setSelectedWebsite}

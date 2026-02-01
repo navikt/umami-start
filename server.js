@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
 
+const BIGQUERY_TIMEZONE = 'Europe/Oslo';
+
 dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
@@ -868,7 +870,7 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
 
         const query = `
             SELECT
-                TIMESTAMP_TRUNC(created_at, ${timeTrunc}, 'Europe/Oslo') as time,
+                TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                 COUNT(*) as count
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
@@ -1262,7 +1264,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             query = `
                 WITH base_query AS (
                     SELECT
-                        TIMESTAMP_TRUNC(created_at, ${timeTrunc}, 'Europe/Oslo') as time,
+                        TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                         session_id,
                         CASE
                             WHEN (${urlFilterCondition}) THEN TRUE
@@ -1305,7 +1307,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 
             query = `
                 SELECT
-                    TIMESTAMP_TRUNC(created_at, ${timeTrunc}, 'Europe/Oslo') as time,
+                    TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                     ${countExpression} as count
                 FROM \`team-researchops-prod-01d6.umami_views.event\`
                 WHERE website_id = @websiteId

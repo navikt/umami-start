@@ -115,11 +115,12 @@ const TrafficAnalysis = () => {
         let endDate: Date;
 
         if (period === 'current_month') {
-            startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
         } else if (period === 'last_month') {
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+            endDate.setHours(23, 59, 59, 999);
         } else if (period === 'custom') {
             if (!customStartDate || !customEndDate) {
                 setError('Vennligst velg en gyldig periode.');
@@ -140,14 +141,21 @@ const TrafficAnalysis = () => {
                 endDate.setHours(23, 59, 59, 999);
             }
         } else {
-            startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
         }
 
         try {
             // Fetch Series Data - use first path if multiple
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
-            const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&urlPath=${encodeURIComponent(urlPath)}&pathOperator=${pathOperator}&metricType=${metricType}`);
+            const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
+
+            let seriesUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}`;
+            if (normalizedPath) {
+                seriesUrl += `&urlPath=${encodeURIComponent(normalizedPath)}`;
+            }
+
+            const seriesResponse = await fetch(seriesUrl);
             if (!seriesResponse.ok) throw new Error('Kunne ikke hente trafikkdata');
             const seriesResult = await seriesResponse.json();
 
