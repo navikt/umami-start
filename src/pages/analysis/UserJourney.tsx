@@ -11,7 +11,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UmamiJourneyView from '../../components/analysis/journey/UmamiJourneyView';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, DEFAULT_ANALYSIS_PERIOD } from '../../lib/utils';
 
 
 const UserJourney = () => {
@@ -20,7 +20,7 @@ const UserJourney = () => {
 
     // Initialize state from URL params
     const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('startUrl') || '');
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
+    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || DEFAULT_ANALYSIS_PERIOD);
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -184,41 +184,15 @@ const UserJourney = () => {
         // Normalize the URL behind the scenes before sending to API
         const normalizedStartUrl = normalizeUrlToPath(startUrl);
 
-        // Calculate date range based on period
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            // Default to current month
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
+        // Calculate date range based on period using centralized utility
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            setError('Vennligst velg en gyldig periode.');
+            setLoading(false);
+            setIsUpdating(false);
+            return;
         }
+        const { startDate, endDate } = dateRange;
 
         const stepsToFetch = customSteps || steps;
 
