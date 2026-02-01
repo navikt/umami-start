@@ -477,39 +477,73 @@ const EventExplorer = () => {
                                     />
                                 </div>
                             </div>
-                            <div className="overflow-x-auto">
-                                <Table size="small">
-                                    <Table.Header>
-                                        <Table.Row>
-                                            <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
-                                            <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                            <Table.HeaderCell></Table.HeaderCell>
-                                        </Table.Row>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {filteredEvents.map((event) => (
-                                            <Table.Row key={event.name}>
-                                                <Table.DataCell>{event.name}</Table.DataCell>
-                                                <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
-                                                <Table.DataCell>
-                                                    <Button
-                                                        size="xsmall"
-                                                        variant="secondary"
-                                                        onClick={() => setSelectedEvent(event.name)}
-                                                    >
-                                                        Utforsk
-                                                    </Button>
-                                                </Table.DataCell>
+                            <div className="border rounded-lg overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <Table size="small">
+                                        <Table.Header>
+                                            <Table.Row>
+                                                <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
+                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                <Table.HeaderCell></Table.HeaderCell>
                                             </Table.Row>
-                                        ))}
-                                    </Table.Body>
-                                </Table>
-                            </div>
-                            {eventsQueryStats && (
-                                <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-2">
-                                    Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                                        </Table.Header>
+                                        <Table.Body>
+                                            {filteredEvents.map((event) => (
+                                                <Table.Row key={event.name}>
+                                                    <Table.DataCell>{event.name}</Table.DataCell>
+                                                    <Table.DataCell align="right">{event.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                    <Table.DataCell>
+                                                        <Button
+                                                            size="xsmall"
+                                                            variant="secondary"
+                                                            onClick={() => setSelectedEvent(event.name)}
+                                                        >
+                                                            Utforsk
+                                                        </Button>
+                                                    </Table.DataCell>
+                                                </Table.Row>
+                                            ))}
+                                        </Table.Body>
+                                    </Table>
                                 </div>
-                            )}
+                                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="small"
+                                            variant="secondary"
+                                            onClick={() => {
+                                                const headers = ['Hendelsesnavn', 'Antall'];
+                                                const csvRows = [
+                                                    headers.join(','),
+                                                    ...filteredEvents.map((event) => [
+                                                        `"${event.name}"`,
+                                                        event.count
+                                                    ].join(','))
+                                                ];
+                                                const csvContent = csvRows.join('\n');
+                                                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                const link = document.createElement('a');
+                                                const url = URL.createObjectURL(blob);
+                                                link.setAttribute('href', url);
+                                                link.setAttribute('download', `hendelser_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                                link.style.visibility = 'hidden';
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                                URL.revokeObjectURL(url);
+                                            }}
+                                            icon={<Download size={16} />}
+                                        >
+                                            Last ned CSV
+                                        </Button>
+                                    </div>
+                                    {eventsQueryStats && (
+                                        <span className="text-sm text-[var(--ax-text-subtle)]">
+                                            Data prosessert: {eventsQueryStats.totalBytesProcessedGB} GB
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     );
                 })()

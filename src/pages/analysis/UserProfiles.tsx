@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort } from '@navikt/ds-react';
-import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink } from 'lucide-react';
+import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink, Download } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
@@ -323,55 +323,97 @@ const UserProfiles = () => {
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <Table size="medium" zebraStripes>
-                                <Table.Header>
-                                    <Table.Row>
-                                        <Table.HeaderCell>Bruker ID</Table.HeaderCell>
-                                        <Table.HeaderCell>Sist sett</Table.HeaderCell>
-                                        <Table.HeaderCell>Land</Table.HeaderCell>
-                                        <Table.HeaderCell>Enhet</Table.HeaderCell>
-                                        <Table.HeaderCell>Nettleser</Table.HeaderCell>
-                                        <Table.HeaderCell>Handling</Table.HeaderCell>
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {filteredUsers.map((user) => (
-                                        <Table.Row
-                                            key={user.sessionId}
-                                            onClick={() => handleRowClick(user)}
-                                            className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]"
-                                        >
-                                            <Table.DataCell>
-                                                <Link href="#" onClick={(e) => { e.preventDefault(); handleRowClick(user); }}>
-                                                    {user.sessionId.substring(0, 8)}...
-                                                </Link>
-                                            </Table.DataCell>
-                                            <Table.DataCell>{formatDate(user.lastSeen)}</Table.DataCell>
-                                            <Table.DataCell>{translateCountry(user.country)}</Table.DataCell>
-                                            <Table.DataCell>
-                                                <div className="flex items-center gap-2">
-                                                    {getDeviceIcon(user.device)}
-                                                    {translateDevice(user.device)}
-                                                </div>
-                                            </Table.DataCell>
-                                            <Table.DataCell>{user.browser || '-'}</Table.DataCell>
-                                            <Table.DataCell>
-                                                <Button
-                                                    size="small"
-                                                    variant="tertiary"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRowClick(user);
-                                                    }}
-                                                >
-                                                    Vis profil
-                                                </Button>
-                                            </Table.DataCell>
+                        <div className="border rounded-lg overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <Table size="medium" zebraStripes>
+                                    <Table.Header>
+                                        <Table.Row>
+                                            <Table.HeaderCell>Bruker ID</Table.HeaderCell>
+                                            <Table.HeaderCell>Sist sett</Table.HeaderCell>
+                                            <Table.HeaderCell>Land</Table.HeaderCell>
+                                            <Table.HeaderCell>Enhet</Table.HeaderCell>
+                                            <Table.HeaderCell>Nettleser</Table.HeaderCell>
+                                            <Table.HeaderCell>Handling</Table.HeaderCell>
                                         </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table>
+                                    </Table.Header>
+                                    <Table.Body>
+                                        {filteredUsers.map((user) => (
+                                            <Table.Row
+                                                key={user.sessionId}
+                                                onClick={() => handleRowClick(user)}
+                                                className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]"
+                                            >
+                                                <Table.DataCell>
+                                                    <Link href="#" onClick={(e) => { e.preventDefault(); handleRowClick(user); }}>
+                                                        {user.sessionId.substring(0, 8)}...
+                                                    </Link>
+                                                </Table.DataCell>
+                                                <Table.DataCell>{formatDate(user.lastSeen)}</Table.DataCell>
+                                                <Table.DataCell>{translateCountry(user.country)}</Table.DataCell>
+                                                <Table.DataCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {getDeviceIcon(user.device)}
+                                                        {translateDevice(user.device)}
+                                                    </div>
+                                                </Table.DataCell>
+                                                <Table.DataCell>{user.browser || '-'}</Table.DataCell>
+                                                <Table.DataCell>
+                                                    <Button
+                                                        size="small"
+                                                        variant="tertiary"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRowClick(user);
+                                                        }}
+                                                    >
+                                                        Vis profil
+                                                    </Button>
+                                                </Table.DataCell>
+                                            </Table.Row>
+                                        ))}
+                                    </Table.Body>
+                                </Table>
+                            </div>
+                            <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="small"
+                                        variant="secondary"
+                                        onClick={() => {
+                                            const headers = ['Bruker ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
+                                            const csvRows = [
+                                                headers.join(','),
+                                                ...filteredUsers.map((user) => [
+                                                    `"${user.sessionId}"`,
+                                                    `"${formatDate(user.lastSeen)}"`,
+                                                    `"${translateCountry(user.country)}"`,
+                                                    `"${translateDevice(user.device)}"`,
+                                                    `"${user.browser || '-'}"`
+                                                ].join(','))
+                                            ];
+                                            const csvContent = csvRows.join('\n');
+                                            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                            const link = document.createElement('a');
+                                            const url = URL.createObjectURL(blob);
+                                            link.setAttribute('href', url);
+                                            link.setAttribute('download', `brukerprofiler_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                            link.style.visibility = 'hidden';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            URL.revokeObjectURL(url);
+                                        }}
+                                        icon={<Download size={16} />}
+                                    >
+                                        Last ned CSV
+                                    </Button>
+                                </div>
+                                {queryStats && (
+                                    <span className="text-sm text-[var(--ax-text-subtle)]">
+                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {totalUsers > ROWS_PER_PAGE && (
@@ -382,14 +424,6 @@ const UserProfiles = () => {
                                     count={Math.ceil(totalUsers / ROWS_PER_PAGE)}
                                     size="small"
                                 />
-                            </div>
-                        )}
-
-                        {queryStats && (
-                            <div className="mt-8 pt-4 border-t border-[var(--ax-border-neutral-subtle)] text-sm text-gray-500 flex justify-end">
-                                <p>
-                                    Data prosessert: <strong>{queryStats.totalBytesProcessedGB} GB</strong>
-                                </p>
                             </div>
                         )}
                     </>

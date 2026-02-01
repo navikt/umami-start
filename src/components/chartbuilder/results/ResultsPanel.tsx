@@ -622,33 +622,43 @@ const ResultsPanel = ({
                       {tableContent}
                     </div>
                     {/* Table Footer */}
-                    <div className="px-4 py-2 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t">
+                    <div className="px-4 py-3 bg-[var(--ax-bg-neutral-soft)] text-sm text-[var(--ax-text-subtle)] border-t">
                       <div className="flex justify-between items-center">
-                        <span>
-                          {(() => {
-                            const totalRows = result.data.length;
-                            const isLargeDataset = totalRows > rowLimit;
-                            const shouldLimitRows = isLargeDataset && !showAllRows && !activeSearchQuery;
+                        <div className="flex items-center gap-4">
+                          <Button
+                            size="small"
+                            variant="secondary"
+                            onClick={downloadCSV}
+                            icon={<Download size={16} />}
+                          >
+                            Last ned CSV
+                          </Button>
+                          <span>
+                            {(() => {
+                              const totalRows = result.data.length;
+                              const isLargeDataset = totalRows > rowLimit;
+                              const shouldLimitRows = isLargeDataset && !showAllRows && !activeSearchQuery;
 
-                            if (activeSearchQuery) {
-                              // Showing search results
-                              const filteredCount = result.data.filter((row: any) => {
-                                const query = activeSearchQuery.toLowerCase();
-                                return Object.values(row).some((value: any) => {
-                                  if (value === null || value === undefined) return false;
-                                  return String(value).toLowerCase().includes(query);
-                                });
-                              }).length;
-                              return <>Viser {filteredCount.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
-                            } else if (shouldLimitRows) {
-                              // Showing limited rows
-                              return <>Viser {rowLimit.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
-                            } else {
-                              // Showing all rows
-                              return <>{totalRows.toLocaleString('nb-NO')} {totalRows === 1 ? 'rad' : 'rader'}</>;
-                            }
-                          })()}
-                        </span>
+                              if (activeSearchQuery) {
+                                // Showing search results
+                                const filteredCount = result.data.filter((row: any) => {
+                                  const query = activeSearchQuery.toLowerCase();
+                                  return Object.values(row).some((value: any) => {
+                                    if (value === null || value === undefined) return false;
+                                    return String(value).toLowerCase().includes(query);
+                                  });
+                                }).length;
+                                return <>Viser {filteredCount.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
+                              } else if (shouldLimitRows) {
+                                // Showing limited rows
+                                return <>Viser {rowLimit.toLocaleString('nb-NO')} av {totalRows.toLocaleString('nb-NO')} rader</>;
+                              } else {
+                                // Showing all rows
+                                return <>{totalRows.toLocaleString('nb-NO')} {totalRows === 1 ? 'rad' : 'rader'}</>;
+                              }
+                            })()}
+                          </span>
+                        </div>
                         {queryStats && (
                           <span>
                             Data prosessert: {queryStats.totalBytesProcessedGB} GB

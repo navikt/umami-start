@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Table, Alert, Loader, Link as DsLink, Tabs, HelpText, Button, TextField } from '@navikt/ds-react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Download } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
@@ -530,6 +530,38 @@ const BrokenLinks = () => {
                                                 ))}
                                             </Table.Body>
                                         </Table>
+                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="small"
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                        const headers = ['URL', 'Ødelagte lenker'];
+                                                        const csvRows = [
+                                                            headers.join(','),
+                                                            ...filteredPages.map((page) => [
+                                                                `"${getUrlPath(page.url)}"`,
+                                                                page.broken_links
+                                                            ].join(','))
+                                                        ];
+                                                        const csvContent = csvRows.join('\n');
+                                                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                        const link = document.createElement('a');
+                                                        const url = URL.createObjectURL(blob);
+                                                        link.setAttribute('href', url);
+                                                        link.setAttribute('download', `sider_med_odelagte_lenker_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                                        link.style.visibility = 'hidden';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                        URL.revokeObjectURL(url);
+                                                    }}
+                                                    icon={<Download size={16} />}
+                                                >
+                                                    Last ned CSV
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </Tabs.Panel>
@@ -566,6 +598,38 @@ const BrokenLinks = () => {
                                                 ))}
                                             </Table.Body>
                                         </Table>
+                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="small"
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                        const headers = ['URL', 'Tilfeller'];
+                                                        const csvRows = [
+                                                            headers.join(','),
+                                                            ...brokenLinks.map((bl) => [
+                                                                `"${bl.url}"`,
+                                                                bl.pages
+                                                            ].join(','))
+                                                        ];
+                                                        const csvContent = csvRows.join('\n');
+                                                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                        const link = document.createElement('a');
+                                                        const url = URL.createObjectURL(blob);
+                                                        link.setAttribute('href', url);
+                                                        link.setAttribute('download', `odelagte_lenker_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                                        link.style.visibility = 'hidden';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                        URL.revokeObjectURL(url);
+                                                    }}
+                                                    icon={<Download size={16} />}
+                                                >
+                                                    Last ned CSV
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </Tabs.Panel>

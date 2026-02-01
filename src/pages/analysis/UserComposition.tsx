@@ -306,6 +306,7 @@ const UserComposition = () => {
                             />
                         </div>
                     </Tabs>
+
                     <div className="flex justify-end mt-8">
                         <Button
                             size="small"

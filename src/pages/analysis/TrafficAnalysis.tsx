@@ -500,6 +500,33 @@ const TrafficAnalysis = () => {
             return <div className="truncate">{name}</div>;
         };
 
+        const downloadCSV = () => {
+            if (!data.length) return;
+
+            const headers = ['Navn', metricLabel];
+            const csvRows = [
+                headers.join(','),
+                ...data.map((item) => {
+                    return [
+                        item.name,
+                        submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
+                    ].join(',');
+                })
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+
         return (
             <VStack gap="space-4">
                 <div className="flex justify-between items-end">
@@ -541,6 +568,18 @@ const TrafficAnalysis = () => {
                             )}
                         </Table.Body>
                     </Table>
+                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                        <div className="flex gap-2">
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={downloadCSV}
+                                icon={<Download size={16} />}
+                            >
+                                Last ned CSV
+                            </Button>
+                        </div>
+                    </div>
                 </div>
                 {totalPages > 1 && (
                     <Pagination
@@ -643,6 +682,33 @@ const TrafficAnalysis = () => {
             return <div className="truncate">{name}</div>;
         };
 
+        const downloadCSV = () => {
+            if (!data.length) return;
+
+            const headers = ['URL-sti', metricLabel];
+            const csvRows = [
+                headers.join(','),
+                ...data.map((item) => {
+                    return [
+                        item.name, // URL-sti name
+                        submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
+                    ].join(',');
+                })
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+
 
         return (
             <VStack gap="space-4">
@@ -708,6 +774,18 @@ const TrafficAnalysis = () => {
                             )}
                         </Table.Body>
                     </Table>
+                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                        <div className="flex gap-2">
+                            <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={downloadCSV}
+                                icon={<Download size={16} />}
+                            >
+                                Last ned CSV
+                            </Button>
+                        </div>
+                    </div>
                 </div>
                 {totalPages > 1 && (
                     <Pagination

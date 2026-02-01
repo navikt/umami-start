@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink } from '@navikt/ds-react';
+import { Download } from 'lucide-react';
 
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
@@ -215,7 +216,7 @@ const Spellings = () => {
         }
     }, [siteimproveId]);
 
-    const renderTable = (items: SpellingIssue[], emptyMsg: string) => {
+    const renderTable = (items: SpellingIssue[], emptyMsg: string, filename: string) => {
         if (items.length === 0) {
             return <Alert variant="success">{emptyMsg}</Alert>;
         }
@@ -237,6 +238,35 @@ const Spellings = () => {
                         ))}
                     </Table.Body>
                 </Table>
+                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                    <div className="flex gap-2">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            onClick={() => {
+                                const headers = ['Ord'];
+                                const csvRows = [
+                                    headers.join(','),
+                                    ...items.map((item) => `"${item.word}"`)
+                                ];
+                                const csvContent = csvRows.join('\n');
+                                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                const link = document.createElement('a');
+                                const url = URL.createObjectURL(blob);
+                                link.setAttribute('href', url);
+                                link.setAttribute('download', `${filename}_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                link.style.visibility = 'hidden';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                            }}
+                            icon={<Download size={16} />}
+                        >
+                            Last ned CSV
+                        </Button>
+                    </div>
+                </div>
             </div>
         );
     };
@@ -432,10 +462,10 @@ const Spellings = () => {
                                 </Tabs.List>
 
                                 <Tabs.Panel value="potential" className="pt-4">
-                                    {renderTable(potentialMisspellings, "Ingen mulige stavefeil funnet.")}
+                                    {renderTable(potentialMisspellings, "Ingen mulige stavefeil funnet.", "mulige_stavefeil")}
                                 </Tabs.Panel>
                                 <Tabs.Panel value="misspellings" className="pt-4">
-                                    {renderTable(misspellings, "Ingen bekreftede stavefeil funnet!")}
+                                    {renderTable(misspellings, "Ingen bekreftede stavefeil funnet!", "bekreftede_stavefeil")}
                                 </Tabs.Panel>
                             </Tabs>
                         </>
