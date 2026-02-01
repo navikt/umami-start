@@ -631,7 +631,7 @@ const EventJourney = () => {
                 <>
                     <TextField
                         size="small"
-                        label="Side eller URL"
+                        label="Side eller URL (bruk * for wildcard)"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
                         onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}

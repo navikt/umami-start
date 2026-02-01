@@ -3871,14 +3871,19 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
 
         let urlFilter = '';
         if (urlPath && urlPath !== '') {
-            urlFilter = `AND (
-                e.url_path = @urlPath 
-                OR e.url_path = @urlPathSlash 
-                OR e.url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (urlPath.includes('*')) {
+                urlFilter = `AND e.url_path LIKE @urlPathLike`;
+                params.urlPathLike = urlPath.replace(/\*/g, '%');
+            } else {
+                urlFilter = `AND (
+                    e.url_path = @urlPath 
+                    OR e.url_path = @urlPathSlash 
+                    OR e.url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         let eventNameFilter = '';
