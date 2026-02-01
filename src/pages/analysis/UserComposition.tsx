@@ -208,9 +208,9 @@ const UserComposition = () => {
                         pathOperator={pathOperator}
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
-                        label="URL-sti (valgfritt)"
+                        label="Side eller URL (valgfritt)"
                         showOperator={false}
-                        placeholder="Skriv og trykk enter"
+
                     />
 
                     <PeriodPicker

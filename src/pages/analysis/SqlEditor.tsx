@@ -1050,7 +1050,7 @@ export default function SqlEditor() {
                                 {hasUrlPathFilter && (
                                     <div className="flex-1 min-w-[240px]">
                                         <TextField
-                                            label="URL-sti"
+                                            label="Side eller URL"
                                             size="small"
                                             description="F.eks. / for forsiden"
                                             value={urlPath}

@@ -924,7 +924,7 @@ const TrafficAnalysis = () => {
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
                         className="w-full sm:w-[350px]"
-                        placeholder="Skriv og trykk enter"
+
                     />
 
                     <PeriodPicker

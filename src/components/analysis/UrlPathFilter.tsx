@@ -5,9 +5,9 @@ import { normalizeUrlToPath } from "../../lib/utils";
 import { useWebsiteMatching } from "../../hooks/useWebsiteMatching";
 
 interface UrlPathFilterProps {
-    /** Array of selected URL paths */
+    /** Array of selected URLs */
     urlPaths: string[];
-    /** Callback when paths change */
+    /** Callback when URLs change */
     onUrlPathsChange: (paths: string[]) => void;
     /** Path operator: 'equals' or 'starts-with' */
     pathOperator: string;
@@ -15,7 +15,7 @@ interface UrlPathFilterProps {
     onPathOperatorChange: (operator: string) => void;
     /** Optional: Selected website domain for validation in bulk add */
     selectedWebsiteDomain?: string;
-    /** Label text (default: "URL-sti") */
+    /** Label text (default: "URL") */
     label?: string;
     /** Placeholder text */
     placeholder?: string;
@@ -35,8 +35,7 @@ export const UrlPathFilter = ({
     pathOperator,
     onPathOperatorChange,
     selectedWebsiteDomain,
-    label = "URL-sti",
-    placeholder = "Skriv og trykk enter",
+    label = "Side eller URL",
     size = "small",
     hideLabel = false,
     showOperator = true,
@@ -351,7 +350,6 @@ export const UrlPathFilter = ({
                     onToggleSelected={handleToggleSelected}
                     value={comboInputValue}
                     onChange={(val) => setComboInputValue(val)}
-                    placeholder={placeholder}
                 />
             </div>
 

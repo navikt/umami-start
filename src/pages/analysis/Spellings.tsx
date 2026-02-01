@@ -289,7 +289,7 @@ const Spellings = () => {
                 <>
                     <TextField
                         size="small"
-                        label="URL-sti (valgfritt)"
+                        label="Side eller URL (valgfritt)"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
                     />

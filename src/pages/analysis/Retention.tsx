@@ -310,7 +310,7 @@ const Retention = () => {
                     <div className="w-full sm:w-[300px]">
                         <TextField
                             size="small"
-                            label="URL-sti"
+                            label="Side eller URL"
                             value={urlPath}
                             onChange={(e) => setUrlPath(e.target.value)}
                             onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}

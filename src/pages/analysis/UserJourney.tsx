@@ -336,7 +336,7 @@ const UserJourney = () => {
                     <div className="w-full sm:w-[300px]">
                         <TextField
                             size="small"
-                            label="URL-sti"
+                            label="Side eller URL"
                             value={startUrl}
                             onChange={(e) => setStartUrl(e.target.value)}
                             onBlur={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}

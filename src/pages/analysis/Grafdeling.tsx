@@ -550,7 +550,7 @@ export default function Grafdeling() {
             {hasUrlPathFilter && (
                 <div className="pt-4">
                     <TextField
-                        label="URL-sti"
+                        label="Side eller URL"
                         size="small"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}

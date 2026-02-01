@@ -672,7 +672,7 @@ const Dashboard = () => {
                             }}
                             value={comboInputValue}
                             onChange={(val) => setComboInputValue(val)}
-                            placeholder="Skriv og trykk enter"
+
                         />
                     </div>
                 </div>

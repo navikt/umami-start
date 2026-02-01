@@ -927,7 +927,7 @@ const QueryPreview = ({
                     {hasUrlPathFilter && (
                       <div className="w-64">
                         <TextField
-                          label="URL-sti"
+                          label="Side eller URL"
                           size="small"
                           value={urlPath}
                           onChange={(e) => setUrlPath(e.target.value)}

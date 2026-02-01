@@ -392,9 +392,9 @@ const EventExplorer = () => {
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
                         className="w-full sm:w-[300px]"
-                        label="URL-sti (valgfritt)"
+                        label="Side eller URL (valgfritt)"
                         showOperator={false}
-                        placeholder="Skriv og trykk enter"
+
                     />
 
                     <PeriodPicker
