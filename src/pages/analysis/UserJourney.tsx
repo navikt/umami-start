@@ -21,7 +21,7 @@ const UserJourney = () => {
     // Initialize state from URL params
     const [startUrl, setStartUrl] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('startUrl') || '');
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -177,6 +177,11 @@ const UserJourney = () => {
     const fetchData = async (preserveData = false, customSteps?: number) => {
         if (!selectedWebsite) return;
 
+        // Normalize the URL behind the scenes before sending to API
+        const normalizedStartUrl = normalizeUrlToPath(startUrl);
+
+        if (!normalizedStartUrl) return;
+
         if (preserveData) {
             setIsUpdating(true);
         } else {
@@ -186,9 +191,6 @@ const UserJourney = () => {
         }
 
         setError(null);
-
-        // Normalize the URL behind the scenes before sending to API
-        const normalizedStartUrl = normalizeUrlToPath(startUrl);
 
         // Calculate date range based on period using centralized utility
         const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
@@ -408,7 +410,7 @@ const UserJourney = () => {
 
             {!startUrl && !loading && !data && (
                 <Alert variant="info" className="mb-4">
-                    Skriv inn en URL-sti for å analysere hendelsesflyt på en spesifikk side.
+                    Skriv inn en URL-sti for å se navigasjonsflyt.
                 </Alert>
             )}
 

@@ -17,7 +17,7 @@ const EventJourney = () => {
     // Initialize state from URL params - check both urlPath and pagePath for compatibility
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -132,6 +132,8 @@ const EventJourney = () => {
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
+
+        if (!urlPath) return;
 
         setLoading(true);
         setError(null);
@@ -665,7 +667,7 @@ const EventJourney = () => {
 
             {!urlPath && !loading && data.length === 0 && (
                 <Alert variant="info" className="mb-4">
-                    Skriv inn en URL-sti for å analysere hendelsesflyt på en spesifikk side.
+                    Skriv inn en URL-sti for å se hendelsesforløp.
                 </Alert>
             )}
 
