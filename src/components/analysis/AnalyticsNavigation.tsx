@@ -43,7 +43,7 @@ export const analyticsPages = [
     {
         id: 'trakt',
         href: '/trakt',
-        label: 'Traktanalyse',
+        label: 'Trakt',
         description: 'Se hvor folk faller fra i en prosess'
     },
     {

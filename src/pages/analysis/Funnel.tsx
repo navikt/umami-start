@@ -810,7 +810,7 @@ FROM timing_data`;
 
     return (
         <ChartLayout
-            title="Traktanalyse"
+            title="Trakt"
             description="Se hvor folk faller fra i en prosess."
             currentPage="trakt"
             websiteDomain={selectedWebsite?.domain}
