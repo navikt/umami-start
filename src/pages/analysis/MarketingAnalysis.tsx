@@ -30,7 +30,7 @@ const MarketingAnalysis = () => {
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -54,7 +54,7 @@ const MarketingAnalysis = () => {
     // View options
     const [metricType, setMetricTypeState] = useState<string>(() => getStoredMetricType(searchParams.get('metricType')));
     const [submittedMetricType, setSubmittedMetricType] = useState<string>(() => getStoredMetricType(searchParams.get('metricType'))); // Track what was actually submitted
-    
+
     // Wrap setMetricType to also save to localStorage
     const setMetricType = (newMetricType: string) => {
         setMetricTypeState(newMetricType);
@@ -70,10 +70,9 @@ const MarketingAnalysis = () => {
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
-    // Auto-submit when URL parameters are present (for shared links)
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
-        const hasConfigParams = searchParams.has('period') || searchParams.has('metricType') || searchParams.has('urlPath');
-        if (selectedWebsite && hasConfigParams && !hasAttemptedFetch) {
+        if (selectedWebsite && !hasAttemptedFetch) {
             fetchData();
         }
     }, [selectedWebsite]);
@@ -325,8 +324,8 @@ const MarketingAnalysis = () => {
 
     return (
         <ChartLayout
-            title="Markedsanalyse"
-            description="Analyser trafikk basert på UTM-parametere og referanser."
+            title="Kampanjer"
+            description="Se trafikk fra kampanjer og lenker med sporing (UTM)."
             currentPage="markedsanalyse"
             websiteDomain={selectedWebsite?.domain}
             websiteName={selectedWebsite?.name}

@@ -59,16 +59,16 @@ export const analyticsPages = [
         description: 'Se hvor mange som kommer tilbake'
     },
     {
-        id: 'markedsanalyse',
-        href: '/markedsanalyse',
-        label: 'Markedsanalyse',
-        description: 'Analyser trafikk basert på UTM-parametere'
-    },
-    {
         id: 'event-explorer',
         href: '/utforsk-hendelser',
         label: 'Egendefinerte hendelser',
         description: 'Utforsk egendefinerte hendelser'
+    },
+    {
+        id: 'markedsanalyse',
+        href: '/markedsanalyse',
+        label: 'Kampanjer',
+        description: 'Analyser trafikk basert på UTM-parametere'
     },
     {
         id: 'sql',

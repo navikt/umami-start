@@ -13,7 +13,7 @@ const sections = [
         description: "Forstå hva som påvirker trafikken",
         bgColor: "var(--ax-bg-default)",
         accentColor: "var(--ax-bg-accent-strong)",
-        ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
+        ids: ['trafikkanalyse', 'event-explorer', 'markedsanalyse']
     },
     {
         title: "Brukere",

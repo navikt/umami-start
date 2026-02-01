@@ -25,7 +25,7 @@ const chartGroups = [
     {
         title: "Trafikk & hendelser",
         icon: <Activity size={18} />,
-        ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
+        ids: ['trafikkanalyse', 'event-explorer', 'markedsanalyse']
     },
     {
         title: "Brukere",
