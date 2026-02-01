@@ -7,17 +7,20 @@
   {
     "teamName": "Idebanken Prod",
     "teamDomain": "https://www.idebanken.org",
-    "teamSiteimproveSite": 21766831756
+    "teamSiteimproveSite": 21766831756,
+    "supportsMarketing": true
   },
   {
     "teamName": "Idebanken Prod Beta",
     "teamDomain": "https://idebanken.nav.no",
-    "teamSiteimproveSite": 43000776390
+    "teamSiteimproveSite": 43000776390,
+    "supportsMarketing": true
   },
   {
     "teamName": "Idebanken Dev",
     "teamDomain": "https://idebanken.ekstern.dev.nav.no",
-    "teamSiteimproveSite": 41890665972
+    "teamSiteimproveSite": 41890665972,
+    "supportsMarketing": true
   },
   {
     "teamName": "Nav",
@@ -29,32 +32,38 @@
   {
     "teamName": "Mangfoldimai",
     "teamDomain": "https://mangfoldimai.no",
-    "teamSiteimproveSite": 30141243932
+    "teamSiteimproveSite": 30141243932,
+    "supportsMarketing": true
   },
   {
     "teamName": "Arbeidsplassen",
     "teamDomain": "https://arbeidsplassen.nav.no",
-    "teamSiteimproveSite": 23679828077
+    "teamSiteimproveSite": 23679828077,
+    "supportsMarketing": true
   },
   {
     "teamName": "Workinnorway",
     "teamDomain": "https://workinnorway.no",
-    "teamSiteimproveSite": 25550852482
+    "teamSiteimproveSite": 25550852482,
+    "supportsMarketing": true
   },
   {
     "teamName": "Kunnskapsbanken",
     "teamDomain": "https://kunnskapsbanken.net",
-    "teamSiteimproveSite": 24837355879
+    "teamSiteimproveSite": 24837355879,
+    "supportsMarketing": true
   },
   {
     "teamName": "arbeidogvelferd",
     "teamDomain": "https://arbeidogvelferd.nav.no",
-    "teamSiteimproveSite": 28929754463
+    "teamSiteimproveSite": 28929754463,
+    "supportsMarketing": true
   },
   {
     "teamName": "detsombetyrnoe",
     "teamDomain": "https://detsombetyrnoe.no",
-    "teamSiteimproveSite": 24075344668
+    "teamSiteimproveSite": 24075344668,
+    "supportsMarketing": true
   },
   {
     "teamName": "finnhjelpemiddel",

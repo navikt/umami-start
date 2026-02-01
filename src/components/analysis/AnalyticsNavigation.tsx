@@ -1,5 +1,6 @@
 import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
+import { useMarketingSupport } from '../../hooks/useSiteimproveSupport';
 
 export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern' | 'hendelsesreiser' | 'sql' | 'grafdeling' | 'odelagte-lenker' | 'stavekontroll';
 
@@ -7,6 +8,8 @@ interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
 
     className?: string;
+    domain?: string;
+    websiteName?: string;
 }
 
 export const analyticsPages = [
@@ -102,11 +105,17 @@ export const analyticsPages = [
     }
 ];
 
-const AnalyticsNavigation = ({ currentPage, className = '' }: AnalyticsNavigationProps) => {
+const AnalyticsNavigation = ({ currentPage, className = '', domain, websiteName }: AnalyticsNavigationProps) => {
+    const hasMarketing = useMarketingSupport(domain, websiteName);
+
     // Filter out the current page if specified
-    const displayPages = currentPage
+    const displayPages = (currentPage
         ? analyticsPages.filter(page => page.id !== currentPage)
-        : analyticsPages;
+        : analyticsPages
+    ).filter(page => {
+        if (page.id === 'markedsanalyse' && !hasMarketing) return false;
+        return true;
+    });
 
     return (
         <div className="mt-12">

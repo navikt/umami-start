@@ -90,8 +90,8 @@ export function hasMarketingSupport(domain: string | null | undefined, websiteNa
     if (isDevWebsiteName(websiteName)) return false;
 
     const team = findTeamByDomain(domain);
-    // Default to true if not specified, only hide if explicitly set to false
-    return team ? team.supportsMarketing !== false : true;
+    // Only show if explicitly set to true in teamsData.json
+    return team ? team.supportsMarketing === true : false;
 }
 
 /**

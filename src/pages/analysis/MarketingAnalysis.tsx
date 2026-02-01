@@ -9,6 +9,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference } from '../../lib/utils';
 import { Website } from '../../types/chart';
+import { useMarketingSupport } from '../../hooks/useSiteimproveSupport';
 
 // Helper function for metric labels
 const getMetricLabel = (type: string): string => {
@@ -45,6 +46,8 @@ const MarketingAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+
+    const hasMarketing = useMarketingSupport(selectedWebsite?.domain, selectedWebsite?.name);
 
 
 
@@ -321,6 +324,30 @@ const MarketingAnalysis = () => {
             </VStack>
         );
     };
+
+
+
+    if (selectedWebsite && !hasMarketing) {
+        return (
+            <ChartLayout
+                title="Kampanjer"
+                description="Se trafikk fra kampanjer og lenker med sporing (UTM)."
+                currentPage="markedsanalyse"
+                websiteDomain={selectedWebsite?.domain}
+                websiteName={selectedWebsite?.name}
+                sidebarContent={
+                    <WebsitePicker
+                        selectedWebsite={selectedWebsite}
+                        onWebsiteChange={setSelectedWebsite}
+                    />
+                }
+            >
+                <Alert variant="warning">
+                    Markedsanalyse er ikke aktivert for dette nettstedet. Kontakt Team ResearchOps for å aktivere det.
+                </Alert>
+            </ChartLayout>
+        );
+    }
 
     return (
         <ChartLayout
