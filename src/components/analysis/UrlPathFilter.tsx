@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Label, UNSAFE_Combobox, Modal, Textarea, Button, TextField } from "@navikt/ds-react";
+import { Label, UNSAFE_Combobox, Modal, Textarea, Button } from "@navikt/ds-react";
 import { normalizeUrlToPath } from "../../lib/utils";
 
 interface UrlPathFilterProps {
@@ -49,11 +49,8 @@ export const UrlPathFilter = ({
     const [urlPasteError, setUrlPasteError] = useState("");
     const urlModalRef = useRef<HTMLDialogElement>(null);
 
-    // Unsaved input modal state (shown when user blurs with typed text)
-    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
-    const [unsavedValue, setUnsavedValue] = useState("");
-    const unsavedModalRef = useRef<HTMLDialogElement>(null);
-    const isSelectingRef = useRef(false); // Track if user is selecting from dropdown
+    // Track if user is selecting from dropdown (to avoid auto-add during selection)
+    const isSelectingRef = useRef(false);
 
     // Helper function to normalize domain for comparison
     const normalizeDomain = (domain: string) => {
@@ -111,12 +108,12 @@ export const UrlPathFilter = ({
     // Handle pasting multiple URLs directly into combobox
     const handlePaste = (e: React.ClipboardEvent) => {
         const pastedText = e.clipboardData.getData('text');
-        
+
         if (hasMultipleValues(pastedText)) {
             e.preventDefault(); // Prevent default paste behavior
-            
+
             const { paths, invalid } = parseMultipleUrls(pastedText);
-            
+
             if (invalid.length > 0) {
                 // If there are invalid URLs, fall back to modal for user feedback
                 setUrlPasteInput(pastedText);
@@ -124,7 +121,7 @@ export const UrlPathFilter = ({
                 setIsUrlModalOpen(true);
                 return;
             }
-            
+
             if (paths.length > 0) {
                 // Add all valid paths
                 const uniqueNewPaths = new Set([...urlPaths, ...paths]);
@@ -160,10 +157,10 @@ export const UrlPathFilter = ({
 
     const handleToggleSelected = (option: string, isSelected: boolean) => {
         console.log('[UrlPathFilter] handleToggleSelected called:', { option, isSelected, currentPaths: urlPaths });
-        
+
         // Mark that we're in a selection process
         isSelectingRef.current = true;
-        
+
         if (isSelected) {
             let normalized = normalizeUrlToPath(option);
             console.log('[UrlPathFilter] normalizeUrlToPath result:', normalized);
@@ -186,48 +183,33 @@ export const UrlPathFilter = ({
             console.log('[UrlPathFilter] Removing path, new paths:', newPaths);
             onUrlPathsChange(newPaths);
         }
-        
+
         // Clear input after handling toggle
         setComboInputValue("");
-        
+
         // Reset selection flag after a short delay
         setTimeout(() => {
             isSelectingRef.current = false;
         }, 100);
     };
 
-    // Handle blur - show modal if there's unsaved input
+    // Handle blur - auto-add any typed value (silent, no modal)
     const handleBlur = () => {
         // Use a small delay to allow toggle selection to complete first
         setTimeout(() => {
             const trimmedValue = comboInputValue.trim();
-            // Only show modal if there's actual input and we're not in the middle of selecting
+            // Only auto-add if there's actual input and we're not in the middle of selecting
             if (trimmedValue && !isSelectingRef.current) {
-                setUnsavedValue(trimmedValue);
-                setIsUnsavedModalOpen(true);
+                let normalized = normalizeUrlToPath(trimmedValue);
+                if (normalized && !normalized.startsWith('/')) {
+                    normalized = '/' + normalized;
+                }
+                if (normalized && !urlPaths.includes(normalized)) {
+                    onUrlPathsChange([...urlPaths, normalized]);
+                }
+                setComboInputValue("");
             }
         }, 150);
-    };
-
-    // Handle adding the unsaved value
-    const handleAddUnsavedValue = () => {
-        let normalized = normalizeUrlToPath(unsavedValue);
-        if (normalized && !normalized.startsWith('/')) {
-            normalized = '/' + normalized;
-        }
-        if (normalized && !urlPaths.includes(normalized)) {
-            onUrlPathsChange([...urlPaths, normalized]);
-        }
-        setComboInputValue("");
-        setUnsavedValue("");
-        setIsUnsavedModalOpen(false);
-    };
-
-    // Handle discarding the unsaved value
-    const handleDiscardUnsavedValue = () => {
-        setComboInputValue("");
-        setUnsavedValue("");
-        setIsUnsavedModalOpen(false);
     };
 
     return (
@@ -262,34 +244,7 @@ export const UrlPathFilter = ({
                 />
             </div>
 
-            {/* Unsaved input confirmation modal */}
-            <Modal
-                ref={unsavedModalRef}
-                open={isUnsavedModalOpen}
-                onClose={handleDiscardUnsavedValue}
-                header={{ heading: "Lagre URL-sti?", closeButton: true }}
-            >
-                <Modal.Body>
-                    <p className="mb-4">
-                        Du har skrevet inn en verdi som ikke ble lagt til. Rediger om nødvendig:
-                    </p>
-                    <TextField
-                        label="URL-sti"
-                        hideLabel
-                        size="small"
-                        value={unsavedValue.startsWith('/') ? unsavedValue : '/' + unsavedValue}
-                        onChange={(e) => setUnsavedValue(e.target.value)}
-                    />
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={handleAddUnsavedValue}>
-                        Legg til
-                    </Button>
-                    <Button variant="secondary" onClick={handleDiscardUnsavedValue}>
-                        Forkast
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+
 
             {/* Bulk URL paste modal */}
             <Modal

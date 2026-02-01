@@ -1,4 +1,4 @@
-import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea, TextField } from "@navikt/ds-react";
+import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
@@ -110,11 +110,8 @@ const Dashboard = () => {
     // Combobox input state
     const [comboInputValue, setComboInputValue] = useState("");
 
-    // Unsaved input modal state (shown when user blurs with typed text)
-    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
-    const [unsavedValue, setUnsavedValue] = useState("");
-    const unsavedModalRef = useRef<HTMLDialogElement>(null);
-    const isSelectingRef = useRef(false); // Track if user is selecting from dropdown
+    // Track if user is selecting from dropdown (to avoid auto-add during selection)
+    const isSelectingRef = useRef(false);
 
     // Active filters used for fetching data
     const [activeFilters, setActiveFilters] = useState({
@@ -475,19 +472,19 @@ const Dashboard = () => {
     // Handle pasting multiple URLs directly into combobox
     const handleUrlPaste = (e: React.ClipboardEvent) => {
         const pastedText = e.clipboardData.getData('text');
-        
+
         if (hasMultipleValues(pastedText)) {
             e.preventDefault();
-            
+
             const { paths, invalid } = parseMultipleUrls(pastedText);
-            
+
             if (invalid.length > 0) {
                 setUrlPasteInput(pastedText);
                 setUrlPasteError(`Noen URL-er tilhører ikke valgt nettside eller er ugyldige. Sjekk: ${invalid.slice(0, 3).join(', ')}${invalid.length > 3 ? '...' : ''}`);
                 setIsUrlModalOpen(true);
                 return;
             }
-            
+
             if (paths.length > 0) {
                 const uniqueNewPaths = new Set([...tempUrlPaths, ...paths]);
                 setTempUrlPaths(Array.from(uniqueNewPaths));
@@ -496,38 +493,23 @@ const Dashboard = () => {
         }
     };
 
-    // Handle blur on combobox - show modal if there's unsaved input
+    // Handle blur on combobox - auto-add any typed value (silent, no modal)
     const handleComboBlur = () => {
         // Use a small delay to allow toggle selection to complete first
         setTimeout(() => {
             const trimmedValue = comboInputValue.trim();
-            // Only show modal if there's actual input and we're not in the middle of selecting
+            // Only auto-add if there's actual input and we're not in the middle of selecting
             if (trimmedValue && !isSelectingRef.current) {
-                setUnsavedValue(trimmedValue);
-                setIsUnsavedModalOpen(true);
+                let normalized = normalizeUrlToPath(trimmedValue);
+                if (normalized && !normalized.startsWith('/')) {
+                    normalized = '/' + normalized;
+                }
+                if (normalized && !tempUrlPaths.includes(normalized)) {
+                    setTempUrlPaths(prev => [...prev, normalized]);
+                }
+                setComboInputValue("");
             }
         }, 150);
-    };
-
-    // Handle adding the unsaved value
-    const handleAddUnsavedValue = () => {
-        let normalized = normalizeUrlToPath(unsavedValue);
-        if (normalized && !normalized.startsWith('/')) {
-            normalized = '/' + normalized;
-        }
-        if (normalized && !tempUrlPaths.includes(normalized)) {
-            setTempUrlPaths(prev => [...prev, normalized]);
-        }
-        setComboInputValue("");
-        setUnsavedValue("");
-        setIsUnsavedModalOpen(false);
-    };
-
-    // Handle discarding the unsaved value
-    const handleDiscardUnsavedValue = () => {
-        setComboInputValue("");
-        setUnsavedValue("");
-        setIsUnsavedModalOpen(false);
     };
 
     const handleBulkAddUrls = () => {
@@ -660,7 +642,7 @@ const Dashboard = () => {
                             onToggleSelected={(option, isSelected) => {
                                 // Mark that we're in a selection process
                                 isSelectingRef.current = true;
-                                
+
                                 // Clear input on selection
                                 setComboInputValue("");
 
@@ -682,7 +664,7 @@ const Dashboard = () => {
                                     }
                                     setTempUrlPaths(prev => prev.filter(p => p !== option && p !== normalized));
                                 }
-                                
+
                                 // Reset selection flag after a short delay
                                 setTimeout(() => {
                                     isSelectingRef.current = false;
@@ -835,34 +817,7 @@ const Dashboard = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* Unsaved input confirmation modal */}
-            <Modal
-                ref={unsavedModalRef}
-                open={isUnsavedModalOpen}
-                onClose={handleDiscardUnsavedValue}
-                header={{ heading: "Lagre URL-sti?", closeButton: true }}
-            >
-                <Modal.Body>
-                    <p className="mb-4">
-                        Du har skrevet inn en verdi som ikke ble lagt til. Rediger om nødvendig:
-                    </p>
-                    <TextField
-                        label="URL-sti"
-                        hideLabel
-                        size="small"
-                        value={unsavedValue.startsWith('/') ? unsavedValue : '/' + unsavedValue}
-                        onChange={(e) => setUnsavedValue(e.target.value)}
-                    />
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={handleAddUnsavedValue}>
-                        Legg til
-                    </Button>
-                    <Button variant="secondary" onClick={handleDiscardUnsavedValue}>
-                        Forkast
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+
 
             {/* Bulk URL Modal */}
             <Modal
