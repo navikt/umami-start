@@ -57,6 +57,9 @@ export const UrlPathFilter = ({
         path: string;
         originalUrl: string;
     } | null>(null);
+    // Modal for missing leading slash
+    const [isMissingSlashModalOpen, setIsMissingSlashModalOpen] = useState(false);
+    const [pendingMissingSlash, setPendingMissingSlash] = useState<string | null>(null);
     const switchModalRef = useRef<HTMLDialogElement>(null);
 
     // Track if user is selecting from dropdown (to avoid auto-add during selection)
@@ -246,21 +249,21 @@ export const UrlPathFilter = ({
     };
 
     const handleToggleSelected = (option: string, isSelected: boolean) => {
-        console.log('[UrlPathFilter] handleToggleSelected called:', { option, isSelected, currentPaths: urlPaths });
-
         // Mark that we're in a selection process
         isSelectingRef.current = true;
 
         if (isSelected) {
             let normalized = normalizeUrlToPath(option);
-            console.log('[UrlPathFilter] normalizeUrlToPath result:', normalized);
-            // Ensure path starts with / if it has content
+            // If missing leading slash, ask user
             if (normalized && !normalized.startsWith('/')) {
-                normalized = '/' + normalized;
+                setPendingMissingSlash(normalized);
+                setIsMissingSlashModalOpen(true);
+                setComboInputValue("");
+                setTimeout(() => { isSelectingRef.current = false; }, 100);
+                return;
             }
             if (normalized && !urlPaths.includes(normalized)) {
                 const newPaths = [...urlPaths, normalized];
-                console.log('[UrlPathFilter] Adding path, new paths:', newPaths);
                 onUrlPathsChange(newPaths);
             }
         } else {
@@ -270,7 +273,6 @@ export const UrlPathFilter = ({
                 normalized = '/' + normalized;
             }
             const newPaths = urlPaths.filter(p => p !== option && p !== normalized);
-            console.log('[UrlPathFilter] Removing path, new paths:', newPaths);
             onUrlPathsChange(newPaths);
         }
 
@@ -283,19 +285,15 @@ export const UrlPathFilter = ({
         }, 100);
     };
 
-    // Handle blur - auto-add any typed value (silent, no modal)
+    // Handle blur - auto-add any typed value (with modal for missing slash)
     const handleBlur = () => {
-        // Use a small delay to allow toggle selection to complete first
         setTimeout(async () => {
             const trimmedValue = comboInputValue.trim();
-            // Only auto-add if there's actual input and we're not in the middle of selecting
             if (trimmedValue && !isSelectingRef.current) {
-
                 // Check for cross-site URL
                 if (trimmedValue.match(/^https?:\/\//)) {
                     const match = await findMatchingWebsite(trimmedValue);
                     const currentDomain = selectedWebsiteDomain ? normalizeDomain(selectedWebsiteDomain) : null;
-
                     if (match && currentDomain) {
                         const matchDomain = normalizeDomain(match.website.domain);
                         if (matchDomain !== currentDomain) {
@@ -305,14 +303,16 @@ export const UrlPathFilter = ({
                                 originalUrl: trimmedValue
                             });
                             setIsSwitchModalOpen(true);
-                            return; // Stop processing, modal will handle it
+                            return;
                         }
                     }
                 }
-
                 let normalized = normalizeUrlToPath(trimmedValue);
                 if (normalized && !normalized.startsWith('/')) {
-                    normalized = '/' + normalized;
+                    setPendingMissingSlash(normalized);
+                    setIsMissingSlashModalOpen(true);
+                    setComboInputValue("");
+                    return;
                 }
                 if (normalized && !urlPaths.includes(normalized)) {
                     onUrlPathsChange([...urlPaths, normalized]);
@@ -396,6 +396,48 @@ export const UrlPathFilter = ({
             </Modal>
 
             {/* Website switch confirmation modal */}
+                        {/* Missing leading slash modal */}
+                        <Modal
+                            open={isMissingSlashModalOpen}
+                            onClose={() => {
+                                setIsMissingSlashModalOpen(false);
+                                setPendingMissingSlash(null);
+                            }}
+                            header={{ heading: pendingMissingSlash ? `Mente du /${pendingMissingSlash}?` : '', closeButton: true }}
+                        >
+                            <Modal.Body>
+                                {pendingMissingSlash && (
+                                    <div className="space-y-4">
+                                        <p>
+                                            Du skrev <strong>{pendingMissingSlash}</strong>, men URL-er starter vanligvis med <strong>/</strong>.
+                                        </p>
+                                        <p>Vil du at vi skal legge til dette automatisk?</p>
+                                    </div>
+                                )}
+                            </Modal.Body>
+                            <Modal.Footer>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        setIsMissingSlashModalOpen(false);
+                                        setPendingMissingSlash(null);
+                                    }}
+                                >
+                                    Avbryt
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        if (pendingMissingSlash && !urlPaths.includes('/' + pendingMissingSlash)) {
+                                            onUrlPathsChange([...urlPaths, '/' + pendingMissingSlash]);
+                                        }
+                                        setIsMissingSlashModalOpen(false);
+                                        setPendingMissingSlash(null);
+                                    }}
+                                >
+                                    Ja, legg til /
+                                </Button>
+                            </Modal.Footer>
+                        </Modal>
             <Modal
                 ref={switchModalRef}
                 open={isSwitchModalOpen}

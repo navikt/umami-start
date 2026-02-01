@@ -112,8 +112,9 @@ export const useWebsiteMatching = () => {
             });
 
             // If no exact match, try normalized comparison and suffix matching
+
             if (!matchedWebsite) {
-                matchedWebsite = availableWebsites.reduce<Website | null>((best, item) => {
+                matchedWebsite = availableWebsites.reduce<Website | undefined>((best, item) => {
                     const normalizedDomain = normalizeDomain(item.domain);
 
                     // Exact normalized match
@@ -129,7 +130,7 @@ export const useWebsiteMatching = () => {
                     }
 
                     return best;
-                }, null);
+                }, undefined);
             }
 
             if (matchedWebsite) {
