@@ -19,7 +19,7 @@ export const analyticsPages = [
     {
         id: 'trafikkanalyse',
         href: '/trafikkanalyse',
-        label: 'Trafikkanalyse',
+        label: 'Trafikkoversikt',
         description: 'Se besøk over tid og trafikkilder'
     },
     {

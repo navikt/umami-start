@@ -140,7 +140,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                                 Trafikk & Hendelser
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
-                                Trafikkanalyse
+                                Trafikkoversikt
                             </Button>
                             {hasMarketing && (
                                 <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className="justify-start">
