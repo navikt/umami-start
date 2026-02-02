@@ -23,9 +23,9 @@ const UserComposition = () => {
         ? pathsFromUrl.map(p => normalizeUrlToPath(p)).filter(Boolean)
         : (legacyPath ? [normalizeUrlToPath(legacyPath)].filter(Boolean) : []);
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
-    const [pathOperator, setPathOperator] = useState<string>('equals');
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -93,7 +93,8 @@ const UserComposition = () => {
                     websiteId: selectedWebsite.id,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
-                    urlPath: urlPaths.length > 0 ? urlPaths[0] : undefined
+                    urlPath: urlPaths.length > 0 ? urlPaths[0] : undefined,
+                    pathOperator: pathOperator
                 }),
             });
 
@@ -118,9 +119,11 @@ const UserComposition = () => {
                 newParams.set('period', period);
                 if (urlPaths.length > 0) {
                     newParams.set('urlPath', urlPaths[0]);
+                    newParams.set('pathOperator', pathOperator);
                     newParams.delete('pagePath');
                 } else {
                     newParams.delete('urlPath');
+                    newParams.delete('pathOperator');
                     newParams.delete('pagePath');
                 }
 
@@ -215,8 +218,6 @@ const UserComposition = () => {
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
                         label="Side eller URL"
-                        showOperator={false}
-
                     />
 
                     <PeriodPicker

@@ -3094,7 +3094,7 @@ app.post('/api/bigquery/retention', async (req, res) => {
 // Get user composition data from BigQuery
 app.post('/api/bigquery/composition', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath } = req.body;
+        const { websiteId, startDate, endDate, urlPath, pathOperator } = req.body;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -3136,7 +3136,10 @@ app.post('/api/bigquery/composition', async (req, res) => {
                     WHERE e.session_id = s.session_id 
                       AND e.website_id = @websiteId
                       AND e.created_at BETWEEN @startDate AND @endDate
-                      AND ${normalizeUrlSql.replace(/url_path/g, 'e.url_path')} = @urlPath
+                      ${pathOperator === 'starts-with'
+                    ? `AND LOWER(${normalizeUrlSql.replace(/url_path/g, 'e.url_path')}) LIKE @urlPathPattern`
+                    : `AND ${normalizeUrlSql.replace(/url_path/g, 'e.url_path')} = @urlPath`
+                }
                   )` : ''}
             )
             SELECT 'browser' as category, browser as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
@@ -3160,7 +3163,11 @@ app.post('/api/bigquery/composition', async (req, res) => {
         };
 
         if (urlPath) {
-            params.urlPath = urlPath;
+            if (pathOperator === 'starts-with') {
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPath = urlPath;
+            }
         }
 
         // Get dry run stats
