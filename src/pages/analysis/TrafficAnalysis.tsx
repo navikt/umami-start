@@ -44,7 +44,7 @@ const TrafficAnalysis = () => {
     const [urlPaths, setUrlPaths] = useState<string[]>(initialPaths);
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -61,7 +61,7 @@ const TrafficAnalysis = () => {
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
 
-    const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
+    const [granularity, setGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('visits');
@@ -69,7 +69,7 @@ const TrafficAnalysis = () => {
     // View options
     const [metricType, setMetricTypeState] = useState<string>(() => getStoredMetricType(searchParams.get('metricType')));
     const [submittedMetricType, setSubmittedMetricType] = useState<string>(() => getStoredMetricType(searchParams.get('metricType'))); // Track what was actually submitted
-    
+
     // Wrap setMetricType to also save to localStorage
     const setMetricType = (newMetricType: string) => {
         setMetricTypeState(newMetricType);
@@ -120,6 +120,17 @@ const TrafficAnalysis = () => {
     // Auto-fetch when filters change (after initial fetch) - Removed manual fetch enforcement
     // No useEffect here for auto-fetch to save costs as per user request
 
+    // Auto-switch to hourly granularity for short periods
+    useEffect(() => {
+        if (period === 'today' || period === 'yesterday') {
+            setGranularity('hour');
+        } else {
+            // Default back to day if switching away from short period, unless strict preference?
+            // Keep it simple: if previously hour code, switch to day. 
+            setGranularity(prev => prev === 'hour' ? 'day' : prev);
+        }
+    }, [period]);
+
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
 
@@ -138,6 +149,10 @@ const TrafficAnalysis = () => {
         setHasAttemptedFetch(true);
         setSubmittedMetricType(metricType);
 
+        // Determine interval - prioritize hour if selected, otherwise let backend default (day) or handle as needed
+        // Note: We only request 'hour' explicitly. For week/month, we currently fetch daily data and aggregate in frontend.
+        const interval = granularity === 'hour' ? 'hour' : 'day';
+
         // Calculate date range based on period using centralized utility
         const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
         if (!dateRange) {
@@ -152,7 +167,7 @@ const TrafficAnalysis = () => {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
 
-            let seriesUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}`;
+            let seriesUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}&interval=${interval}`;
             if (normalizedPath) {
                 seriesUrl += `&urlPath=${encodeURIComponent(normalizedPath)}`;
             }
@@ -278,8 +293,9 @@ const TrafficAnalysis = () => {
 
         let processedData = seriesData;
 
-        // Apply aggregation if granularity is not 'day'
-        if (granularity !== 'day') {
+        // Apply aggregation if granularity is 'week' or 'month'
+        // For 'hour', we use the data as-is (assuming backend returned hourly data)
+        if (granularity === 'week' || granularity === 'month') {
             const aggregated = new Map<string, { time: Date, value: number, count: number }>();
 
             seriesData.forEach((item: any) => {
@@ -346,6 +362,8 @@ const TrafficAnalysis = () => {
                 xAxisLabel = `Uke ${format(new Date(item.time), 'w', { locale: nb })}`;
             } else if (granularity === 'month') {
                 xAxisLabel = format(new Date(item.time), 'MMM yyyy', { locale: nb });
+            } else if (granularity === 'hour') {
+                xAxisLabel = `${format(new Date(item.time), 'HH:mm')}`;
             } else {
                 xAxisLabel = new Date(item.time).toLocaleDateString('nb-NO');
             }
@@ -429,12 +447,16 @@ const TrafficAnalysis = () => {
             }
         };
         const metricLabel = getCSVMetricLabel(submittedMetricType);
-        const headers = ['Dato', metricLabel];
+        const dateHeader = granularity === 'hour' ? 'Tidspunkt' : 'Dato';
+        const headers = [dateHeader, metricLabel];
         const csvRows = [
             headers.join(','),
             ...seriesData.map((item) => {
+                const timeStr = granularity === 'hour'
+                    ? `${new Date(item.time).toLocaleDateString('nb-NO')} ${new Date(item.time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`
+                    : new Date(item.time).toLocaleDateString('nb-NO');
                 return [
-                    new Date(item.time).toLocaleDateString('nb-NO'),
+                    timeStr,
                     submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
                 ].join(',');
             })
@@ -830,8 +852,15 @@ const TrafficAnalysis = () => {
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
 
+        const formatTime = (time: string) => {
+            if (granularity === 'hour') {
+                return `${new Date(time).toLocaleDateString('nb-NO')} ${new Date(time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+            return new Date(time).toLocaleDateString('nb-NO');
+        };
+
         const filteredData = data.filter(item =>
-            new Date(item.time).toLocaleDateString('nb-NO').includes(search)
+            formatTime(item.time).includes(search)
         );
 
         useEffect(() => {
@@ -847,9 +876,9 @@ const TrafficAnalysis = () => {
                     <Heading level="3" size="small">Trend</Heading>
                     <div className="w-64">
                         <TextField
-                            label="Søk etter dato"
+                            label={granularity === 'hour' ? "Søk etter tidspunkt" : "Søk etter dato"}
                             hideLabel
-                            placeholder="Søk etter dato..."
+                            placeholder={granularity === 'hour' ? "Søk etter tid..." : "Søk etter dato..."}
                             size="small"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -860,7 +889,7 @@ const TrafficAnalysis = () => {
                     <Table size="small">
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell>Dato</Table.HeaderCell>
+                                <Table.HeaderCell>{granularity === 'hour' ? 'Tidspunkt' : 'Dato'}</Table.HeaderCell>
                                 <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
@@ -868,7 +897,7 @@ const TrafficAnalysis = () => {
                             {paginatedData.map((item, index) => (
                                 <Table.Row key={index}>
                                     <Table.DataCell>
-                                        {new Date(item.time).toLocaleDateString('nb-NO')}
+                                        {formatTime(item.time)}
                                     </Table.DataCell>
                                     <Table.DataCell align="right">
                                         {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
@@ -878,7 +907,7 @@ const TrafficAnalysis = () => {
                             {filteredData.length === 0 && (
                                 <Table.Row>
                                     <Table.DataCell colSpan={2} align="center">
-                                        {data.length > 0 ? 'Ingen treff' : 'Ingen data'}
+                                        {data.length > 0 ? 'Ingen treff (Data: ' + data.length + ')' : 'Ingen data'}
                                     </Table.DataCell>
                                 </Table.Row>
                             )}
@@ -1002,7 +1031,7 @@ const TrafficAnalysis = () => {
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
-                                <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} />
+                                <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={granularity} />
                                 <div className="flex flex-col gap-8">
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center mb-2">
@@ -1028,6 +1057,7 @@ const TrafficAnalysis = () => {
                                                     <option value="day">Daglig</option>
                                                     <option value="week">Ukentlig</option>
                                                     <option value="month">Månedlig</option>
+                                                    <option value="hour">Time</option>
                                                 </Select>
                                             </div>
                                         </div>

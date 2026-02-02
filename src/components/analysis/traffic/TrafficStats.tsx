@@ -5,9 +5,10 @@ interface TrafficStatsProps {
     metricType: string;
     /** Optional: Override the total with actual unique count (e.g., from page metrics) */
     totalOverride?: number;
+    granularity?: 'day' | 'week' | 'month' | 'hour';
 }
 
-const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOverride }) => {
+const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOverride, granularity = 'day' }) => {
     if (!data || data.length === 0) return null;
 
     // Calculate stats
@@ -18,7 +19,25 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
     // Find absolute max and corresponding date
     const maxItem = data.reduce((prev, current) => (prev.count > current.count) ? prev : current, data[0]);
     const max = maxItem.count;
-    const maxDate = new Date(maxItem.time).toLocaleDateString('nb-NO');
+
+    let maxLabelText = '';
+    if (granularity === 'hour') {
+        maxLabelText = new Date(maxItem.time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+        // Add date if spanning multiple days might be good, but usually 'hour' is for short periods. 
+        // Let's include date just in case.
+        maxLabelText = `${new Date(maxItem.time).toLocaleDateString('nb-NO')} ${maxLabelText}`;
+    } else if (granularity === 'week') {
+        // Week number
+        // Note: Formatting week number requires date-fns or similar if we want "Uke X", 
+        // but here we just use date string or leave as is. 
+        // The original used local date string.
+        maxLabelText = new Date(maxItem.time).toLocaleDateString('nb-NO');
+    } else if (granularity === 'month') {
+        // Month name
+        maxLabelText = new Date(maxItem.time).toLocaleString('nb-NO', { month: 'long', year: 'numeric' });
+    } else {
+        maxLabelText = new Date(maxItem.time).toLocaleDateString('nb-NO');
+    }
 
     // Calculate median
     const sortedValues = [...values].sort((a, b) => a - b);
@@ -47,12 +66,20 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
     let box1Label = `Totalt ${getMetricLabel(metricType)}`;
     let box1Value = totalOverride !== undefined ? totalOverride : sum;
 
-    let box2Label = 'Gjennomsnitt per dag';
+    let timeUnitLabel = 'dag';
+    if (granularity === 'hour') timeUnitLabel = 'time';
+    if (granularity === 'week') timeUnitLabel = 'uke';
+    if (granularity === 'month') timeUnitLabel = 'måned';
+
+    let box2Label = `Gjennomsnitt per ${timeUnitLabel}`;
     let box2Value = avg;
 
-    let box3Label = 'Toppdag';
+    let box3Label = 'Topp-periode';
+    if (granularity === 'day') box3Label = 'Toppdag';
+    if (granularity === 'hour') box3Label = 'Topp-time';
+
     let box3Value = max;
-    let box3Subtext = '';
+    let box3Subtext = maxLabelText;
 
     if (metricType === 'proportion') {
         box1Label = 'Gjennomsnittlig andel';
@@ -63,7 +90,7 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
 
         box3Label = 'Høyeste andel';
         box3Value = max; // Max proportion (0.x)
-        box3Subtext = maxDate;
+        box3Subtext = maxLabelText;
     }
 
     return (
