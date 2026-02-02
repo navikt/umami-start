@@ -51,6 +51,9 @@ const TrafficAnalysis = () => {
         savePeriodPreference(newPeriod);
     };
 
+    // Track submitted period to prevent chart flashing on selection change
+    const [submittedPeriod, setSubmittedPeriod] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+
 
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
@@ -62,6 +65,7 @@ const TrafficAnalysis = () => {
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
 
     const [granularity, setGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
+    const [submittedGranularity, setSubmittedGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
 
     // Tab states
     const [activeTab, setActiveTab] = useState<string>('visits');
@@ -120,17 +124,6 @@ const TrafficAnalysis = () => {
     // Auto-fetch when filters change (after initial fetch) - Removed manual fetch enforcement
     // No useEffect here for auto-fetch to save costs as per user request
 
-    // Auto-switch to hourly granularity for short periods
-    useEffect(() => {
-        if (period === 'today' || period === 'yesterday') {
-            setGranularity('hour');
-        } else {
-            // Default back to day if switching away from short period, unless strict preference?
-            // Keep it simple: if previously hour code, switch to day. 
-            setGranularity(prev => prev === 'hour' ? 'day' : prev);
-        }
-    }, [period]);
-
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
 
@@ -148,10 +141,20 @@ const TrafficAnalysis = () => {
         setExternalReferrerData([]);
         setHasAttemptedFetch(true);
         setSubmittedMetricType(metricType);
+        let effectiveGranularity = granularity;
+
+        // Auto-switch to hourly granularity for short periods upon fetch
+        if (period === 'today' || period === 'yesterday') {
+            effectiveGranularity = 'hour';
+            setGranularity('hour'); // Sync UI with the enforced decision
+        }
+
+        setSubmittedGranularity(effectiveGranularity);
+        setSubmittedPeriod(period);
 
         // Determine interval - prioritize hour if selected, otherwise let backend default (day) or handle as needed
         // Note: We only request 'hour' explicitly. For week/month, we currently fetch daily data and aggregate in frontend.
-        const interval = granularity === 'hour' ? 'hour' : 'day';
+        const interval = effectiveGranularity === 'hour' ? 'hour' : 'day';
 
         // Calculate date range based on period using centralized utility
         const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
@@ -295,7 +298,7 @@ const TrafficAnalysis = () => {
 
         // Apply aggregation if granularity is 'week' or 'month'
         // For 'hour', we use the data as-is (assuming backend returned hourly data)
-        if (granularity === 'week' || granularity === 'month') {
+        if (submittedGranularity === 'week' || submittedGranularity === 'month') {
             const aggregated = new Map<string, { time: Date, value: number, count: number }>();
 
             seriesData.forEach((item: any) => {
@@ -305,7 +308,7 @@ const TrafficAnalysis = () => {
                 let key = '';
                 let displayTime = date;
 
-                if (granularity === 'week') {
+                if (submittedGranularity === 'week') {
                     displayTime = startOfWeek(date, { weekStartsOn: 1 });
                     key = format(displayTime, 'yyyy-MM-dd');
                 } else { // month
@@ -358,11 +361,11 @@ const TrafficAnalysis = () => {
             }
 
             let xAxisLabel = '';
-            if (granularity === 'week') {
+            if (submittedGranularity === 'week') {
                 xAxisLabel = `Uke ${format(new Date(item.time), 'w', { locale: nb })}`;
-            } else if (granularity === 'month') {
+            } else if (submittedGranularity === 'month') {
                 xAxisLabel = format(new Date(item.time), 'MMM yyyy', { locale: nb });
-            } else if (granularity === 'hour') {
+            } else if (submittedGranularity === 'hour') {
                 xAxisLabel = `${format(new Date(item.time), 'HH:mm')}`;
             } else {
                 xAxisLabel = new Date(item.time).toLocaleDateString('nb-NO');
@@ -422,7 +425,7 @@ const TrafficAnalysis = () => {
             yMax,
             yMin,
         };
-    }, [seriesData, showAverage, submittedMetricType, granularity]);
+    }, [seriesData, showAverage, submittedMetricType, submittedGranularity]);
 
     const copyShareLink = async () => {
         try {
@@ -447,12 +450,12 @@ const TrafficAnalysis = () => {
             }
         };
         const metricLabel = getCSVMetricLabel(submittedMetricType);
-        const dateHeader = granularity === 'hour' ? 'Tidspunkt' : 'Dato';
+        const dateHeader = submittedGranularity === 'hour' ? 'Tidspunkt' : 'Dato';
         const headers = [dateHeader, metricLabel];
         const csvRows = [
             headers.join(','),
             ...seriesData.map((item) => {
-                const timeStr = granularity === 'hour'
+                const timeStr = submittedGranularity === 'hour'
                     ? `${new Date(item.time).toLocaleDateString('nb-NO')} ${new Date(item.time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`
                     : new Date(item.time).toLocaleDateString('nb-NO');
                 return [
@@ -853,7 +856,7 @@ const TrafficAnalysis = () => {
         const rowsPerPage = 20;
 
         const formatTime = (time: string) => {
-            if (granularity === 'hour') {
+            if (submittedGranularity === 'hour') {
                 return `${new Date(time).toLocaleDateString('nb-NO')} ${new Date(time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`;
             }
             return new Date(time).toLocaleDateString('nb-NO');
@@ -876,9 +879,9 @@ const TrafficAnalysis = () => {
                     <Heading level="3" size="small">Trend</Heading>
                     <div className="w-64">
                         <TextField
-                            label={granularity === 'hour' ? "Søk etter tidspunkt" : "Søk etter dato"}
+                            label={submittedGranularity === 'hour' ? "Søk etter tidspunkt" : "Søk etter dato"}
                             hideLabel
-                            placeholder={granularity === 'hour' ? "Søk etter tid..." : "Søk etter dato..."}
+                            placeholder={submittedGranularity === 'hour' ? "Søk etter tid..." : "Søk etter dato..."}
                             size="small"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -889,7 +892,7 @@ const TrafficAnalysis = () => {
                     <Table size="small">
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell>{granularity === 'hour' ? 'Tidspunkt' : 'Dato'}</Table.HeaderCell>
+                                <Table.HeaderCell>{submittedGranularity === 'hour' ? 'Tidspunkt' : 'Dato'}</Table.HeaderCell>
                                 <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
@@ -1031,7 +1034,7 @@ const TrafficAnalysis = () => {
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
-                                <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={granularity} />
+                                <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={submittedGranularity} />
                                 <div className="flex flex-col gap-8">
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center mb-2">
@@ -1065,7 +1068,7 @@ const TrafficAnalysis = () => {
                                             {chartData ? (
                                                 <ResponsiveContainer>
                                                     <LineChart
-                                                        key={`${submittedMetricType}-${period}-${seriesData.length}`}
+                                                        key={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}`}
                                                         data={chartData.data}
                                                         legendsOverflowText={'Overflow Items'}
                                                         yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
