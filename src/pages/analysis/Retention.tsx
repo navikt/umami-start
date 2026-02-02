@@ -1,13 +1,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Heading, BodyShort } from '@navikt/ds-react';
+import { Button, Alert, Loader, Tabs, Heading, BodyShort } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
@@ -18,8 +19,9 @@ const Retention = () => {
 
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -125,6 +127,7 @@ const Retention = () => {
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                     urlPath: normalizedUrl,
+                    pathOperator,
                 }),
             });
 
@@ -172,8 +175,10 @@ const Retention = () => {
                 newParams.set('period', period);
                 if (normalizedUrl) {
                     newParams.set('urlPath', normalizedUrl);
+                    newParams.set('pathOperator', pathOperator);
                 } else {
                     newParams.delete('urlPath');
+                    newParams.delete('pathOperator');
                 }
 
                 // Update URL without navigation
@@ -314,12 +319,13 @@ const Retention = () => {
             filters={
                 <>
                     <div className="w-full sm:w-[300px]">
-                        <TextField
-                            size="small"
+                        <UrlPathFilter
+                            urlPaths={urlPath ? [urlPath] : []}
+                            onUrlPathsChange={(paths) => setUrlPath(paths[0] || '')}
+                            pathOperator={pathOperator}
+                            onPathOperatorChange={setPathOperator}
+                            selectedWebsiteDomain={selectedWebsite?.domain}
                             label="Side eller URL"
-                            value={urlPath}
-                            onChange={(e) => setUrlPath(e.target.value)}
-                            onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
                         />
                     </div>
 

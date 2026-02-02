@@ -2909,7 +2909,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
 // Get retention data from BigQuery
 app.post('/api/bigquery/retention', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath, businessDaysOnly } = req.body;
+        const { websiteId, startDate, endDate, urlPath, pathOperator, businessDaysOnly } = req.body;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -2957,7 +2957,9 @@ app.post('/api/bigquery/retention', async (req, res) => {
                     session_id,
                     event_date AS first_seen_date
                 FROM base
-                WHERE url_path_clean = @urlPath
+                WHERE ${pathOperator === 'starts-with'
+                    ? 'LOWER(url_path_clean) LIKE @urlPathPattern'
+                    : 'url_path_clean = @urlPath'}
             ),
             ` : `
             filtered_sessions AS (
@@ -3016,7 +3018,11 @@ app.post('/api/bigquery/retention', async (req, res) => {
         };
 
         if (urlPath) {
-            params.urlPath = urlPath;
+            if (pathOperator === 'starts-with') {
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPath = urlPath;
+            }
         }
 
         // Get dry run stats
