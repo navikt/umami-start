@@ -276,6 +276,7 @@ const UserProfiles = () => {
             {!loading && users.length > 0 && (() => {
                 const filteredUsers = users.filter(user =>
                     user.sessionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (user.distinctId && user.distinctId.toLowerCase().includes(searchQuery.toLowerCase())) ||
                     (user.country && translateCountry(user.country).toLowerCase().includes(searchQuery.toLowerCase())) ||
                     (user.browser && user.browser.toLowerCase().includes(searchQuery.toLowerCase()))
                 );
@@ -359,11 +360,12 @@ const UserProfiles = () => {
                                         size="small"
                                         variant="secondary"
                                         onClick={() => {
-                                            const headers = ['Bruker ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
+                                            const headers = ['Bruker ID', 'Distinct ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
                                             const csvRows = [
                                                 headers.join(','),
                                                 ...filteredUsers.map((user) => [
                                                     `"${user.sessionId}"`,
+                                                    `"${user.distinctId || ''}"`,
                                                     `"${formatDate(user.lastSeen)}"`,
                                                     `"${translateCountry(user.country)}"`,
                                                     `"${translateDevice(user.device)}"`,
@@ -426,6 +428,12 @@ const UserProfiles = () => {
                                     <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Bruker ID</Heading>
                                     <code className="text-sm break-all">{selectedSession.sessionId}</code>
                                 </div>
+                                {selectedSession.distinctId && (
+                                    <div className="col-span-2">
+                                        <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Distinct ID</Heading>
+                                        <code className="text-sm break-all">{selectedSession.distinctId}</code>
+                                    </div>
+                                )}
                                 <div>
                                     <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Først sett</Heading>
                                     <div className="flex items-center gap-2">

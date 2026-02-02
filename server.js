@@ -3549,7 +3549,7 @@ app.post('/api/bigquery/users', async (req, res) => {
 
         let searchFilter = '';
         if (searchQuery) {
-            searchFilter = `AND session_id LIKE @searchQuery`;
+            searchFilter = `AND (session.session_id LIKE @searchQuery OR session.distinct_id LIKE @searchQuery)`;
             params.searchQuery = `%${searchQuery}%`;
         }
 
@@ -3612,6 +3612,7 @@ app.post('/api/bigquery/users', async (req, res) => {
                     ANY_VALUE(session.device) as device,
                     ANY_VALUE(session.os) as os,
                     ANY_VALUE(session.browser) as browser,
+                    ANY_VALUE(session.distinct_id) as distinct_id,
                     COUNT(*) as event_count
                 FROM \`team-researchops-prod-01d6.umami_views.session\` as session
                 ${urlFilterJoin}
@@ -3689,6 +3690,7 @@ app.post('/api/bigquery/users', async (req, res) => {
 
         const users = rows.map(row => ({
             sessionId: row.session_id,
+            distinctId: row.distinct_id,
             lastSeen: row.last_seen.value,
             firstSeen: row.first_seen.value,
             country: row.country,
