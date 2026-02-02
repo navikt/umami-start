@@ -10,7 +10,7 @@ import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
+import { normalizeUrlToPath, getStoredPeriod } from '../../lib/utils';
 
 
 const Retention = () => {
@@ -20,12 +20,28 @@ const Retention = () => {
     // Initialize state from URL params
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
-    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
+    const [period, setPeriodState] = useState<string>(() => {
+        const initial = getStoredPeriod(searchParams.get('retentionPeriod') || searchParams.get('period'));
+        const validPeriods = ['current_month', 'last_month', 'custom'];
+        return validPeriods.includes(initial) ? initial : 'last_month';
+    });
 
-    // Wrap setPeriod to also save to localStorage
+    // Track if we overrode the global/stored period because it wasn't supported
+    const [overriddenGlobalPeriod, setOverriddenGlobalPeriod] = useState<string | null>(() => {
+        const retentionParam = searchParams.get('retentionPeriod');
+        if (retentionParam) return null; // If explicitly using retentionPeriod, assume valid/intentional
+
+        const requested = getStoredPeriod(searchParams.get('period'));
+        const validPeriods = ['current_month', 'last_month', 'custom'];
+
+        return !validPeriods.includes(requested) ? requested : null;
+    });
+
+    // Do not save period preference to localStorage for Retention, as it restricts available options.
+    // We don't want visiting this page to restrict the global period preference for other pages.
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
-        savePeriodPreference(newPeriod);
+        setOverriddenGlobalPeriod(null); // Clear alert if user manually changes it
     };
 
     // Support custom dates from URL
@@ -67,6 +83,8 @@ const Retention = () => {
 
     // Helper function to normalize URL input - extracts path from full URLs
 
+
+
     const fetchData = async () => {
         if (!selectedWebsite) return;
 
@@ -82,6 +100,7 @@ const Retention = () => {
         const now = new Date();
         let startDate: Date;
         let endDate: Date;
+
 
         if (period === 'current_month') {
             // First day of current month to now
@@ -111,7 +130,8 @@ const Retention = () => {
                 endDate.setHours(23, 59, 59, 999);
             }
         } else {
-            // Default fallback
+            // Default fallback for periods not strictly supported in retention (like 'today', 'week', etc.)
+            // We fall back to "Last Month" to ensure we have meaningful data
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             endDate = new Date(now.getFullYear(), now.getMonth(), 0);
         }
@@ -172,7 +192,8 @@ const Retention = () => {
 
                 // Update URL with configuration for sharing
                 const newParams = new URLSearchParams(window.location.search);
-                newParams.set('period', period);
+                newParams.set('retentionPeriod', period);
+                newParams.delete('period'); // Remove generic period param to avoid polluting other pages
                 if (normalizedUrl) {
                     newParams.set('urlPath', normalizedUrl);
                     newParams.set('pathOperator', pathOperator);
@@ -336,6 +357,7 @@ const Retention = () => {
                         onStartDateChange={setCustomStartDate}
                         endDate={customEndDate}
                         onEndDateChange={setCustomEndDate}
+                        showShortPeriods={false}
                     />
 
                     <div className="flex items-end pb-[2px]">
@@ -359,12 +381,26 @@ const Retention = () => {
 
             {loading && (
                 <div className="flex justify-center items-center h-full">
-                    <Loader size="xlarge" title="Beregner retensjon..." />
+                    <Loader size="xlarge" title="Beregner brukerlojalitet..." />
                 </div>
             )}
 
+
             {!loading && retentionData.length > 0 && (
                 <>
+                    {/* Fallback View Alert */}
+                    {overriddenGlobalPeriod && (
+                        <Alert variant="info" className="mb-4">
+                            <Heading spacing size="small" level="3">
+                                Viser data for forrige måned
+                            </Heading>
+                            <BodyShort spacing>
+                                Med Umami får brukere ny anonym ID ved starten av hver måned.
+                                For å måle lojalitet korrekt må vi derfor holde oss innenfor én kalendermåned.
+                                Vi viser deg tallene for <strong>forrige måned</strong> som sikrer best datakvalitet.
+                            </BodyShort>
+                        </Alert>
+                    )}
 
                     {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && (
                         <Alert variant="warning" className="mb-4">

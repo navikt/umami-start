@@ -11,6 +11,7 @@ interface PeriodPickerProps {
     onEndDateChange: (date: Date | undefined) => void;
     lastMonthLabel?: string;
     currentMonthLabel?: string;
+    showShortPeriods?: boolean;
 }
 
 export const PeriodPicker = ({
@@ -21,7 +22,8 @@ export const PeriodPicker = ({
     endDate,
     onEndDateChange,
     lastMonthLabel = 'Forrige måned',
-    currentMonthLabel = 'Denne måneden'
+    currentMonthLabel = 'Denne måneden',
+    showShortPeriods = true
 }: PeriodPickerProps) => {
     const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
@@ -52,12 +54,16 @@ export const PeriodPicker = ({
                     onChange={handlePeriodChange}
                 >
                     {/* Period options in requested order */}
-                    <option value="today">I dag</option>
-                    <option value="yesterday">I går</option>
-                    <option value="this_week">Denne uken</option>
-                    <option value="last_7_days">Siste 7 dager</option>
-                    <option value="last_week">Forrige uke</option>
-                    <option value="last_28_days">Siste 28 dager</option>
+                    {showShortPeriods && (
+                        <>
+                            <option value="today">I dag</option>
+                            <option value="yesterday">I går</option>
+                            <option value="this_week">Denne uken</option>
+                            <option value="last_7_days">Siste 7 dager</option>
+                            <option value="last_week">Forrige uke</option>
+                            <option value="last_28_days">Siste 28 dager</option>
+                        </>
+                    )}
                     <option value="current_month">{currentMonthLabel}</option>
                     <option value="last_month">{lastMonthLabel}</option>
                     {period === 'custom' && startDate && endDate ? (
