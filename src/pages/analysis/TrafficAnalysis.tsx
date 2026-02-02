@@ -1037,7 +1037,7 @@ const TrafficAnalysis = () => {
                                 <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={submittedGranularity} />
                                 <div className="flex flex-col gap-8">
                                     <div className="flex flex-col gap-4">
-                                        <div className="flex justify-between items-center mb-2">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                                             <div className="flex items-center gap-4">
                                                 <Switch
                                                     checked={showAverage}
