@@ -3524,7 +3524,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 // Get user sessions (User Profiles)
 app.post('/api/bigquery/users', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, urlPath } = req.body;
+        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, urlPath, pathOperator } = req.body;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -3553,9 +3553,32 @@ app.post('/api/bigquery/users', async (req, res) => {
         let urlFilterJoin = '';
         if (urlPath) {
             // Add URL path parameters
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+
+            let condition = '';
+
+            if (pathOperator === 'starts-with') {
+                // Helper to generate the URL normalization SQL (same as in composition)
+                const normalizeUrlSql = `
+                    CASE 
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END
+                `;
+
+                condition = `LOWER(${normalizeUrlSql}) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+
+                condition = `(
+                        url_path = @urlPath
+                        OR url_path = @urlPathSlash
+                        OR url_path LIKE @urlPathQuery
+                    )`;
+            }
 
             // CTE to find sessions that visited the specified URL
             urlFilterCTE = `
@@ -3564,16 +3587,12 @@ app.post('/api/bigquery/users', async (req, res) => {
                     FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                     WHERE website_id = @websiteId
                     AND created_at BETWEEN @startDate AND @endDate
-                    AND (
-                        url_path = @urlPath
-                        OR url_path = @urlPathSlash
-                        OR url_path LIKE @urlPathQuery
-                    )
+                    AND ${condition}
                 ),
             `;
             urlFilterJoin = `INNER JOIN matching_sessions ms ON session.session_id = ms.session_id`;
 
-            console.log('[User Profiles] URL filter active:', { urlPath, urlFilterCTE: 'CTE defined', urlFilterJoin });
+            console.log('[User Profiles] URL filter active:', { urlPath, pathOperator, urlFilterCTE: 'CTE defined', urlFilterJoin });
         }
 
         const query = `

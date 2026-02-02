@@ -7,6 +7,7 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
+import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
@@ -18,7 +19,7 @@ const UserProfiles = () => {
 
     // State
     const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-    
+
     // Wrap setPeriod to also save to localStorage
     const setPeriod = (newPeriod: string) => {
         setPeriodState(newPeriod);
@@ -34,6 +35,7 @@ const UserProfiles = () => {
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
+    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [users, setUsers] = useState<any[]>([]);
     const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -58,12 +60,7 @@ const UserProfiles = () => {
     }, [selectedWebsite, period, page]);
 
     // Handle "Enter" key in search fields
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            setPage(1);
-            fetchUsers();
-        }
-    };
+
 
     const handleSearchClick = () => {
         setPage(1);
@@ -92,6 +89,7 @@ const UserProfiles = () => {
             endDate: endDate.toISOString(),
             query: searchQuery,
             urlPath: pagePath ? normalizeUrlToPath(pagePath) : undefined,
+            pathOperator,
             limit: ROWS_PER_PAGE,
             offset: (page - 1) * ROWS_PER_PAGE
         };
@@ -117,9 +115,11 @@ const UserProfiles = () => {
             newParams.set('period', period);
             if (pagePath) {
                 newParams.set('urlPath', pagePath);
+                newParams.set('pathOperator', pathOperator);
                 newParams.delete('pagePath');
             } else {
                 newParams.delete('urlPath');
+                newParams.delete('pathOperator');
                 newParams.delete('pagePath');
             }
 
@@ -221,13 +221,13 @@ const UserProfiles = () => {
             filters={
                 <>
                     <div className="w-full sm:w-auto min-w-[200px]">
-                        <TextField
-                            size="small"
+                        <UrlPathFilter
+                            urlPaths={pagePath ? [pagePath] : []}
+                            onUrlPathsChange={(paths) => setPagePath(paths[0] || '')}
+                            pathOperator={pathOperator}
+                            onPathOperatorChange={setPathOperator}
+                            selectedWebsiteDomain={selectedWebsite?.domain}
                             label="Side eller URL"
-                            value={pagePath}
-                            onChange={(e) => setPagePath(e.target.value)}
-                            onBlur={(e) => setPagePath(normalizeUrlToPath(e.target.value))}
-                            onKeyDown={handleKeyDown}
                         />
                     </div>
 
