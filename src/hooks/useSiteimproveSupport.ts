@@ -6,6 +6,8 @@ interface TeamData {
     teamDomain: string;
     teamSiteimproveSite: number | false;
     supportsMarketing?: boolean;
+    usesCookies?: boolean;
+    cookiesEnabledFrom?: string;
 }
 
 /**
@@ -101,6 +103,45 @@ export function hasMarketingSupport(domain: string | null | undefined, websiteNa
  */
 export function useSiteimproveSupport(domain: string | null | undefined): boolean {
     return useMemo(() => hasSiteimproveSupport(domain), [domain]);
+}
+
+/**
+ * Check if a domain uses cookies based on teamsData.json
+ * @param domain - The domain to check
+ * @returns boolean - true if cookies are used (default: false)
+ */
+export function hasCookieSupport(domain: string | null | undefined): boolean {
+    const team = findTeamByDomain(domain);
+    return team ? team.usesCookies === true : false;
+}
+
+/**
+ * Get the date when cookies-based distinct_id counting started for a domain.
+ * Returns null if not configured.
+ */
+export function getCookieStartDate(domain: string | null | undefined): Date | null {
+    const team = findTeamByDomain(domain);
+    if (!team?.cookiesEnabledFrom) return null;
+    const parsed = new Date(`${team.cookiesEnabledFrom}T00:00:00`);
+    return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * React hook to check Cookie support for a domain
+ * @param domain - The domain to check
+ * @returns boolean - true if cookies are used
+ */
+export function useCookieSupport(domain: string | null | undefined): boolean {
+    return useMemo(() => hasCookieSupport(domain), [domain]);
+}
+
+/**
+ * React hook to get cookie start date for a domain
+ * @param domain - The domain to check
+ * @returns Date | null - start date of distinct_id usage
+ */
+export function useCookieStartDate(domain: string | null | undefined): Date | null {
+    return useMemo(() => getCookieStartDate(domain), [domain]);
 }
 
 /**

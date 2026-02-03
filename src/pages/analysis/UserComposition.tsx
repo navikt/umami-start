@@ -9,11 +9,14 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams } from '../../lib/utils';
+import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 
 
 const UserComposition = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+    const usesCookies = useCookieSupport(selectedWebsite?.domain);
+    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params - support multiple paths
@@ -82,6 +85,7 @@ const UserComposition = () => {
             return;
         }
         const { startDate, endDate } = dateRange;
+        const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
 
         try {
             const response = await fetch('/api/bigquery/composition', {
@@ -94,7 +98,9 @@ const UserComposition = () => {
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                     urlPath: urlPaths.length > 0 ? urlPaths[0] : undefined,
-                    pathOperator: pathOperator
+                    pathOperator: pathOperator,
+                    countBy,
+                    countBySwitchAt
                 }),
             });
 

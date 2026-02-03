@@ -912,7 +912,9 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
             count: parseInt(row.count)
         }));
 
-        res.json({ data });
+        res.json({
+            data
+        });
     } catch (error) {
         console.error('BigQuery event series error:', error);
         res.status(500).json({
@@ -1079,7 +1081,10 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             console.log('[Event Parameter Values] Dry run failed:', dryRunError.message);
         }
 
-        res.json({ values, queryStats });
+        res.json({
+            values,
+            queryStats
+        });
     } catch (error) {
         console.error('BigQuery event parameter values error:', error);
         res.status(500).json({
@@ -1231,8 +1236,20 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
 
-        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits', pathOperator } = req.query;
-        console.log(`[Traffic Series] Request: metricType=${metricType}, urlPath=${urlPath}, pathOperator=${pathOperator}`);
+        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits', pathOperator, countBy, countBySwitchAt } = req.query;
+        console.log(`[Traffic Series] Request: metricType=${metricType}, urlPath=${urlPath}, pathOperator=${pathOperator}, countBy=${countBy}`);
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id' && (metricType === 'visitors' || metricType === 'proportion');
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami_views.event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami_views.event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : 'session_id');
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1248,27 +1265,30 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             startDate: startDate,
             endDate: endDate
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let urlFilter = '';
         let urlFilterCondition = 'FALSE'; // Default for proportion if no path (shouldn't happen if validated)
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
-                const condition = 'LOWER(url_path) LIKE @urlPathPattern';
+                const condition = `LOWER(${col}url_path) LIKE @urlPathPattern`;
                 urlFilter = `AND ${condition}`;
                 urlFilterCondition = condition;
                 params.urlPathPattern = urlPath.toLowerCase() + '%';
             } else {
                 const condition = `(
-                    url_path = @urlPath 
-                    OR url_path = @urlPathSlash 
-                    OR url_path LIKE @urlPathQuery
+                    ${col}url_path = @urlPath 
+                    OR ${col}url_path = @urlPathSlash 
+                    OR ${col}url_path LIKE @urlPathQuery
                 )`;
                 urlFilter = `AND ${condition}`;
                 urlFilterCondition = `
-                    url_path = @urlPath 
-                    OR url_path = @urlPathSlash 
-                    OR url_path LIKE @urlPathQuery
+                    ${col}url_path = @urlPath 
+                    OR ${col}url_path = @urlPathSlash 
+                    OR ${col}url_path LIKE @urlPathQuery
                 `;
                 params.urlPath = urlPath;
                 params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
@@ -1289,28 +1309,28 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             query = `
                 WITH base_query AS (
                     SELECT
-                        TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
-                        session_id,
+                        TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
+                        ${userIdExpression} as user_id,
                         CASE
                             WHEN (${urlFilterCondition}) THEN TRUE
                             ELSE FALSE
                         END AS has_visited
-                    FROM \`team-researchops-prod-01d6.umami_views.event\`
-                    WHERE website_id = @websiteId
-                    AND created_at BETWEEN @startDate AND @endDate
-                    AND event_type = 1 -- Pageview
+                    FROM ${fromClause}
+                    WHERE ${col}website_id = @websiteId
+                    AND ${col}created_at BETWEEN @startDate AND @endDate
+                    AND ${col}event_type = 1 -- Pageview
                 ),
                 totals as (
                     SELECT 
                         time,
-                        COUNT(DISTINCT session_id) AS total_visitors
+                        COUNT(DISTINCT user_id) AS total_visitors
                     FROM base_query
                     GROUP BY time
                 ),
                 specifics as (
                     SELECT 
                         time,
-                        COUNT(DISTINCT session_id) AS specific_visitors
+                        COUNT(DISTINCT user_id) AS specific_visitors
                     FROM base_query
                     WHERE has_visited = TRUE
                     GROUP BY time
@@ -1329,20 +1349,22 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             if (metricType === 'pageviews') {
                 countExpression = 'COUNT(*)';
             } else if (metricType === 'visits') {
-                countExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // økter / besøk
+                countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // økter / besøk
             } else {
-                countExpression = 'APPROX_COUNT_DISTINCT(session_id)'; // visitors (unike besøkende)
+                countExpression = useDistinctId
+                    ? `APPROX_COUNT_DISTINCT(${userIdExpression})`
+                    : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besøkende)
             }
-            console.log(`[Traffic Series] Count Expression: ${countExpression}`);
+            console.log(`[Traffic Series] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
 
             query = `
                 SELECT
-                    TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
+                    TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                     ${countExpression} as count
-                FROM \`team-researchops-prod-01d6.umami_views.event\`
-                WHERE website_id = @websiteId
-                AND created_at BETWEEN @startDate AND @endDate
-                AND event_type = 1 -- Pageview
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
                 ${urlFilter}
                 GROUP BY 1
                 ORDER BY 1
@@ -1390,7 +1412,11 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             console.log('[Traffic Series] Dry run failed:', dryRunError.message);
         }
 
-        res.json({ data, queryStats });
+        res.json({
+            data,
+            queryStats,
+            meta: { usedDistinctId: useDistinctId }
+        });
     } catch (error) {
         console.error('BigQuery traffic series error:', error);
         res.status(500).json({
@@ -1616,7 +1642,20 @@ app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
     try {
         const { websiteId } = req.params;
         const navIdent = req.user?.navIdent || 'UNKNOWN';
-        const { startAt, endAt, urlPath, pathOperator, limit = '1000' } = req.query;
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000', countBy, countBySwitchAt } = req.query;
+        console.log('[Page Metrics] Request:', { websiteId, urlPath, countBy });
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami_views.event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami_views.event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : 'session_id');
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
@@ -1631,18 +1670,21 @@ app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
             endDate,
             limit: parseInt(limit)
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let urlFilter = '';
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
-                urlFilter = 'AND LOWER(url_path) LIKE @urlPathPattern';
+                urlFilter = `AND LOWER(${col}url_path) LIKE @urlPathPattern`;
                 params.urlPathPattern = urlPath.toLowerCase() + '%';
             } else {
                 urlFilter = `AND (
-                    url_path = @urlPath 
-                    OR url_path = @urlPathSlash 
-                    OR url_path LIKE @urlPathQuery
+                    ${col}url_path = @urlPath 
+                    OR ${col}url_path = @urlPathSlash 
+                    OR ${col}url_path LIKE @urlPathQuery
                 )`;
                 params.urlPath = urlPath;
                 params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
@@ -1652,25 +1694,25 @@ app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
 
         const query = `
             WITH total_stats AS (
-                SELECT APPROX_COUNT_DISTINCT(session_id) as total_visitors
-                FROM \`team-researchops-prod-01d6.umami_views.event\`
-                WHERE website_id = @websiteId
-                AND created_at BETWEEN @startDate AND @endDate
-                AND event_type = 1
+                SELECT APPROX_COUNT_DISTINCT(${userIdExpression}) as total_visitors
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1
             ),
             page_stats AS (
                 SELECT
                     CASE 
-                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
                         THEN '/'
-                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/')
                     END as url_path,
-                    APPROX_COUNT_DISTINCT(session_id) as visitors,
+                    APPROX_COUNT_DISTINCT(${userIdExpression}) as visitors,
                     COUNT(*) as pageviews
-                FROM \`team-researchops-prod-01d6.umami_views.event\`
-                WHERE website_id = @websiteId
-                AND created_at BETWEEN @startDate AND @endDate
-                AND event_type = 1 -- Pageview
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
                 ${urlFilter}
                 GROUP BY 1
             )
@@ -1700,7 +1742,10 @@ app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
             proportion: Number(row.proportion || 0)
         }));
 
-        res.json({ data });
+        res.json({
+            data,
+            meta: { usedDistinctId: useDistinctId }
+        });
     } catch (error) {
         console.error('BigQuery page metrics error:', error);
         res.status(500).json({ error: error.message || 'Failed to fetch page metrics' });
@@ -1712,8 +1757,20 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
     try {
         const { websiteId } = req.params;
         const navIdent = req.user?.navIdent || 'UNKNOWN';
-        const { startAt, endAt, urlPath, pathOperator, limit = '1000', metricType = 'visits' } = req.query;
-        console.log(`[Traffic Breakdown] Request: metricType=${metricType}, pathOperator=${pathOperator}`);
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000', metricType = 'visits', countBy, countBySwitchAt } = req.query;
+        console.log(`[Traffic Breakdown] Request: metricType=${metricType}, pathOperator=${pathOperator}, countBy=${countBy}`);
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id' && (metricType === 'visitors' || metricType === 'proportion');
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami_views.event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami_views.event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : 'session_id');
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
@@ -1728,6 +1785,9 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             endDate,
             limit: parseInt(limit)
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let condition = 'url_path = @urlPath';
         params.urlPath = urlPath || '/'; // Default to root if missing, though typically required
@@ -1751,36 +1811,39 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             // If "All pages", sources = referrers, exits = exit pages.
             condition = '1=1';
         }
-
         let countExpression;
         if (metricType === 'pageviews') {
             countExpression = 'COUNT(*)';
         } else if (metricType === 'visits') {
-            countExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // økter / besøk
+            countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // økter / besøk
         } else {
-            countExpression = 'APPROX_COUNT_DISTINCT(session_id)'; // visitors (unike besøkende)
+            countExpression = useDistinctId
+                ? `APPROX_COUNT_DISTINCT(s.distinct_id)`
+                : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besøkende)
         }
-        console.log(`[Traffic Breakdown] Count Expression: ${countExpression}`);
+        console.log(`[Traffic Breakdown] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
 
         const query = `
             WITH session_events AS (
                 SELECT
-                    session_id,
-                    visit_id,
-                    referrer_domain,
-                    CASE 
-                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                    ${userIdExpression} as user_id,
+                    ${col}session_id,
+                    ${col}visit_id,
+                    ${col}referrer_domain,
+                    CASE
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
                         THEN '/'
-                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/')
                     END as url_path,
-                    created_at
-                FROM \`team-researchops-prod-01d6.umami_views.event\`
-                WHERE website_id = @websiteId
-                  AND created_at BETWEEN @startDate AND @endDate
-                  AND event_type = 1 -- Pageview
+                    ${col}created_at
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
             ),
             events_with_context AS (
                 SELECT
+                    user_id,
                     session_id,
                     visit_id,
                     url_path,
@@ -1798,19 +1861,20 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
                     url_path as landing_page,
                     COALESCE(next_page, 'Exit') as next_page,
                     session_id,
-                    visit_id
+                    visit_id,
+                    user_id
                 FROM events_with_context
                 WHERE ${condition}
             ),
             sources_agg AS (
-                SELECT source as name, ${countExpression} as visitors
+                SELECT source as name, ${metricType === 'pageviews' ? 'COUNT(*)' : (metricType === 'visits' ? 'APPROX_COUNT_DISTINCT(visit_id)' : 'APPROX_COUNT_DISTINCT(user_id)')} as visitors
                 FROM filtered_events
                 GROUP BY 1
                 ORDER BY visitors DESC
                 LIMIT @limit
             ),
             exits_agg AS (
-                SELECT next_page as name, ${countExpression} as visitors
+                SELECT next_page as name, ${metricType === 'pageviews' ? 'COUNT(*)' : (metricType === 'visits' ? 'APPROX_COUNT_DISTINCT(visit_id)' : 'APPROX_COUNT_DISTINCT(user_id)')} as visitors
                 FROM filtered_events
                 GROUP BY 1
                 ORDER BY visitors DESC
@@ -1838,7 +1902,11 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             else if (row.type === 'exit') exits.push(item);
         });
 
-        res.json({ sources, exits });
+        res.json({
+            sources,
+            exits,
+            meta: { usedDistinctId: useDistinctId }
+        });
     } catch (error) {
         console.error('BigQuery traffic breakdown error:', error);
         res.status(500).json({ error: error.message || 'Failed to fetch traffic breakdown' });
@@ -2493,7 +2561,21 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
 
-        const { startAt, endAt, urlPath, limit = '100', metricType = 'visits', pathOperator } = req.query;
+        const { startAt, endAt, urlPath, limit = '100', metricType = 'visits', pathOperator, countBy, countBySwitchAt } = req.query;
+
+        console.log(`[Marketing Stats] Request: metricType=${metricType}, countBy=${countBy}`);
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id' && (metricType === 'visitors' || metricType === 'proportion' || metricType === 'users');
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami.public_website_event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami.public_website_event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : `${col}session_id`);
 
         if (!bigquery) {
             return res.status(500).json({
@@ -2510,6 +2592,9 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
             endDate: endDate,
             limit: parseInt(limit)
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let urlFilter = '';
         if (urlPath) {
@@ -2538,11 +2623,8 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
                 countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
                 break;
             case 'proportion':
-                // For proportion, we count unique visitors but will calculate ratio in response
-                countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
-                break;
             default: // visitors
-                countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
+                countExpression = 'APPROX_COUNT_DISTINCT(user_id)';
         }
 
         const dimensions = [
@@ -2557,7 +2639,9 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
 
         // Construct a single query using UNION ALL with a CTE to avoid multi-scanning the table
         // We select all necessary columns in the CTE
-        const cteColumns = dimensions.map(d => d.key).join(', ');
+        // BigQuery aliases columns automatically (e.g. e.utm_source -> utm_source), so we can reference them directly in unionParts
+        const cteColumns = dimensions.map(d => `${col}${d.key}`).join(', ');
+
         const unionParts = dimensions.map(dim => `
             (
                 SELECT 
@@ -2574,17 +2658,21 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
         const query = `
             WITH base_data AS (
                 SELECT 
-                    session_id,
+                    ${col}session_id as session_id,
+                    ${userIdExpression} as user_id,
                     ${cteColumns}
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = @websiteId
-                AND created_at BETWEEN @startDate AND @endDate
-                AND created_at BETWEEN @startDate AND @endDate
-                AND event_type = 1
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1
                 ${urlFilter}
             )
             ${unionParts}
         `;
+
+
+
+
 
         // Execute single query
         console.log(`[Marketing] Fetching stats for website ${websiteId} (Single Query Optimization)`);
@@ -2646,7 +2734,11 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
             });
         }
 
-        res.json({ data: responseData, queryStats });
+        res.json({
+            data: responseData,
+            queryStats,
+            meta: { usedDistinctId: useDistinctId }
+        });
     } catch (error) {
         console.error('BigQuery marketing stats error:', error);
         res.status(500).json({
@@ -3100,11 +3192,24 @@ app.post('/api/bigquery/retention', async (req, res) => {
 // Get user composition data from BigQuery
 app.post('/api/bigquery/composition', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath, pathOperator } = req.body;
+        const { websiteId, startDate, endDate, urlPath, pathOperator, countBy, countBySwitchAt } = req.body;
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        // Use umami_views.session if identifying by distinct_id to ensure access to that column, otherwise public_session is fine
+        const table = useDistinctId
+            ? '`team-researchops-prod-01d6.umami_views.session`'
+            : '`team-researchops-prod-01d6.umami.public_session`';
+
+        const userIdExpression = useSwitch
+            ? `IF(s.created_at >= @countBySwitchAt, s.distinct_id, s.session_id)`
+            : (useDistinctId ? 's.distinct_id' : 's.session_id');
+        const countExpression = useDistinctId ? 'COUNT(DISTINCT user_id)' : 'COUNT(*)';
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
-
 
         if (!bigquery) {
             return res.status(500).json({
@@ -3131,8 +3236,9 @@ app.post('/api/bigquery/composition', async (req, res) => {
                     s.device,
                     s.screen,
                     s.language,
-                    s.country
-                FROM \`team-researchops-prod-01d6.umami.public_session\` s
+                    s.country,
+                    ${userIdExpression} as user_id
+                FROM ${table} s
                 WHERE s.website_id = @websiteId
                   AND s.created_at BETWEEN @startDate AND @endDate
                   ${urlPath ? `
@@ -3148,17 +3254,17 @@ app.post('/api/bigquery/composition', async (req, res) => {
                 }
                   )` : ''}
             )
-            SELECT 'browser' as category, browser as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'browser' as category, browser as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'os' as category, os as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'os' as category, os as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'device' as category, device as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'device' as category, device as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'screen' as category, screen as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'screen' as category, screen as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'language' as category, language as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'language' as category, language as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'country' as category, country as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'country' as category, country as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             ORDER BY category, count DESC
         `;
 
@@ -3167,6 +3273,9 @@ app.post('/api/bigquery/composition', async (req, res) => {
             startDate,
             endDate
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
@@ -3216,7 +3325,8 @@ app.post('/api/bigquery/composition', async (req, res) => {
 
         res.json({
             data: rows,
-            queryStats
+            queryStats,
+            meta: { usedDistinctId: useDistinctId }
         });
 
     } catch (error) {

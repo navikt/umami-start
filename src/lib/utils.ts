@@ -217,3 +217,38 @@ export const getDateRangeFromPeriod = (
 
   return { startDate, endDate };
 };
+
+export const getCookieCountByParams = (
+  usesCookies: boolean,
+  cookieStartDate: Date | null | undefined,
+  startDate: Date,
+  endDate: Date
+): { countBy?: 'distinct_id'; countBySwitchAt?: number } => {
+  if (!usesCookies) return {};
+  if (!cookieStartDate) {
+    return { countBy: 'distinct_id' };
+  }
+
+  const switchAt = cookieStartDate.getTime();
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+
+  if (endMs < switchAt) return {};
+  if (startMs >= switchAt) return { countBy: 'distinct_id' };
+  return { countBy: 'distinct_id', countBySwitchAt: switchAt };
+};
+
+export const shouldShowCookieBadge = (
+  usesCookies: boolean,
+  cookieStartDate: Date | null | undefined,
+  startDate: Date,
+  endDate: Date
+): boolean => {
+  const { countBy, countBySwitchAt } = getCookieCountByParams(
+    usesCookies,
+    cookieStartDate,
+    startDate,
+    endDate
+  );
+  return countBy === 'distinct_id' && !countBySwitchAt;
+};

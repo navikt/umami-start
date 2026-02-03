@@ -11,8 +11,9 @@ import TrafficStats from '../../components/analysis/traffic/TrafficStats';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, shouldShowCookieBadge } from '../../lib/utils';
 
 // Helper functions for metric labels
 const getMetricLabelCapitalized = (type: string): string => {
@@ -35,6 +36,8 @@ const getMetricLabelWithCount = (type: string): string => {
 
 const TrafficAnalysis = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+    const usesCookies = useCookieSupport(selectedWebsite?.domain);
+    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
@@ -114,6 +117,25 @@ const TrafficAnalysis = () => {
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
     const [externalReferrerData, setExternalReferrerData] = useState<any[]>([]); // Data from marketing-stats API
 
+    const getCountByQueryParams = (startDate: Date, endDate: Date) => {
+        const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
+        return {
+            countByParams: countBy ? `&countBy=${countBy}` : '',
+            countBySwitchAtParam: countBySwitchAt ? `&countBySwitchAt=${countBySwitchAt}` : ''
+        };
+    };
+
+    const currentDateRange = useMemo(() => getDateRangeFromPeriod(period, customStartDate, customEndDate), [period, customStartDate, customEndDate]);
+    const showCookieBadge = useMemo(() => {
+        if (!currentDateRange) return false;
+        return shouldShowCookieBadge(
+            usesCookies,
+            cookieStartDate,
+            currentDateRange.startDate,
+            currentDateRange.endDate
+        );
+    }, [usesCookies, cookieStartDate, currentDateRange]);
+
     // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
         if (selectedWebsite && !hasAttemptedFetch) {
@@ -164,13 +186,14 @@ const TrafficAnalysis = () => {
             return;
         }
         const { startDate, endDate } = dateRange;
+        const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
 
         try {
             // Fetch Series Data - use first path if multiple
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
 
-            let seriesUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}&interval=${interval}`;
+            let seriesUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}&interval=${interval}${countByParams}${countBySwitchAtParam}`;
             if (normalizedPath) {
                 seriesUrl += `&urlPath=${encodeURIComponent(normalizedPath)}`;
             }
@@ -231,7 +254,8 @@ const TrafficAnalysis = () => {
         try {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
+            const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
+            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(breakdownUrl);
             if (!response.ok) throw new Error('Kunne ikke hente trafikkdetaljer');
@@ -255,7 +279,8 @@ const TrafficAnalysis = () => {
         try {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
+            const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
+            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(metricsUrl);
             if (!response.ok) throw new Error('Kunne ikke hente sidemetrikker');
@@ -276,7 +301,8 @@ const TrafficAnalysis = () => {
         try {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
-            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
+            const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
+            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(url);
             if (!response.ok) throw new Error('Kunne ikke hente eksterne trafikkilder');
@@ -985,9 +1011,10 @@ const TrafficAnalysis = () => {
                             label="Visning"
                             size="small"
                             value={metricType}
+                            key={`metric-${metricType}-${showCookieBadge ? 'cookie' : 'nocookie'}`}
                             onChange={(e) => setMetricType(e.target.value)}
                         >
-                            <option value="visitors">Unike besøkende</option>
+                            <option value="visitors">Unike besøkende{showCookieBadge ? ' 🍪' : ''}</option>
                             <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>
                             <option value="proportion">Andel (av besøkende)</option>

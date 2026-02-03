@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Select, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
@@ -7,9 +7,9 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, shouldShowCookieBadge } from '../../lib/utils';
 import { Website } from '../../types/chart';
-import { useMarketingSupport } from '../../hooks/useSiteimproveSupport';
+import { useMarketingSupport, useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 
 // Helper function for metric labels
 const getMetricLabel = (type: string): string => {
@@ -46,8 +46,21 @@ const MarketingAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const usesCookies = useCookieSupport(selectedWebsite?.domain);
+    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
 
     const hasMarketing = useMarketingSupport(selectedWebsite?.domain, selectedWebsite?.name);
+
+    const currentDateRange = useMemo(() => getDateRangeFromPeriod(period, customStartDate, customEndDate), [period, customStartDate, customEndDate]);
+    const showCookieBadge = useMemo(() => {
+        if (!currentDateRange) return false;
+        return shouldShowCookieBadge(
+            usesCookies,
+            cookieStartDate,
+            currentDateRange.startDate,
+            currentDateRange.endDate
+        );
+    }, [usesCookies, cookieStartDate, currentDateRange]);
 
 
 
@@ -97,12 +110,15 @@ const MarketingAnalysis = () => {
             return;
         }
         const { startDate, endDate } = dateRange;
+        const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
+        const countByParams = countBy ? `&countBy=${countBy}` : '';
+        const countBySwitchAtParam = countBySwitchAt ? `&countBySwitchAt=${countBySwitchAt}` : '';
 
         try {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
 
-            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}`;
+            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(url);
             if (!response.ok) throw new Error('Kunne ikke hente markedsdata');
@@ -387,9 +403,10 @@ const MarketingAnalysis = () => {
                             label="Visning"
                             size="small"
                             value={metricType}
+                            key={`metric-${metricType}-${showCookieBadge ? 'cookie' : 'nocookie'}`}
                             onChange={(e) => setMetricType(e.target.value)}
                         >
-                            <option value="visitors">Unike besøkende</option>
+                            <option value="visitors">Unike besøkende{showCookieBadge ? ' 🍪' : ''}</option>
                             <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>
                             <option value="proportion">Andel (av besøkende)</option>
