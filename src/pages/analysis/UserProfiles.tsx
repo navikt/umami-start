@@ -430,7 +430,7 @@ const UserProfiles = () => {
                                 </div>
                                 {selectedSession.distinctId && (
                                     <div className="col-span-2">
-                                        <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Distinct ID</Heading>
+                                        <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Distinct ID (Cookie ID)</Heading>
                                         <code className="text-sm break-all">{selectedSession.distinctId}</code>
                                     </div>
                                 )}
