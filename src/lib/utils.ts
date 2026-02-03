@@ -238,17 +238,30 @@ export const getCookieCountByParams = (
   return { countBy: 'distinct_id', countBySwitchAt: switchAt };
 };
 
-export const shouldShowCookieBadge = (
+export const getCookieBadge = (
   usesCookies: boolean,
   cookieStartDate: Date | null | undefined,
   startDate: Date,
   endDate: Date
-): boolean => {
+): '' | 'cookie' | 'mix' => {
   const { countBy, countBySwitchAt } = getCookieCountByParams(
     usesCookies,
     cookieStartDate,
     startDate,
     endDate
   );
-  return countBy === 'distinct_id' && !countBySwitchAt;
+  if (countBy !== 'distinct_id') return '';
+  return countBySwitchAt ? 'mix' : 'cookie';
+};
+
+export const getVisitorLabelWithBadge = (
+  usesCookies: boolean,
+  cookieStartDate: Date | null | undefined,
+  startDate: Date,
+  endDate: Date
+): string => {
+  const badge = getCookieBadge(usesCookies, cookieStartDate, startDate, endDate);
+  if (badge === 'cookie') return 'Unike besøkende 🍪';
+  if (badge === 'mix') return 'Unike besøkende 🧑‍🍳';
+  return 'Unike besøkende';
 };

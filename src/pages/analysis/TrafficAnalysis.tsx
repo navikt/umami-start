@@ -13,7 +13,7 @@ import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, shouldShowCookieBadge } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils';
 
 // Helper functions for metric labels
 const getMetricLabelCapitalized = (type: string): string => {
@@ -126,9 +126,9 @@ const TrafficAnalysis = () => {
     };
 
     const currentDateRange = useMemo(() => getDateRangeFromPeriod(period, customStartDate, customEndDate), [period, customStartDate, customEndDate]);
-    const showCookieBadge = useMemo(() => {
-        if (!currentDateRange) return false;
-        return shouldShowCookieBadge(
+    const cookieBadge = useMemo(() => {
+        if (!currentDateRange) return '';
+        return getCookieBadge(
             usesCookies,
             cookieStartDate,
             currentDateRange.startDate,
@@ -1011,10 +1011,17 @@ const TrafficAnalysis = () => {
                             label="Visning"
                             size="small"
                             value={metricType}
-                            key={`metric-${metricType}-${showCookieBadge ? 'cookie' : 'nocookie'}`}
+                            key={`metric-${metricType}-${cookieBadge || 'nocookie'}`}
                             onChange={(e) => setMetricType(e.target.value)}
                         >
-                            <option value="visitors">Unike besøkende{showCookieBadge ? ' 🍪' : ''}</option>
+                            <option value="visitors">{currentDateRange
+                                ? getVisitorLabelWithBadge(
+                                    usesCookies,
+                                    cookieStartDate,
+                                    currentDateRange.startDate,
+                                    currentDateRange.endDate
+                                )
+                                : 'Unike besøkende'}</option>
                             <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>
                             <option value="proportion">Andel (av besøkende)</option>
