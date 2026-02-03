@@ -101,10 +101,12 @@ export const PeriodPicker = ({
                                 <DatePicker.Input
                                     label="Fra dato"
                                     value={startDate ? format(startDate, 'dd.MM.yyyy') : ''}
+                                    readOnly
                                 />
                                 <DatePicker.Input
                                     label="Til dato"
                                     value={endDate ? format(endDate, 'dd.MM.yyyy') : ''}
+                                    readOnly
                                 />
                             </div>
                         </DatePicker>

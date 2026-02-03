@@ -10,8 +10,9 @@ import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams, getCookieBadge } from '../../lib/utils';
 import { TextField } from '@navikt/ds-react';
+import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 
 const UserProfiles = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -34,6 +35,8 @@ const UserProfiles = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const usesCookies = useCookieSupport(selectedWebsite?.domain);
+    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
     const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -83,6 +86,7 @@ const UserProfiles = () => {
 
         const { startDate, endDate } = getDateRange();
 
+        const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
         const payload = {
             websiteId: selectedWebsite.id,
             startDate: startDate.toISOString(),
@@ -91,7 +95,9 @@ const UserProfiles = () => {
             urlPath: pagePath ? normalizeUrlToPath(pagePath) : undefined,
             pathOperator,
             limit: ROWS_PER_PAGE,
-            offset: (page - 1) * ROWS_PER_PAGE
+            offset: (page - 1) * ROWS_PER_PAGE,
+            countBy,
+            countBySwitchAt
         };
 
         console.log('Fetching users with payload:', payload);
@@ -166,7 +172,7 @@ const UserProfiles = () => {
     const handleRowClick = (user: any) => {
         setSelectedSession(user);
         setIsModalOpen(true);
-        fetchUserActivity(user.sessionId);
+        fetchUserActivity(user.primarySessionId || user.sessionIds?.[0] || user.userId);
     };
 
     const formatDate = (dateString: string) => {
@@ -274,9 +280,15 @@ const UserProfiles = () => {
             )}
 
             {!loading && users.length > 0 && (() => {
+                const { startDate, endDate } = getDateRange();
+                const cookieBadge = getCookieBadge(usesCookies, cookieStartDate, startDate, endDate);
+                const isCookieRange = cookieBadge === 'cookie';
+                const isMixRange = cookieBadge === 'mix';
+
                 const filteredUsers = users.filter(user =>
-                    user.sessionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (user.userId && user.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
                     (user.distinctId && user.distinctId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                    (user.sessionIds && user.sessionIds.some((id: string) => id.toLowerCase().includes(searchQuery.toLowerCase()))) ||
                     (user.country && translateCountry(user.country).toLowerCase().includes(searchQuery.toLowerCase())) ||
                     (user.browser && user.browser.toLowerCase().includes(searchQuery.toLowerCase()))
                 );
@@ -288,7 +300,11 @@ const UserProfiles = () => {
                                     {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'brukere'}
                                 </Heading>
                                 <BodyShort className="text-[var(--ax-text-subtle)] max-w-prose">
-                                    Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.
+                                    {isCookieRange
+                                        ? 'Cookies er aktivert. Brukere identifiseres med cookie‑ID på tvers av økter innen perioden.'
+                                        : isMixRange
+                                            ? 'Perioden krysser overgang til cookies. Listen inneholder både cookie‑ID og sesjons‑ID.'
+                                            : 'Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.'}
                                 </BodyShort>
                             </div>
                             <div className="w-64">
@@ -319,13 +335,14 @@ const UserProfiles = () => {
                                     <Table.Body>
                                         {filteredUsers.map((user) => (
                                             <Table.Row
-                                                key={user.sessionId}
+                                                key={user.userId}
                                                 onClick={() => handleRowClick(user)}
                                                 className="cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]"
                                             >
                                                 <Table.DataCell>
                                                     <Link href="#" onClick={(e) => { e.preventDefault(); handleRowClick(user); }}>
-                                                        {user.sessionId.substring(0, 8)}...
+                                                        {user.idType === 'cookie' ? ' 🍪 ' : ''}
+                                                        {user.userId ? `${user.userId.substring(0, 8)}...` : '(ukjent)'}                          
                                                     </Link>
                                                 </Table.DataCell>
                                                 <Table.DataCell>{formatDate(user.lastSeen)}</Table.DataCell>
@@ -360,11 +377,13 @@ const UserProfiles = () => {
                                         size="small"
                                         variant="secondary"
                                         onClick={() => {
-                                            const headers = ['Bruker ID', 'Distinct ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
+                                            const headers = ['Bruker ID', 'ID-type', 'Sesjoner', 'Distinct ID', 'Sist sett', 'Land', 'Enhet', 'Nettleser'];
                                             const csvRows = [
                                                 headers.join(','),
                                                 ...filteredUsers.map((user) => [
-                                                    `"${user.sessionId}"`,
+                                                    `"${user.userId}"`,
+                                                    `"${user.idType || ''}"`,
+                                                    `"${(user.sessionIds || []).length}"`,
                                                     `"${user.distinctId || ''}"`,
                                                     `"${formatDate(user.lastSeen)}"`,
                                                     `"${translateCountry(user.country)}"`,
@@ -425,10 +444,27 @@ const UserProfiles = () => {
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4 bg-[var(--ax-bg-neutral-soft)] p-4 rounded-lg">
                                 <div className="col-span-2">
-                                    <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Bruker ID</Heading>
-                                    <code className="text-sm break-all">{selectedSession.sessionId}</code>
+                                    <Heading level="3" size="xsmall" className="mb-1 text-gray-500">
+                                        {selectedSession.idType === 'cookie' ? 'Cookie ID (Distinct ID)' : 'Sesjons‑ID'}
+                                    </Heading>
+                                    <code className="text-sm break-all">
+                                        {selectedSession.userId || '(mangler cookie-id)'}
+                                        {selectedSession.idType === 'cookie' ? ' 🍪' : ''}
+                                    </code>
                                 </div>
-                                {selectedSession.distinctId && (
+                                {selectedSession.sessionIds && selectedSession.sessionIds.length > 0 && selectedSession.idType === 'cookie' && (
+                                    <div className="col-span-2">
+                                        <Heading level="3" size="xsmall" className="mb-1 text-gray-500">
+                                            Sesjoner knyttet til bruker ({selectedSession.sessionIds.length})
+                                        </Heading>
+                                        <ul className="space-y-1 list-disc list-inside">
+                                            {selectedSession.sessionIds.map((id: string) => (
+                                                <li key={id} className="break-all">{id}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                {selectedSession.distinctId && selectedSession.idType !== 'cookie' && (
                                     <div className="col-span-2">
                                         <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Distinct ID (Cookie ID)</Heading>
                                         <code className="text-sm break-all">{selectedSession.distinctId}</code>

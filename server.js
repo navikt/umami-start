@@ -3640,7 +3640,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 // Get user sessions (User Profiles)
 app.post('/api/bigquery/users', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, urlPath, pathOperator } = req.body;
+        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, urlPath, pathOperator, countBy, countBySwitchAt } = req.body;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -3649,6 +3649,17 @@ app.post('/api/bigquery/users', async (req, res) => {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
         }
 
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const userKeyExpression = useSwitch
+            ? `IF(session.created_at >= @countBySwitchAt, session.distinct_id, session.session_id)`
+            : (useDistinctId ? 'session.distinct_id' : 'session.session_id');
+        const idTypeExpression = useSwitch
+            ? `IF(session.created_at >= @countBySwitchAt AND session.distinct_id IS NOT NULL, 'cookie', 'session')`
+            : (useDistinctId ? `'cookie'` : `'session'`);
+
         const params = {
             websiteId,
             startDate,
@@ -3656,6 +3667,9 @@ app.post('/api/bigquery/users', async (req, res) => {
             limit: parseInt(limit),
             offset: parseInt(offset)
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let searchFilter = '';
         if (searchQuery) {
@@ -3715,7 +3729,8 @@ app.post('/api/bigquery/users', async (req, res) => {
             WITH ${urlFilterCTE}
             session_data AS (
                 SELECT
-                    session.session_id,
+                    ${userKeyExpression} as user_id,
+                    ${idTypeExpression} as id_type,
                     MAX(session.created_at) as last_seen,
                     MIN(session.created_at) as first_seen,
                     ANY_VALUE(session.country) as country,
@@ -3723,13 +3738,15 @@ app.post('/api/bigquery/users', async (req, res) => {
                     ANY_VALUE(session.os) as os,
                     ANY_VALUE(session.browser) as browser,
                     ANY_VALUE(session.distinct_id) as distinct_id,
+                    ARRAY_AGG(DISTINCT session.session_id) as session_ids,
+                    ARRAY_AGG(session.session_id ORDER BY session.created_at DESC LIMIT 1)[OFFSET(0)] as primary_session_id,
                     COUNT(*) as event_count
                 FROM \`team-researchops-prod-01d6.umami_views.session\` as session
                 ${urlFilterJoin}
                 WHERE session.website_id = @websiteId
                 AND session.created_at BETWEEN @startDate AND @endDate
                 ${searchFilter}
-                GROUP BY session.session_id
+                GROUP BY user_id, id_type
             )
             SELECT * FROM session_data
             ORDER BY last_seen DESC
@@ -3753,7 +3770,7 @@ app.post('/api/bigquery/users', async (req, res) => {
         const countQuery = `
             WITH ${urlFilterCTE}
             filtered_sessions AS (
-                SELECT DISTINCT session.session_id
+                SELECT DISTINCT ${userKeyExpression} as user_id
                 FROM \`team-researchops-prod-01d6.umami_views.session\` as session
                 ${urlFilterJoin}
                 WHERE session.website_id = @websiteId
@@ -3799,7 +3816,10 @@ app.post('/api/bigquery/users', async (req, res) => {
         }
 
         const users = rows.map(row => ({
-            sessionId: row.session_id,
+            userId: row.user_id,
+            idType: row.id_type,
+            sessionIds: row.session_ids || [],
+            primarySessionId: row.primary_session_id,
             distinctId: row.distinct_id,
             lastSeen: row.last_seen.value,
             firstSeen: row.first_seen.value,
