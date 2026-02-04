@@ -12,7 +12,7 @@ import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import CookieMixNotice from '../../components/analysis/CookieMixNotice';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getStoredPeriod, getCookieBadge, getCookieCountByParams } from '../../lib/utils';
+import { normalizeUrlToPath, getStoredPeriod, getDateRangeFromPeriod, getCookieBadge, getCookieCountByParams } from '../../lib/utils';
 
 
 const Retention = () => {
@@ -48,6 +48,14 @@ const Retention = () => {
         setOverriddenGlobalPeriod(null); // Clear alert if user manually changes it
     };
 
+    useEffect(() => {
+        if (!usesCookies) return;
+        const requested = getStoredPeriod(searchParams.get('retentionPeriod') || searchParams.get('period'));
+        if (requested !== period) {
+            setPeriodState(requested);
+        }
+    }, [usesCookies, searchParams, period]);
+
     // Support custom dates from URL
     const fromDateFromUrl = searchParams.get("from");
     const toDateFromUrl = searchParams.get("to");
@@ -68,6 +76,9 @@ const Retention = () => {
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
 
     const getRetentionDateRange = () => {
+        if (usesCookies) {
+            return getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        }
         const now = new Date();
         let startDate: Date;
         let endDate: Date;
@@ -394,7 +405,7 @@ const Retention = () => {
                         onStartDateChange={setCustomStartDate}
                         endDate={customEndDate}
                         onEndDateChange={setCustomEndDate}
-                        showShortPeriods={false}
+                        showShortPeriods={usesCookies}
                     />
 
                     <div className="flex items-end pb-[2px]">
