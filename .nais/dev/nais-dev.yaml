@@ -35,6 +35,7 @@ spec:
     application:
       enabled: true
       allowAllUsers: true
+      tenant: nav.no # bytte til trygdeetaten.no ?
     sidecar:
       autoLogin: true
       enabled: true
