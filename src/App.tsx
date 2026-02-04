@@ -1,4 +1,5 @@
-import { Page } from "@navikt/ds-react";
+import { Page, Theme } from "@navikt/ds-react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -28,9 +29,36 @@ const ScrollToTopWrapper = () => {
 // Create a wrapper component for Page Layout
 const PageLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isHome = location.pathname === "/";
+  const isFullWidthPage =
+    location.pathname === "/" ||
+    location.pathname === "/dashboards" ||
+    location.pathname === "/dashboard" ||
+    location.pathname === "/oppsett" ||
+    location.pathname === "/komigang" ||
+    location.pathname === "/grafbygger" ||
+    location.pathname === "/personvern" ||
+    location.pathname === "/tilgjengelighet" ||
+    location.pathname === "/taksonomi" ||
+    location.pathname === "/metabase" ||
+    location.pathname.startsWith("/trafikkanalyse") ||
+    location.pathname.startsWith("/markedsanalyse") ||
+    location.pathname.startsWith("/utforsk-hendelser") ||
+    location.pathname.startsWith("/datastruktur") ||
+    location.pathname.startsWith("/brukerprofiler") ||
+    location.pathname.startsWith("/brukerlojalitet") ||
+    location.pathname.startsWith("/brukersammensetning") ||
+    location.pathname.startsWith("/brukerreiser") ||
+    location.pathname.startsWith("/hendelsesreiser") ||
+    location.pathname.startsWith("/trakt") ||
+    location.pathname.startsWith("/personvernssjekk") ||
+    location.pathname.startsWith("/diagnose") ||
+    location.pathname.startsWith("/grafdeling") ||
+    location.pathname.startsWith("/profil") ||
+    location.pathname.startsWith("/kvalitet/odelagte-lenker") ||
+    location.pathname.startsWith("/kvalitet/stavekontroll") ||
+    location.pathname.startsWith("/sql");
 
-  if (isHome) {
+  if (isFullWidthPage) {
     return <main style={{ width: "100%" }}>{children}</main>;
   }
 
@@ -42,6 +70,24 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const storedTheme = localStorage.getItem("umami-theme") as "light" | "dark" | null;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return storedTheme || (prefersDark ? "dark" : "light");
+  });
+
+  useEffect(() => {
+    // Listen for theme changes from ThemeButton
+    const handleThemeChange = (event: CustomEvent<"light" | "dark">) => {
+      setTheme(event.detail);
+    };
+
+    window.addEventListener("themeChange", handleThemeChange as EventListener);
+    return () => {
+      window.removeEventListener("themeChange", handleThemeChange as EventListener);
+    };
+  }, []);
+
   useHead({
     script: [
       {
@@ -66,9 +112,9 @@ function App() {
   });
 
   return (
-    <>
+    <Theme theme={theme}>
       <Page>
-        <Header />
+        <Header theme={theme} />
         <Router>
           <PageLayout>
             <Routes>
@@ -81,7 +127,7 @@ function App() {
         </Router>
       </Page>
       <Footer />
-    </>
+    </Theme>
   );
 }
 

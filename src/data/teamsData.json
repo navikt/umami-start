@@ -1,0 +1,101 @@
+[
+  {
+    "teamName": "Aksel",
+    "teamDomain": "https://aksel.nav.no",
+    "teamSiteimproveSite": 30048105178
+  },
+  {
+    "teamName": "Idebanken Prod",
+    "teamDomain": "https://www.idebanken.org",
+    "teamSiteimproveSite": 21766831756,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "Idebanken Prod Beta",
+    "teamDomain": "https://idebanken.nav.no",
+    "teamSiteimproveSite": 43000776390,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "Idebanken Dev",
+    "teamDomain": "https://idebanken.ekstern.dev.nav.no",
+    "teamSiteimproveSite": 41890665972,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "Nav",
+    "teamDomain": "https://www.nav.no",
+    "teamSiteimproveSite": 21766831756,
+    "supportsMarketing": false,
+    "usesCookies": true,
+    "cookiesEnabledFrom": "2026-02-02"
+  },
+  {
+    "teamName": "Mangfoldimai",
+    "teamDomain": "https://mangfoldimai.no",
+    "teamSiteimproveSite": 30141243932,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "Arbeidsplassen",
+    "teamDomain": "https://arbeidsplassen.nav.no",
+    "teamSiteimproveSite": 23679828077,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "Workinnorway",
+    "teamDomain": "https://workinnorway.no",
+    "teamSiteimproveSite": 25550852482,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "Kunnskapsbanken",
+    "teamDomain": "https://kunnskapsbanken.net",
+    "teamSiteimproveSite": 24837355879,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "arbeidogvelferd",
+    "teamDomain": "https://arbeidogvelferd.nav.no",
+    "teamSiteimproveSite": 28929754463,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "detsombetyrnoe",
+    "teamDomain": "https://detsombetyrnoe.no",
+    "teamSiteimproveSite": 24075344668,
+    "supportsMarketing": true
+  },
+  {
+    "teamName": "finnhjelpemiddel",
+    "teamDomain": "https://finnhjelpemiddel.nav.no",
+    "teamSiteimproveSite": 33711348311
+  },
+  {
+    "teamName": "felgen",
+    "teamDomain": "https://felgen.nav.no",
+    "teamSiteimproveSite": false
+  },
+  {
+    "teamName": "skup",
+    "teamDomain": "https://skup.nav.no",
+    "teamSiteimproveSite": false
+  },
+  {
+    "teamName": "innblikk",
+    "teamDomain": "https://innblikk.nav.no",
+    "teamSiteimproveSite": false
+  },
+  {
+    "teamName": "uurapport",
+    "teamDomain": "a11y-statement-ny.ansatt.nav.no",
+    "teamSiteimproveSite": false,
+    "supportsMarketing": false
+  },
+  {
+    "teamName": "navno",
+    "teamDomain": "https://navno.sharepoint.com",
+    "teamSiteimproveSite": false,
+    "supportsMarketing": false
+  }
+]

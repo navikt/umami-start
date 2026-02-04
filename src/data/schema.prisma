@@ -143,6 +143,13 @@ model WebsiteEvent {
 
 // In Bigquery team-researchops-prod-01d6.umami_views.event_data
 // In bigquery bundled dataKey and values as event_parameters REPEATED RECORD	
+Name	Mode	Type	Description	
+website_event_id	NULLABLE	STRING		
+website_id	NULLABLE	STRING		
+event_parameters	REPEATED	RECORD		
+created_at	NULLABLE	TIMESTAMP	
+
+// In Postgres and old Bigquery instancea team-researchops-prod-01d6.umami.event_data
 model EventData {
   id             String    @id() @map("event_data_id") @db.Uuid
   websiteId      String    @map("website_id") @db.Uuid

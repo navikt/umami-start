@@ -1,5 +1,0 @@
-[
-    {"event_name":"lenke klikket","parameters":["tekst","url","destinasjon"]},
-    {"event_name":"accordion åpnet","parameters":["tittel"]},
-    {"event_name":"accordion lukket","parameters":["tittel"]}
-    ]

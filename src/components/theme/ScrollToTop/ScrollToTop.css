@@ -4,10 +4,12 @@
     bottom: 25px;
     right: 25px;
     border-radius: 100px;
-    background: #073f64;
-    border: 1px solid #fff;
+    background: var(--ax-bg-accent-strong);
+    color: var(--ax-text-contrast);
+    border: 1px solid var(--ax-border-subtle);
 }
 
 #språkhjelp-back-to-top:hover {
-    background: #000;
+    background: var(--ax-bg-accent-strong-hover);
+    color: var(--ax-text-contrast);
 }

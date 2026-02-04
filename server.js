@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
 
+const BIGQUERY_TIMEZONE = 'Europe/Oslo';
+
 dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
@@ -27,6 +29,15 @@ app.use((req, res, next) => {
     res.setTimeout(120000) // 2 minutes
     next()
 })
+
+// Ensure UTF-8 encoding for API JSON responses (fixes Norwegian characters)
+app.use('/api', (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    next()
+})
+
+
+
 
 // Initialize BigQuery client
 let bigquery;
@@ -86,6 +97,73 @@ try {
     console.error('==========================================');
 }
 
+// Helper function to add audit logging to BigQuery queries
+function addAuditLogging(queryConfig, navIdent, analysisType = null) {
+    const isDryRun = queryConfig.dryRun === true;
+
+    // Add NAV ident as a label (queryable metadata in BigQuery)
+    queryConfig.labels = {
+        ...queryConfig.labels,
+        nav_ident: navIdent.toLowerCase().replace(/[^a-z0-9_-]/g, '_'), // Labels must be lowercase and alphanumeric
+        user_type: 'internal',
+        job_mode: isDryRun ? 'dry_run' : 'execution'
+    };
+
+    if (analysisType) {
+        queryConfig.labels.analysis_type = analysisType.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    }
+
+    // Add NAV ident as SQL comment (visible in query history)
+    if (queryConfig.query && navIdent) {
+        let comment = `-- Nav ident: ${navIdent}\n-- Timestamp: ${new Date().toISOString()}`;
+        if (isDryRun) {
+            comment += `\n-- Mode: Dry Run`;
+        }
+        if (analysisType) {
+            comment += `\n-- Analysis: ${analysisType}`;
+        }
+        queryConfig.query = `${comment}\n${queryConfig.query}`;
+    }
+
+    return queryConfig;
+}
+
+// Helper query to substitute parameters in SQL string for display
+const substituteQueryParameters = (query, params) => {
+    if (!query || !params) return query;
+
+    let substitutedQuery = query;
+
+    // Sort keys by length (descending) to avoid partial replacement issues
+    // e.g. replacing @url1 instead of @url10
+    const keys = Object.keys(params).sort((a, b) => b.length - a.length);
+
+    keys.forEach(key => {
+        const value = params[key];
+        let stringValue;
+
+        if (typeof value === 'string') {
+            // Check if it's likely a date (ISO) or number-as-string
+            // But generally, strings should be quoted
+            // Escape single quotes
+            stringValue = `'${value.replace(/'/g, "\\'")}'`;
+        } else if (value instanceof Date) {
+            stringValue = `'${value.toISOString()}'`;
+        } else if (value === null || value === undefined) {
+            stringValue = 'NULL';
+        } else {
+            stringValue = String(value);
+        }
+
+        // Replace @key with value, ensuring word boundary
+        // Note: BigQuery params start with @
+        const regex = new RegExp(`@${key}\\b`, 'g');
+        substitutedQuery = substitutedQuery.replace(regex, stringValue);
+    });
+
+    return substitutedQuery;
+};
+
 const buildPath = path.join(path.resolve(__dirname, './dist'))
 
 app.use('/', express.static(buildPath, { index: false }))
@@ -102,6 +180,205 @@ app.get('/isalive', (req, res) => {
 app.get('/isready', (req, res) => {
     res.send('OK')
 })
+
+// Authentication middleware - extracts NAV ident for audit logging
+async function authenticateUser(req, res, next) {
+    try {
+        // Try to import @navikt/oasis
+        let oasis;
+        try {
+            oasis = await import('@navikt/oasis');
+        } catch (importError) {
+            // In local dev, oasis might not be available
+            // Check for mock ident
+            if (process.env.MOCK_NAV_IDENT) {
+                console.log('[Auth] Using MOCK_NAV_IDENT:', process.env.MOCK_NAV_IDENT);
+                req.user = {
+                    navIdent: process.env.MOCK_NAV_IDENT,
+                    name: 'Mock User',
+                    email: 'mock.user@nav.no'
+                };
+                return next();
+            }
+
+            console.log('[Auth] @navikt/oasis not available and no MOCK_NAV_IDENT set');
+            req.user = { navIdent: 'LOCAL_DEV' }; // Fallback for local development
+            return next();
+        }
+
+        // Check for mock ident even if oasis is available (for local testing with installed deps)
+        if (process.env.MOCK_NAV_IDENT) {
+            console.log('[Auth] Using MOCK_NAV_IDENT (override):', process.env.MOCK_NAV_IDENT);
+            req.user = {
+                navIdent: process.env.MOCK_NAV_IDENT,
+                name: 'Mock User',
+                email: 'mock.user@nav.no'
+            };
+            return next();
+        }
+
+        const { getToken, validateToken, parseAzureUserToken } = oasis;
+
+        // Extract token from request
+        const token = getToken(req);
+
+        if (!token) {
+            return res.status(401).json({ error: 'Ingen autentiseringstoken' });
+        }
+
+        // Validate the token
+        const validation = await validateToken(token);
+
+        if (!validation.ok) {
+            return res.status(401).json({
+                error: 'Ugyldig token',
+                details: validation.error?.message || 'Token-validering feilet'
+            });
+        }
+
+        // Parse the Azure token to get user information
+        const parsed = parseAzureUserToken(token);
+
+        if (!parsed.ok) {
+            return res.status(500).json({ error: 'Kunne ikke parse token' });
+        }
+
+        // Add user information to request object for audit logging
+        // Format name as "Firstname Lastname" (Norwegian convention)
+        let name = parsed.name || '';
+
+        // Fix potential encoding issues
+        if (name.includes('Ã')) {
+            try {
+                name = Buffer.from(name, 'latin1').toString('utf-8');
+            } catch (e) { console.warn('[Auth] Failed to fix encoding:', name); }
+        }
+
+        const nameParts = name.split(', ');
+        const formattedName = nameParts.length === 2
+            ? `${nameParts[1]} ${nameParts[0]}`
+            : name;
+
+        req.user = {
+            navIdent: parsed.NAVident,
+            name: formattedName,
+            email: parsed.preferred_username
+        };
+
+        console.log(`[Auth] User authenticated: ${parsed.NAVident}`);
+        next();
+
+    } catch (error) {
+        console.error('[Auth] Authentication error:', error);
+        return res.status(500).json({
+            error: 'Autentisering feilet',
+            details: error.message
+        });
+    }
+}
+
+// Apply authentication middleware to all /api routes (except /api/user/me which has its own handling)
+app.use('/api/bigquery', authenticateUser);
+
+
+// User authentication endpoint - returns NAV ident and user info
+app.get('/api/user/me', async (req, res) => {
+    try {
+        // Try to import @navikt/oasis - it's optional locally but required in NAIS
+        let oasis;
+        try {
+            oasis = await import('@navikt/oasis');
+        } catch (importError) {
+            if (process.env.MOCK_NAV_IDENT) {
+                return res.json({
+                    navIdent: process.env.MOCK_NAV_IDENT,
+                    name: 'Mock User',
+                    email: 'mock.user@nav.no',
+                    authenticated: true,
+                    message: `Vellykket autentisert som ${process.env.MOCK_NAV_IDENT} (MOCK)`
+                });
+            }
+
+            return res.status(503).json({
+                error: 'Authentication not available in local dev',
+                message: 'Deploy to NAIS to test authentication',
+                details: importError.message
+            });
+        }
+
+        if (process.env.MOCK_NAV_IDENT) {
+            return res.json({
+                navIdent: process.env.MOCK_NAV_IDENT,
+                name: 'Mock User',
+                email: 'mock.user@nav.no',
+                authenticated: true,
+                message: `Vellykket autentisert som ${process.env.MOCK_NAV_IDENT} (MOCK)`
+            });
+        }
+
+        const { getToken, validateToken, parseAzureUserToken } = oasis;
+
+        // Extract token from request
+        const token = getToken(req);
+
+        if (!token) {
+            return res.status(401).json({ error: 'No authentication token provided' });
+        }
+
+        // Validate the token
+        const validation = await validateToken(token);
+
+        if (!validation.ok) {
+            return res.status(401).json({
+                error: 'Invalid token',
+                details: validation.error?.message || 'Token validation failed'
+            });
+        }
+
+        // Parse the Azure token to get user information
+        const parsed = parseAzureUserToken(token);
+
+        if (!parsed.ok) {
+            return res.status(500).json({ error: 'Failed to parse token' });
+        }
+
+        // Return user information
+        // Format name as "Firstname Lastname" (Norwegian convention)
+        // Azure returns "Lastname, Firstname" so we need to reverse it
+        let name = parsed.name || '';
+
+        // Fix potential encoding issues (UTF-8 bytes interpreted as Latin-1)
+        if (name.includes('Ã')) {
+            try {
+                name = Buffer.from(name, 'latin1').toString('utf-8');
+            } catch (e) {
+                // Keep original if fixing fails
+                console.warn('[Auth] Failed to fix encoding for name:', name);
+            }
+        }
+
+        const nameParts = name.split(', ');
+        const formattedName = nameParts.length === 2
+            ? `${nameParts[1]} ${nameParts[0]}` // Firstname Lastname
+            : name; // Fallback to original if format is unexpected
+
+        res.json({
+            navIdent: parsed.NAVident,
+            name: formattedName,
+            email: parsed.preferred_username,
+            authenticated: true,
+            message: `Vellykket autentisert som ${parsed.NAVident}`
+        });
+
+    } catch (error) {
+        console.error('Authentication error:', error);
+        res.status(500).json({
+            error: 'Authentication failed',
+            details: error.message
+        });
+    }
+});
+
 
 // Get diagnosis data (global overview)
 app.post('/api/bigquery/diagnosis', async (req, res) => {
@@ -135,11 +412,14 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
             endDate: endDate
         };
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Diagnoseverktoy'));
 
         const [rows] = await job.getQueryResults();
 
@@ -155,12 +435,14 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Diagnoseverktoy'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -187,7 +469,7 @@ app.post('/api/bigquery/diagnosis', async (req, res) => {
 // BigQuery API endpoint
 app.post('/api/bigquery', async (req, res) => {
     try {
-        const { query } = req.body
+        const { query, analysisType } = req.body
 
         console.log('[BigQuery API] Request received');
 
@@ -206,10 +488,13 @@ app.post('/api/bigquery', async (req, res) => {
 
         console.log('[BigQuery API] Submitting query...');
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
-            location: 'europe-north1',
-        })
+            location: 'europe-north1'
+        }, navIdent, analysisType || 'Sqlverktoy'));
 
         console.log('[BigQuery API] Query job created, waiting for results...');
 
@@ -220,11 +505,13 @@ app.post('/api/bigquery', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 dryRun: true
-            });
+            }, navIdent, analysisType || 'Sqlverktoy'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -276,7 +563,11 @@ app.post('/api/bigquery', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, urlPath } = req.query;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const { startAt, endAt, urlPath, pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -295,14 +586,19 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
 
         let urlFilter = '';
         if (urlPath) {
-            urlFilter = `AND (
-                url_path = @urlPath 
-                OR url_path = @urlPathSlash 
-                OR url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         const query = `
@@ -316,11 +612,13 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
             ORDER BY count DESC
         `;
 
-        const [job] = await bigquery.createQueryJob({
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
         const events = rows.map(row => ({
@@ -331,12 +629,14 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Hendelsesutforsker'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -365,7 +665,11 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, includeParams, eventName, urlPath } = req.query;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const { startAt, endAt, includeParams, eventName, urlPath, pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -387,14 +691,19 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
 
         let urlFilter = '';
         if (urlPath) {
-            urlFilter = `AND (
-                e.url_path = @urlPath 
-                OR e.url_path = @urlPathSlash 
-                OR e.url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(e.url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    e.url_path = @urlPath 
+                    OR e.url_path = @urlPathSlash 
+                    OR e.url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         let eventFilter = '';
@@ -420,10 +729,13 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+                AND e.website_id = d.website_id
+                AND e.created_at = d.created_at
+                AND d.website_id = @websiteId
+                AND d.created_at BETWEEN @startDate AND @endDate
             CROSS JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name IS NOT NULL
             AND p.data_key IS NOT NULL
             ${urlFilter}
@@ -452,12 +764,15 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         // Dry run to estimate bytes processed
         let estimatedBytes = '0';
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+            const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Hendelsesutforsker'));
 
             const dryRunMetadata = dryRunJob.metadata;
             estimatedBytes = dryRunMetadata.statistics?.totalBytesProcessed || '0';
@@ -468,11 +783,13 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         }
 
         // Actual query execution
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -514,7 +831,13 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
 app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, eventName, urlPath, interval = 'day' } = req.query;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+
+
+        const { startAt, endAt, eventName, urlPath, interval = 'day', pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -533,14 +856,19 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
 
         let urlFilter = '';
         if (urlPath) {
-            urlFilter = `AND (
-                url_path = @urlPath 
-                OR url_path = @urlPathSlash 
-                OR url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         let eventFilter = '';
@@ -557,7 +885,7 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
 
         const query = `
             SELECT
-                TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
+                TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                 COUNT(*) as count
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
@@ -569,11 +897,13 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
             ORDER BY 1
         `;
 
-        const [job] = await bigquery.createQueryJob({
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -582,7 +912,9 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
             count: parseInt(row.count)
         }));
 
-        res.json({ data });
+        res.json({
+            data
+        });
     } catch (error) {
         console.error('BigQuery event series error:', error);
         res.status(500).json({
@@ -595,6 +927,10 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
     try {
         const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         if (!bigquery) {
             return res.status(500).json({
@@ -610,13 +946,15 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
             WHERE website_id = @websiteId
         `;
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: {
                 websiteId: websiteId
             }
-        });
+        }, navIdent, 'Datovelger'));
 
         const [rows] = await job.getQueryResults();
 
@@ -643,7 +981,13 @@ app.get('/api/bigquery/websites/:websiteId/daterange', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, eventName, parameterName, urlPath } = req.query;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+
+
+        const { startAt, endAt, eventName, parameterName, urlPath, pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -664,14 +1008,19 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
 
         let urlFilter = '';
         if (urlPath) {
-            urlFilter = `AND (
-                e.url_path = @urlPath 
-                OR e.url_path = @urlPathSlash 
-                OR e.url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(e.url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    e.url_path = @urlPath 
+                    OR e.url_path = @urlPathSlash 
+                    OR e.url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         const query = `
@@ -681,10 +1030,11 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+                AND e.website_id = d.website_id
+                AND e.created_at = d.created_at
             CROSS JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name = @eventName
             AND p.data_key = @parameterName
             ${urlFilter}
@@ -693,11 +1043,11 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             LIMIT 100
         `;
 
-        const [job] = await bigquery.createQueryJob({
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -709,12 +1059,14 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Hendelsesutforsker'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -729,7 +1081,10 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
             console.log('[Event Parameter Values] Dry run failed:', dryRunError.message);
         }
 
-        res.json({ values, queryStats });
+        res.json({
+            values,
+            queryStats
+        });
     } catch (error) {
         console.error('BigQuery event parameter values error:', error);
         res.status(500).json({
@@ -742,7 +1097,13 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
 app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, eventName, urlPath, limit = '20' } = req.query;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+
+
+        const { startAt, endAt, eventName, urlPath, limit = '20', pathOperator } = req.query;
 
         if (!bigquery) {
             return res.status(500).json({
@@ -763,14 +1124,19 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
 
         let urlFilter = '';
         if (urlPath) {
-            urlFilter = `AND (
-                e.url_path = @urlPath 
-                OR e.url_path = @urlPathSlash 
-                OR e.url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(e.url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    e.url_path = @urlPath 
+                    OR e.url_path = @urlPathSlash 
+                    OR e.url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         const query = `
@@ -781,10 +1147,11 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
             FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
             JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
                 ON e.event_id = d.website_event_id
+                AND e.website_id = d.website_id
+                AND e.created_at = d.created_at
             LEFT JOIN UNNEST(d.event_parameters) AS p
             WHERE e.website_id = @websiteId
             AND e.created_at BETWEEN @startDate AND @endDate
-            AND d.created_at BETWEEN @startDate AND @endDate
             AND e.event_name = @eventName
             ${urlFilter}
             GROUP BY e.event_id, e.created_at
@@ -795,11 +1162,13 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
         console.log('[Latest Events] Query params:', params);
         console.log('[Latest Events] URL filter:', urlFilter);
 
-        const [job] = await bigquery.createQueryJob({
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Hendelsesutforsker'));
 
         const [rows] = await job.getQueryResults();
 
@@ -828,12 +1197,14 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Hendelsesutforsker'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -862,7 +1233,23 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
 app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => {
     try {
         const { websiteId } = req.params;
-        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits' } = req.query;
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const { startAt, endAt, urlPath, interval = 'day', metricType = 'visits', pathOperator, countBy, countBySwitchAt } = req.query;
+        console.log(`[Traffic Series] Request: metricType=${metricType}, urlPath=${urlPath}, pathOperator=${pathOperator}, countBy=${countBy}`);
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id' && (metricType === 'visitors' || metricType === 'proportion');
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami_views.event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami_views.event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : 'session_id');
 
         if (!bigquery) {
             return res.status(500).json({
@@ -878,17 +1265,35 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             startDate: startDate,
             endDate: endDate
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let urlFilter = '';
+        let urlFilterCondition = 'FALSE'; // Default for proportion if no path (shouldn't happen if validated)
+
         if (urlPath) {
-            urlFilter = `AND (
-                url_path = @urlPath 
-                OR url_path = @urlPathSlash 
-                OR url_path LIKE @urlPathQuery
-            )`;
-            params.urlPath = urlPath;
-            params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-            params.urlPathQuery = urlPath + '?%';
+            if (pathOperator === 'starts-with') {
+                const condition = `LOWER(${col}url_path) LIKE @urlPathPattern`;
+                urlFilter = `AND ${condition}`;
+                urlFilterCondition = condition;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                const condition = `(
+                    ${col}url_path = @urlPath 
+                    OR ${col}url_path = @urlPathSlash 
+                    OR ${col}url_path LIKE @urlPathQuery
+                )`;
+                urlFilter = `AND ${condition}`;
+                urlFilterCondition = `
+                    ${col}url_path = @urlPath 
+                    OR ${col}url_path = @urlPathSlash 
+                    OR ${col}url_path LIKE @urlPathQuery
+                `;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
         }
 
         // Determine time truncation based on interval
@@ -896,46 +1301,102 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
         if (interval === 'hour') timeTrunc = 'HOUR';
         if (interval === 'week') timeTrunc = 'WEEK';
         if (interval === 'month') timeTrunc = 'MONTH';
-        // Choose aggregation based on metric type
-        const countExpression = metricType === 'pageviews'
-            ? 'COUNT(*)'
-            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        let query;
 
-        const query = `
-            SELECT
-                TIMESTAMP_TRUNC(created_at, ${timeTrunc}) as time,
-                ${countExpression} as count
-            FROM \`team-researchops-prod-01d6.umami_views.event\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            AND event_type = 1 -- Pageview
-            ${urlFilter}
-            GROUP BY 1
-            ORDER BY 1
-        `;
+        if (metricType === 'proportion') {
+            // Proportion query (Andel)
+            // Calculates: (Visitors to URL) / (Total Visitors) per time period
+            query = `
+                WITH base_query AS (
+                    SELECT
+                        TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
+                        ${userIdExpression} as user_id,
+                        CASE
+                            WHEN (${urlFilterCondition}) THEN TRUE
+                            ELSE FALSE
+                        END AS has_visited
+                    FROM ${fromClause}
+                    WHERE ${col}website_id = @websiteId
+                    AND ${col}created_at BETWEEN @startDate AND @endDate
+                    AND ${col}event_type = 1 -- Pageview
+                ),
+                totals as (
+                    SELECT 
+                        time,
+                        COUNT(DISTINCT user_id) AS total_visitors
+                    FROM base_query
+                    GROUP BY time
+                ),
+                specifics as (
+                    SELECT 
+                        time,
+                        COUNT(DISTINCT user_id) AS specific_visitors
+                    FROM base_query
+                    WHERE has_visited = TRUE
+                    GROUP BY time
+                )
+                SELECT
+                    totals.time,
+                    SAFE_DIVIDE(specifics.specific_visitors, totals.total_visitors) as count
+                FROM totals
+                LEFT JOIN specifics ON totals.time = specifics.time
+                ORDER BY totals.time
+            `;
+        } else {
+            // Standard query (Visitors, Visits, or Pageviews)
+            // Choose aggregation based on metric type
+            let countExpression;
+            if (metricType === 'pageviews') {
+                countExpression = 'COUNT(*)';
+            } else if (metricType === 'visits') {
+                countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // økter / besøk
+            } else {
+                countExpression = useDistinctId
+                    ? `APPROX_COUNT_DISTINCT(${userIdExpression})`
+                    : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besøkende)
+            }
+            console.log(`[Traffic Series] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
 
-        const [job] = await bigquery.createQueryJob({
+            query = `
+                SELECT
+                    TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
+                    ${countExpression} as count
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
+                ${urlFilter}
+                GROUP BY 1
+                ORDER BY 1
+            `;
+        }
+
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Trafikkanalyse'));
 
         const [rows] = await job.getQueryResults();
 
         const data = rows.map(row => ({
             time: row.time.value,
-            count: parseInt(row.count)
+            count: Number(row.count)
         }));
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Trafikkanalyse'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -951,7 +1412,11 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             console.log('[Traffic Series] Dry run failed:', dryRunError.message);
         }
 
-        res.json({ data, queryStats });
+        res.json({
+            data,
+            queryStats,
+            meta: { usedDistinctId: useDistinctId }
+        });
     } catch (error) {
         console.error('BigQuery traffic series error:', error);
         res.status(500).json({
@@ -964,6 +1429,9 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
     try {
         const { websiteId } = req.params;
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         const { startAt, endAt, limit = '50', metricType = 'visits' } = req.query;
 
         if (!bigquery) {
@@ -984,15 +1452,48 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
         };
 
         // Choose aggregation based on metric type
-        const countExpression = metricType === 'pageviews'
-            ? 'COUNT(*)'
-            : 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        let countExpression = '';
+        let proportionCTE = '';
+
+        if (metricType === 'proportion') {
+            proportionCTE = `
+                total_site_visitors AS (
+                    SELECT COUNT(DISTINCT session_id) as total_count
+                    FROM \`team-researchops-prod-01d6.umami_views.event\`
+                    WHERE website_id = @websiteId
+                      AND created_at BETWEEN @startDate AND @endDate
+                      AND event_type = 1 -- Pageview
+                ),`;
+            // Will be set specifically per query branch due to alias differences
+        } else if (metricType === 'pageviews') {
+            countExpression = 'COUNT(*)';
+        } else {
+            countExpression = 'APPROX_COUNT_DISTINCT(session_id)'; // visitors
+        }
 
         if (req.query.urlPath) {
             // Page-centric flow: Source -> Specific Page -> Next
-            params.urlPath = req.query.urlPath;
+
+            // Check operator
+            const pathOperator = req.query.pathOperator;
+            let condition = 'url_path = @urlPath';
+            params.urlPath = req.query.urlPath; // Set urlPath for both cases
+
+            if (pathOperator === 'starts-with') {
+                condition = 'LOWER(url_path) LIKE @urlPathPattern';
+                params.urlPathPattern = req.query.urlPath.toLowerCase() + '%';
+            } else {
+                // params.urlPath is already set above to req.query.urlPath
+            }
+
+
+            const countExpr = metricType === 'proportion'
+                ? 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(session_id), (SELECT total_count FROM total_site_visitors))'
+                : countExpression;
+
             query = `
-                WITH session_events AS (
+                WITH ${proportionCTE}
+                session_events AS (
                     SELECT
                         session_id,
                         referrer_domain,
@@ -1023,17 +1524,23 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     END as source,
                     url_path as landing_page, -- Using 'landing_page' alias to match frontend expectation (it's the center node)
                     COALESCE(next_page, 'Exit') as next_page,
-                    ${metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(session_id)'} as count
+                    ${countExpr} as count
                 FROM events_with_context
-                WHERE url_path = @urlPath
+                WHERE ${condition}
                 GROUP BY 1, 2, 3
                 ORDER BY 4 DESC
                 LIMIT @limit
             `;
         } else {
             // Default: Landing Page Flow (Source -> Landing Page -> Next)
+
+            const countExpr = metricType === 'proportion'
+                ? 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(s.session_id), (SELECT total_count FROM total_site_visitors))'
+                : (metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(s.session_id)');
+
             query = `
-                WITH session_events AS (
+                WITH ${proportionCTE}
+                session_events AS (
                     SELECT
                         session_id,
                         referrer_domain,
@@ -1069,7 +1576,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
                     COALESCE(s.referrer_domain, 'Direkte / Annet') as source,
                     s.landing_page,
                     COALESCE(sp.second_page, 'Exit') as next_page,
-                    ${metricType === 'pageviews' ? 'COUNT(*)' : 'APPROX_COUNT_DISTINCT(s.session_id)'} as count
+                    ${countExpr} as count
                 FROM session_starts s
                 LEFT JOIN second_pages sp ON s.session_id = sp.session_id
                 GROUP BY 1, 2, 3
@@ -1078,11 +1585,13 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             `;
         }
 
-        const [job] = await bigquery.createQueryJob({
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Trafikkanalyse'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1090,18 +1599,20 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             source: row.source,
             landingPage: row.landing_page,
             nextPage: row.next_page,
-            count: parseInt(row.count)
+            count: Number(row.count)
         }));
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1126,9 +1637,288 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
     }
 });
 
+// Get page metrics (accurate visitors/pageviews/proportion per page)
+app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000', countBy, countBySwitchAt } = req.query;
+        console.log('[Page Metrics] Request:', { websiteId, urlPath, countBy });
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami_views.event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami_views.event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : 'session_id');
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            limit: parseInt(limit)
+        };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
+
+        let urlFilter = '';
+
+        if (urlPath) {
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(${col}url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    ${col}url_path = @urlPath 
+                    OR ${col}url_path = @urlPathSlash 
+                    OR ${col}url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
+        }
+
+        const query = `
+            WITH total_stats AS (
+                SELECT APPROX_COUNT_DISTINCT(${userIdExpression}) as total_visitors
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1
+            ),
+            page_stats AS (
+                SELECT
+                    CASE 
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END as url_path,
+                    APPROX_COUNT_DISTINCT(${userIdExpression}) as visitors,
+                    COUNT(*) as pageviews
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
+                ${urlFilter}
+                GROUP BY 1
+            )
+            SELECT
+                p.url_path,
+                p.visitors,
+                p.pageviews,
+                SAFE_DIVIDE(p.visitors, t.total_visitors) as proportion
+            FROM page_stats p
+            CROSS JOIN total_stats t
+            ORDER BY p.visitors DESC
+            LIMIT @limit
+        `;
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        }, navIdent, 'Side-metrikker'));
+
+        const [rows] = await job.getQueryResults();
+
+        const data = rows.map(row => ({
+            urlPath: row.url_path,
+            visitors: Number(row.visitors),
+            pageviews: Number(row.pageviews),
+            proportion: Number(row.proportion || 0)
+        }));
+
+        res.json({
+            data,
+            meta: { usedDistinctId: useDistinctId }
+        });
+    } catch (error) {
+        console.error('BigQuery page metrics error:', error);
+        res.status(500).json({ error: error.message || 'Failed to fetch page metrics' });
+    }
+});
+
+// Get traffic breakdown (accurate sources/exits)
+app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+        const { startAt, endAt, urlPath, pathOperator, limit = '1000', metricType = 'visits', countBy, countBySwitchAt } = req.query;
+        console.log(`[Traffic Breakdown] Request: metricType=${metricType}, pathOperator=${pathOperator}, countBy=${countBy}`);
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id' && (metricType === 'visitors' || metricType === 'proportion');
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami_views.event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami_views.event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : 'session_id');
+
+        if (!bigquery) {
+            return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            limit: parseInt(limit)
+        };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
+
+        let condition = 'url_path = @urlPath';
+        params.urlPath = urlPath || '/'; // Default to root if missing, though typically required
+
+        if (urlPath) {
+            if (pathOperator === 'starts-with') {
+                condition = 'LOWER(url_path) LIKE @urlPathPattern';
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPathQuery = urlPath + '?%';
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                condition = `(
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+            }
+        } else {
+            // If no URL path provided, flow breakdown is less meaningful or implies "Any page". 
+            // But for traffic analysis page, we usually have a context. 
+            // If "All pages", sources = referrers, exits = exit pages.
+            condition = '1=1';
+        }
+        let countExpression;
+        if (metricType === 'pageviews') {
+            countExpression = 'COUNT(*)';
+        } else if (metricType === 'visits') {
+            countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // økter / besøk
+        } else {
+            countExpression = useDistinctId
+                ? `APPROX_COUNT_DISTINCT(s.distinct_id)`
+                : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besøkende)
+        }
+        console.log(`[Traffic Breakdown] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
+
+        const query = `
+            WITH session_events AS (
+                SELECT
+                    ${userIdExpression} as user_id,
+                    ${col}session_id,
+                    ${col}visit_id,
+                    ${col}referrer_domain,
+                    CASE
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END as url_path,
+                    ${col}created_at
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
+            ),
+            events_with_context AS (
+                SELECT
+                    user_id,
+                    session_id,
+                    visit_id,
+                    url_path,
+                    referrer_domain,
+                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_page,
+                    LEAD(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as next_page
+                FROM session_events
+            ),
+            filtered_events AS (
+                SELECT
+                    CASE
+                        WHEN prev_page IS NOT NULL THEN prev_page
+                        ELSE COALESCE(referrer_domain, 'Direkte / Annet')
+                    END as source,
+                    url_path as landing_page,
+                    COALESCE(next_page, 'Exit') as next_page,
+                    session_id,
+                    visit_id,
+                    user_id
+                FROM events_with_context
+                WHERE ${condition}
+            ),
+            sources_agg AS (
+                SELECT source as name, ${metricType === 'pageviews' ? 'COUNT(*)' : (metricType === 'visits' ? 'APPROX_COUNT_DISTINCT(visit_id)' : 'APPROX_COUNT_DISTINCT(user_id)')} as visitors
+                FROM filtered_events
+                GROUP BY 1
+                ORDER BY visitors DESC
+                LIMIT @limit
+            ),
+            exits_agg AS (
+                SELECT next_page as name, ${metricType === 'pageviews' ? 'COUNT(*)' : (metricType === 'visits' ? 'APPROX_COUNT_DISTINCT(visit_id)' : 'APPROX_COUNT_DISTINCT(user_id)')} as visitors
+                FROM filtered_events
+                GROUP BY 1
+                ORDER BY visitors DESC
+                LIMIT @limit
+            )
+            SELECT 'source' as type, name, visitors FROM sources_agg
+            UNION ALL
+            SELECT 'exit' as type, name, visitors FROM exits_agg
+        `;
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        }, navIdent, 'Trafikk-breakdown'));
+
+        const [rows] = await job.getQueryResults();
+
+        const sources = [];
+        const exits = [];
+
+        rows.forEach(row => {
+            const item = { name: row.name, visitors: Number(row.visitors) };
+            if (row.type === 'source') sources.push(item);
+            else if (row.type === 'exit') exits.push(item);
+        });
+
+        res.json({
+            sources,
+            exits,
+            meta: { usedDistinctId: useDistinctId }
+        });
+    } catch (error) {
+        console.error('BigQuery traffic breakdown error:', error);
+        res.status(500).json({ error: error.message || 'Failed to fetch traffic breakdown' });
+    }
+});
+
 // Get websites from BigQuery
 app.get('/api/bigquery/websites', async (req, res) => {
     try {
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
@@ -1150,10 +1940,12 @@ app.get('/api/bigquery/websites', async (req, res) => {
             ORDER BY name
         `;
 
-        const [job] = await bigquery.createQueryJob({
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1'
-        });
+        }, navIdent, 'Nettsidevelger'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1184,6 +1976,10 @@ app.get('/api/bigquery/websites', async (req, res) => {
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
         const { websiteId, startUrl, startDate, endDate, steps = 3, limit = 30, direction = 'forward' } = req.body;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1291,7 +2087,9 @@ app.post('/api/bigquery/journeys', async (req, res) => {
             ORDER BY step, value DESC
         `;
 
-        const [job] = await bigquery.createQueryJob({
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: {
@@ -1302,11 +2100,13 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 steps,
                 limit
             }
-        });
+        }, navIdent, 'Sideflyt'));
 
         // Get cost estimate
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: {
@@ -1318,7 +2118,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     limit
                 },
                 dryRun: true
-            });
+            }, navIdent, 'Sideflyt'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1365,7 +2165,10 @@ app.post('/api/bigquery/journeys', async (req, res) => {
         // Get dry run stats for response
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+            const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: {
@@ -1377,7 +2180,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                     limit
                 },
                 dryRun: true
-            });
+            }, navIdent, 'Sideflyt'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1410,7 +2213,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
 // BigQuery dry run endpoint - estimate query cost
 app.post('/api/bigquery/estimate', async (req, res) => {
     try {
-        const { query } = req.body
+        const { query, analysisType } = req.body
 
         if (!query) {
             return res.status(400).json({ error: 'Query is required' })
@@ -1424,11 +2227,14 @@ app.post('/api/bigquery/estimate', async (req, res) => {
         }
 
         // Dry run to get query statistics without executing
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
-            dryRun: true,
-        })
+            dryRun: true
+        }, navIdent, analysisType || 'Sqlverktoy'));
 
         const stats = job.metadata.statistics;
         const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);
@@ -1461,7 +2267,10 @@ app.post('/api/bigquery/estimate', async (req, res) => {
 // Get funnel data from BigQuery
 app.post('/api/bigquery/funnel', async (req, res) => {
     try {
-        const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
+        const { websiteId, urls, steps: inputSteps, startDate, endDate, onlyDirectEntry = true } = req.body;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1469,11 +2278,27 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             })
         }
 
-        if (!urls || !Array.isArray(urls) || urls.length < 2) {
+        // Backward compatibility: Convert legacy `urls` to `steps` if `steps` is missing
+        let steps = inputSteps;
+        if (!steps && urls) {
+            steps = urls.map(url => ({ type: 'url', value: url }));
+        }
+
+        if (!steps || !Array.isArray(steps) || steps.length < 2) {
             return res.status(400).json({
-                error: 'At least 2 URLs are required for a funnel'
+                error: 'At least 2 steps are required for a funnel'
             });
         }
+
+        // Determine which event types we need to query
+        // 1 = Pageview (for type: 'url')
+        // 2 = Custom Event (for type: 'event')
+        const neededEventTypes = new Set();
+        steps.forEach(step => {
+            if (step.type === 'url') neededEventTypes.add(1);
+            if (step.type === 'event') neededEventTypes.add(2);
+        });
+        const eventTypesList = Array.from(neededEventTypes).join(', ');
 
         // Helper to generate the URL normalization SQL
         const normalizeUrlSql = `
@@ -1484,72 +2309,161 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             END
         `;
 
-        // 1. Base events CTE with LAG for strict mode
+        // 1. Base events CTE with step_value calculation
+        // We calculate a unified 'step_value' to compare against:
+        // - For Pageviews (type 1): The normalized URL path
+        // - For Custom Events (type 2): The event name
+        // We also keep the url_path for events with eventScope='current-path'
         let query = `
             WITH events_raw AS (
-                SELECT 
+                SELECT
                     session_id,
-                    ${normalizeUrlSql} as url_path,
+                    event_id,
+                    website_id,
+                    event_type,
+                    CASE
+                        WHEN event_type = 1 THEN ${normalizeUrlSql}
+                        WHEN event_type = 2 THEN event_name
+                        ELSE NULL
+                    END as step_value,
+                    ${normalizeUrlSql} as url_path_normalized,
                     created_at
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
-                  AND event_type = 1 -- Pageview
+                  AND event_type IN (${eventTypesList})
             ),
             events AS (
-                SELECT 
+                SELECT
                     *,
-                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
+                    LAG(step_value) OVER (PARTITION BY session_id ORDER BY created_at) as prev_step_value,
+                    LAG(url_path_normalized) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
                 FROM events_raw
             ),
         `;
 
         // 2. Generate CTEs for each step
-        const stepCtes = urls.map((url, index) => {
+        const stepCtes = steps.map((step, index) => {
             const stepName = `step${index + 1}`;
             const prevStepName = `step${index}`;
+            const paramName = `stepValue${index}`;
+
+            // Check if we need to enforce type match as well (e.g. if a URL and Event have same name?)
+            // For now, assuming step_value uniqueness is enough or tolerable.
+            // But strictness:
+            // If checking for URL, we should ensure event_type=1
+            // If checking for Event, we should ensure event_type=2
+            const typeCheck = step.type === 'url' ? 'AND event_type = 1' : 'AND event_type = 2';
+
+            // For events with eventScope='current-path', we need to ensure they happen on the same URL as the previous step
+            const eventScopeCheck = (step.type === 'event' && step.eventScope === 'current-path' && index > 0)
+                ? `AND e.url_path_normalized = prev.url_path${index}`
+                : '';
+
+            // Check for event parameters (filters)
+            // Expect step.params to be an array of { key, value, operator }
+            let paramFilters = '';
+            if (step.type === 'event' && step.params && Array.isArray(step.params) && step.params.length > 0) {
+                const conditions = step.params.map((p, pIdx) => {
+                    const pKeyName = `step${index}_pKey${pIdx}`;
+                    const pValName = `step${index}_pVal${pIdx}`;
+
+                    // We'll handle the parameter injection later when building the params object,
+                    // but we need to remember to do it.
+
+                    const operator = p.operator === 'contains' ? 'LIKE' : '=';
+
+                    return `EXISTS (
+                        SELECT 1
+                        FROM \`team-researchops-prod-01d6.umami_views.event_data\` d_${index}_${pIdx}
+                        CROSS JOIN UNNEST(d_${index}_${pIdx}.event_parameters) p_${index}_${pIdx}
+                        WHERE d_${index}_${pIdx}.website_event_id = e.event_id
+                          AND d_${index}_${pIdx}.website_id = e.website_id
+                          AND d_${index}_${pIdx}.created_at = e.created_at
+                          AND p_${index}_${pIdx}.data_key = @${pKeyName}
+                          AND p_${index}_${pIdx}.string_value ${operator} @${pValName}
+                    )`;
+                });
+
+                if (conditions.length > 0) {
+                    paramFilters = 'AND ' + conditions.join(' AND ');
+                }
+            }
 
             if (index === 0) {
-                // Step 1: Always any visit to the first URL
+                // Step 1: Always any visit/event matching the first step
+                // We also store the URL path for potential use in subsequent steps
+
+                // Check for whiteboard
+                const isWildcard = step.value.includes('*');
+                const operator = isWildcard ? 'LIKE' : '=';
+
                 return `
             ${stepName} AS (
-                SELECT session_id, MIN(created_at) as time${index + 1}
-                FROM events
-                WHERE url_path = @url${index}
-                GROUP BY session_id
+                SELECT session_id, MIN(created_at) as time${index + 1},
+                       MIN(url_path_normalized) as url_path${index + 1},
+                       e.event_id as event_id${index + 1} -- Keep distinct
+                FROM events e
+                WHERE step_value ${operator} @${paramName}
+                  ${typeCheck}
+                  ${paramFilters}
+                GROUP BY session_id, e.event_id
             )`;
             } else {
+                const prevParamName = `stepValue${index - 1}`;
+
+                // Check for wildcard in current step
+                const isWildcard = step.value.includes('*');
+                const operator = isWildcard ? 'LIKE' : '=';
+
+                // Check for wildcard in PREVIOUS step (for strict mode check)
+                const isPrevWildcard = steps[index - 1].value.includes('*');
+                const prevOperator = isPrevWildcard ? 'LIKE' : '=';
+
                 if (onlyDirectEntry) {
-                    // Strict mode: Current URL must be visited immediately after Previous URL
-                    // We join on session_id and ensure the current event's prev_url_path matches the previous step's URL
+                    // Strict mode: Current step must be immediately after Previous step
                     return `
             ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1},
+                       MIN(e.url_path_normalized) as url_path${index + 1},
+                       e.event_id as event_id${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
+                WHERE e.step_value ${operator} @${paramName}
+                  ${typeCheck}
                   AND e.created_at > prev.time${index}
-                  AND e.prev_url_path = @url${index - 1} -- Strict check: Immediate predecessor
-                GROUP BY e.session_id
+                  AND e.prev_step_value ${prevOperator} @${prevParamName}
+                  ${eventScopeCheck}
+                  ${paramFilters}
+                GROUP BY e.session_id, e.event_id
             )`;
                 } else {
-                    // Loose mode: Eventual visit (standard funnel)
+                    // Loose mode: Eventual follow-up
                     return `
             ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
+                SELECT e.session_id, MIN(e.created_at) as time${index + 1},
+                       MIN(e.url_path_normalized) as url_path${index + 1},
+                       e.event_id as event_id${index + 1}
                 FROM events e
                 JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
+                WHERE e.step_value ${operator} @${paramName}
+                  ${typeCheck}
                   AND e.created_at > prev.time${index}
-                GROUP BY e.session_id
+                  ${eventScopeCheck}
+                  ${paramFilters}
+                GROUP BY e.session_id, e.event_id
             )`;
                 }
             }
+
         });
 
         query += stepCtes.join(',') + `
-            SELECT 
-                ${urls.map((_, i) => `(SELECT COUNT(*) FROM step${i + 1}) as step${i + 1}_count`).join(',\n                ')}
+            SELECT ${steps.map((_, i) => `
+                ${i} as step, 
+                @stepValue${i} as url, 
+                (SELECT COUNT(DISTINCT session_id) FROM step${i + 1}) as count`).join('\n            UNION ALL SELECT ')}
+            ORDER BY step
         `;
 
         // Create params object
@@ -1559,19 +2473,39 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             endDate
         };
 
-        urls.forEach((url, index) => {
-            params[`url${index}`] = url;
+        steps.forEach((step, index) => {
+            if (step.value.includes('*')) {
+                params[`stepValue${index}`] = step.value.replace(/\*/g, '%');
+            } else {
+                params[`stepValue${index}`] = step.value;
+            }
+
+            // Add params for filters
+            if (step.type === 'event' && step.params && Array.isArray(step.params)) {
+                step.params.forEach((p, pIdx) => {
+                    params[`step${index}_pKey${pIdx}`] = p.key;
+
+                    if (p.operator === 'contains') {
+                        params[`step${index}_pVal${pIdx}`] = `%${p.value}%`;
+                    } else {
+                        params[`step${index}_pVal${pIdx}`] = p.value;
+                    }
+                });
+            }
         });
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Traktanalyse'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1583,16 +2517,18 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 estimatedCostUSD: estimatedCostUSD
             };
 
-            console.log(`[Funnel] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+            console.log(`[Funnel] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD} (Types: ${eventTypesList})`);
         } catch (dryRunError) {
             console.log('[Funnel] Dry run failed:', dryRunError.message);
         }
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Traktanalyse'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1600,20 +2536,15 @@ app.post('/api/bigquery/funnel', async (req, res) => {
             return res.json({ data: [] });
         }
 
-        const row = rows[0];
-
-        // Format for frontend
-        const funnelData = urls.map((url, index) => ({
+        const data = rows.map((row, index) => ({
             step: index,
-            url: url,
-            count: parseInt(row[`step${index + 1}_count`] || 0)
+            url: steps[index].value,
+            type: steps[index].type,
+            params: steps[index].params,
+            count: parseInt(row.count || 0)
         }));
 
-        res.json({
-            data: funnelData,
-            queryStats
-        });
-
+        res.json({ data, queryStats, sql: substituteQueryParameters(query, params) });
     } catch (error) {
         console.error('BigQuery funnel error:', error);
         res.status(500).json({
@@ -1622,10 +2553,213 @@ app.post('/api/bigquery/funnel', async (req, res) => {
     }
 });
 
-// Get funnel timing data from BigQuery (average time per step)
+// Get marketing stats (UTM parameters)
+app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) => {
+    try {
+        const { websiteId } = req.params;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const { startAt, endAt, urlPath, limit = '100', metricType = 'visits', pathOperator, countBy, countBySwitchAt } = req.query;
+
+        console.log(`[Marketing Stats] Request: metricType=${metricType}, countBy=${countBy}`);
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id' && (metricType === 'visitors' || metricType === 'proportion' || metricType === 'users');
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami.public_website_event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami.public_website_event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : `${col}session_id`);
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        const startDate = startAt ? new Date(parseInt(startAt)).toISOString() : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const endDate = endAt ? new Date(parseInt(endAt)).toISOString() : new Date().toISOString();
+
+        const params = {
+            websiteId: websiteId,
+            startDate: startDate,
+            endDate: endDate,
+            limit: parseInt(limit)
+        };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
+
+        let urlFilter = '';
+        if (urlPath) {
+            if (pathOperator === 'starts-with') {
+                urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                urlFilter = `AND (
+                    url_path = @urlPath 
+                    OR url_path = @urlPathSlash 
+                    OR url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
+        }
+
+        // Choose aggregation based on metric type
+        let countExpression;
+        switch (metricType) {
+            case 'pageviews':
+                countExpression = 'COUNT(*)';
+                break;
+            case 'visits':
+                countExpression = 'APPROX_COUNT_DISTINCT(session_id)';
+                break;
+            case 'proportion':
+            default: // visitors
+                countExpression = 'APPROX_COUNT_DISTINCT(user_id)';
+        }
+
+        const dimensions = [
+            { key: 'utm_source', label: 'source' },
+            { key: 'utm_medium', label: 'medium' },
+            { key: 'utm_campaign', label: 'campaign' },
+            { key: 'utm_content', label: 'content' },
+            { key: 'utm_term', label: 'term' },
+            { key: 'referrer_domain', label: 'referrer' },
+            { key: 'url_query', label: 'query' }
+        ];
+
+        // Construct a single query using UNION ALL with a CTE to avoid multi-scanning the table
+        // We select all necessary columns in the CTE
+        // BigQuery aliases columns automatically (e.g. e.utm_source -> utm_source), so we can reference them directly in unionParts
+        const cteColumns = dimensions.map(d => `${col}${d.key}`).join(', ');
+
+        const unionParts = dimensions.map(dim => `
+            (
+                SELECT 
+                    '${dim.label}' as dimension,
+                    COALESCE(${dim.key}, '(none)') as name,
+                    ${countExpression} as count
+                FROM base_data
+                GROUP BY 1, 2
+                ORDER BY count DESC
+                LIMIT @limit
+            )
+        `).join(' UNION ALL ');
+
+        const query = `
+            WITH base_data AS (
+                SELECT 
+                    ${col}session_id as session_id,
+                    ${userIdExpression} as user_id,
+                    ${cteColumns}
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1
+                ${urlFilter}
+            )
+            ${unionParts}
+        `;
+
+
+
+
+
+        // Execute single query
+        console.log(`[Marketing] Fetching stats for website ${websiteId} (Single Query Optimization)`);
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
+            query: query,
+            location: 'europe-north1',
+            params: params
+        }, navIdent, 'Markedsanalyse'));
+
+        const [rows] = await job.getQueryResults();
+        console.log(`[Marketing] Query returned ${rows.length} rows total`);
+
+        // Get dry run stats for the single query
+        let queryStats = null;
+        try {
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            }, navIdent, 'Markedsanalyse'));
+
+            const meta = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(meta.totalBytesProcessed);
+            queryStats = {
+                totalBytesProcessedGB: (bytesProcessed / (1024 ** 3)).toFixed(2),
+                estimatedCostUSD: ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3)
+            };
+            console.log(`[Marketing] Dry run - Processing ${queryStats.totalBytesProcessedGB} GB`);
+        } catch (e) {
+            console.log(`[Marketing] Dry run failed: `, e.message);
+        }
+
+        // Aggregate results by dimension label
+        const responseData = {};
+        dimensions.forEach(dim => responseData[dim.label] = []);
+
+        rows.forEach(row => {
+            if (responseData[row.dimension]) {
+                responseData[row.dimension].push({
+                    name: row.name,
+                    count: parseInt(row.count)
+                });
+            }
+        });
+
+        // For proportion metric, calculate percentages based on total visitors per dimension
+        if (metricType === 'proportion') {
+            Object.keys(responseData).forEach(dimension => {
+                const items = responseData[dimension];
+                const total = items.reduce((sum, item) => sum + item.count, 0);
+                if (total > 0) {
+                    items.forEach(item => {
+                        // Keep count as percentage (0-100)
+                        item.count = Math.round((item.count / total) * 1000) / 10; // Round to 1 decimal
+                    });
+                }
+            });
+        }
+
+        res.json({
+            data: responseData,
+            queryStats,
+            meta: { usedDistinctId: useDistinctId }
+        });
+    } catch (error) {
+        console.error('BigQuery marketing stats error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to fetch marketing stats'
+        });
+    }
+});
+
+
 app.post('/api/bigquery/funnel-timing', async (req, res) => {
     try {
-        const { websiteId, urls, startDate, endDate, onlyDirectEntry = true } = req.body;
+        const { websiteId, steps, startDate, endDate, onlyDirectEntry = true } = req.body;
+        let { urls } = req.body;
+
+        // Support 'steps' input format (array of objects) by extracting values
+        if (!urls && steps && Array.isArray(steps)) {
+            urls = steps.map(s => s.value);
+        }
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({
@@ -1641,16 +2775,107 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
 
         // Helper to generate the URL normalization SQL
         const normalizeUrlSql = `
-            CASE 
+        CASE 
                 WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
                 THEN '/'
                 ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-            END
-        `;
+        END
+            `;
 
-        // 1. Base events CTE with LAG for strict mode
-        let query = `
-            WITH events_raw AS (
+        // Optimized Query using ARRAY_AGG and UDF to avoid self-joins
+        const query = `
+            CREATE TEMP FUNCTION match_funnel(
+                hits ARRAY<STRUCT<url STRING, ts TIMESTAMP>>, 
+                steps ARRAY<STRING>, 
+                strict BOOL
+            )
+            RETURNS ARRAY<STRUCT<step INT64, from_url STRING, to_url STRING, diff INT64>>
+            LANGUAGE js AS """
+                if (!hits || !steps || steps.length < 2) return [];
+                
+                var currentStepIdx = 0;
+                var stepTimes = [];
+                var lastHitIndex = -1;
+                var result = [];
+                
+                // 1. Find the first occurrence of the START URL
+                for (var i = 0; i < hits.length; i++) {
+                    if (hits[i].url === steps[0]) {
+                        stepTimes.push(hits[i].ts);
+                        lastHitIndex = i;
+                        currentStepIdx = 1;
+                        break;
+                    }
+                }
+                
+                // If start not found, return empty
+                if (currentStepIdx === 0) return [];
+                
+                // 2. Find subsequent steps
+                for (var s = 1; s < steps.length; s++) {
+                    var targetUrl = steps[s];
+                    var stepFound = false;
+                    
+                    if (strict) {
+                        // STRICT MODE: Must be the IMMEDIATE next event
+                        if (lastHitIndex + 1 < hits.length && hits[lastHitIndex + 1].url === targetUrl) {
+                            stepTimes.push(hits[lastHitIndex + 1].ts);
+                            lastHitIndex++;
+                            stepFound = true;
+                        }
+                    } else {
+                        // LOOSE MODE: Search forward for the next occurrence
+                        for (var i = lastHitIndex + 1; i < hits.length; i++) {
+                            if (hits[i].url === targetUrl) {
+                                stepTimes.push(hits[i].ts);
+                                lastHitIndex = i;
+                                stepFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If any step in the chain is broken, stop recording timings
+                    // (We only want completed sub-sequences? Or do we want partials? 
+                    // The standard funnel calculation typically tracks drop-off.
+                    // But for TIMING, we only care about transitions that actually happened.)
+                    if (!stepFound) break; 
+                }
+                
+                // Calculate diffs between found steps
+                // stepTimes contains [T0, T1, T2...] for steps 0, 1, 2...
+                // We produce pairs (0->1, 1->2, etc.)
+                for (var i = 0; i < stepTimes.length - 1; i++) {
+                    var t1 = new Date(stepTimes[i]);
+                    var t2 = new Date(stepTimes[i+1]);
+                    var diffSeconds = (t2 - t1) / 1000;
+                    
+                    result.push({
+                        step: i,
+                        from_url: steps[i],
+                        to_url: steps[i+1],
+                        diff: Math.round(diffSeconds)
+                    });
+                }
+
+                // Add total time if full funnel completed
+                if (stepTimes.length === steps.length) {
+                    var tStart = new Date(stepTimes[0]);
+                    var tEnd = new Date(stepTimes[stepTimes.length - 1]);
+                    var totalDiffSeconds = (tEnd - tStart) / 1000;
+                    
+                    result.push({
+                        step: -1, 
+                        from_url: "Total",
+                        to_url: "Total",
+                        diff: Math.round(totalDiffSeconds)
+                    });
+                }
+                
+                return result;
+            """;
+
+            WITH events AS (
                 SELECT 
                     session_id,
                     ${normalizeUrlSql} as url_path,
@@ -1658,124 +2883,69 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 FROM \`team-researchops-prod-01d6.umami.public_website_event\`
                 WHERE website_id = @websiteId
                   AND created_at BETWEEN @startDate AND @endDate
-                  AND event_type = 1 -- Pageview
+                  AND event_type = 1
+                  -- Optimization: Filter to only relevant URLs early
+                  -- Note: For strict mode, we might need context, but if we strictly just check the sequence of *funnel pages*,
+                  -- filtering is fine IF strictness ignores non-funnel pages. 
+                  -- standard strict funnel: A -> B (direct). 
+                  -- If user does A -> Random -> B. Strict funnel fails.
+                  -- If we filter out Random, we see A -> B. Strict funnel passes. 
+                  -- THIS IS A SEMANTIC DIFFERENCE.
+                  -- However, usually for "Funnel Analysis" we care about the specific flow defined.
+                  -- But strictly speaking, "Direct Entry" means "referrer = prev_step".
+                  -- To be safe and fast, we won't filter 'events' by URL for now to preserve strict semantics strictly.
+                  -- But to survive the "Resources Exceeded", filtering is the main cure.
+                  -- Let's Compromise: If Loose Mode, we filter. If Strict Mode, we don't (or we accept the loose-on-noise behavior).
+                  -- Given the error, we MUST optimize. 
+                  -- Let's try WITHOUT the URL filter first, relying on ARRAY_AGG efficiency.
+                  -- If that fails, we can add the filter.
             ),
-            events AS (
+            sessions AS (
                 SELECT 
-                    *,
-                    LAG(url_path) OVER (PARTITION BY session_id ORDER BY created_at) as prev_url_path
-                FROM events_raw
-            ),
-        `;
-
-        // 2. Generate CTEs for each step with timing
-        const stepCtes = urls.map((url, index) => {
-            const stepName = `step${index + 1}`;
-            const prevStepName = `step${index}`;
-
-            if (index === 0) {
-                // Step 1: Always any visit to the first URL
-                return `
-            ${stepName} AS (
-                SELECT session_id, MIN(created_at) as time${index + 1}
+                    session_id,
+                    ARRAY_AGG(STRUCT(url_path as url, created_at as ts) ORDER BY created_at) as hits
                 FROM events
-                WHERE url_path = @url${index}
                 GROUP BY session_id
-            )`;
-            } else {
-                if (onlyDirectEntry) {
-                    // Strict mode: Current URL must be visited immediately after Previous URL
-                    return `
-            ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
-                FROM events e
-                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
-                  AND e.created_at > prev.time${index}
-                  AND e.prev_url_path = @url${index - 1} -- Strict check: Immediate predecessor
-                GROUP BY e.session_id
-            )`;
-                } else {
-                    // Loose mode: Eventual visit (standard funnel)
-                    return `
-            ${stepName} AS (
-                SELECT e.session_id, MIN(e.created_at) as time${index + 1}
-                FROM events e
-                JOIN ${prevStepName} prev ON e.session_id = prev.session_id
-                WHERE e.url_path = @url${index} 
-                  AND e.created_at > prev.time${index}
-                GROUP BY e.session_id
-            )`;
-                }
-            }
-        });
-
-        // 3. Build the timing query - join all steps and calculate time differences
-        const joinClauses = urls.map((_, i) => {
-            if (i === 0) return 'step1';
-            return `LEFT JOIN step${i + 1} ON step1.session_id = step${i + 1}.session_id`;
-        }).join('\n            ');
-
-        // Create column aliases for the timing_data CTE
-        const timeColumns = urls.map((_, i) => `step${i + 1}.time${i + 1} as time${i + 1}`).join(',\n                    ');
-
-        // First, create a CTE with individual time differences per session
-        const timeDiffColumns = urls.map((_, i) => {
-            if (i === 0) return null;
-            return `TIMESTAMP_DIFF(time${i + 1}, time${i}, SECOND) as diff_${i}_to_${i + 1}`;
-        }).filter(Boolean).join(',\n                    ');
-
-        // Then calculate both average and median for each time difference
-        const aggregateSelects = urls.map((_, i) => {
-            if (i === 0) return null;
-            return `
-                AVG(diff_${i}_to_${i + 1}) as avg_seconds_${i}_to_${i + 1},
-                APPROX_QUANTILES(diff_${i}_to_${i + 1}, 2)[OFFSET(1)] as median_seconds_${i}_to_${i + 1}`;
-        }).filter(Boolean);
-
-        query += stepCtes.join(',') + `,
-            timing_data AS (
-                SELECT
-                    ${timeColumns}
-                FROM ${joinClauses}
             ),
-            time_diffs AS (
-                SELECT
-                    ${timeDiffColumns}
-                FROM timing_data
-                WHERE ${urls.map((_, i) => {
-            if (i === 0) return null;
-            return `time${i} IS NOT NULL AND time${i + 1} IS NOT NULL`;
-        }).filter(Boolean).join(' AND ')}
+            timings AS (
+                SELECT 
+                    session_id,
+                    match
+                FROM sessions,
+                UNNEST(match_funnel(hits, @steps, @strict)) as match
             )
             SELECT 
-                ${aggregateSelects.join(',\n                ')}
-            FROM time_diffs
+                match.step,
+                match.from_url,
+                match.to_url,
+                AVG(match.diff) as avg_seconds,
+                APPROX_QUANTILES(match.diff, 2)[OFFSET(1)] as median_seconds,
+                COUNT(*) as count -- Debug info
+            FROM timings
+            GROUP BY 1, 2, 3
+            ORDER BY step
         `;
 
-        console.log('[Funnel Timing] Generated SQL query:', query);
-
+        console.log('[Funnel Timing] Generated SQL query (Optimization: UDF)');
 
         // Create params object
         const params = {
             websiteId,
             startDate,
-            endDate
+            endDate,
+            steps: urls,
+            strict: onlyDirectEntry
         };
-
-        urls.forEach((url, index) => {
-            params[`url${index}`] = url;
-        });
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Traktanalyse'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1787,16 +2957,16 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
                 estimatedCostUSD: estimatedCostUSD
             };
 
-            console.log(`[Funnel Timing] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD}`);
+            console.log(`[Funnel Timing] Dry run - Processing ${gbProcessed} GB, estimated cost: $${estimatedCostUSD} `);
         } catch (dryRunError) {
             console.log('[Funnel Timing] Dry run failed:', dryRunError.message);
         }
 
-        const [job] = await bigquery.createQueryJob({
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Traktanalyse'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1804,25 +2974,18 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             return res.json({ data: [], queryStats });
         }
 
-        const row = rows[0];
-
-        // Format timing data for frontend
-        const timingData = [];
-        for (let i = 0; i < urls.length - 1; i++) {
-            const avgSeconds = row[`avg_seconds_${i}_to_${i + 1}`];
-            const medianSeconds = row[`median_seconds_${i}_to_${i + 1}`];
-            timingData.push({
-                fromStep: i,
-                toStep: i + 1,
-                fromUrl: urls[i],
-                toUrl: urls[i + 1],
-                avgSeconds: avgSeconds ? Math.round(parseFloat(avgSeconds)) : null,
-                medianSeconds: medianSeconds ? Math.round(parseFloat(medianSeconds)) : null
-            });
-        }
+        const timingData = rows.map((row) => ({
+            fromStep: parseInt(row.step),
+            toStep: parseInt(row.step) + 1,
+            fromUrl: row.from_url,
+            toUrl: row.to_url,
+            avgSeconds: row.avg_seconds ? Math.round(parseFloat(row.avg_seconds)) : null,
+            medianSeconds: row.median_seconds ? Math.round(parseFloat(row.median_seconds)) : null
+        }));
 
         res.json({
             data: timingData,
+            sql: query, // simplified for display
             queryStats
         });
 
@@ -1838,13 +3001,28 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
 // Get retention data from BigQuery
 app.post('/api/bigquery/retention', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath, businessDaysOnly } = req.body;
+        const { websiteId, startDate, endDate, urlPath, pathOperator, businessDaysOnly, countBy, countBySwitchAt } = req.body;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({
                 error: 'BigQuery client not initialized'
             })
         }
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami.public_website_event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami.public_website_event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : `${col}session_id`);
 
         // Calculate the maximum days for retention based on the date range
         // This represents the maximum number of days someone from the earliest cohort
@@ -1856,73 +3034,75 @@ app.post('/api/bigquery/retention', async (req, res) => {
 
         // Optimized query that normalizes URLs once and avoids expensive EXISTS clauses
         const query = `
-            WITH base AS (
-                -- Pre-normalize URL once (no regex in joins later)
+            WITH base AS(
+    --Pre - normalize URL once(no regex in joins later)
                 SELECT
-                    session_id,
-                    DATE(created_at) AS event_date,
-                    created_at,
-                    -- lightweight URL normalization
+                    ${userIdExpression} as user_id,
+                    DATE(${col}created_at, 'Europe/Oslo') AS event_date,
+    ${col}created_at,
+    --lightweight URL normalization
                     IFNULL(
-                        NULLIF(
-                            RTRIM(
-                                REGEXP_REPLACE(
-                                    REGEXP_REPLACE(url_path, r'[?#].*', ''), -- strip query/fragments
-                                    r'//+', '/'),                             -- collapse slashes
+        NULLIF(
+            RTRIM(
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), --strip query / fragments
+                                    r'//+', '/'), --collapse slashes
                                 '/'),
-                            ''),
-                        '/') AS url_path_clean
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = @websiteId
-                    AND created_at BETWEEN @startDate AND @endDate
+            ''),
+        '/') AS url_path_clean
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                    AND ${col}created_at BETWEEN @startDate AND @endDate
             ),
             ${urlPath ? `
             filtered_sessions AS (
-                -- Only keep session-days where the specified URL occurred
+                -- Only keep user-days where the specified URL occurred
                 SELECT DISTINCT
-                    session_id,
+                    user_id,
                     event_date AS first_seen_date
                 FROM base
-                WHERE url_path_clean = @urlPath
+                WHERE ${pathOperator === 'starts-with'
+                    ? 'LOWER(url_path_clean) LIKE @urlPathPattern'
+                    : 'url_path_clean = @urlPath'}
             ),
             ` : `
             filtered_sessions AS (
-                -- Get first seen date for each session
+                -- Get first seen date for each user
                 SELECT
-                    session_id,
+                    user_id,
                     MIN(event_date) AS first_seen_date
                 FROM base
-                GROUP BY session_id
+                GROUP BY user_id
             ),
             `}
             user_activity AS (
                 SELECT DISTINCT
-                    session_id,
+                    user_id,
                     event_date AS activity_date
                 FROM base
                 ${businessDaysOnly ? `WHERE EXTRACT(DAYOFWEEK FROM event_date) NOT IN (1, 7)` : ''}
             ),
             retention_base AS (
                 SELECT
-                    f.session_id,
+                    f.user_id,
                     f.first_seen_date,
                     a.activity_date,
                     DATE_DIFF(a.activity_date, f.first_seen_date, DAY) AS day_diff
                 FROM filtered_sessions f
                 JOIN user_activity a
-                    USING (session_id)
+                    USING (user_id)
                 WHERE DATE_DIFF(a.activity_date, f.first_seen_date, DAY) >= 0
             ),
             retention_counts AS (
                 SELECT
                     day_diff,
-                    COUNT(DISTINCT session_id) AS returning_users
+                    COUNT(DISTINCT user_id) AS returning_users
                 FROM retention_base
                 WHERE day_diff <= @maxDays
                 GROUP BY day_diff
             ),
             user_counts AS (
-                SELECT COUNT(DISTINCT session_id) AS total_users
+                SELECT COUNT(DISTINCT user_id) AS total_users
                 FROM filtered_sessions
             )
             SELECT
@@ -1940,20 +3120,30 @@ app.post('/api/bigquery/retention', async (req, res) => {
             endDate,
             maxDays
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         if (urlPath) {
-            params.urlPath = urlPath;
+            if (pathOperator === 'starts-with') {
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPath = urlPath;
+            }
         }
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Brukerlojalitet'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -1970,11 +3160,13 @@ app.post('/api/bigquery/retention', async (req, res) => {
             console.log('[Retention] Dry run failed:', dryRunError.message);
         }
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Brukerlojalitet'));
 
         const [rows] = await job.getQueryResults();
 
@@ -2015,7 +3207,24 @@ app.post('/api/bigquery/retention', async (req, res) => {
 // Get user composition data from BigQuery
 app.post('/api/bigquery/composition', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath } = req.body;
+        const { websiteId, startDate, endDate, urlPath, pathOperator, countBy, countBySwitchAt } = req.body;
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        // Use umami_views.session if identifying by distinct_id to ensure access to that column, otherwise public_session is fine
+        const table = useDistinctId
+            ? '`team-researchops-prod-01d6.umami_views.session`'
+            : '`team-researchops-prod-01d6.umami.public_session`';
+
+        const userIdExpression = useSwitch
+            ? `IF(s.created_at >= @countBySwitchAt, s.distinct_id, s.session_id)`
+            : (useDistinctId ? 's.distinct_id' : 's.session_id');
+        const countExpression = useDistinctId ? 'COUNT(DISTINCT user_id)' : 'COUNT(*)';
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({
@@ -2042,8 +3251,9 @@ app.post('/api/bigquery/composition', async (req, res) => {
                     s.device,
                     s.screen,
                     s.language,
-                    s.country
-                FROM \`team-researchops-prod-01d6.umami.public_session\` s
+                    s.country,
+                    ${userIdExpression} as user_id
+                FROM ${table} s
                 WHERE s.website_id = @websiteId
                   AND s.created_at BETWEEN @startDate AND @endDate
                   ${urlPath ? `
@@ -2053,20 +3263,23 @@ app.post('/api/bigquery/composition', async (req, res) => {
                     WHERE e.session_id = s.session_id 
                       AND e.website_id = @websiteId
                       AND e.created_at BETWEEN @startDate AND @endDate
-                      AND ${normalizeUrlSql.replace(/url_path/g, 'e.url_path')} = @urlPath
+                      ${pathOperator === 'starts-with'
+                    ? `AND LOWER(${normalizeUrlSql.replace(/url_path/g, 'e.url_path')}) LIKE @urlPathPattern`
+                    : `AND ${normalizeUrlSql.replace(/url_path/g, 'e.url_path')} = @urlPath`
+                }
                   )` : ''}
             )
-            SELECT 'browser' as category, browser as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'browser' as category, browser as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'os' as category, os as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'os' as category, os as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'device' as category, device as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'device' as category, device as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'screen' as category, screen as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'screen' as category, screen as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'language' as category, language as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'language' as category, language as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             UNION ALL
-            SELECT 'country' as category, country as value, COUNT(*) as count FROM relevant_sessions GROUP BY 1, 2
+            SELECT 'country' as category, country as value, ${countExpression} as count FROM relevant_sessions GROUP BY 1, 2
             ORDER BY category, count DESC
         `;
 
@@ -2075,20 +3288,30 @@ app.post('/api/bigquery/composition', async (req, res) => {
             startDate,
             endDate
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         if (urlPath) {
-            params.urlPath = urlPath;
+            if (pathOperator === 'starts-with') {
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPath = urlPath;
+            }
         }
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Brukersammensetning'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2105,17 +3328,20 @@ app.post('/api/bigquery/composition', async (req, res) => {
             console.log('[Composition] Dry run failed:', dryRunError.message);
         }
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Brukersammensetning'));
 
         const [rows] = await job.getQueryResults();
 
         res.json({
             data: rows,
-            queryStats
+            queryStats,
+            meta: { usedDistinctId: useDistinctId }
         });
 
     } catch (error) {
@@ -2136,7 +3362,11 @@ app.post('/api/bigquery/composition', async (req, res) => {
 // Privacy Check Endpoint
 app.post('/api/bigquery/privacy-check', async (req, res) => {
     try {
+
         const { websiteId, startDate, endDate, dryRun } = req.body;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
@@ -2167,7 +3397,8 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             'Kontonummer': '\\b\\d{4}\\.?\\d{2}\\.\\d{5}\\b',
             'Organisasjonsnummer': '\\b\\d{9}\\b',
             'Bilnummer': '\\b[A-Z]{2}\\s?\\d{5}\\b',
-            'Mulig søk': '[?&](?:q|query|search|k|ord)=[^&]+'
+            'Mulig søk': '[?&](?:q|query|search|k|ord)=[^&]+',
+            'Redacted': '\\[.*?\\]'
         };
 
         // Tables and columns to check
@@ -2186,15 +3417,16 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             { table: 'public_session', column: 'os' },
             { table: 'public_session', column: 'device' },
             { table: 'public_session', column: 'city' },
-            // public_event_data
-            { table: 'public_event_data', column: 'string_value' }
+
         ];
 
         // If global search, fetch website names first
         let websiteMap = new Map();
         if (!websiteId) {
             try {
-                const [siteRows] = await bigquery.query(`SELECT website_id, name FROM \`team-researchops-prod-01d6.umami.public_website\``);
+                const [siteRows] = await bigquery.query(addAuditLogging({
+                    query: `SELECT website_id, name FROM \`team-researchops-prod-01d6.umami.public_website\``
+                }, navIdent, 'Personvernssjekk'));
                 siteRows.forEach(r => websiteMap.set(r.website_id, r.name));
             } catch (e) {
                 console.error('Error fetching websites for global search:', e);
@@ -2205,6 +3437,11 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 
         for (const check of checks) {
             for (const [type, pattern] of Object.entries(patterns)) {
+                // Special filter for phone numbers to avoid matching /vis/123...
+                const extraFilter = type === 'Telefonnummer'
+                    ? `AND NOT REGEXP_CONTAINS(${check.column}, r'/vis/[0-9]+')`
+                    : '';
+
                 if (websiteId) {
                     unionQueries.push(`
                         SELECT 
@@ -2221,6 +3458,7 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                         WHERE website_id = @websiteId
                         AND created_at BETWEEN @startDate AND @endDate
                         AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                        ${extraFilter}
                     `);
                 } else {
                     // Global search: group by website_id
@@ -2239,9 +3477,68 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
                         FROM \`team-researchops-prod-01d6.umami.${check.table}\`
                         WHERE created_at BETWEEN @startDate AND @endDate
                         AND REGEXP_CONTAINS(${check.column}, r'${pattern}')
+                        ${extraFilter}
                         GROUP BY website_id
                     `);
                 }
+            }
+        }
+
+        // Special check for event_data (nested in views)
+        for (const [type, pattern] of Object.entries(patterns)) {
+            // Special filter for phone numbers to avoid matching /vis/123...
+            const extraFilter = type === 'Telefonnummer'
+                ? `AND NOT REGEXP_CONTAINS(p.string_value, r'/vis/[0-9]+')`
+                : '';
+
+            if (websiteId) {
+                unionQueries.push(`
+                    SELECT 
+                        'event_data' as table_name,
+                        'string_value' as column_name,
+                        '${type}' as match_type,
+                        COUNT(*) as count,
+                        ${type === 'E-post' ? `COUNTIF(REGEXP_CONTAINS(p.string_value, r'@nav'))` : '0'} as nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT p.string_value)` : '0'} as unique_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_other_count,
+                        ARRAY_AGG(DISTINCT p.string_value LIMIT 5) as examples
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                    JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                        ON e.event_id = d.website_event_id
+                        AND e.website_id = d.website_id
+                        AND e.created_at = d.created_at
+                    CROSS JOIN UNNEST(d.event_parameters) AS p
+                    WHERE e.website_id = @websiteId
+                    AND e.created_at BETWEEN @startDate AND @endDate
+                    AND REGEXP_CONTAINS(p.string_value, r'${pattern}')
+                    ${extraFilter}
+                `);
+            } else {
+                // Global search: group by website_id
+                unionQueries.push(`
+                    SELECT 
+                        e.website_id,
+                        'event_data' as table_name,
+                        'string_value' as column_name,
+                        '${type}' as match_type,
+                        COUNT(*) as count,
+                        ${type === 'E-post' ? `COUNTIF(REGEXP_CONTAINS(p.string_value, r'@nav'))` : '0'} as nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT p.string_value)` : '0'} as unique_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_nav_count,
+                        ${type === 'E-post' ? `COUNT(DISTINCT CASE WHEN NOT REGEXP_CONTAINS(p.string_value, r'@nav') THEN p.string_value END)` : '0'} as unique_other_count,
+                        ARRAY_AGG(DISTINCT p.string_value LIMIT 5) as examples
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                    JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                        ON e.event_id = d.website_event_id
+                        AND e.website_id = d.website_id
+                        AND e.created_at = d.created_at
+                    CROSS JOIN UNNEST(d.event_parameters) AS p
+                    WHERE e.created_at BETWEEN @startDate AND @endDate
+                    AND REGEXP_CONTAINS(p.string_value, r'${pattern}')
+                    ${extraFilter}
+                    GROUP BY e.website_id
+                `);
             }
         }
 
@@ -2259,12 +3556,15 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         // Dry run check
         if (dryRun) {
             try {
-                const [dryRunJob] = await bigquery.createQueryJob({
+                // Get NAV ident from authenticated user for audit logging
+
+
+                const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                     query: finalQuery,
                     location: 'europe-north1',
                     params: params,
                     dryRun: true
-                });
+                }, navIdent, 'Personvernssjekk'));
 
                 const stats = dryRunJob.metadata.statistics;
                 const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2286,11 +3586,14 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
             }
         }
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: finalQuery,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Personvernssjekk'));
 
         const [rows] = await job.getQueryResults();
 
@@ -2318,12 +3621,14 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: finalQuery,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2350,67 +3655,173 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 // Get user sessions (User Profiles)
 app.post('/api/bigquery/users', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0 } = req.body;
+        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, maxUsers: maxUsersInput, urlPath, pathOperator, countBy, countBySwitchAt } = req.body;
+        const DEFAULT_MAX_USERS = 5000;
+        const MIN_MAX_USERS = 50;
+        const MAX_MAX_USERS = 10000;
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
 
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
+        }
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const userKeyExpression = useSwitch
+            ? `IF(session.created_at >= @countBySwitchAt, session.distinct_id, session.session_id)`
+            : (useDistinctId ? 'session.distinct_id' : 'session.session_id');
+        const idTypeExpression = useSwitch
+            ? `IF(session.created_at >= @countBySwitchAt AND session.distinct_id IS NOT NULL, 'cookie', 'session')`
+            : (useDistinctId ? `'cookie'` : `'session'`);
+
+        const parsedMaxUsers = parseInt(maxUsersInput, 10);
+        const maxUsers = Number.isFinite(parsedMaxUsers)
+            ? Math.min(Math.max(parsedMaxUsers, MIN_MAX_USERS), MAX_MAX_USERS)
+            : DEFAULT_MAX_USERS;
+
+        const parsedLimit = parseInt(limit, 10);
+        const parsedOffset = parseInt(offset, 10);
+        const safeOffset = Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0;
+        const remaining = Math.max(maxUsers - safeOffset, 0);
+        const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 0), remaining) : Math.min(50, remaining);
+
+        if (safeLimit === 0) {
+            return res.json({ users: [], total: maxUsers, queryStats: null });
         }
 
         const params = {
             websiteId,
             startDate,
             endDate,
-            limit: parseInt(limit),
-            offset: parseInt(offset)
+            limit: safeLimit,
+            offset: safeOffset,
+            maxUsers
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         let searchFilter = '';
         if (searchQuery) {
-            searchFilter = `AND session_id LIKE @searchQuery`;
+            searchFilter = `AND (session.session_id LIKE @searchQuery OR session.distinct_id LIKE @searchQuery)`;
             params.searchQuery = `%${searchQuery}%`;
         }
 
+        console.log('[User Profiles] Request:', { websiteId, urlPath, searchQuery });
+
+        let urlFilterCTE = '';
+        let urlFilterJoin = '';
+        if (urlPath) {
+            // Add URL path parameters
+
+            let condition = '';
+
+            if (pathOperator === 'starts-with') {
+                // Helper to generate the URL normalization SQL (same as in composition)
+                const normalizeUrlSql = `
+                    CASE 
+                        WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
+                        THEN '/'
+                        ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
+                    END
+                `;
+
+                condition = `LOWER(${normalizeUrlSql}) LIKE @urlPathPattern`;
+                params.urlPathPattern = urlPath.toLowerCase() + '%';
+            } else {
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+
+                condition = `(
+                        url_path = @urlPath
+                        OR url_path = @urlPathSlash
+                        OR url_path LIKE @urlPathQuery
+                    )`;
+            }
+
+            // CTE to find sessions that visited the specified URL
+            urlFilterCTE = `
+                matching_sessions AS (
+                    SELECT DISTINCT session_id
+                    FROM \`team-researchops-prod-01d6.umami.public_website_event\`
+                    WHERE website_id = @websiteId
+                    AND created_at BETWEEN @startDate AND @endDate
+                    AND ${condition}
+                ),
+            `;
+            urlFilterJoin = `INNER JOIN matching_sessions ms ON session.session_id = ms.session_id`;
+
+            console.log('[User Profiles] URL filter active:', { urlPath, pathOperator, urlFilterCTE: 'CTE defined', urlFilterJoin });
+        }
+
         const query = `
-            SELECT
-                session_id,
-                MAX(created_at) as last_seen,
-                MIN(created_at) as first_seen,
-                ANY_VALUE(country) as country,
-                ANY_VALUE(device) as device,
-                ANY_VALUE(os) as os,
-                ANY_VALUE(browser) as browser,
-                COUNT(*) as event_count
-            FROM \`team-researchops-prod-01d6.umami_views.session\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            ${searchFilter}
-            GROUP BY session_id
+            WITH ${urlFilterCTE}
+            session_data AS (
+                SELECT
+                    ${userKeyExpression} as user_id,
+                    ${idTypeExpression} as id_type,
+                    MAX(session.created_at) as last_seen,
+                    MIN(session.created_at) as first_seen,
+                    ANY_VALUE(session.country) as country,
+                    ANY_VALUE(session.device) as device,
+                    ANY_VALUE(session.os) as os,
+                    ANY_VALUE(session.browser) as browser,
+                    ANY_VALUE(session.distinct_id) as distinct_id,
+                    ARRAY_AGG(DISTINCT session.session_id) as session_ids,
+                    ARRAY_AGG(session.session_id ORDER BY session.created_at DESC LIMIT 1)[OFFSET(0)] as primary_session_id,
+                    COUNT(*) as event_count
+                FROM \`team-researchops-prod-01d6.umami_views.session\` as session
+                ${urlFilterJoin}
+                WHERE session.website_id = @websiteId
+                AND session.created_at BETWEEN @startDate AND @endDate
+                ${searchFilter}
+                GROUP BY user_id, id_type
+            )
+            SELECT * FROM session_data
             ORDER BY last_seen DESC
             LIMIT @limit OFFSET @offset
         `;
 
-        const [job] = await bigquery.createQueryJob({
+        console.log('[User Profiles] Query:', query.substring(0, 500) + '...');
+
+        // Get NAV ident from authenticated user for audit logging
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Brukerprofiler'));
 
         const [rows] = await job.getQueryResults();
 
         // Get total count for pagination
         const countQuery = `
-            SELECT COUNT(DISTINCT session_id) as total
-            FROM \`team-researchops-prod-01d6.umami_views.session\`
-            WHERE website_id = @websiteId
-            AND created_at BETWEEN @startDate AND @endDate
-            ${searchFilter}
+            WITH ${urlFilterCTE}
+            filtered_sessions AS (
+                SELECT DISTINCT ${userKeyExpression} as user_id
+                FROM \`team-researchops-prod-01d6.umami_views.session\` as session
+                ${urlFilterJoin}
+                WHERE session.website_id = @websiteId
+                AND session.created_at BETWEEN @startDate AND @endDate
+                ${searchFilter}
+            )
+            SELECT COUNT(*) as total FROM (
+                SELECT 1 FROM filtered_sessions LIMIT @maxUsers
+            )
         `;
 
-        const [countJob] = await bigquery.createQueryJob({
+
+        const [countJob] = await bigquery.createQueryJob(addAuditLogging({
             query: countQuery,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Brukerprofiler'));
 
         const [countRows] = await countJob.getQueryResults();
         const total = countRows[0]?.total || 0;
@@ -2418,12 +3829,14 @@ app.post('/api/bigquery/users', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Brukerprofiler'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2439,7 +3852,11 @@ app.post('/api/bigquery/users', async (req, res) => {
         }
 
         const users = rows.map(row => ({
-            sessionId: row.session_id,
+            userId: row.user_id,
+            idType: row.id_type,
+            sessionIds: row.session_ids || [],
+            primarySessionId: row.primary_session_id,
+            distinctId: row.distinct_id,
             lastSeen: row.last_seen.value,
             firstSeen: row.first_seen.value,
             country: row.country,
@@ -2461,6 +3878,9 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
     try {
         const { websiteId } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!websiteId) {
             return res.status(400).json({ error: 'Missing websiteId' });
         }
@@ -2473,7 +3893,7 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
                 COUNTIF(event_type = 2) as custom_events
             FROM \`team-researchops-prod-01d6.umami.public_website_event\`
             WHERE website_id = @websiteId
-              AND created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH))
+              AND created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE('Europe/Oslo'), INTERVAL 6 MONTH))
             GROUP BY 1
             ORDER BY 1
         `;
@@ -2487,17 +3907,22 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
 
         const params = { websiteId };
 
-        const [historyJob] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+
+        const [historyJob] = await bigquery.createQueryJob(addAuditLogging({
             query: historyQuery,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Diagnoseverktoy'));
 
-        const [lastEventJob] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+        const [lastEventJob] = await bigquery.createQueryJob(addAuditLogging({
             query: lastEventQuery,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Diagnoseverktoy'));
 
         const [historyRows] = await historyJob.getQueryResults();
         const [lastEventRows] = await lastEventJob.getQueryResults();
@@ -2515,19 +3940,23 @@ app.post('/api/bigquery/diagnosis-history', async (req, res) => {
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunHistoryJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunHistoryJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: historyQuery,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Diagnoseverktoy'));
 
-            const [dryRunLastEventJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunLastEventJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: lastEventQuery,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Diagnoseverktoy'));
 
             const historyStats = dryRunHistoryJob.metadata.statistics;
             const lastEventStats = dryRunLastEventJob.metadata.statistics;
@@ -2563,6 +3992,9 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
         const { sessionId } = req.params;
         const { websiteId, startDate, endDate } = req.body;
 
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
         if (!bigquery) {
             return res.status(500).json({ error: 'BigQuery client not initialized' });
         }
@@ -2589,23 +4021,28 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
             LIMIT 1000
         `;
 
-        const [job] = await bigquery.createQueryJob({
+        // Get NAV ident from authenticated user for audit logging
+
+
+        const [job] = await bigquery.createQueryJob(addAuditLogging({
             query: query,
             location: 'europe-north1',
             params: params
-        });
+        }, navIdent, 'Brukerprofiler'));
 
         const [rows] = await job.getQueryResults();
 
         // Get dry run stats
         let queryStats = null;
         try {
-            const [dryRunJob] = await bigquery.createQueryJob({
+            // Get NAV ident from authenticated user for audit logging
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
                 query: query,
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            });
+            }, navIdent, 'Brukerprofiler'));
 
             const stats = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(stats.totalBytesProcessed);
@@ -2636,7 +4073,239 @@ app.post('/api/bigquery/users/:sessionId/activity', async (req, res) => {
     }
 });
 
-app.use(/^(?!.*\/(internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
+// Get event journeys (sequences of events)
+app.post('/api/bigquery/event-journeys', async (req, res) => {
+    try {
+        const { websiteId, startDate, endDate, urlPath, minEvents = 1, eventFilter } = req.body;
+
+        if (!bigquery) {
+            return res.status(500).json({
+                error: 'BigQuery client not initialized'
+            })
+        }
+
+        // Get NAV ident from authenticated user for audit logging
+        const navIdent = req.user?.navIdent || 'UNKNOWN';
+
+        const params = {
+            websiteId,
+            startDate,
+            endDate,
+            minEvents: parseInt(minEvents)
+        };
+
+        let urlFilter = '';
+        if (urlPath && urlPath !== '') {
+            if (urlPath.includes('*')) {
+                urlFilter = `AND e.url_path LIKE @urlPathLike`;
+                params.urlPathLike = urlPath.replace(/\*/g, '%');
+            } else {
+                urlFilter = `AND (
+                    e.url_path = @urlPath 
+                    OR e.url_path = @urlPathSlash 
+                    OR e.url_path LIKE @urlPathQuery
+                )`;
+                params.urlPath = urlPath;
+                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                params.urlPathQuery = urlPath + '?%';
+            }
+        }
+
+        let eventNameFilter = '';
+        if (eventFilter && Array.isArray(eventFilter) && eventFilter.length > 0) {
+            // We want sessions that include THESE events.
+            // Filter at the session aggregation level or pre-filter?
+            // Let's filter in the HAVING clause of SessionPaths to ensure the path contains the event
+            params.eventFilterList = eventFilter;
+        }
+
+        // 1. Join with event_data to get properties
+        // 2. Aggregate properties into a string per event
+        // 3. Create the path array
+        const query = `
+            WITH EventProps AS (
+                SELECT
+                    e.event_id,
+                    e.session_id,
+                    e.event_name,
+                    e.created_at,
+                    -- Aggregate ALL properties into a string for grouping
+                    -- Exclude variable properties like scrollPos, screen that don't provide meaningful info
+                    STRING_AGG(
+                        CASE 
+                            WHEN LOWER(p.data_key) IN ('scrollpos', 'screen', 'screenwidth', 'screenheight', 'viewport', 'timestamp', 'time', 'scrolldepth') THEN NULL
+                            ELSE CONCAT(p.data_key, ': ', REPLACE(COALESCE(p.string_value, CAST(p.number_value AS STRING), CAST(p.date_value AS STRING)), '||', ' '))
+                        END, 
+                        '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key
+                    ) as props_str
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                LEFT JOIN \`team-researchops-prod-01d6.umami_views.event_data\` d
+                    ON e.event_id = d.website_event_id
+                    AND e.website_id = d.website_id
+                    AND e.created_at = d.created_at
+                LEFT JOIN UNNEST(d.event_parameters) AS p
+                WHERE e.website_id = @websiteId
+                AND e.created_at BETWEEN @startDate AND @endDate
+                AND e.event_name IS NOT NULL
+                ${urlFilter}
+                GROUP BY 1, 2, 3, 4
+            ),
+            -- Filter out consecutive identical events (same name and same functional properties)
+            DedupedEvents AS (
+                SELECT 
+                    *,
+                    LAG(event_name) OVER (PARTITION BY session_id ORDER BY created_at, CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str) as prev_event_name,
+                    LAG(props_str) OVER (PARTITION BY session_id ORDER BY created_at, CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str) as prev_props_str
+                FROM EventProps
+            ),
+            CleanedEvents AS (
+                SELECT *
+                FROM DedupedEvents
+                WHERE 
+                    -- Keep if it's the first event (prev is null)
+                    prev_event_name IS NULL 
+                    -- Or if it's different from the previous event
+                    OR event_name != prev_event_name
+                    -- Or if properties are different (handling NULLs safely)
+                    OR IFNULL(props_str, '') != IFNULL(prev_props_str, '')
+            ),
+            SessionPaths AS (
+                SELECT
+                    session_id,
+                    -- Create an array of "EventName (props)" ordered by time
+                    ARRAY_AGG(
+                        IF(props_str IS NOT NULL, CONCAT(event_name, ': ', props_str), event_name)
+                        ORDER BY created_at, CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str
+                    ) as path,
+                    -- Also aggregate raw event names for filtering
+                    ARRAY_AGG(event_name) as event_names
+                FROM CleanedEvents
+                GROUP BY session_id
+                HAVING ARRAY_LENGTH(path) >= @minEvents
+                ${eventFilter && Array.isArray(eventFilter) && eventFilter.length > 0 ?
+                `AND EXISTS(SELECT 1 FROM UNNEST(event_names) AS n WHERE n IN UNNEST(@eventFilterList))` : ''}
+            ),
+            PathCounts AS (
+                SELECT
+                    path,
+                    COUNT(*) as count
+                FROM SessionPaths
+                GROUP BY path
+            )
+            SELECT
+                TO_JSON_STRING(path) as path_json,
+                count
+            FROM PathCounts
+            ORDER BY count DESC
+            LIMIT 100
+        `;
+
+        // Secondary query for high-level stats (Bounces, Navigation without events)
+        const statsQuery = `
+            WITH TargetVisits AS (
+                SELECT 
+                    e.session_id, 
+                    MIN(e.created_at) as visit_time
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                WHERE e.website_id = @websiteId
+                AND e.created_at BETWEEN @startDate AND @endDate
+                AND e.event_name IS NULL -- Pageview
+                ${urlFilter}
+                GROUP BY e.session_id
+            ),
+            Interactions AS (
+                SELECT DISTINCT e.session_id
+                FROM \`team-researchops-prod-01d6.umami.public_website_event\` e
+                WHERE e.website_id = @websiteId
+                AND e.created_at BETWEEN @startDate AND @endDate
+                AND e.event_name IS NOT NULL -- Events
+                ${urlFilter}
+            ),
+            Navigation AS (
+                SELECT DISTINCT t.session_id
+                FROM TargetVisits t
+                JOIN \`team-researchops-prod-01d6.umami.public_website_event\` later
+                    ON t.session_id = later.session_id
+                    AND later.created_at BETWEEN @startDate AND @endDate
+                    AND later.created_at > t.visit_time
+                    AND later.event_name IS NULL
+            )
+            SELECT
+                COUNT(DISTINCT t.session_id) as total_sessions,
+                COUNT(DISTINCT i.session_id) as sessions_with_events,
+                COUNT(DISTINCT CASE WHEN i.session_id IS NULL AND n.session_id IS NOT NULL THEN t.session_id END) as sessions_no_events_navigated,
+                COUNT(DISTINCT CASE WHEN i.session_id IS NULL AND n.session_id IS NULL THEN t.session_id END) as sessions_no_events_bounced
+            FROM TargetVisits t
+            LEFT JOIN Interactions i ON t.session_id = i.session_id
+            LEFT JOIN Navigation n ON t.session_id = n.session_id
+        `;
+
+        // Get dry run stats first
+        let queryStats = null;
+        try {
+
+            // Get NAV ident from authenticated user for audit logging
+
+
+            const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
+                query: query,
+                location: 'europe-north1',
+                params: params,
+                dryRun: true
+            }, navIdent, 'Hendelsesflyt'));
+
+            const stats = dryRunJob.metadata.statistics;
+            const bytesProcessed = parseInt(stats.totalBytesProcessed);
+            const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
+            const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
+
+            queryStats = {
+                totalBytesProcessedGB: gbProcessed,
+                estimatedCostUSD: estimatedCostUSD
+            };
+        } catch (dryRunError) {
+            console.log('[Event Journeys] Dry run failed:', dryRunError.message);
+        }
+
+
+        const [journeyJob] = await bigquery.createQueryJob(addAuditLogging({
+            query,
+            location: 'europe-north1',
+            params
+        }, navIdent, 'Hendelsesflyt'));
+        const [journeyRows] = await journeyJob.getQueryResults();
+
+        const [statsJob] = await bigquery.createQueryJob(addAuditLogging({
+            query: statsQuery,
+            location: 'europe-north1',
+            params
+        }, navIdent, 'Hendelsesflyt'));
+        const [statsRows] = await statsJob.getQueryResults();
+        const journeyStats = statsRows[0] || {};
+
+        const journeys = journeyRows.map(row => ({
+            path: JSON.parse(row.path_json),
+            count: row.count
+        }));
+
+        res.json({
+            journeys,
+            journeyStats,
+            queryStats
+        });
+
+    } catch (error) {
+        console.error('[Event Journeys] ERROR:', error.message);
+        if (error.errors) {
+            console.error('[Event Journeys] BigQuery errors:', JSON.stringify(error.errors, null, 2));
+        }
+        res.status(500).json({
+            error: error.message || 'Failed to fetch event journeys'
+        });
+    }
+});
+
+app.use(/^(?!.*\/(api|internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
 
 const server = app.listen(8080, () => {
     console.log('Listening on port 8080')
