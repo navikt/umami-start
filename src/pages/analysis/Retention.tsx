@@ -434,7 +434,7 @@ const Retention = () => {
                     )}
 
                     {/* Fallback View Alert */}
-                    {overriddenGlobalPeriod && cookieBadge !== 'cookie' && (
+                    {overriddenGlobalPeriod && !usesCookies && (
                         <Alert variant="info" className="mb-4">
                             <Heading spacing size="small" level="3">
                                 Viser data for forrige måned
@@ -447,7 +447,7 @@ const Retention = () => {
                         </Alert>
                     )}
 
-                    {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && cookieBadge !== 'cookie' && (
+                    {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && !usesCookies && (
                         <Alert variant="warning" className="mb-4">
                             <Heading spacing size="small" level="3">
                                 Ufullstendige data for inneværende måned
