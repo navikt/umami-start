@@ -14,7 +14,7 @@ const CookieMixNotice = ({ websiteName, cookieStartDate, variant = 'mix' }: Cook
         : 'Merk: Blanding av metoder for identifisering av brukere';
     const content = variant === 'pre'
         ? `${websiteName || 'denne siden'} startet måling med cookies ${cookieStartDate ? format(cookieStartDate, 'd. MMMM yyyy', { locale: nb }) : 'i denne perioden'}. Perioden du har valgt er før dette, så brukere identifiseres uten cookies.`
-        : `${websiteName || 'denne siden'} startet måling med cookies ${cookieStartDate ? format(cookieStartDate, 'd. MMMM yyyy', { locale: nb }) : 'i denne perioden'}. Perioden du har valgt dekker både tiden før og etter.`;
+        : `${websiteName || 'denne siden'} startet måling og sammenkobling av events på brukernivå på tvers av kalendermåneder ${cookieStartDate ? format(cookieStartDate, 'd. MMMM yyyy', { locale: nb }) : 'i denne perioden'}. Perioden du har valgt dekker både tiden før og etter.`;
     return (
         <InfoCard data-color="info" className="mb-4">
             <InfoCard.Header>
