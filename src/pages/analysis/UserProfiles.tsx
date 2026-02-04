@@ -14,6 +14,11 @@ import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriod
 import { TextField } from '@navikt/ds-react';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 
+const ROWS_PER_PAGE = 50;
+const DEFAULT_MAX_USERS = 1000;
+const MIN_MAX_USERS = 50;
+const MAX_MAX_USERS = 100000;
+
 const UserProfiles = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
@@ -45,6 +50,7 @@ const UserProfiles = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState<number>(1);
+    const [maxUsers, setMaxUsers] = useState<number>(DEFAULT_MAX_USERS);
     const [queryStats, setQueryStats] = useState<any>(null);
 
     // Details Modal State
@@ -53,8 +59,6 @@ const UserProfiles = () => {
     const [activityData, setActivityData] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [selectedActivityUrl, setSelectedActivityUrl] = useState<string | null>(null);
-
-    const ROWS_PER_PAGE = 50;
 
     useEffect(() => {
         if (selectedWebsite) {
@@ -67,7 +71,7 @@ const UserProfiles = () => {
 
     const handleSearchClick = () => {
         setPage(1);
-        fetchUsers();
+        fetchUsers(1);
     };
 
     const getDateRange = () => {
@@ -78,13 +82,28 @@ const UserProfiles = () => {
         return dateRange;
     };
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (pageOverride?: number) => {
         if (!selectedWebsite) return;
 
         setLoading(true);
         setError(null);
 
         const { startDate, endDate } = getDateRange();
+        const currentPage = pageOverride ?? page;
+        const normalizedMaxUsers = Number.isFinite(maxUsers) && maxUsers > 0
+            ? Math.min(Math.max(maxUsers, MIN_MAX_USERS), MAX_MAX_USERS)
+            : DEFAULT_MAX_USERS;
+        const offset = (currentPage - 1) * ROWS_PER_PAGE;
+        const remaining = Math.max(normalizedMaxUsers - offset, 0);
+        const limit = Math.min(ROWS_PER_PAGE, remaining);
+
+        if (limit === 0) {
+            setUsers([]);
+            setTotalUsers(normalizedMaxUsers);
+            setQueryStats(null);
+            setLoading(false);
+            return;
+        }
 
         const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
         const payload = {
@@ -94,8 +113,9 @@ const UserProfiles = () => {
             query: searchQuery,
             urlPath: pagePath ? normalizeUrlToPath(pagePath) : undefined,
             pathOperator,
-            limit: ROWS_PER_PAGE,
-            offset: (page - 1) * ROWS_PER_PAGE,
+            limit,
+            offset,
+            maxUsers: normalizedMaxUsers,
             countBy,
             countBySwitchAt
         };
@@ -248,6 +268,30 @@ const UserProfiles = () => {
                         endDate={customEndDate}
                         onEndDateChange={setCustomEndDate}
                     />
+
+                    <div className="w-full sm:w-auto min-w-[160px]">
+                        <TextField
+                            label="Maks brukere"
+                            size="small"
+                            type="number"
+                            min={MIN_MAX_USERS}
+                            max={MAX_MAX_USERS}
+                            step={50}
+                            value={Number.isFinite(maxUsers) && maxUsers > 0 ? maxUsers : ''}
+                            onChange={(e) => {
+                                const value = parseInt(e.target.value, 10);
+                                setMaxUsers(Number.isFinite(value) ? value : 0);
+                            }}
+                            onBlur={() => {
+                                const normalized = Number.isFinite(maxUsers) && maxUsers > 0
+                                    ? Math.min(Math.max(maxUsers, MIN_MAX_USERS), MAX_MAX_USERS)
+                                    : DEFAULT_MAX_USERS;
+                                if (normalized !== maxUsers) {
+                                    setMaxUsers(normalized);
+                                }
+                            }}
+                        />
+                    </div>
 
                     <div className="flex items-end pb-[2px]">
                         <Button

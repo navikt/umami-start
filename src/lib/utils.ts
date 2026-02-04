@@ -260,8 +260,5 @@ export const getVisitorLabelWithBadge = (
   startDate: Date,
   endDate: Date
 ): string => {
-  const badge = getCookieBadge(usesCookies, cookieStartDate, startDate, endDate);
-  if (badge === 'cookie') return 'Unike besøkende 🍪';
-  if (badge === 'mix') return 'Unike besøkende 🧑‍🍳';
   return 'Unike besøkende';
 };

@@ -11,6 +11,7 @@ import TrafficStats from '../../components/analysis/traffic/TrafficStats';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
+import InfoCard from '../../components/InfoCard';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils';
@@ -1038,6 +1039,7 @@ const TrafficAnalysis = () => {
                             Vis trafikk
                         </Button>
                     </div>
+
                 </>
             }
         >
@@ -1045,6 +1047,17 @@ const TrafficAnalysis = () => {
                 <Alert variant="error" className="mb-4">
                     {error}
                 </Alert>
+            )}
+
+            {cookieBadge === 'mix' && (
+                <InfoCard data-color="info" className="mb-4">
+                    <InfoCard.Header>
+                        <InfoCard.Title>Merk: Blanding av Umami bruker-ider</InfoCard.Title>
+                    </InfoCard.Header>
+                    <InfoCard.Content>
+                        {selectedWebsite?.name || 'denne siden'} startet måling med cookies {cookieStartDate ? format(cookieStartDate, 'd. MMMM yyyy', { locale: nb }) : 'i denne perioden'}. Perioden du har valgt dekker både tiden før og etter.
+                    </InfoCard.Content>
+                </InfoCard>
             )}
 
             {

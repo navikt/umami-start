@@ -3640,7 +3640,10 @@ app.post('/api/bigquery/privacy-check', async (req, res) => {
 // Get user sessions (User Profiles)
 app.post('/api/bigquery/users', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, urlPath, pathOperator, countBy, countBySwitchAt } = req.body;
+        const { websiteId, startDate, endDate, query: searchQuery, limit = 50, offset = 0, maxUsers: maxUsersInput, urlPath, pathOperator, countBy, countBySwitchAt } = req.body;
+        const DEFAULT_MAX_USERS = 5000;
+        const MIN_MAX_USERS = 50;
+        const MAX_MAX_USERS = 10000;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -3660,12 +3663,28 @@ app.post('/api/bigquery/users', async (req, res) => {
             ? `IF(session.created_at >= @countBySwitchAt AND session.distinct_id IS NOT NULL, 'cookie', 'session')`
             : (useDistinctId ? `'cookie'` : `'session'`);
 
+        const parsedMaxUsers = parseInt(maxUsersInput, 10);
+        const maxUsers = Number.isFinite(parsedMaxUsers)
+            ? Math.min(Math.max(parsedMaxUsers, MIN_MAX_USERS), MAX_MAX_USERS)
+            : DEFAULT_MAX_USERS;
+
+        const parsedLimit = parseInt(limit, 10);
+        const parsedOffset = parseInt(offset, 10);
+        const safeOffset = Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0;
+        const remaining = Math.max(maxUsers - safeOffset, 0);
+        const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 0), remaining) : Math.min(50, remaining);
+
+        if (safeLimit === 0) {
+            return res.json({ users: [], total: maxUsers, queryStats: null });
+        }
+
         const params = {
             websiteId,
             startDate,
             endDate,
-            limit: parseInt(limit),
-            offset: parseInt(offset)
+            limit: safeLimit,
+            offset: safeOffset,
+            maxUsers
         };
         if (useSwitch) {
             params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
@@ -3777,7 +3796,9 @@ app.post('/api/bigquery/users', async (req, res) => {
                 AND session.created_at BETWEEN @startDate AND @endDate
                 ${searchFilter}
             )
-            SELECT COUNT(*) as total FROM filtered_sessions
+            SELECT COUNT(*) as total FROM (
+                SELECT 1 FROM filtered_sessions LIMIT @maxUsers
+            )
         `;
 
 
