@@ -151,6 +151,14 @@ const TrafficAnalysis = () => {
     // Auto-fetch when filters change (after initial fetch) - Removed manual fetch enforcement
     // No useEffect here for auto-fetch to save costs as per user request
 
+    // Auto-fetch when granularity changes (after initial fetch).
+    useEffect(() => {
+        if (!hasAttemptedFetch || !selectedWebsite || loading) return;
+        if (granularity !== submittedGranularity) {
+            fetchSeriesData();
+        }
+    }, [granularity, submittedGranularity, hasAttemptedFetch, selectedWebsite, loading]);
+
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
 
