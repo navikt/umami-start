@@ -200,6 +200,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     if (chart.type === 'siteimprove') {
         const baseUrl = getBaseUrl({
             localUrl: "https://reops-proxy.intern.nav.no",
+            devUrl: "https://reops-proxy.ansatt.dev.nav.no",
             prodUrl: "https://reops-proxy.ansatt.nav.no",
         });
 

@@ -101,6 +101,7 @@ const BrokenLinks = () => {
             try {
                 const baseUrl = getBaseUrl({
                     localUrl: "https://reops-proxy.intern.nav.no",
+                    devUrl: "https://reops-proxy.ansatt.dev.nav.no",
                     prodUrl: "https://reops-proxy.ansatt.nav.no",
                 });
                 const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
@@ -188,6 +189,7 @@ const BrokenLinks = () => {
             try {
                 const baseUrl = getBaseUrl({
                     localUrl: "https://reops-proxy.intern.nav.no",
+                    devUrl: "https://reops-proxy.ansatt.dev.nav.no",
                     prodUrl: "https://reops-proxy.ansatt.nav.no",
                 });
                 const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
@@ -276,6 +278,7 @@ const BrokenLinks = () => {
         try {
             const baseUrl = getBaseUrl({
                 localUrl: "https://reops-proxy.intern.nav.no",
+                devUrl: "https://reops-proxy.ansatt.dev.nav.no",
                 prodUrl: "https://reops-proxy.ansatt.nav.no",
             });
             const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
