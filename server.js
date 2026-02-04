@@ -1746,7 +1746,7 @@ app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent, 'Side-metrikker'));
+        }, navIdent, 'trafikkanalyse'));
 
         const [rows] = await job.getQueryResults();
 
@@ -1904,7 +1904,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent, 'Trafikk-breakdown'));
+        }, navIdent, 'trafikkanalyse'));
 
         const [rows] = await job.getQueryResults();
 
