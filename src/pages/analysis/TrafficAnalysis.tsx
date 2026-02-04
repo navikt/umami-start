@@ -3,15 +3,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, HelpText } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink, ArrowRight } from 'lucide-react';
-import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
-import { nb } from 'date-fns/locale';
+import { parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import TrafficStats from '../../components/analysis/traffic/TrafficStats';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
-import InfoCard from '../../components/InfoCard';
+import CookieMixNotice from '../../components/analysis/CookieMixNotice';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils';
@@ -136,6 +135,10 @@ const TrafficAnalysis = () => {
             currentDateRange.endDate
         );
     }, [usesCookies, cookieStartDate, currentDateRange]);
+    const isPreCookieRange = useMemo(() => {
+        if (!currentDateRange || !cookieStartDate) return false;
+        return currentDateRange.endDate.getTime() < cookieStartDate.getTime();
+    }, [currentDateRange, cookieStartDate]);
 
     // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
@@ -1049,15 +1052,12 @@ const TrafficAnalysis = () => {
                 </Alert>
             )}
 
-            {cookieBadge === 'mix' && (
-                <InfoCard data-color="info" className="mb-4">
-                    <InfoCard.Header>
-                        <InfoCard.Title>Merk: Blanding av Umami bruker-ider</InfoCard.Title>
-                    </InfoCard.Header>
-                    <InfoCard.Content>
-                        {selectedWebsite?.name || 'denne siden'} startet måling med cookies {cookieStartDate ? format(cookieStartDate, 'd. MMMM yyyy', { locale: nb }) : 'i denne perioden'}. Perioden du har valgt dekker både tiden før og etter.
-                    </InfoCard.Content>
-                </InfoCard>
+            {(cookieBadge === 'mix' || isPreCookieRange) && (
+                <CookieMixNotice
+                    websiteName={selectedWebsite?.name}
+                    cookieStartDate={cookieStartDate}
+                    variant={isPreCookieRange ? 'pre' : 'mix'}
+                />
             )}
 
             {

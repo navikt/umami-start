@@ -3001,7 +3001,7 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
 // Get retention data from BigQuery
 app.post('/api/bigquery/retention', async (req, res) => {
     try {
-        const { websiteId, startDate, endDate, urlPath, pathOperator, businessDaysOnly } = req.body;
+        const { websiteId, startDate, endDate, urlPath, pathOperator, businessDaysOnly, countBy, countBySwitchAt } = req.body;
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -3011,6 +3011,18 @@ app.post('/api/bigquery/retention', async (req, res) => {
                 error: 'BigQuery client not initialized'
             })
         }
+
+        const countBySwitchAtMs = countBySwitchAt ? parseInt(countBySwitchAt) : NaN;
+        const hasCountBySwitchAt = Number.isFinite(countBySwitchAtMs);
+        const useDistinctId = countBy === 'distinct_id';
+        const useSwitch = useDistinctId && hasCountBySwitchAt;
+        const col = useDistinctId ? 'e.' : '';
+        const fromClause = useDistinctId
+            ? `\`team-researchops-prod-01d6.umami.public_website_event\` e LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\` s ON e.session_id = s.session_id`
+            : `\`team-researchops-prod-01d6.umami.public_website_event\``;
+        const userIdExpression = useSwitch
+            ? `IF(${col}created_at >= @countBySwitchAt, s.distinct_id, ${col}session_id)`
+            : (useDistinctId ? 's.distinct_id' : `${col}session_id`);
 
         // Calculate the maximum days for retention based on the date range
         // This represents the maximum number of days someone from the earliest cohort
@@ -3025,28 +3037,28 @@ app.post('/api/bigquery/retention', async (req, res) => {
             WITH base AS(
     --Pre - normalize URL once(no regex in joins later)
                 SELECT
-                    session_id,
-                    DATE(created_at, 'Europe/Oslo') AS event_date,
-    created_at,
+                    ${userIdExpression} as user_id,
+                    DATE(${col}created_at, 'Europe/Oslo') AS event_date,
+    ${col}created_at,
     --lightweight URL normalization
                     IFNULL(
         NULLIF(
             RTRIM(
                 REGEXP_REPLACE(
-                    REGEXP_REPLACE(url_path, r'[?#].*', ''), --strip query / fragments
+                    REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), --strip query / fragments
                                     r'//+', '/'), --collapse slashes
                                 '/'),
             ''),
         '/') AS url_path_clean
-                FROM \`team-researchops-prod-01d6.umami.public_website_event\`
-                WHERE website_id = @websiteId
-                    AND created_at BETWEEN @startDate AND @endDate
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                    AND ${col}created_at BETWEEN @startDate AND @endDate
             ),
             ${urlPath ? `
             filtered_sessions AS (
-                -- Only keep session-days where the specified URL occurred
+                -- Only keep user-days where the specified URL occurred
                 SELECT DISTINCT
-                    session_id,
+                    user_id,
                     event_date AS first_seen_date
                 FROM base
                 WHERE ${pathOperator === 'starts-with'
@@ -3055,42 +3067,42 @@ app.post('/api/bigquery/retention', async (req, res) => {
             ),
             ` : `
             filtered_sessions AS (
-                -- Get first seen date for each session
+                -- Get first seen date for each user
                 SELECT
-                    session_id,
+                    user_id,
                     MIN(event_date) AS first_seen_date
                 FROM base
-                GROUP BY session_id
+                GROUP BY user_id
             ),
             `}
             user_activity AS (
                 SELECT DISTINCT
-                    session_id,
+                    user_id,
                     event_date AS activity_date
                 FROM base
                 ${businessDaysOnly ? `WHERE EXTRACT(DAYOFWEEK FROM event_date) NOT IN (1, 7)` : ''}
             ),
             retention_base AS (
                 SELECT
-                    f.session_id,
+                    f.user_id,
                     f.first_seen_date,
                     a.activity_date,
                     DATE_DIFF(a.activity_date, f.first_seen_date, DAY) AS day_diff
                 FROM filtered_sessions f
                 JOIN user_activity a
-                    USING (session_id)
+                    USING (user_id)
                 WHERE DATE_DIFF(a.activity_date, f.first_seen_date, DAY) >= 0
             ),
             retention_counts AS (
                 SELECT
                     day_diff,
-                    COUNT(DISTINCT session_id) AS returning_users
+                    COUNT(DISTINCT user_id) AS returning_users
                 FROM retention_base
                 WHERE day_diff <= @maxDays
                 GROUP BY day_diff
             ),
             user_counts AS (
-                SELECT COUNT(DISTINCT session_id) AS total_users
+                SELECT COUNT(DISTINCT user_id) AS total_users
                 FROM filtered_sessions
             )
             SELECT
@@ -3108,6 +3120,9 @@ app.post('/api/bigquery/retention', async (req, res) => {
             endDate,
             maxDays
         };
+        if (useSwitch) {
+            params.countBySwitchAt = new Date(countBySwitchAtMs).toISOString();
+        }
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {

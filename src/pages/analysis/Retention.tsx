@@ -9,12 +9,16 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
+import CookieMixNotice from '../../components/analysis/CookieMixNotice';
+import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import { Website } from '../../types/chart';
-import { normalizeUrlToPath, getStoredPeriod } from '../../lib/utils';
+import { normalizeUrlToPath, getStoredPeriod, getCookieBadge, getCookieCountByParams } from '../../lib/utils';
 
 
 const Retention = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+    const usesCookies = useCookieSupport(selectedWebsite?.domain);
+    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
     const [searchParams] = useSearchParams();
 
     // Initialize state from URL params
@@ -63,6 +67,62 @@ const Retention = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
 
+    const getRetentionDateRange = () => {
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date;
+
+        if (period === 'current_month') {
+            // First day of current month to now
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
+        } else if (period === 'last_month') {
+            // First day to last day of previous month
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === 'custom') {
+            if (!customStartDate || !customEndDate) {
+                return null;
+            }
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            const isToday = customEndDate.getDate() === now.getDate() &&
+                customEndDate.getMonth() === now.getMonth() &&
+                customEndDate.getFullYear() === now.getFullYear();
+
+            if (isToday) {
+                endDate = now;
+            } else {
+                endDate = new Date(customEndDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
+        } else {
+            // Default fallback for periods not strictly supported in retention (like 'today', 'week', etc.)
+            // We fall back to "Last Month" to ensure we have meaningful data
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+
+        return { startDate, endDate };
+    };
+
+    const cookieBadge = useMemo(() => {
+        const range = getRetentionDateRange();
+        if (!range) return '';
+        return getCookieBadge(
+            usesCookies,
+            cookieStartDate,
+            range.startDate,
+            range.endDate
+        );
+    }, [usesCookies, cookieStartDate, period, customStartDate, customEndDate]);
+    const isPreCookieRange = useMemo(() => {
+        const range = getRetentionDateRange();
+        if (!range || !cookieStartDate) return false;
+        return range.endDate.getTime() < cookieStartDate.getTime();
+    }, [cookieStartDate, period, customStartDate, customEndDate]);
+
     // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
         if (selectedWebsite && !hasAutoSubmitted && !loading) {
@@ -96,45 +156,20 @@ const Retention = () => {
 
         const normalizedUrl = normalizeUrlToPath(urlPath);
 
-        // Calculate date range based on period
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-
-        if (period === 'current_month') {
-            // First day of current month to now
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            // First day to last day of previous month
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            // Default fallback for periods not strictly supported in retention (like 'today', 'week', etc.)
-            // We fall back to "Last Month" to ensure we have meaningful data
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        const dateRange = getRetentionDateRange();
+        if (!dateRange) {
+            setError('Vennligst velg en gyldig periode.');
+            setLoading(false);
+            return;
         }
+        const { startDate, endDate } = dateRange;
+
+        const { countBy, countBySwitchAt } = getCookieCountByParams(
+            usesCookies,
+            cookieStartDate,
+            startDate,
+            endDate
+        );
 
         try {
             const response = await fetch('/api/bigquery/retention', {
@@ -148,6 +183,8 @@ const Retention = () => {
                     endDate: endDate.toISOString(),
                     urlPath: normalizedUrl,
                     pathOperator,
+                    countBy,
+                    countBySwitchAt,
                 }),
             });
 
@@ -388,8 +425,16 @@ const Retention = () => {
 
             {!loading && retentionData.length > 0 && (
                 <>
+                    {(cookieBadge === 'mix' || isPreCookieRange) && (
+                        <CookieMixNotice
+                            websiteName={selectedWebsite?.name}
+                            cookieStartDate={cookieStartDate}
+                            variant={isPreCookieRange ? 'pre' : 'mix'}
+                        />
+                    )}
+
                     {/* Fallback View Alert */}
-                    {overriddenGlobalPeriod && (
+                    {overriddenGlobalPeriod && cookieBadge !== 'cookie' && (
                         <Alert variant="info" className="mb-4">
                             <Heading spacing size="small" level="3">
                                 Viser data for forrige måned
@@ -402,7 +447,7 @@ const Retention = () => {
                         </Alert>
                     )}
 
-                    {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && (
+                    {isCurrentMonthData && hasAttemptedFetch && retentionData.length > 0 && cookieBadge !== 'cookie' && (
                         <Alert variant="warning" className="mb-4">
                             <Heading spacing size="small" level="3">
                                 Ufullstendige data for inneværende måned

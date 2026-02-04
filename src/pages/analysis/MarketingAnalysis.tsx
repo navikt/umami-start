@@ -3,12 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Select, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { nb } from 'date-fns/locale';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
-import InfoCard from '../../components/InfoCard';
+import CookieMixNotice from '../../components/analysis/CookieMixNotice';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils';
 import { Website } from '../../types/chart';
 import { useMarketingSupport, useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
@@ -63,6 +62,10 @@ const MarketingAnalysis = () => {
             currentDateRange.endDate
         );
     }, [usesCookies, cookieStartDate, currentDateRange]);
+    const isPreCookieRange = useMemo(() => {
+        if (!currentDateRange || !cookieStartDate) return false;
+        return currentDateRange.endDate.getTime() < cookieStartDate.getTime();
+    }, [currentDateRange, cookieStartDate]);
 
 
 
@@ -441,15 +444,12 @@ const MarketingAnalysis = () => {
                 </Alert>
             )}
 
-            {cookieBadge === 'mix' && (
-                <InfoCard data-color="info" className="mb-4">
-                    <InfoCard.Header>
-                        <InfoCard.Title>Merk</InfoCard.Title>
-                    </InfoCard.Header>
-                    <InfoCard.Content>
-                        {selectedWebsite?.name || 'denne siden'} startet måling med cookies {cookieStartDate ? format(cookieStartDate, 'd. MMMM yyyy', { locale: nb }) : 'i denne perioden'}. Perioden du har valgt dekker både tiden før og etter, så tallet for unike besøkende er ikke direkte sammenlignbart gjennom hele perioden.
-                    </InfoCard.Content>
-                </InfoCard>
+            {(cookieBadge === 'mix' || isPreCookieRange) && (
+                <CookieMixNotice
+                    websiteName={selectedWebsite?.name}
+                    cookieStartDate={cookieStartDate}
+                    variant={isPreCookieRange ? 'pre' : 'mix'}
+                />
             )}
 
             {loading && (
