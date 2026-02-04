@@ -255,10 +255,10 @@ export const getCookieBadge = (
 };
 
 export const getVisitorLabelWithBadge = (
-  usesCookies: boolean,
-  cookieStartDate: Date | null | undefined,
-  startDate: Date,
-  endDate: Date
+  _usesCookies: boolean,
+  _cookieStartDate: Date | null | undefined,
+  _startDate: Date,
+  _endDate: Date
 ): string => {
   return 'Unike besøkende';
 };
