@@ -128,6 +128,21 @@ function addAuditLogging(queryConfig, navIdent, analysisType = null) {
     return queryConfig;
 }
 
+// Allow callers to override analysis type based on referer path
+function getAnalysisTypeOverride(req, fallback) {
+    const referer = typeof req?.headers?.referer === 'string' ? req.headers.referer : '';
+    if (referer) {
+        try {
+            const url = new URL(referer);
+            if (url.pathname === '/trafikkanalyse') return 'trafikkanalyse';
+            if (url.pathname === '/markedsanalyse') return 'markedsanalyse';
+        } catch (_) {
+            // Ignore invalid referer
+        }
+    }
+    return fallback;
+}
+
 // Helper query to substitute parameters in SQL string for display
 const substituteQueryParameters = (query, params) => {
     if (!query || !params) return query;
@@ -2681,7 +2696,7 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
             query: query,
             location: 'europe-north1',
             params: params
-        }, navIdent, 'Markedsanalyse'));
+        }, navIdent, getAnalysisTypeOverride(req, 'Markedsanalyse')));
 
         const [rows] = await job.getQueryResults();
         console.log(`[Marketing] Query returned ${rows.length} rows total`);
@@ -2694,7 +2709,7 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
                 location: 'europe-north1',
                 params: params,
                 dryRun: true
-            }, navIdent, 'Markedsanalyse'));
+            }, navIdent, getAnalysisTypeOverride(req, 'Markedsanalyse')));
 
             const meta = dryRunJob.metadata.statistics;
             const bytesProcessed = parseInt(meta.totalBytesProcessed);
