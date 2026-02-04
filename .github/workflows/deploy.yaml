@@ -51,8 +51,24 @@ jobs:
       - name: "Deploy to Dev"
         uses: "nais/deploy/actions/deploy@v2"
         env:
+          CLUSTER: "dev-gcp"
+          RESOURCE: .nais/dev/nais-dev.yaml
+          VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
+
+  deploy-prod-dev:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    needs: build
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Deploy to Prod-dev"
+        uses: "nais/deploy/actions/deploy@v2"
+        env:
           CLUSTER: "prod-gcp"
-          RESOURCE: .nais/nais-dev.yaml
+          RESOURCE: .nais/prod/nais-prod-dev.yaml
           VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
 
   deploy-prod:
@@ -68,7 +84,7 @@ jobs:
         uses: "nais/deploy/actions/deploy@v2"
         env:
           CLUSTER: "prod-gcp"
-          RESOURCE: .nais/nais-prod.yaml
+          RESOURCE: .nais/prod/nais-prod.yaml
           VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
       - name: "Create deployment tag"
         if: success()
