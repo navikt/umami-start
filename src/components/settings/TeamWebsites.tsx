@@ -124,10 +124,16 @@ function TeamWebsites() {
             }
         });
 
-        // Sort by base name
-        const sorted = Array.from(groups.values()).sort((a, b) =>
-            a.baseName.localeCompare(b.baseName, 'nb')
-        );
+        // Sort by base name, but feature Nav.no first
+        const sorted = Array.from(groups.values()).sort((a, b) => {
+            const aIsFeatured = a.baseName.trim().toLowerCase() === 'nav.no';
+            const bIsFeatured = b.baseName.trim().toLowerCase() === 'nav.no';
+
+            if (aIsFeatured && !bIsFeatured) return -1;
+            if (!aIsFeatured && bIsFeatured) return 1;
+
+            return a.baseName.localeCompare(b.baseName, 'nb');
+        });
 
         setGroupedData(sorted);
     }, [data]);
