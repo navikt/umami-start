@@ -86,7 +86,7 @@ export const PeriodPicker = ({
                 header={{ heading: "Velg datoperiode", closeButton: true }}
             >
                 <Modal.Body>
-                    <div className="flex flex-col gap-4 min-h-[300px]">
+                    <div className="flex flex-col gap-4">
                         <DatePicker
                             mode="range"
                             selected={{ from: startDate, to: endDate }}
@@ -97,16 +97,18 @@ export const PeriodPicker = ({
                                 }
                             }}
                         >
-                            <div className="flex gap-4">
+                            <div className="flex flex-col gap-2">
                                 <DatePicker.Input
+                                    id="custom-start-date"
                                     label="Fra dato"
+                                    size="small"
                                     value={startDate ? format(startDate, 'dd.MM.yyyy') : ''}
-                                    readOnly
                                 />
                                 <DatePicker.Input
+                                    id="custom-end-date"
                                     label="Til dato"
+                                    size="small"
                                     value={endDate ? format(endDate, 'dd.MM.yyyy') : ''}
-                                    readOnly
                                 />
                             </div>
                         </DatePicker>
@@ -115,7 +117,13 @@ export const PeriodPicker = ({
                 <Modal.Footer>
                     <Button
                         type="button"
-                        onClick={() => setIsDateModalOpen(false)}
+                        onClick={() => {
+                            if (startDate && endDate) {
+                                onPeriodChange('custom');
+                                setIsDateModalOpen(false);
+                            }
+                        }}
+                        disabled={!startDate || !endDate}
                     >
                         Bruk datoer
                     </Button>
