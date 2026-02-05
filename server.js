@@ -1450,6 +1450,42 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
             count: Number(row.count)
         }));
 
+        // Total across the whole period (not sum of buckets)
+        let totalCount = null;
+        if (metricType !== 'proportion') {
+            let totalCountExpression;
+            if (metricType === 'pageviews') {
+                totalCountExpression = 'COUNT(*)';
+            } else if (metricType === 'visits') {
+                totalCountExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`;
+            } else {
+                totalCountExpression = useDistinctId
+                    ? `APPROX_COUNT_DISTINCT(${userIdExpression})`
+                    : `APPROX_COUNT_DISTINCT(session_id)`;
+            }
+
+            const totalQuery = `
+                SELECT
+                    ${totalCountExpression} as total
+                FROM ${fromClause}
+                WHERE ${col}website_id = @websiteId
+                AND ${col}created_at BETWEEN @startDate AND @endDate
+                AND ${col}event_type = 1 -- Pageview
+                ${urlFilter}
+            `;
+
+            const [totalJob] = await bigquery.createQueryJob(addAuditLogging({
+                query: totalQuery,
+                location: 'europe-north1',
+                params: params
+            }, navIdent, 'Trafikkanalyse'));
+
+            const [totalRows] = await totalJob.getQueryResults();
+            if (totalRows && totalRows.length > 0) {
+                totalCount = Number(totalRows[0].total);
+            }
+        }
+
         // Get dry run stats
         let queryStats = null;
         try {
@@ -1478,6 +1514,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
 
         res.json({
             data,
+            totalCount,
             queryStats,
             meta: { usedDistinctId: useDistinctId }
         });

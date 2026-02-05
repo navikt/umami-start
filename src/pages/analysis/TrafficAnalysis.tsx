@@ -92,6 +92,7 @@ const TrafficAnalysis = () => {
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
+    const [seriesTotalCount, setSeriesTotalCount] = useState<number | undefined>(undefined);
     const [pageMetrics, setPageMetrics] = useState<any[]>([]);
     const [seriesQueryStats, setSeriesQueryStats] = useState<any>(null);
 
@@ -109,14 +110,13 @@ const TrafficAnalysis = () => {
         }));
     }, [pageMetrics, submittedMetricType]);
 
-    // Calculate total from page metrics (actual unique count)
-    const pageMetricsTotal = useMemo(() => {
-        if (!pageMetrics.length) return undefined;
-        return pageMetrics.reduce((sum, item) => {
-            const value = submittedMetricType === 'pageviews' ? item.pageviews : item.visitors;
-            return sum + (value || 0);
-        }, 0);
-    }, [pageMetrics, submittedMetricType]);
+    // Override totals for metrics that cannot be summed across time buckets.
+    const totalOverride = useMemo(() => {
+        if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
+            return seriesTotalCount;
+        }
+        return undefined;
+    }, [submittedMetricType, seriesTotalCount]);
 
 
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
@@ -181,6 +181,7 @@ const TrafficAnalysis = () => {
         setLoading(true);
         setError(null);
         setSeriesData([]);
+        setSeriesTotalCount(undefined);
         setPageMetrics([]);
         setBreakdownData({ sources: [], exits: [] });
         setExternalReferrerData([]);
@@ -238,6 +239,9 @@ const TrafficAnalysis = () => {
             if (seriesResult.data) {
                 console.log('[TrafficAnalysis] Received series data:', seriesResult.data.length, 'records');
                 setSeriesData(seriesResult.data);
+            }
+            if (typeof seriesResult.totalCount === 'number') {
+                setSeriesTotalCount(seriesResult.totalCount);
             }
             if (seriesResult.queryStats) {
                 setSeriesQueryStats(seriesResult.queryStats);
@@ -648,6 +652,16 @@ const TrafficAnalysis = () => {
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
         const renderName = (name: string) => {
+            if (name === 'Ukjent / Andre') {
+                return (
+                    <div className="flex items-center gap-2 max-w-full">
+                        <span className="truncate">Ukjent / Andre</span>
+                        <HelpText title="Hva betyr dette?" strategy="fixed">
+                            Differansen mellom totalen og summen av identifiserte kanaler. Dette kan skyldes filtrering, begrenset antall kilder, eller manglende henvisningsdata.
+                        </HelpText>
+                    </div>
+                );
+            }
             if (name === '(none)' || name === 'Direkte / Annet') {
                 return (
                     <div className="flex items-center gap-2 max-w-full">
@@ -792,6 +806,30 @@ const TrafficAnalysis = () => {
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count);
     }, [externalReferrerData]);
+
+    const seriesTotal = useMemo(() => {
+        if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
+            return seriesTotalCount ?? 0;
+        }
+        if (!seriesData.length) return 0;
+        return seriesData.reduce((sum, item) => sum + Number(item.count || 0), 0);
+    }, [seriesData, seriesTotalCount, submittedMetricType]);
+
+    const externalChannelsWithUnknown = useMemo(() => {
+        if (submittedMetricType === 'proportion') {
+            return externalChannels;
+        }
+        if (!seriesTotal || !externalChannels.length) return externalChannels;
+
+        const channelSum = externalChannels.reduce((sum, item) => sum + Number(item.count || 0), 0);
+        const diff = Math.round(seriesTotal - channelSum);
+
+        if (diff > 0) {
+            return [...externalChannels, { name: 'Ukjent / Andre', count: diff }];
+        }
+
+        return externalChannels;
+    }, [externalChannels, seriesTotal, submittedMetricType]);
 
     const TrafficTable = ({ title, data, onRowClick, selectedWebsite, metricLabel }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void; selectedWebsite: Website | null; metricLabel: string }) => {
         const [search, setSearch] = useState('');
@@ -1181,7 +1219,7 @@ const TrafficAnalysis = () => {
                                     </div>
                                 ) : (
                                     <>
-                                        <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={submittedGranularity} />
+                                        <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={totalOverride} granularity={submittedGranularity} />
                                         <div className="flex flex-col gap-8">
                                             <div className="flex flex-col gap-4">
                                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -1276,7 +1314,7 @@ const TrafficAnalysis = () => {
                                         <div className="w-full md:w-1/2">
                                             <ExternalTrafficTable
                                                 title="Kanaler"
-                                                data={externalChannels}
+                                                data={externalChannelsWithUnknown}
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                             />
                                         </div>
