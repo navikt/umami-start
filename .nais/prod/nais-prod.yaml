@@ -40,4 +40,4 @@ spec:
       enabled: true
   env:
     - name: SITEIMPROVE_BASE_URL
-      value: "reops-proxy.team-researchops.svc.cluster.local/siteimprove"
+      value: "http://reops-proxy.team-researchops.svc.cluster.local/siteimprove"
