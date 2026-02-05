@@ -7,8 +7,8 @@ import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
-import { getBaseUrl } from '../../lib/environment';
 import InfoCard from '../../components/InfoCard';
+import { getBaseUrl } from '../../lib/environment';
 
 interface BrokenLink {
     id: number;
@@ -39,6 +39,11 @@ interface CrawlData {
 }
 
 const BrokenLinks = () => {
+    const siteimproveBaseUrl = getBaseUrl({
+        localUrl: "https://reops-proxy.intern.nav.no",
+        devUrl: "https://reops-proxy.intern.dev.nav.no",
+        prodUrl: "https://reops-proxy.intern.nav.no",
+    });
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [brokenLinks, setBrokenLinks] = useState<BrokenLink[]>([]);
     const [pagesWithBrokenLinks, setPagesWithBrokenLinks] = useState<PageWithBrokenLinks[]>([]);
@@ -99,11 +104,7 @@ const BrokenLinks = () => {
             setPageError(null);
 
             try {
-                const baseUrl = getBaseUrl({
-                    localUrl: "https://reops-proxy.intern.nav.no",
-                    devUrl: "https://reops-proxy.ansatt.dev.nav.no",
-                    prodUrl: "https://reops-proxy.ansatt.nav.no",
-                });
+                const baseUrl = siteimproveBaseUrl;
                 const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
                 const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/pages_with_broken_links/${pageId}/broken_links?page_size=50`;
@@ -187,11 +188,7 @@ const BrokenLinks = () => {
             setPagesError(null);
 
             try {
-                const baseUrl = getBaseUrl({
-                    localUrl: "https://reops-proxy.intern.nav.no",
-                    devUrl: "https://reops-proxy.ansatt.dev.nav.no",
-                    prodUrl: "https://reops-proxy.ansatt.nav.no",
-                });
+                const baseUrl = siteimproveBaseUrl;
                 const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
                 const url = `${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/links/broken_links/${linkId}/pages?page_size=50`;
@@ -276,11 +273,7 @@ const BrokenLinks = () => {
         setCrawlInfo(null);
 
         try {
-            const baseUrl = getBaseUrl({
-                localUrl: "https://reops-proxy.intern.nav.no",
-                devUrl: "https://reops-proxy.ansatt.dev.nav.no",
-                prodUrl: "https://reops-proxy.ansatt.nav.no",
-            });
+            const baseUrl = siteimproveBaseUrl;
             const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
             // Fetch Broken Links

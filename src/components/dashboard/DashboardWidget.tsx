@@ -4,8 +4,8 @@ import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/r
 import { ExternalLink, MoreVertical } from 'lucide-react';
 import { SavedChart } from '../../data/dashboard/types';
 import { format } from 'date-fns';
-import { getBaseUrl } from '../../lib/environment';
 import { translateValue } from '../../lib/translations';
+import { getBaseUrl } from '../../lib/environment';
 import AnalysisActionModal from '../analysis/AnalysisActionModal';
 // @ts-ignore
 import SiteScores from '../siteimprove/SiteScores';
@@ -200,8 +200,8 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     if (chart.type === 'siteimprove') {
         const baseUrl = getBaseUrl({
             localUrl: "https://reops-proxy.intern.nav.no",
-            devUrl: "https://reops-proxy.ansatt.dev.nav.no",
-            prodUrl: "https://reops-proxy.ansatt.nav.no",
+            devUrl: "https://reops-proxy.intern.dev.nav.no",
+            prodUrl: "https://reops-proxy.intern.nav.no",
         });
 
         // If chart has siteimprove_id, use group-level scoring

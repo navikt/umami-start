@@ -7,8 +7,8 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
-import { getBaseUrl } from '../../lib/environment';
 import InfoCard from '../../components/InfoCard';
+import { getBaseUrl } from '../../lib/environment';
 
 interface SpellingIssue {
     id: number;
@@ -37,6 +37,11 @@ interface CrawlData {
 }
 
 const Spellings = () => {
+    const siteimproveBaseUrl = getBaseUrl({
+        localUrl: "https://reops-proxy.intern.nav.no",
+        devUrl: "https://reops-proxy.intern.dev.nav.no",
+        prodUrl: "https://reops-proxy.intern.nav.no",
+    });
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [siteimproveId, setSiteimproveId] = useState<string | null>(null);
     const [overviewData, setOverviewData] = useState<QualityAssuranceCheck | null>(null);
@@ -81,11 +86,7 @@ const Spellings = () => {
     };
 
     const fetchPageId = async (siteId: string, path: string) => {
-        const baseUrl = getBaseUrl({
-            localUrl: "https://reops-proxy.intern.nav.no",
-            devUrl: "https://reops-proxy.ansatt.dev.nav.no",
-            prodUrl: "https://reops-proxy.ansatt.nav.no",
-        });
+        const baseUrl = siteimproveBaseUrl;
         const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
         const encodedUrl = encodeURIComponent(path);
@@ -115,11 +116,7 @@ const Spellings = () => {
         setCrawlInfo(null);
 
         try {
-            const baseUrl = getBaseUrl({
-                localUrl: "https://reops-proxy.intern.nav.no",
-                devUrl: "https://reops-proxy.ansatt.dev.nav.no",
-                prodUrl: "https://reops-proxy.ansatt.nav.no",
-            });
+            const baseUrl = siteimproveBaseUrl;
             const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
             if (!urlPath) {

@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
 
 const BIGQUERY_TIMEZONE = 'Europe/Oslo';
+const SITEIMPROVE_PROXY_BASE_URL = 'https://reops-proxy.intern.nav.no/siteimprove';
 
 dotenv.config()
 
@@ -294,6 +295,51 @@ async function authenticateUser(req, res, next) {
 
 // Apply authentication middleware to all /api routes (except /api/user/me which has its own handling)
 app.use('/api/bigquery', authenticateUser);
+
+// Proxy Siteimprove requests through the server (uses internal proxy host)
+app.use('/api/siteimprove', authenticateUser, async (req, res) => {
+    try {
+        const targetUrl = new URL(req.url, SITEIMPROVE_PROXY_BASE_URL);
+        const headers = {};
+
+        if (req.headers.authorization) headers.authorization = req.headers.authorization;
+        if (req.headers.cookie) headers.cookie = req.headers.cookie;
+        if (req.headers.accept) headers.accept = req.headers.accept;
+        if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+        if (req.headers['x-request-id']) headers['x-request-id'] = req.headers['x-request-id'];
+        if (req.headers['x-correlation-id']) headers['x-correlation-id'] = req.headers['x-correlation-id'];
+
+        const fetchOptions = { method: req.method, headers };
+        if (req.method !== 'GET' && req.method !== 'HEAD' && req.body !== undefined) {
+            fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        }
+
+        const upstreamResponse = await fetch(targetUrl.toString(), fetchOptions);
+
+        // Forward relevant headers (skip hop-by-hop headers)
+        const hopByHop = new Set([
+            'connection',
+            'keep-alive',
+            'proxy-authenticate',
+            'proxy-authorization',
+            'te',
+            'trailer',
+            'transfer-encoding',
+            'upgrade'
+        ]);
+        upstreamResponse.headers.forEach((value, key) => {
+            if (!hopByHop.has(key.toLowerCase())) {
+                res.setHeader(key, value);
+            }
+        });
+
+        const buffer = Buffer.from(await upstreamResponse.arrayBuffer());
+        res.status(upstreamResponse.status).send(buffer);
+    } catch (error) {
+        console.error('[Siteimprove proxy] Error:', error);
+        res.status(502).json({ error: 'Failed to fetch Siteimprove data' });
+    }
+});
 
 
 // User authentication endpoint - returns NAV ident and user info
