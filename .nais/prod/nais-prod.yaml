@@ -38,3 +38,6 @@ spec:
     sidecar:
       autoLogin: true
       enabled: true
+  env:
+    - name: SITEIMPROVE_PROXY_BASE_URL
+      value: https://reops-proxy.intern.nav.no/siteimprove

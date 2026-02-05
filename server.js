@@ -5,10 +5,11 @@ import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
 
 const BIGQUERY_TIMEZONE = 'Europe/Oslo';
-const SITEIMPROVE_PROXY_BASE_URL = process.env.SITEIMPROVE_PROXY_BASE_URL
-    || (process.env.NAIS_CLUSTER_NAME?.includes('dev')
-        ? 'https://reops-proxy.intern.dev.nav.no/siteimprove'
-        : 'https://reops-proxy.intern.nav.no/siteimprove');
+const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL;
+
+if (!SITEIMPROVE_BASE_URL) {
+    throw new Error('Missing env var: SITEIMPROVE_BASE_URL');
+}
 
 dotenv.config()
 
