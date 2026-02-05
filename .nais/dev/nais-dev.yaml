@@ -31,6 +31,11 @@ spec:
       memory: 128Mi
   ingresses:
     - https://startumami.ansatt.dev.nav.no
+      accessPolicy:
+  outbound:
+    rules:
+        - application: reops-proxy
+          namespace: team-researchops
   azure:
     application:
       enabled: true
