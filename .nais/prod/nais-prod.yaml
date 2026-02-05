@@ -38,3 +38,6 @@ spec:
     sidecar:
       autoLogin: true
       enabled: true
+  env:
+    - name: SITEIMPROVE_BASE_URL
+      value: "http://reops-proxy.team-researchops.svc.cluster.local/siteimprove"

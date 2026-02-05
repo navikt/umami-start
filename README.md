@@ -6,6 +6,9 @@ For å måle brukeradferd effektivt, trenger du verktøy som gir innsikt uten å
 Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde dashboards, med mulighet for dypere produktanalyser i verktøy som Metabase, Grafana og Jupyter Notebook.
 
 ---
+# Env
+\-\ \`SITEIMPROVE_BASE_URL\`: Base URL for the Siteimprove proxy, injected via NAIS (see \`.nais/dev/nais-dev.yaml\` and \`.nais/prod/nais-prod.yaml\`) to avoid hardcoded endpoints\.
+
 
 # Bruk a KI
 
