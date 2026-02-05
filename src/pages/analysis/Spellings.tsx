@@ -8,7 +8,6 @@ import WebsitePicker from '../../components/analysis/WebsitePicker';
 import { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
 import InfoCard from '../../components/InfoCard';
-import { getBaseUrl } from '../../lib/environment';
 
 interface SpellingIssue {
     id: number;
@@ -37,11 +36,7 @@ interface CrawlData {
 }
 
 const Spellings = () => {
-    const siteimproveBaseUrl = getBaseUrl({
-        localUrl: "https://reops-proxy.intern.nav.no",
-        devUrl: "https://reops-proxy.intern.dev.nav.no",
-        prodUrl: "https://reops-proxy.intern.nav.no",
-    });
+    const siteimproveBaseUrl = '/api/siteimprove';
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [siteimproveId, setSiteimproveId] = useState<string | null>(null);
     const [overviewData, setOverviewData] = useState<QualityAssuranceCheck | null>(null);
