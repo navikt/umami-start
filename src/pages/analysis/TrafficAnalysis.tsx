@@ -67,6 +67,8 @@ const TrafficAnalysis = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const [submittedCustomStartDate, setSubmittedCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
+    const [submittedCustomEndDate, setSubmittedCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
 
     const [granularity, setGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
     const [submittedGranularity, setSubmittedGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
@@ -77,6 +79,8 @@ const TrafficAnalysis = () => {
     // View options
     const [metricType, setMetricTypeState] = useState<string>(() => getStoredMetricType(searchParams.get('metricType')));
     const [submittedMetricType, setSubmittedMetricType] = useState<string>(() => getStoredMetricType(searchParams.get('metricType'))); // Track what was actually submitted
+    const [submittedUrlPaths, setSubmittedUrlPaths] = useState<string[]>(initialPaths);
+    const [submittedPathOperator, setSubmittedPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
 
     // Wrap setMetricType to also save to localStorage
     const setMetricType = (newMetricType: string) => {
@@ -117,6 +121,12 @@ const TrafficAnalysis = () => {
 
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
     const [externalReferrerData, setExternalReferrerData] = useState<any[]>([]); // Data from marketing-stats API
+    const [hasFetchedPageMetrics, setHasFetchedPageMetrics] = useState<boolean>(false);
+    const [hasFetchedBreakdown, setHasFetchedBreakdown] = useState<boolean>(false);
+    const [hasFetchedExternalReferrers, setHasFetchedExternalReferrers] = useState<boolean>(false);
+    const [isLoadingPageMetrics, setIsLoadingPageMetrics] = useState<boolean>(false);
+    const [isLoadingBreakdown, setIsLoadingBreakdown] = useState<boolean>(false);
+    const [isLoadingExternalReferrers, setIsLoadingExternalReferrers] = useState<boolean>(false);
 
     const getCountByQueryParams = (startDate: Date, endDate: Date) => {
         const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
@@ -174,8 +184,18 @@ const TrafficAnalysis = () => {
         setPageMetrics([]);
         setBreakdownData({ sources: [], exits: [] });
         setExternalReferrerData([]);
+        setHasFetchedPageMetrics(false);
+        setHasFetchedBreakdown(false);
+        setHasFetchedExternalReferrers(false);
+        setIsLoadingPageMetrics(false);
+        setIsLoadingBreakdown(false);
+        setIsLoadingExternalReferrers(false);
         setHasAttemptedFetch(true);
         setSubmittedMetricType(metricType);
+        setSubmittedUrlPaths(urlPaths);
+        setSubmittedPathOperator(pathOperator);
+        setSubmittedCustomStartDate(customStartDate);
+        setSubmittedCustomEndDate(customEndDate);
         let effectiveGranularity = granularity;
 
         // Auto-switch to hourly granularity for short periods upon fetch
@@ -223,13 +243,6 @@ const TrafficAnalysis = () => {
                 setSeriesQueryStats(seriesResult.queryStats);
             }
 
-            // Fetch Breakdown Data, Page Metrics, and External Referrers in parallel
-            await Promise.all([
-                fetchTrafficBreakdown(startDate, endDate),
-                fetchPageMetrics(startDate, endDate),
-                fetchExternalReferrers(startDate, endDate)
-            ]);
-
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
@@ -261,14 +274,18 @@ const TrafficAnalysis = () => {
         }
     };
 
-    const fetchTrafficBreakdown = async (startDate: Date, endDate: Date) => {
+    const fetchTrafficBreakdown = async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
         if (!selectedWebsite) return;
 
         try {
-            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
+            setIsLoadingBreakdown(true);
+            const activeUrlPaths = options?.urlPaths ?? submittedUrlPaths;
+            const activePathOperator = options?.pathOperator ?? submittedPathOperator;
+            const activeMetricType = options?.metricType ?? submittedMetricType;
+            const urlPath = activeUrlPaths.length > 0 ? activeUrlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
             const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
-            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
+            const breakdownUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-breakdown?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${activePathOperator}&metricType=${activeMetricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(breakdownUrl);
             if (!response.ok) throw new Error('Kunne ikke hente trafikkdetaljer');
@@ -282,18 +299,25 @@ const TrafficAnalysis = () => {
             }
         } catch (err: any) {
             console.error('Error fetching traffic breakdown:', err);
+        } finally {
+            setHasFetchedBreakdown(true);
+            setIsLoadingBreakdown(false);
         }
     };
 
 
-    const fetchPageMetrics = async (startDate: Date, endDate: Date) => {
+    const fetchPageMetrics = async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
         if (!selectedWebsite) return;
 
         try {
-            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
+            setIsLoadingPageMetrics(true);
+            const activeUrlPaths = options?.urlPaths ?? submittedUrlPaths;
+            const activePathOperator = options?.pathOperator ?? submittedPathOperator;
+            const activeMetricType = options?.metricType ?? submittedMetricType;
+            const urlPath = activeUrlPaths.length > 0 ? activeUrlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
             const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
-            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
+            const metricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${activePathOperator}&metricType=${activeMetricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(metricsUrl);
             if (!response.ok) throw new Error('Kunne ikke hente sidemetrikker');
@@ -304,18 +328,25 @@ const TrafficAnalysis = () => {
             }
         } catch (err: any) {
             console.error('Error fetching page metrics:', err);
+        } finally {
+            setHasFetchedPageMetrics(true);
+            setIsLoadingPageMetrics(false);
         }
     };
 
     // Fetch external referrer data from marketing-stats API (same as MarketingAnalysis)
-    const fetchExternalReferrers = async (startDate: Date, endDate: Date) => {
+    const fetchExternalReferrers = async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
         if (!selectedWebsite) return;
 
         try {
-            const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
+            setIsLoadingExternalReferrers(true);
+            const activeUrlPaths = options?.urlPaths ?? submittedUrlPaths;
+            const activePathOperator = options?.pathOperator ?? submittedPathOperator;
+            const activeMetricType = options?.metricType ?? submittedMetricType;
+            const urlPath = activeUrlPaths.length > 0 ? activeUrlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
             const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
-            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${pathOperator}&metricType=${metricType}${countByParams}${countBySwitchAtParam}`;
+            const url = `/api/bigquery/websites/${selectedWebsite.id}/marketing-stats?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&limit=100${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${activePathOperator}&metricType=${activeMetricType}${countByParams}${countBySwitchAtParam}`;
 
             const response = await fetch(url);
             if (!response.ok) throw new Error('Kunne ikke hente eksterne trafikkilder');
@@ -326,8 +357,62 @@ const TrafficAnalysis = () => {
             }
         } catch (err: any) {
             console.error('Error fetching external referrers:', err);
+        } finally {
+            setHasFetchedExternalReferrers(true);
+            setIsLoadingExternalReferrers(false);
         }
     };
+
+    // Lazy-load tab data to avoid unnecessary queries
+    useEffect(() => {
+        if (!hasAttemptedFetch || !selectedWebsite) return;
+
+        const dateRange = getDateRangeFromPeriod(submittedPeriod, submittedCustomStartDate, submittedCustomEndDate);
+        if (!dateRange) return;
+
+        const { startDate, endDate } = dateRange;
+        const options = {
+            urlPaths: submittedUrlPaths,
+            pathOperator: submittedPathOperator,
+            metricType: submittedMetricType
+        };
+
+        if (activeTab === 'visits') {
+            if (!hasFetchedPageMetrics) {
+                fetchPageMetrics(startDate, endDate, options);
+            }
+            return;
+        }
+
+        if (activeTab === 'sources') {
+            if (!hasFetchedExternalReferrers) {
+                fetchExternalReferrers(startDate, endDate, options);
+            }
+            if (!hasFetchedBreakdown) {
+                fetchTrafficBreakdown(startDate, endDate, options);
+            }
+            return;
+        }
+
+        if (activeTab === 'navigation') {
+            if (!hasFetchedBreakdown) {
+                fetchTrafficBreakdown(startDate, endDate, options);
+            }
+        }
+    }, [
+        activeTab,
+        hasAttemptedFetch,
+        selectedWebsite,
+        submittedPeriod,
+        submittedCustomStartDate,
+        submittedCustomEndDate,
+        submittedMetricType,
+        submittedUrlPaths,
+        submittedPathOperator,
+        hasFetchedPageMetrics,
+        hasFetchedExternalReferrers,
+        hasFetchedBreakdown
+    ]);
 
     // Prepare Chart Data
     const chartData = useMemo(() => {
@@ -535,7 +620,7 @@ const TrafficAnalysis = () => {
 
         // Filter Sources for internal entrances only, excluding the current URL path(s) being analyzed
         const entrancesList = sources
-            .filter(s => s.name.startsWith('/') && !urlPaths.some(path => {
+            .filter(s => s.name.startsWith('/') && !submittedUrlPaths.some(path => {
                 const normalizedPath = path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path;
                 const normalizedName = s.name !== '/' && s.name.endsWith('/') ? s.name.slice(0, -1) : s.name;
                 return normalizedName === normalizedPath;
@@ -543,7 +628,7 @@ const TrafficAnalysis = () => {
             .sort((a, b) => b.count - a.count);
 
         return { entrances: entrancesList, exits: exitsList };
-    }, [breakdownData, urlPaths]);
+    }, [breakdownData, submittedUrlPaths]);
 
     // Simple table component for external traffic - similar to AnalysisTable in MarketingAnalysis
     const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain }: { title: string; data: { name: string; count: number }[]; metricLabel: string; websiteDomain?: string }) => {
@@ -1090,144 +1175,164 @@ const TrafficAnalysis = () => {
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
-                                <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={submittedGranularity} />
-                                <div className="flex flex-col gap-8">
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                                            <div className="flex items-center gap-4">
-                                                <Switch
-                                                    checked={showAverage}
-                                                    onChange={(e) => setShowAverage(e.target.checked)}
-                                                    size="small"
-                                                >
-                                                    Vis gjennomsnitt
-                                                </Switch>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Label size="small" htmlFor="traffic-granularity">Tidsoppløsning</Label>
-                                                <Select
-                                                    id="traffic-granularity"
-                                                    label="Tidsoppløsning"
-                                                    hideLabel
-                                                    size="small"
-                                                    value={granularity}
-                                                    onChange={(e) => setGranularity(e.target.value as any)}
-                                                >
-                                                    <option value="day">Daglig</option>
-                                                    <option value="week">Ukentlig</option>
-                                                    <option value="month">Månedlig</option>
-                                                    <option value="hour">Time</option>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <div style={{ width: '100%', height: '400px' }}>
-                                            {chartData ? (
-                                                <ResponsiveContainer>
-                                                    <LineChart
-                                                        key={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}`}
-                                                        data={chartData.data}
-                                                        legendsOverflowText={'Overflow Items'}
-                                                        yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
-                                                        yAxisTickCount={6}
-                                                        yMaxValue={chartData.yMax}
-                                                        yMinValue={chartData.yMin}
-                                                        allowMultipleShapesForPoints={false}
-                                                        enablePerfOptimization={true}
-                                                        margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
-                                                        legendProps={{
-                                                            allowFocusOnLegends: true,
-                                                            styles: {
-                                                                text: { color: 'var(--ax-text-default)' },
-                                                            }
-                                                        }}
-                                                    />
-                                                </ResponsiveContainer>
-                                            ) : (
-                                                <div className="flex items-center justify-center h-full text-gray-500">
-                                                    Ingen data tilgjengelig for diagram
+                                {hasAttemptedFetch && (isLoadingPageMetrics || !hasFetchedPageMetrics) ? (
+                                    <div className="flex justify-center items-center h-full py-16">
+                                        <Loader size="xlarge" title="Henter data..." />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={pageMetricsTotal} granularity={submittedGranularity} />
+                                        <div className="flex flex-col gap-8">
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+                                                    <div className="flex items-center gap-4">
+                                                        <Switch
+                                                            checked={showAverage}
+                                                            onChange={(e) => setShowAverage(e.target.checked)}
+                                                            size="small"
+                                                        >
+                                                            Vis gjennomsnitt
+                                                        </Switch>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Label size="small" htmlFor="traffic-granularity">Tidsoppløsning</Label>
+                                                        <Select
+                                                            id="traffic-granularity"
+                                                            label="Tidsoppløsning"
+                                                            hideLabel
+                                                            size="small"
+                                                            value={granularity}
+                                                            onChange={(e) => setGranularity(e.target.value as any)}
+                                                        >
+                                                            <option value="day">Daglig</option>
+                                                            <option value="week">Ukentlig</option>
+                                                            <option value="month">Månedlig</option>
+                                                            <option value="hour">Time</option>
+                                                        </Select>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                                <div style={{ width: '100%', height: '400px' }}>
+                                                    {chartData ? (
+                                                        <ResponsiveContainer>
+                                                            <LineChart
+                                                                key={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}`}
+                                                                data={chartData.data}
+                                                                legendsOverflowText={'Overflow Items'}
+                                                                yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
+                                                                yAxisTickCount={6}
+                                                                yMaxValue={chartData.yMax}
+                                                                yMinValue={chartData.yMin}
+                                                                allowMultipleShapesForPoints={false}
+                                                                enablePerfOptimization={true}
+                                                                margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
+                                                                legendProps={{
+                                                                    allowFocusOnLegends: true,
+                                                                    styles: {
+                                                                        text: { color: 'var(--ax-text-default)' },
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </ResponsiveContainer>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-gray-500">
+                                                            Ingen data tilgjengelig for diagram
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                    <div className="flex flex-col md:flex-row gap-8 mt-8">
-                                        {/* Pages Table - Always visible context - Moved to first position */}
-                                        <div className="w-full md:w-1/2">
-                                            <TrafficTable
-                                                title="Inkluderte sider"
-                                                data={includedPagesData}
-                                                onRowClick={setSelectedInternalUrl}
-                                                selectedWebsite={selectedWebsite}
-                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                            />
-                                        </div>
+                                            <div className="flex flex-col md:flex-row gap-8 mt-8">
+                                                {/* Pages Table - Always visible context - Moved to first position */}
+                                                <div className="w-full md:w-1/2">
+                                                    <TrafficTable
+                                                        title="Inkluderte sider"
+                                                        data={includedPagesData}
+                                                        onRowClick={setSelectedInternalUrl}
+                                                        selectedWebsite={selectedWebsite}
+                                                        metricLabel={getMetricLabelCapitalized(submittedMetricType)}
+                                                    />
+                                                </div>
 
-                                        {/* Chart Data Table - Moved to second position with pagination/search */}
-                                        <div className="w-full md:w-1/2">
-                                            <ChartDataTable
-                                                data={seriesData}
-                                                metricLabel={getMetricLabelWithCount(submittedMetricType)}
-                                            />
+                                                {/* Chart Data Table - Moved to second position with pagination/search */}
+                                                <div className="w-full md:w-1/2">
+                                                    <ChartDataTable
+                                                        data={seriesData}
+                                                        metricLabel={getMetricLabelWithCount(submittedMetricType)}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    </>
+                                )}
                             </Tabs.Panel>
 
                             <Tabs.Panel value="sources" className="pt-4">
-                                <div className="flex flex-col gap-8">
-                                    <div className="w-full md:w-1/2">
-                                        <ExternalTrafficTable
-                                            title="Kanaler"
-                                            data={externalChannels}
-                                            metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                        />
+                                {hasAttemptedFetch && ((isLoadingExternalReferrers || !hasFetchedExternalReferrers) || (isLoadingBreakdown || !hasFetchedBreakdown)) ? (
+                                    <div className="flex justify-center items-center h-full py-16">
+                                        <Loader size="xlarge" title="Henter data..." />
                                     </div>
-                                    <div className="flex flex-col md:flex-row gap-8">
+                                ) : (
+                                    <div className="flex flex-col gap-8">
                                         <div className="w-full md:w-1/2">
                                             <ExternalTrafficTable
-                                                title="Eksterne kilder"
-                                                data={externalReferrers}
+                                                title="Kanaler"
+                                                data={externalChannels}
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                                websiteDomain={selectedWebsite?.domain}
                                             />
                                         </div>
-                                        <div className="w-full md:w-1/2">
-                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
+                                        <div className="flex flex-col md:flex-row gap-8">
+                                            <div className="w-full md:w-1/2">
+                                                <ExternalTrafficTable
+                                                    title="Eksterne kilder"
+                                                    data={externalReferrers}
+                                                    metricLabel={getMetricLabelCapitalized(submittedMetricType)}
+                                                    websiteDomain={selectedWebsite?.domain}
+                                                />
+                                            </div>
+                                            <div className="w-full md:w-1/2">
+                                                <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
                             </Tabs.Panel>
 
                             <Tabs.Panel value="navigation" className="pt-4">
-                                <div className="flex flex-col md:flex-row gap-8">
-                                    <div className="w-full md:w-1/2">
-                                        <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
+                                {hasAttemptedFetch && (isLoadingBreakdown || !hasFetchedBreakdown) ? (
+                                    <div className="flex justify-center items-center h-full py-16">
+                                        <Loader size="xlarge" title="Henter data..." />
                                     </div>
-                                    <div className="w-full md:w-1/2">
-                                        <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">
-                                            <Heading level="3" size="small" className="mb-2">Se vanlige veier gjennom nettstedet</Heading>
-                                            <p className="text-[var(--ax-text-subtle)] mb-4">
-                                                Navigasjonsflyt viser hvordan brukerne navigerer mellom flere sider i samme besøk.
-                                            </p>
-                                            <Button
-                                                variant="secondary"
-                                                size="small"
-                                                icon={<ArrowRight size={16} />}
-                                                iconPosition="right"
-                                                onClick={() => {
-                                                    const params = new URLSearchParams();
-                                                    if (selectedWebsite?.id) params.set('websiteId', selectedWebsite.id);
-                                                    if (period) params.set('period', period);
-                                                    if (urlPaths.length > 0) params.set('urlPath', urlPaths[0]);
-                                                    navigate(`/brukerreiser?${params.toString()}`);
-                                                }}
-                                                disabled={!selectedWebsite}
-                                            >
-                                                Gå til navigasjonsflyt
-                                            </Button>
+                                ) : (
+                                    <div className="flex flex-col md:flex-row gap-8">
+                                        <div className="w-full md:w-1/2">
+                                            <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
+                                        </div>
+                                        <div className="w-full md:w-1/2">
+                                            <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">
+                                                <Heading level="3" size="small" className="mb-2">Se vanlige veier gjennom nettstedet</Heading>
+                                                <p className="text-[var(--ax-text-subtle)] mb-4">
+                                                    Navigasjonsflyt viser hvordan brukerne navigerer mellom flere sider i samme besøk.
+                                                </p>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="small"
+                                                    icon={<ArrowRight size={16} />}
+                                                    iconPosition="right"
+                                                    onClick={() => {
+                                                        const params = new URLSearchParams();
+                                                        if (selectedWebsite?.id) params.set('websiteId', selectedWebsite.id);
+                                                        if (period) params.set('period', period);
+                                                        if (urlPaths.length > 0) params.set('urlPath', urlPaths[0]);
+                                                        navigate(`/brukerreiser?${params.toString()}`);
+                                                    }}
+                                                    disabled={!selectedWebsite}
+                                                >
+                                                    Gå til navigasjonsflyt
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
                             </Tabs.Panel>
                         </Tabs>
 
