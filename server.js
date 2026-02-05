@@ -303,7 +303,7 @@ app.use('/api/bigquery', authenticateUser);
 // Proxy Siteimprove requests through the server (uses internal proxy host)
 app.use('/api/siteimprove', authenticateUser, async (req, res) => {
     try {
-        const targetUrl = new URL(req.url, SITEIMPROVE_PROXY_BASE_URL);
+        const targetUrl = new URL(req.url, SITEIMPROVE_BASE_URL);
         const headers = {};
 
         if (req.headers.authorization) headers.authorization = req.headers.authorization;

@@ -7,7 +7,7 @@ Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde 
 
 ---
 # Env
-\-\ \`SITEIMPROVE_PROXY_BASE_URL\`: Base URL for the Siteimprove proxy, injected via NAIS (see \`.nais/dev/nais-dev.yaml\` and \`.nais/prod/nais-prod.yaml\`) to avoid hardcoded endpoints\.
+\-\ \`SITEIMPROVE_BASE_URL\`: Base URL for the Siteimprove proxy, injected via NAIS (see \`.nais/dev/nais-dev.yaml\` and \`.nais/prod/nais-prod.yaml\`) to avoid hardcoded endpoints\.
 
 
 # Bruk a KI
