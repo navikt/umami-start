@@ -7,6 +7,15 @@ import AlertWithCloseButton from '../AlertWithCloseButton';
 import ResultsPanel from './ResultsPanel';
 import { translateValue } from '../../../lib/translations';
 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+  if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+    return (window as any).__GCP_PROJECT_ID__;
+  }
+  // Fallback for development/SSR contexts
+  throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
 interface QueryPreviewProps {
   sql: string;
   activeStep?: number;
@@ -128,9 +137,10 @@ const QueryPreview = ({
 
     // Date Filter Substitution
     if (hasMetabaseDateFilter && dateRange.from && dateRange.to && !(preserveMetabasePlaceholders && interactiveDateFilter)) {
+      const projectId = getGcpProjectId();
       const fromSql = `TIMESTAMP('${format(dateRange.from, 'yyyy-MM-dd')}')`;
       const toSql = `TIMESTAMP('${format(dateRange.to, 'yyyy-MM-dd')}T23:59:59')`;
-      const replacement = `AND \`team-researchops-prod-01d6.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+      const replacement = `AND \`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
       processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, replacement);
     }
 

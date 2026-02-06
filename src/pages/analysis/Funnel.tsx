@@ -14,6 +14,21 @@ import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 import { Website } from '../../types/chart';
 
+declare global {
+    interface Window {
+        __GCP_PROJECT_ID__?: string;
+    }
+}
+
+const getGcpProjectId = (): string => {
+    const pid =
+        (typeof window !== 'undefined' ? window.__GCP_PROJECT_ID__ : undefined) ??
+        (typeof process !== 'undefined' ? (process as any)?.env?.GCP_PROJECT_ID : undefined);
+
+    if (!pid) throw new Error('Missing runtime config: GCP_PROJECT_ID');
+    return pid;
+};
+
 
 const Funnel = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -194,7 +209,8 @@ const Funnel = () => {
         });
         const eventTypesList = Array.from(neededEventTypes).join(', ');
 
-        // Build the base CTE - using field filter after event_type clause
+        const projectId = getGcpProjectId();
+
         let sql = `-- Traktanalyse for Metabase
 -- Bruk denne SQL-en i Metabase for å lage en traktgraf
 -- Velg "Funnel" som visualiseringstype etter at du har kjørt spørringen
@@ -217,7 +233,7 @@ WITH events_raw AS (
         END as step_value,
         event_id,
         created_at
-    FROM \`team-researchops-prod-01d6.umami_views.event\`
+    FROM \`${projectId}.umami_views.event\`
     WHERE website_id = '${selectedWebsite.id}'
       AND event_type IN (${eventTypesList})
       [[AND {{created_at}}]]
@@ -253,7 +269,7 @@ events AS (
 
                     return `EXISTS (
         SELECT 1
-        FROM \`team-researchops-prod-01d6.umami_views.event_data\` d_${index}_${pIdx}
+        FROM \`${projectId}.umami_views.event_data\` d_${index}_${pIdx}
         CROSS JOIN UNNEST(d_${index}_${pIdx}.event_parameters) p_${index}_${pIdx}
         WHERE d_${index}_${pIdx}.website_event_id = e.event_id
           AND d_${index}_${pIdx}.website_id = '${selectedWebsite.id}'
@@ -352,7 +368,7 @@ WITH events_raw AS (
         session_id,
         COALESCE(NULLIF(RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/'), ''), '/') as url_path,
         created_at
-    FROM \`team-researchops-prod-01d6.umami_views.event\`
+    FROM \`${projectId}.umami_views.event\`
     WHERE website_id = '${selectedWebsite.id}'
       AND event_type = 1
       [[AND {{created_at}}]]

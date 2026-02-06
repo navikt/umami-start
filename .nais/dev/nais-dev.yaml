@@ -49,3 +49,5 @@ spec:
       value: "http://reops-proxy.team-researchops.svc.cluster.local/siteimprove"
     - name: UMAMI_BASE_URL
       value: "https://umami.ansatt.dev.nav.no"
+    - name: GCP_PROJECT_ID
+      value: "team-researchops-dev-4396"

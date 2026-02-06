@@ -1,5 +1,16 @@
 import { DashboardConfig } from './types';
 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+  if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+    return (window as any).__GCP_PROJECT_ID__;
+  }
+  // Fallback for development/SSR contexts
+  throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
+const projectId = getGcpProjectId();
+
 export const standardDashboard: DashboardConfig = {
   title: "Webstatistikk",
   description: "Standarddashboard med trafikktall.",
@@ -15,10 +26,10 @@ export const standardDashboard: DashboardConfig = {
       width: '60',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*  FROM \`${projectId}.umami_views.event\`
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -38,10 +49,10 @@ LIMIT 1000`
       showTotal: true,
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*  FROM \`${projectId}.umami_views.event\`
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -75,10 +86,10 @@ LIMIT 1001
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*  FROM \`${projectId}.umami_views.event\`
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -98,10 +109,10 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*  FROM \`${projectId}.umami_views.event\`
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -126,12 +137,12 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*  FROM \`${projectId}.umami_views.event\`
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 2
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_name IS NOT NULL
+  AND \`${projectId}.umami_views.event\`.event_type = 2
+  AND \`${projectId}.umami_views.event\`.event_name IS NOT NULL
 )
 
 SELECT
@@ -150,17 +161,17 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.session_id,
-    \`team-researchops-prod-01d6.umami_views.event\`.visit_id,
-    \`team-researchops-prod-01d6.umami_views.event\`.url_path,
-    \`team-researchops-prod-01d6.umami_views.event\`.created_at,
-    LEAD(\`team-researchops-prod-01d6.umami_views.event\`.url_path) OVER (
-      PARTITION BY \`team-researchops-prod-01d6.umami_views.event\`.session_id 
-      ORDER BY \`team-researchops-prod-01d6.umami_views.event\`.created_at
+    \`${projectId}.umami_views.event\`.session_id,
+    \`${projectId}.umami_views.event\`.visit_id,
+    \`${projectId}.umami_views.event\`.url_path,
+    \`${projectId}.umami_views.event\`.created_at,
+    LEAD(\`${projectId}.umami_views.event\`.url_path) OVER (
+      PARTITION BY \`${projectId}.umami_views.event\`.session_id 
+      ORDER BY \`${projectId}.umami_views.event\`.created_at
     ) AS next_page
-  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
+  FROM \`${projectId}.umami_views.event\`
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
   [[AND {{created_at}} ]]
 )
 
@@ -186,13 +197,13 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*,
-    \`team-researchops-prod-01d6.umami_views.session\`.country  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\`
-    ON \`team-researchops-prod-01d6.umami_views.event\`.session_id = \`team-researchops-prod-01d6.umami_views.session\`.session_id
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*,
+    \`${projectId}.umami_views.session\`.country  FROM \`${projectId}.umami_views.event\`
+  LEFT JOIN \`${projectId}.umami_views.session\`
+    ON \`${projectId}.umami_views.event\`.session_id = \`${projectId}.umami_views.session\`.session_id
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -213,13 +224,13 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*,
-    \`team-researchops-prod-01d6.umami_views.session\`.language  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\`
-    ON \`team-researchops-prod-01d6.umami_views.event\`.session_id = \`team-researchops-prod-01d6.umami_views.session\`.session_id
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*,
+    \`${projectId}.umami_views.session\`.language  FROM \`${projectId}.umami_views.event\`
+  LEFT JOIN \`${projectId}.umami_views.session\`
+    ON \`${projectId}.umami_views.event\`.session_id = \`${projectId}.umami_views.session\`.session_id
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -245,13 +256,13 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*,
-    \`team-researchops-prod-01d6.umami_views.session\`.device  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\`
-    ON \`team-researchops-prod-01d6.umami_views.event\`.session_id = \`team-researchops-prod-01d6.umami_views.session\`.session_id
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*,
+    \`${projectId}.umami_views.session\`.device  FROM \`${projectId}.umami_views.event\`
+  LEFT JOIN \`${projectId}.umami_views.session\`
+    ON \`${projectId}.umami_views.event\`.session_id = \`${projectId}.umami_views.session\`.session_id
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -272,13 +283,13 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*,
-    \`team-researchops-prod-01d6.umami_views.session\`.os  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\`
-    ON \`team-researchops-prod-01d6.umami_views.event\`.session_id = \`team-researchops-prod-01d6.umami_views.session\`.session_id
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*,
+    \`${projectId}.umami_views.session\`.os  FROM \`${projectId}.umami_views.event\`
+  LEFT JOIN \`${projectId}.umami_views.session\`
+    ON \`${projectId}.umami_views.event\`.session_id = \`${projectId}.umami_views.session\`.session_id
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -298,13 +309,13 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*,
-    \`team-researchops-prod-01d6.umami_views.session\`.browser  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\`
-    ON \`team-researchops-prod-01d6.umami_views.event\`.session_id = \`team-researchops-prod-01d6.umami_views.session\`.session_id
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*,
+    \`${projectId}.umami_views.session\`.browser  FROM \`${projectId}.umami_views.event\`
+  LEFT JOIN \`${projectId}.umami_views.session\`
+    ON \`${projectId}.umami_views.event\`.session_id = \`${projectId}.umami_views.session\`.session_id
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 
@@ -324,13 +335,13 @@ LIMIT 1000
       width: '50',
       sql: `WITH base_query AS (
   SELECT
-    \`team-researchops-prod-01d6.umami_views.event\`.*,
-    \`team-researchops-prod-01d6.umami_views.session\`.screen  FROM \`team-researchops-prod-01d6.umami_views.event\`
-  LEFT JOIN \`team-researchops-prod-01d6.umami_views.session\`
-    ON \`team-researchops-prod-01d6.umami_views.event\`.session_id = \`team-researchops-prod-01d6.umami_views.session\`.session_id
-  WHERE \`team-researchops-prod-01d6.umami_views.event\`.website_id = '{{website_id}}'
-  AND \`team-researchops-prod-01d6.umami_views.event\`.event_type = 1
-  AND \`team-researchops-prod-01d6.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
+    \`${projectId}.umami_views.event\`.*,
+    \`${projectId}.umami_views.session\`.screen  FROM \`${projectId}.umami_views.event\`
+  LEFT JOIN \`${projectId}.umami_views.session\`
+    ON \`${projectId}.umami_views.event\`.session_id = \`${projectId}.umami_views.session\`.session_id
+  WHERE \`${projectId}.umami_views.event\`.website_id = '{{website_id}}'
+  AND \`${projectId}.umami_views.event\`.event_type = 1
+  AND \`${projectId}.umami_views.event\`.url_path = [[ {{url_sti}} --]] '/'
   [[AND {{created_at}} ]]
 )
 

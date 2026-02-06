@@ -20,13 +20,24 @@ type Website = {
     createdAt: string;
 };
 
-const defaultQuery = `SELECT 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+        return (window as any).__GCP_PROJECT_ID__;
+    }
+    // Fallback for development/SSR contexts
+    throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
+const getDefaultQuery = () => `SELECT 
   website_id,
   name
 FROM 
-  \`team-researchops-prod-01d6.umami.public_website\`
+  \`${getGcpProjectId()}.umami.public_website\`
 LIMIT 
   100;`;
+
+const defaultQuery = getDefaultQuery();
 
 // Helper function to truncate JSON to prevent browser crashes
 const truncateJSON = (obj: any, maxChars: number = 50000): string => {
@@ -46,6 +57,9 @@ const truncateJSON = (obj: any, maxChars: number = 50000): string => {
 
 export default function SqlEditor() {
     const [searchParams] = useSearchParams();
+
+    // Get GCP Project ID from runtime
+    const projectId = getGcpProjectId();
 
     const urlPathFromUrl = searchParams.get('urlPath');
     const pathOperatorFromUrl = searchParams.get('pathOperator');
@@ -161,14 +175,15 @@ export default function SqlEditor() {
             fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
             toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
 
+            const projectId = getGcpProjectId();
             // Detect likely table to apply date filter to
-            let tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
+            let tablePrefix = `\`${projectId}.umami_views.event\``;
             if (processedSql.includes('umami_views.event')) {
-                tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
+                tablePrefix = `\`${projectId}.umami_views.event\``;
             } else if (processedSql.includes('umami_views.session')) {
-                tablePrefix = '`team-researchops-prod-01d6.umami_views.session`';
+                tablePrefix = `\`${projectId}.umami_views.session\``;
             } else if (processedSql.includes('public_session') && !processedSql.includes('public_website_event')) {
-                tablePrefix = '`team-researchops-prod-01d6.umami.public_session`';
+                tablePrefix = `\`${projectId}.umami.public_session\``;
             }
 
             const dateReplacement = `AND ${tablePrefix}.created_at BETWEEN ${fromSql} AND ${toSql}`;
@@ -177,8 +192,9 @@ export default function SqlEditor() {
 
         // If query joins partitioned public_session, mirror the date filter to enable partition pruning
         if (fromSql && toSql && /public_session/gi.test(processedSql) && !/public_session[^\n]*created_at/gi.test(processedSql)) {
-            const eventFilter = `\`team-researchops-prod-01d6.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
-            const sessionPredicate = `\`team-researchops-prod-01d6.umami_views.session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+            const projectId = getGcpProjectId();
+            const eventFilter = `\`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+            const sessionPredicate = `\`${projectId}.umami_views.session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
 
 
             if (processedSql.includes(eventFilter)) {
@@ -242,7 +258,7 @@ export default function SqlEditor() {
             return currentQuery;
         }
 
-        const table = '`team-researchops-prod-01d6.umami_views.event`';
+        const table = `\`${getGcpProjectId()}.umami_views.event\``;
 
         if (/WHERE/i.test(currentQuery)) {
             return currentQuery.replace(/WHERE/i, (match) => `${match} ${table}.website_id = '{{website_id}}' AND`);
@@ -1082,12 +1098,12 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_website</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{projectId}.umami.public_website</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website'); }}
+                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_website`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1096,12 +1112,12 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Personer</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami_views.session</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{projectId}.umami_views.session</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.session'); }}
+                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami_views.session`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1110,12 +1126,12 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Alle hendelser</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami_views.event</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{projectId}.umami_views.event</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.event'); }}
+                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami_views.event`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1124,12 +1140,12 @@ export default function SqlEditor() {
                             <li className="flex flex-col gap-1">
                                 <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami_views.event_data</span>
+                                    <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{projectId}.umami_views.event_data</span>
                                     <Button
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami_views.event_data'); }}
+                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami_views.event_data`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1141,12 +1157,12 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Nettsider/apper</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_website</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{projectId}.umami.public_website</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website'); }}
+                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_website`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1155,12 +1171,12 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Personer</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_session</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{projectId}.umami.public_session</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_session'); }}
+                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_session`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1169,12 +1185,12 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Alle hendelser</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_website_event</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{`${projectId}.umami.public_website_event`}</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_website_event'); }}
+                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_website_event`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1183,12 +1199,12 @@ export default function SqlEditor() {
                                 <li className="flex flex-col gap-1">
                                     <span className="font-semibold text-sm mt-2">Egenfedinerte hendelser metadata</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">team-researchops-prod-01d6.umami.public_event_data</span>
+                                        <span className="font-mono text-xs bg-[var(--ax-bg-neutral-soft)] px-2 py-1 rounded border border-[var(--ax-border-neutral-subtle)]">{`${projectId}.umami.public_event_data`}</span>
                                         <Button
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText('team-researchops-prod-01d6.umami.public_event_data'); }}
+                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_event_data`); }}
                                         >
                                             Kopier
                                         </Button>

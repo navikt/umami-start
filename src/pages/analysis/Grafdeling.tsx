@@ -8,6 +8,15 @@ import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { subDays, format } from 'date-fns';
 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+        return (window as any).__GCP_PROJECT_ID__;
+    }
+    // Fallback for development/SSR contexts
+    throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
 type Website = {
     id: string;
     name: string;
@@ -111,11 +120,12 @@ export default function Grafdeling() {
             fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
             toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
 
-            let tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
+            const projectId = getGcpProjectId();
+            let tablePrefix = `\`${projectId}.umami_views.event\``;
             if (processedSql.includes('umami_views.event')) {
-                tablePrefix = '`team-researchops-prod-01d6.umami_views.event`';
+                tablePrefix = `\`${projectId}.umami_views.event\``;
             } else if (processedSql.includes('umami_views.session')) {
-                tablePrefix = '`team-researchops-prod-01d6.umami_views.session`';
+                tablePrefix = `\`${projectId}.umami_views.session\``;
             }
 
             const dateReplacement = `AND ${tablePrefix}.created_at BETWEEN ${fromSql} AND ${toSql}`;

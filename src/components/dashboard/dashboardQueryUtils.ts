@@ -1,6 +1,15 @@
 
 import { subDays, format } from 'date-fns';
 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+        return (window as any).__GCP_PROJECT_ID__;
+    }
+    // Fallback for development/SSR contexts
+    throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
 interface FilterState {
     urlFilters: string[];
     dateRange: string;
@@ -72,12 +81,13 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
     const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}', '${timezone}')`;
     const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59', '${timezone}')`;
 
-    // For newer queries using umami_views, we should use that table name. 
+    const projectId = getGcpProjectId();
+    // For newer queries using umami_views, we should use that table name.
     // However, since this utility replaces a placeholder in existing SQL, we need to check which table calls for it or use a safer regex.
     // The current implementation hardcodes the table name which is risky if the base query uses a different table.
     // Let's try to infer it or use the new default if not sure.
     // But to satisfy the immediate request of updating table names:
-    const dateReplacement = `AND \`team-researchops-prod-01d6.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
+    const dateReplacement = `AND \`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
     processedSql = processedSql.replace(/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi, dateReplacement);
 
     // 4. Handle metric type substitutions
@@ -88,7 +98,7 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
         );
         processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Sidevisninger');
     } else if (filters.metricType === 'proportion') {
-        const totalSiteVisitorsSubquery = `(SELECT COUNT(DISTINCT session_id) FROM \`team-researchops-prod-01d6.umami_views.event\` WHERE website_id = '${websiteId}' AND event_type = 1 AND created_at BETWEEN ${fromSql} AND ${toSql})`;
+        const totalSiteVisitorsSubquery = `(SELECT COUNT(DISTINCT session_id) FROM \`${projectId}.umami_views.event\` WHERE website_id = '${websiteId}' AND event_type = 1 AND created_at BETWEEN ${fromSql} AND ${toSql})`;
         processedSql = processedSql.replace(
             /COUNT\s*\(\s*DISTINCT\s+(?:([a-zA-Z_\.]+)\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
             (_match, tablePrefix) => {

@@ -21,6 +21,15 @@ import {
 } from '../../types/chart';
 //import CopyButton from '../../components/theme/CopyButton/CopyButton';
 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+  if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+    return (window as any).__GCP_PROJECT_ID__;
+  }
+  // Fallback for development/SSR contexts
+  throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [
   {
@@ -913,11 +922,12 @@ const ChartsPage = () => {
             }
           });
 
+          const projectId = getGcpProjectId();
           if (column === 'session_id') {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column}) 
-                FROM \`team-researchops-prod-01d6.umami_views.event\`
+                FROM \`${projectId}.umami_views.event\`
                 WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -925,7 +935,7 @@ const ChartsPage = () => {
             return `ROUND(
               100.0 * COUNT(DISTINCT base_query.${column}) / NULLIF((
                 SELECT COUNT(DISTINCT ${column})
-                FROM \`team-researchops-prod-01d6.umami_views.event\`
+                FROM \`${projectId}.umami_views.event\`
                 WHERE website_id = '${websiteId}'${subqueryFilters}
               ), 0)
             , 1) as ${quotedAlias}`;
@@ -956,8 +966,9 @@ const ChartsPage = () => {
       f.column === 'created_at' && f.interactive === true && f.metabaseParam === true
     );
 
-    const fullWebsiteTable = '`team-researchops-prod-01d6.umami_views.event`';
-    const fullSessionTable = '`team-researchops-prod-01d6.umami_views.session`';
+    const projectId = getGcpProjectId();
+    const fullWebsiteTable = `\`${projectId}.umami_views.event\``;
+    const fullSessionTable = `\`${projectId}.umami_views.session\``;
 
     const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
 
@@ -1075,7 +1086,7 @@ const ChartsPage = () => {
       sql += '    visit_id,\n';
       sql += '    MIN(created_at) AS first_event_time,\n';
       sql += '    CASE WHEN COUNT(*) > 1 THEN TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) ELSE 0 END AS duration_seconds\n';
-      sql += `  FROM \`team-researchops-prod-01d6.umami_views.event\`\n`;
+      sql += `  FROM \`${projectId}.umami_views.event\`\n`;
       sql += `  WHERE website_id = '${config.website.id}'\n`;
 
       if (hasInteractiveDateFilter) {
@@ -1361,7 +1372,7 @@ const ChartsPage = () => {
         config.metrics.some(metric => metric.column?.startsWith('param_'));
 
       if (needsEventData) {
-        sql += 'LEFT JOIN `team-researchops-prod-01d6.umami_views.event_data` AS ed_view\n';
+        sql += `LEFT JOIN \`${projectId}.umami_views.event_data\` AS ed_view\n`;
         sql += '  ON base_query.event_id = ed_view.website_event_id\n';
         sql += '  AND base_query.website_id = ed_view.website_id\n';
         sql += '  AND base_query.created_at = ed_view.created_at\n';

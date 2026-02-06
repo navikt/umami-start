@@ -12,6 +12,21 @@
 import { SavedChart } from '../data/dashboard/types';
 import { format, subDays } from 'date-fns';
 
+// Get GCP_PROJECT_ID from runtime-injected global variable
+const getGcpProjectId = (): string => {
+    // 1) Runtime-injected value (browser) - preferred
+    const winProjectId =
+        typeof window !== 'undefined' ? (window as any).__GCP_PROJECT_ID__ : undefined;
+    if (winProjectId) return winProjectId;
+
+    // 2) Env var (SSR / Node contexts)
+    const envProjectId = (globalThis as any)?.process?.env?.GCP_PROJECT_ID;
+    if (envProjectId) return envProjectId;
+
+    // Fail fast so misconfigured k8s is obvious
+    throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
+
 interface Filters {
     urlFilters: string[];
     dateRange: string;
@@ -68,8 +83,9 @@ function buildCombinedSessionQuery(
     filters: Filters,
     fields: string[]
 ): string {
-    const tableName = '`team-researchops-prod-01d6.umami_views.event`';
-    const sessionTable = '`team-researchops-prod-01d6.umami_views.session`';
+    const projectId = getGcpProjectId();
+    const tableName = `\`${projectId}.umami_views.event\``;
+    const sessionTable = `\`${projectId}.umami_views.session\``;
 
     // Build the fields string
     const fieldsSelect = fields.map(f => `${sessionTable}.${f}`).join(',\n    ');
@@ -358,9 +374,10 @@ export async function fetchDashboardDataBatched(
                 const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}', '${timezone}')`;
                 const toSql = `TIMESTAMP('${format(endDate, 'yyyy-MM-dd')}T23:59:59', '${timezone}')`;
 
+                const projectId = getGcpProjectId();
                 const totalVisitorsSql = `
                     SELECT COUNT(DISTINCT session_id) as total
-                    FROM \`team-researchops-prod-01d6.umami_views.event\`
+                    FROM \`${projectId}.umami_views.event\`
                     WHERE website_id = '${websiteId}'
                     AND event_type = 1
                     AND created_at BETWEEN ${fromSql} AND ${toSql}
