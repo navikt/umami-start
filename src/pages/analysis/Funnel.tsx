@@ -21,9 +21,12 @@ declare global {
 }
 
 const getGcpProjectId = (): string => {
-    const pid =
-        (typeof window !== 'undefined' ? window.__GCP_PROJECT_ID__ : undefined) ??
-        (typeof process !== 'undefined' ? (process as any)?.env?.GCP_PROJECT_ID : undefined);
+    const injectedProjectId =
+        typeof window !== 'undefined' ? window.__GCP_PROJECT_ID__ : undefined;
+    const viteProjectId =
+        typeof import.meta !== 'undefined' ? import.meta.env.VITE_GCP_PROJECT_ID : undefined;
+
+    const pid = injectedProjectId ?? viteProjectId;
 
     if (!pid) throw new Error('Missing runtime config: GCP_PROJECT_ID');
     return pid;
@@ -353,6 +356,8 @@ events AS (
         // Only URL-based funnels support timing (no events)
         const urlSteps = normalizedSteps.filter(s => s.type === 'url');
         if (urlSteps.length < 2) return '';
+
+        const projectId = getGcpProjectId();
 
         let sql = `-- Tidsbruk-analyse for Metabase
 -- Viser median tid (i sekunder) mellom hvert steg i trakten
@@ -1359,7 +1364,7 @@ FROM timing_data`;
                                                             <div className="p-3 bg-[var(--ax-bg-neutral-soft)] border-t flex justify-between items-center">
                                                                 <div>
                                                                     {timingQueryStats && (
-                                                                        <span className="text-sm text-[var(--ax-text-subtle)]">
+                                                                        <span className="text-sm text-[var(--ax-text-subtle]">
                                                                             Data prosessert: {timingQueryStats.totalBytesProcessedGB} GB
                                                                         </span>
                                                                     )}
