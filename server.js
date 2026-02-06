@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
+import { readFile } from 'fs/promises'
 
 const BIGQUERY_TIMEZONE = 'Europe/Oslo';
 const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL;
@@ -4414,15 +4415,11 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
 });
 
 // Serve index.html with injected runtime config
-app.use(/^(?!.*\/(api|internal|static)\/).*$/, (req, res) => {
-    const fs = require('fs');
+app.use(/^(?!.*\/(api|internal|static)\/).*$/, async (req, res) => {
     const indexPath = `${buildPath}/index.html`;
 
-    fs.readFile(indexPath, 'utf8', (err, html) => {
-        if (err) {
-            console.error('Error reading index.html:', err);
-            return res.status(500).send('Internal Server Error');
-        }
+    try {
+        const html = await readFile(indexPath, 'utf8');
 
         // Inject UMAMI_BASE_URL as a global variable
         const injectedHtml = html.replace(
@@ -4431,7 +4428,10 @@ app.use(/^(?!.*\/(api|internal|static)\/).*$/, (req, res) => {
         );
 
         res.send(injectedHtml);
-    });
+    } catch (err) {
+        console.error('Error reading index.html:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 const server = app.listen(8080, () => {
