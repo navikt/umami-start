@@ -6,9 +6,14 @@ import { BigQuery } from '@google-cloud/bigquery'
 
 const BIGQUERY_TIMEZONE = 'Europe/Oslo';
 const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL;
+const UMAMI_BASE_URL = process.env.UMAMI_BASE_URL;
 
 if (!SITEIMPROVE_BASE_URL) {
     throw new Error('Missing env var: SITEIMPROVE_BASE_URL');
+}
+
+if (!UMAMI_BASE_URL) {
+    throw new Error('Missing env var: UMAMI_BASE_URL');
 }
 
 dotenv.config()
@@ -200,6 +205,7 @@ app.get('/isalive', (req, res) => {
 app.get('/isready', (req, res) => {
     res.send('OK')
 })
+
 
 // Authentication middleware - extracts NAV ident for audit logging
 async function authenticateUser(req, res, next) {
@@ -4407,7 +4413,26 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
     }
 });
 
-app.use(/^(?!.*\/(api|internal|static)\/).*$/, (req, res) => res.sendFile(`${buildPath}/index.html`))
+// Serve index.html with injected runtime config
+app.use(/^(?!.*\/(api|internal|static)\/).*$/, (req, res) => {
+    const fs = require('fs');
+    const indexPath = `${buildPath}/index.html`;
+
+    fs.readFile(indexPath, 'utf8', (err, html) => {
+        if (err) {
+            console.error('Error reading index.html:', err);
+            return res.status(500).send('Internal Server Error');
+        }
+
+        // Inject UMAMI_BASE_URL as a global variable
+        const injectedHtml = html.replace(
+            '</head>',
+            `<script>window.__UMAMI_BASE_URL__ = "${UMAMI_BASE_URL}";</script></head>`
+        );
+
+        res.send(injectedHtml);
+    });
+});
 
 const server = app.listen(8080, () => {
     console.log('Listening on port 8080')

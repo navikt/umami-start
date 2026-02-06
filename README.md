@@ -7,7 +7,8 @@ Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde 
 
 ---
 # Env
-\-\ \`SITEIMPROVE_BASE_URL\`: Base URL for the Siteimprove proxy, injected via NAIS (see \`.nais/dev/nais-dev.yaml\` and \`.nais/prod/nais-prod.yaml\`) to avoid hardcoded endpoints\.
+- `SITEIMPROVE_BASE_URL`: Base URL for the Siteimprove proxy, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`) to avoid hardcoded endpoints.
+- `UMAMI_BASE_URL`: Base URL for the Umami tracking server, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`). This is used in tracking code snippets. **Required** - the application will fail to start if not set.
 
 
 # Bruk a KI
