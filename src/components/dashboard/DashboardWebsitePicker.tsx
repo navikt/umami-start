@@ -46,8 +46,11 @@ interface WebsiteApiResponse {
 
 const API_TIMEOUT_MS = 120000; // timeout
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
-const WEBSITES_CACHE_KEY = 'umami_websites_cache';
-const SELECTED_WEBSITE_CACHE_KEY = 'umami_selected_website';
+
+// Make cache keys environment-aware to prevent dev/prod conflicts
+const getHostPrefix = () => window.location.hostname.replace(/\./g, '_');
+const WEBSITES_CACHE_KEY = `umami_websites_cache_${getHostPrefix()}`;
+const SELECTED_WEBSITE_CACHE_KEY = `umami_selected_website_${getHostPrefix()}`;
 
 // LocalStorage helper functions
 const saveToLocalStorage = (key: string, data: any) => {

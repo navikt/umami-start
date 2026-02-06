@@ -47,7 +47,8 @@ export const useWebsiteMatching = () => {
         // Try to load websites from localStorage cache first
         // Note: The cache stores RAW data, so we need to filter it
         try {
-            const cachedItemStr = localStorage.getItem('umami_websites_cache');
+            const hostPrefix = window.location.hostname.replace(/\./g, '_');
+            const cachedItemStr = localStorage.getItem(`umami_websites_cache_${hostPrefix}`);
             if (cachedItemStr) {
                 const item = JSON.parse(cachedItemStr);
                 const now = Date.now();

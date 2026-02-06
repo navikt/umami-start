@@ -58,15 +58,16 @@ export const DEFAULT_ANALYSIS_PERIOD = 'last_7_days';
 /** Default metric type for analysis pages: "Sidevisninger" (pageviews) */
 export const DEFAULT_ANALYSIS_METRIC_TYPE = 'pageviews';
 
-// LocalStorage keys for user preferences
-const PERIOD_STORAGE_KEY = 'umami_analysis_period';
-const METRIC_TYPE_STORAGE_KEY = 'umami_analysis_metric_type';
+// LocalStorage keys for user preferences (environment-aware to prevent dev/prod conflicts)
+const getHostPrefix = () => window.location.hostname.replace(/\./g, '_');
+const PERIOD_STORAGE_KEY = `umami_analysis_period_${getHostPrefix()}`;
+const METRIC_TYPE_STORAGE_KEY = `umami_analysis_metric_type_${getHostPrefix()}`;
 
 /** Get period from localStorage, falling back to URL param or default */
 export const getStoredPeriod = (urlParam?: string | null): string => {
   // URL param takes priority (for shared links)
   if (urlParam) return urlParam;
-  
+
   try {
     const stored = localStorage.getItem(PERIOD_STORAGE_KEY);
     if (stored) return stored;
@@ -92,7 +93,7 @@ export const savePeriodPreference = (period: string): void => {
 export const getStoredMetricType = (urlParam?: string | null): string => {
   // URL param takes priority (for shared links)
   if (urlParam) return urlParam;
-  
+
   try {
     const stored = localStorage.getItem(METRIC_TYPE_STORAGE_KEY);
     if (stored) return stored;
