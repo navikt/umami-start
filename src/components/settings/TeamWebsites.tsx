@@ -205,7 +205,8 @@ function TeamWebsites() {
             <div className="search-controls" style={styles.container}>
                 <form role="search" style={{ width: '250px' }}>
                     <Search
-                        label="Søk alle NAV sine sider"
+                        label="Søk"
+                        hideLabel={false}
                         variant="simple"
                         value={searchQuery}
                         onChange={setSearchQuery}
@@ -213,17 +214,19 @@ function TeamWebsites() {
                         size="small"
                     />
                 </form>
-                <Select
-                    label="Filtrer miljø"
-                    size="small"
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value as FilterType)}
-                    style={{ width: '180px' }}
-                >
-                    <option value="all">Alle</option>
-                    <option value="prod-only">Kun prod</option>
-                    <option value="dev-only">Kun dev</option>
-                </Select>
+                {!window.location.hostname.includes('.dev.nav.no') && (
+                    <Select
+                        label="Filtrer miljø"
+                        size="small"
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value as FilterType)}
+                        style={{ width: '180px' }}
+                    >
+                        <option value="all">Alle</option>
+                        <option value="prod-only">Kun prod</option>
+                        <option value="dev-only">Kun dev</option>
+                    </Select>
+                )}
             </div>
             <div style={{ overflowX: 'auto' }}>
                 <div className="my-2 text-md text-[var(--ax-text-default)]">

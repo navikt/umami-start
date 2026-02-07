@@ -47,8 +47,46 @@ function Oppsett() {
             />
 
             <Page.Block width="xl" gutters className="pb-16 px-4">
+
+                <div style={{ marginBottom: "12px", paddingTop: "24px" }}>
+                    <Heading spacing as="h2" size="medium">Nyhet: Hardt skille mellom dev og prod</Heading>
+                    <BodyShort>NB: Det arbeides med å flytte over dev-apper til det nye dev-miljøet.</BodyShort>
+                </div>
+
+                {/* Environment Switcher Section - at top */}
+                <div style={{
+                    backgroundColor: 'var(--ax-bg-neutral-soft)',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    marginTop: '10px',
+                    marginBottom: '64px',
+                    border: '1px solid var(--ax-border-neutral-subtle)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '16px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Heading as="h3" size="xsmall" style={{ margin: 0 }}>Miljø</Heading>
+                        <Tag variant={getEnvironmentInfo().current === 'Dev' ? 'warning' : getEnvironmentInfo().current === 'Lokal' ? 'info' : 'success'} size="xsmall">
+                            {getEnvironmentInfo().current}
+                        </Tag>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '14px' }}>
+                        {getEnvironmentInfo().current === 'Lokal' ? (
+                            <>
+                                <Link href={getEnvironmentInfo().devUrl}>Dev →</Link>
+                                <Link href={getEnvironmentInfo().otherUrl}>Prod →</Link>
+                            </>
+                        ) : (
+                            <Link href={getEnvironmentInfo().otherUrl}>
+                                {getEnvironmentInfo().otherEnv} →
+                            </Link>
+                        )}
+                    </div>
+                </div>
+
                 {/* Veiledninger Section */}
-                <div style={{ marginTop: "38px", marginBottom: "32px" }}>
+                <div style={{ marginBottom: "32px" }}>
                     <Heading as="h2" size="medium">Veiledninger</Heading>
                 </div>
 
@@ -194,40 +232,6 @@ function Oppsett() {
                 <BodyShort style={{ marginTop: "40px", marginBottom: "40px" }}>
                     For teknisk dokumentasjon, <Link target="_blank" href="https://umami.is/docs/tracker-configuration">se Umami sin dokumentasjonsside</Link>.
                 </BodyShort>
-
-                {/* Environment Switcher Section */}
-                <div style={{
-                    backgroundColor: 'var(--ax-bg-neutral-soft)',
-                    padding: '24px 32px',
-                    borderRadius: '12px',
-                    marginBottom: '60px',
-                    border: '1px solid var(--ax-border-neutral-subtle)'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <Heading as="h3" size="small" style={{ margin: 0 }}>Miljø</Heading>
-                            <Tag variant={getEnvironmentInfo().current === 'Dev' ? 'warning' : getEnvironmentInfo().current === 'Lokal' ? 'info' : 'success'} size="small">
-                                {getEnvironmentInfo().current}
-                            </Tag>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            {getEnvironmentInfo().current === 'Lokal' ? (
-                                <>
-                                    <Link href={getEnvironmentInfo().devUrl}>
-                                        Gå til Dev →
-                                    </Link>
-                                    <Link href={getEnvironmentInfo().otherUrl}>
-                                        Gå til Prod →
-                                    </Link>
-                                </>
-                            ) : (
-                                <Link href={getEnvironmentInfo().otherUrl}>
-                                    Gå til {getEnvironmentInfo().otherEnv} →
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
             </Page.Block>
             <KontaktSeksjon showMarginBottom={true} />
         </>
