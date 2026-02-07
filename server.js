@@ -5,6 +5,9 @@ import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
 import { readFile } from 'fs/promises'
 
+// Load .env file BEFORE accessing any process.env values
+dotenv.config()
+
 const BIGQUERY_TIMEZONE = 'Europe/Oslo';
 const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL;
 const UMAMI_BASE_URL = process.env.UMAMI_BASE_URL;
@@ -21,8 +24,6 @@ if (!UMAMI_BASE_URL) {
 if (!GCP_PROJECT_ID) {
     throw new Error('Missing env var: GCP_PROJECT_ID');
 }
-
-dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

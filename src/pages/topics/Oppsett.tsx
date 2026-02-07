@@ -1,8 +1,42 @@
-import { BodyShort, Heading, Link, Page } from "@navikt/ds-react";
+import { BodyShort, Heading, Link, Page, Tag } from "@navikt/ds-react";
 import TeamWebsites from "../../components/settings/TeamWebsites";
 import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon";
 import { PageHeader } from "../../components/theme/PageHeader/PageHeader";
 import { developerTools } from "../../components/analysis/DeveloperToolsNavigation";
+
+// Helper to get environment info and switch URL
+const getEnvironmentInfo = () => {
+    const hostname = window.location.hostname;
+    const isDev = hostname.includes('.dev.nav.no');
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+    if (isLocalhost) {
+        return {
+            current: 'Lokal',
+            otherEnv: 'Prod',
+            otherUrl: 'https://startumami.ansatt.nav.no' + window.location.pathname,
+            devUrl: 'https://startumami.ansatt.dev.nav.no' + window.location.pathname,
+        };
+    }
+
+    if (isDev) {
+        // Currently on dev, link to prod
+        const prodHostname = hostname.replace('.dev.nav.no', '.nav.no');
+        return {
+            current: 'Dev',
+            otherEnv: 'Prod',
+            otherUrl: `https://${prodHostname}${window.location.pathname}`,
+        };
+    } else {
+        // Currently on prod, link to dev
+        const devHostname = hostname.replace('.nav.no', '.dev.nav.no');
+        return {
+            current: 'Prod',
+            otherEnv: 'Dev',
+            otherUrl: `https://${devHostname}${window.location.pathname}`,
+        };
+    }
+};
 
 function Oppsett() {
     return (
@@ -157,9 +191,43 @@ function Oppsett() {
 
                 <TeamWebsites />
 
-                <BodyShort style={{ marginTop: "40px", marginBottom: "60px" }}>
+                <BodyShort style={{ marginTop: "40px", marginBottom: "40px" }}>
                     For teknisk dokumentasjon, <Link target="_blank" href="https://umami.is/docs/tracker-configuration">se Umami sin dokumentasjonsside</Link>.
                 </BodyShort>
+
+                {/* Environment Switcher Section */}
+                <div style={{
+                    backgroundColor: 'var(--ax-bg-neutral-soft)',
+                    padding: '24px 32px',
+                    borderRadius: '12px',
+                    marginBottom: '60px',
+                    border: '1px solid var(--ax-border-neutral-subtle)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Heading as="h3" size="small" style={{ margin: 0 }}>Miljø</Heading>
+                            <Tag variant={getEnvironmentInfo().current === 'Dev' ? 'warning' : getEnvironmentInfo().current === 'Lokal' ? 'info' : 'success'} size="small">
+                                {getEnvironmentInfo().current}
+                            </Tag>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                            {getEnvironmentInfo().current === 'Lokal' ? (
+                                <>
+                                    <Link href={getEnvironmentInfo().devUrl}>
+                                        Gå til Dev →
+                                    </Link>
+                                    <Link href={getEnvironmentInfo().otherUrl}>
+                                        Gå til Prod →
+                                    </Link>
+                                </>
+                            ) : (
+                                <Link href={getEnvironmentInfo().otherUrl}>
+                                    Gå til {getEnvironmentInfo().otherEnv} →
+                                </Link>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </Page.Block>
             <KontaktSeksjon showMarginBottom={true} />
         </>

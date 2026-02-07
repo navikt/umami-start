@@ -51,7 +51,7 @@ export default function Header({ theme }: HeaderProps) {
                   />
                 </svg>
                 <span className="text-2xl whitespace-nowrap">
-                  Umami
+                  Umami{window.location.hostname.includes('.dev.nav.no') ? ' Dev' : ''}
                 </span>
               </div>
             </Button>
