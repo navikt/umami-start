@@ -591,7 +591,7 @@ const WebsitePicker = ({
           clearButton
           isMultiSelect={false}
         />
-        {!selectedWebsite && (
+        {!selectedWebsite && !window.location.hostname.includes('.dev.nav.no') && (
           <div className="flex items-center gap-2 mt-2">
             <span className="text-sm">Hurtigvalg:</span>
             <Button
