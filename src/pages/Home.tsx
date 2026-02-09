@@ -2,7 +2,7 @@ import { Heading, Link, Page } from "@navikt/ds-react";
 import UrlSearchForm from "../components/dashboard/UrlSearchForm";
 import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
 import { KontaktSeksjon } from "../components/theme/Kontakt/KontaktSeksjon";
-import WebsitePicker, { Website } from "../components/analysis/WebsitePicker";
+import WebsitePicker, { type Website } from "../components/analysis/WebsitePicker";
 import { useState, useMemo } from "react";
 import { useSiteimproveSupport, useMarketingSupport } from "../hooks/useSiteimproveSupport";
 
@@ -133,9 +133,23 @@ function Home() {
             </div>
 
             <Page.Block width="xl" gutters>
+            
                 <div style={{ marginTop: "50px", marginBottom: "32px" }}>
-                    <Heading as="h2" size="large">Hva vil du se nærmere på?</Heading>
-                    <div style={{ marginTop: '24px', maxWidth: '400px' }}>
+                    <Heading as="h2" size="large">Hva vil du analysere?</Heading>
+                    <div
+                        aria-hidden
+                        style={{
+                            position: "absolute",
+                            width: "1px",
+                            height: "1px",
+                            margin: "-1px",
+                            padding: 0,
+                            overflow: "hidden",
+                            clip: "rect(0, 0, 0, 0)",
+                            whiteSpace: "nowrap",
+                            border: 0,
+                        }}
+                    >
                         <WebsitePicker
                             selectedWebsite={selectedWebsite}
                             onWebsiteChange={setSelectedWebsite}
