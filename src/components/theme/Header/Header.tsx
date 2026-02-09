@@ -84,14 +84,6 @@ export default function Header({ theme }: HeaderProps) {
                 <Button
                   as={Link}
                   variant="tertiary"
-                  href="/dashboards"
-                  className={linkButton}
-                >
-                </Button>
-
-                <Button
-                  as={Link}
-                  variant="tertiary"
                   href="/oppsett"
                   className={linkButton}
                 >
