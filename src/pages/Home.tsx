@@ -1,335 +1,262 @@
-import { Heading, Link, Page } from "@navikt/ds-react";
+import { Heading, Link, Alert, Box, Bleed } from "@navikt/ds-react";
 import UrlSearchForm from "../components/dashboard/UrlSearchForm";
-import { analyticsPages } from "../components/analysis/AnalyticsNavigation";
-import { KontaktSeksjon } from "../components/theme/Kontakt/KontaktSeksjon";
-import WebsitePicker, { type Website } from "../components/analysis/WebsitePicker";
-import { useState, useMemo } from "react";
-import { useSiteimproveSupport, useMarketingSupport } from "../hooks/useSiteimproveSupport";
+import { Card, Section } from "../components/shared";
+import { Page } from "../components/Page";
+import { useState, useEffect, ReactNode } from "react";
 
-// Section configuration for the 3-column layout
-const sections = [
+const BannerSection = ({ onDismiss }: { onDismiss: () => void }): ReactNode => {
+  return (
+    <Page.Block width="xl" gutters>
+      <Bleed reflectivePadding marginInline="full" asChild>
+        <Section padding="space-8">
+          <Alert variant="error" closeButton onClose={onDismiss}>
+            <Heading spacing as="h3" size="xsmall">
+              Nyhet: Hardt skille mellom dev og prod
+            </Heading>
+            NB: Det arbeides med å flytte over dev-apper til det nye
+            dev-miljøet.
+          </Alert>
+        </Section>
+      </Bleed>
+    </Page.Block>
+  );
+};
+
+const HeroSection = (): ReactNode => {
+  return (
+    <Page.Block width="xl" gutters style={{ height: "100%" }}>
+      <Bleed
+        style={{ height: "100%" }}
+        reflectivePadding
+        marginInline="full"
+        asChild
+      >
+        <Box style={{ height: "100%" }} background="accent-soft">
+          <Section
+            padding="space-16"
+            style={{
+              maxWidth: "600px",
+              height: "100%",
+              margin: "0 auto",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <Heading spacing={true} as="h1" size="xlarge">
+              Mål brukeradferd med Umami
+            </Heading>
+            <div style={{ width: "100%" }}>
+              <UrlSearchForm />
+            </div>
+          </Section>
+        </Box>
+      </Bleed>
+    </Page.Block>
+  );
+};
+
+const GuidesSection = (): ReactNode => {
+  const guides = [
     {
-        title: "Trafikk & hendelser",
-        description: "Forstå hva som påvirker trafikken",
-        bgColor: "var(--ax-bg-default)",
-        accentColor: "var(--ax-bg-accent-strong)",
-        ids: ['trafikkanalyse', 'event-explorer', 'markedsanalyse']
+      href: "/komigang",
+      label: "Oppsett guide",
+      description: "Sett opp Umami for din nettside",
     },
     {
-        title: "Brukere",
-        description: "Lær om de besøkende",
-        bgColor: "var(--ax-bg-default)",
-        accentColor: "var(--ax-bg-accent-strong)",
-        ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
+      href: "https://navno.sharepoint.com/sites/intranett-utvikling/SitePages/Rutine-for-bruk-av-Umami.aspx",
+      label: "Retningslinjer",
+      description: "Rutine for bruk av Umami",
     },
     {
-        title: "Navigasjon",
-        description: "Se hvordan besøkende navigerer",
-        bgColor: "var(--ax-bg-default)",
-        accentColor: "var(--ax-bg-accent-strong)",
-        ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
-    }
-];
+      href: "/taksonomi",
+      label: "Taksonomi",
+      description: "Navngi hendelser og egenskaper",
+    },
+  ];
 
-// Content quality section
-const contentQualitySection = {
-    title: "Innholdskvalitet",
-    description: "Sjekk kvaliteten på innholdet",
-    bgColor: "var(--ax-bg-default)",
-    accentColor: "var(--ax-bg-accent-strong)",
-    ids: ['odelagte-lenker', 'stavekontroll']
+  return (
+    <Page.Block width="xl" gutters style={{ paddingBlock: "40px" }}>
+      <Section>
+        <Heading as="h2" size="medium" spacing>
+          Veiledninger
+        </Heading>
+
+        <Box
+          as="div"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "16px",
+          }}
+        >
+          {guides.map((guide) => (
+            <Link
+              key={guide.href}
+              href={guide.href}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px 24px",
+                backgroundColor: "var(--ax-bg-default)",
+                borderRadius: "12px",
+                textDecoration: "none",
+                color: "var(--ax-text-default)",
+                border: "1px solid var(--ax-border-neutral-subtle)",
+                transition: "all 0.2s ease",
+                fontWeight: 500,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor =
+                  "var(--ax-border-neutral-strong)";
+                e.currentTarget.style.backgroundColor =
+                  "var(--ax-bg-neutral-soft)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor =
+                  "var(--ax-border-neutral-subtle)";
+                e.currentTarget.style.backgroundColor = "var(--ax-bg-default)";
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: "4px" }}>
+                  {guide.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    color: "var(--ax-text-subtle)",
+                    fontWeight: 400,
+                  }}
+                >
+                  {guide.description}
+                </div>
+              </div>
+              <span
+                style={{
+                  color: "var(--ax-bg-accent-strong)",
+                  fontSize: "18px",
+                  marginLeft: "16px",
+                }}
+              >
+                →
+              </span>
+            </Link>
+          ))}
+        </Box>
+      </Section>
+    </Page.Block>
+  );
+};
+
+const FooterSection = (): ReactNode => {
+  return (
+    <Page.Block width="xl" gutters>
+      <Bleed
+        style={{ paddingBlock: "40px" }}
+        reflectivePadding
+        marginInline="full"
+        asChild
+      >
+        <Box background="accent-soft">
+          <Section background="accent-soft">
+            <Heading as="h3" size="medium" spacing>
+              Få hjelp med Umami
+            </Heading>
+
+            <Box
+              as="div"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gap: "24px",
+              }}
+            >
+              <Card>
+                <Link
+                  href="https://nav-it.slack.com/archives/C02UGFS2J4B"
+                  target="_blank"
+                >
+                  <Heading as="h3" size="medium">
+                    Chat med ResearchOps
+                  </Heading>
+                </Link>
+                <p>
+                  Bli med i Slack-kanalen{" "}
+                  <Link
+                    href="https://nav-it.slack.com/archives/C02UGFS2J4B"
+                    target="_blank"
+                  >
+                    #researchops
+                  </Link>{" "}
+                  for å stille spørsmål og få hjelp.
+                </p>
+              </Card>
+
+              <Card>
+                <Link
+                  href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/"
+                  target="_blank"
+                >
+                  <Heading as="h3" size="medium">
+                    Du kan også booke en samtale
+                  </Heading>
+                </Link>
+                <p>
+                  <Link
+                    href="https://outlook.office365.com/owa/calendar/TeamResearchOps@nav.no/bookings/"
+                    target="_blank"
+                  >
+                    Book en prat 1:1 eller workshop
+                  </Link>{" "}
+                  med ResearchOps-teamet.
+                </p>
+              </Card>
+            </Box>
+          </Section>
+        </Box>
+      </Bleed>
+    </Page.Block>
+  );
 };
 
 function Home() {
-    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const hasSiteimprove = useSiteimproveSupport(selectedWebsite?.domain);
-    const hasMarketing = useMarketingSupport(selectedWebsite?.domain, selectedWebsite?.name);
+  const [showBanner, setShowBanner] = useState(false);
 
-    // Filter sections based on feature support
-    const filteredSections = useMemo(() => {
-        return sections.map(section => {
-            if (section.title === "Trafikk & hendelser" && !hasMarketing) {
-                return {
-                    ...section,
-                    ids: section.ids.filter(id => id !== 'markedsanalyse')
-                };
-            }
-            return section;
-        });
-    }, [hasMarketing]);
+  useEffect(() => {
+    const dismissed = localStorage.getItem("umami-banner-dismissed");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowBanner(dismissed !== "true");
+  }, []);
 
-    return (
+  const handleDismissBanner = () => {
+    localStorage.setItem("umami-banner-dismissed", "true");
+    setShowBanner(false);
+  };
+
+  return (
+    <Page
+      footer={
         <>
-            {/* Hero section */}
-            {/* Hero section */}
-            <div style={{
-                width: "100%",
-                backgroundColor: "var(--ax-bg-accent-soft)",
-                color: "var(--ax-text-default)",
-                paddingTop: "70px",
-                paddingBottom: "70px",
-            }}>
-                <Page.Block width="xl" gutters>
-                    <Heading spacing={true} as="h1" size="xlarge">Mål brukeradferd med Umami</Heading>
-                    <UrlSearchForm>
-                        {/* Shortcuts temporarily disabled
-                        <div style={{ marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <RouterLink
-                                to="/dashboard?visning=fylkeskontor"
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '6px 12px',
-                                    borderRadius: '999px',
-                                    backgroundColor: 'var(--ax-bg-default)',
-                                    border: '1px solid var(--ax-border-neutral-subtle)',
-                                    color: 'var(--ax-text-default)',
-                                    textDecoration: 'none',
-                                    fontSize: '14px'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
-                                    e.currentTarget.style.textDecoration = 'underline';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
-                                    e.currentTarget.style.textDecoration = 'none';
-                                }}
-                            >
-                                <Buildings3Icon aria-hidden />
-                                Nav fylkeskontor
-                            </RouterLink>
-                            <RouterLink
-                                to="/dashboard?visning=hjelpemiddelsentral"
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '6px 12px',
-                                    borderRadius: '999px',
-                                    backgroundColor: 'var(--ax-bg-default)',
-                                    border: '1px solid var(--ax-border-neutral-subtle)',
-                                    color: 'var(--ax-text-default)',
-                                    textDecoration: 'none',
-                                    fontSize: '14px'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
-                                    e.currentTarget.style.textDecoration = 'underline';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
-                                    e.currentTarget.style.textDecoration = 'none';
-                                }}
-                            >
-                                <WheelchairIcon aria-hidden />
-                                Hjelpemiddelsentralene
-                            </RouterLink>
-                        </div>
-                        */}
-                    </UrlSearchForm>
-                </Page.Block>
-            </div>
-
-            <Page.Block width="xl" gutters>
-            
-                <div style={{ marginTop: "50px", marginBottom: "32px" }}>
-                    <Heading as="h2" size="large">Hva vil du analysere?</Heading>
-                    <div
-                        aria-hidden
-                        style={{
-                            position: "absolute",
-                            width: "1px",
-                            height: "1px",
-                            margin: "-1px",
-                            padding: 0,
-                            overflow: "hidden",
-                            clip: "rect(0, 0, 0, 0)",
-                            whiteSpace: "nowrap",
-                            border: 0,
-                        }}
-                    >
-                        <WebsitePicker
-                            selectedWebsite={selectedWebsite}
-                            onWebsiteChange={setSelectedWebsite}
-                            variant="minimal"
-                        />
-                    </div>
-                </div>
-
-                {/* 3-Column Analysis Cards */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                    gap: '24px',
-                    marginBottom: '25px'
-                }}>
-                    {filteredSections.map((section) => (
-                        <div
-                            key={section.title}
-                            style={{
-                                backgroundColor: section.bgColor,
-                                padding: '32px',
-                                borderRadius: '12px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                border: `1px solid var(--ax-border-neutral-subtle)`,
-                            }}
-                        >
-                            <div style={{
-                                borderLeft: `4px solid ${section.accentColor}`,
-                                paddingLeft: '16px',
-                                marginBottom: '24px'
-                            }}>
-                                <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
-                                    {section.title}
-                                </Heading>
-                                <p style={{ fontSize: '16px', color: 'var(--ax-text-subtle)', margin: 0 }}>{section.description}</p>
-                            </div>
-
-                            <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {analyticsPages
-                                    .filter(page => section.ids.includes(page.id))
-                                    .map(page => (
-                                        <Link
-                                            key={page.id}
-                                            href={page.href}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '16px 20px',
-                                                backgroundColor: 'var(--ax-bg-default)',
-                                                borderRadius: '8px',
-                                                textDecoration: 'none',
-                                                color: 'var(--ax-text-default)',
-                                                border: '1px solid var(--ax-border-neutral-subtle)', // Border for buttons
-                                                transition: 'all 0.2s ease',
-                                                fontWeight: 500
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
-                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
-                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
-                                            }}
-                                        >
-                                            <span>{page.label}</span>
-                                            <span style={{ color: section.accentColor, fontSize: '18px' }}>→</span>
-                                        </Link>
-                                    ))}
-                            </nav>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Bottom section: Innholdskvalitet + Grafbygger */}
-                <div
-                    className={`bottom-grid${hasSiteimprove ? '' : ' single-item'}`}
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: hasSiteimprove ? 'repeat(2, 1fr)' : '1fr',
-                        gap: '24px',
-                        marginTop: '25px',
-                        marginBottom: '40px'
-                    }}>
-                    {/* Innholdskvalitet Card - Only show if Siteimprove is supported */}
-                    {hasSiteimprove && (
-                        <div
-                            style={{
-                                backgroundColor: contentQualitySection.bgColor,
-                                padding: '32px',
-                                borderRadius: '12px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                border: `1px solid var(--ax-border-neutral-subtle)`,
-                            }}
-                        >
-                            <div style={{
-                                borderLeft: `4px solid ${contentQualitySection.accentColor}`,
-                                paddingLeft: '16px',
-                                marginBottom: '24px'
-                            }}>
-                                <Heading as="h3" size="small" style={{ color: 'var(--ax-text-default)', marginBottom: '4px' }}>
-                                    {contentQualitySection.title}
-                                </Heading>
-                                <p style={{ fontSize: '16px', color: 'var(--ax-text-subtle)', margin: 0 }}>{contentQualitySection.description}</p>
-                            </div>
-
-                            <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {analyticsPages
-                                    .filter(page => contentQualitySection.ids.includes(page.id))
-                                    .map(page => (
-                                        <Link
-                                            key={page.id}
-                                            href={page.href}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '16px 20px',
-                                                backgroundColor: 'var(--ax-bg-default)',
-                                                borderRadius: '8px',
-                                                textDecoration: 'none',
-                                                color: 'var(--ax-text-default)',
-                                                border: '1px solid var(--ax-border-neutral-subtle)',
-                                                transition: 'all 0.2s ease',
-                                                fontWeight: 500
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-strong)';
-                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-neutral-soft)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.borderColor = 'var(--ax-border-neutral-subtle)';
-                                                e.currentTarget.style.backgroundColor = 'var(--ax-bg-default)';
-                                            }}
-                                        >
-                                            <span>{page.label}</span>
-                                            <span style={{ color: contentQualitySection.accentColor, fontSize: '18px' }}>→</span>
-                                        </Link>
-                                    ))}
-                            </nav>
-                        </div>
-                    )}
-
-                    {/* Grafbygger section */}
-                    <div style={{
-                        border: '1px solid var(--ax-border-neutral-subtle)',
-                        padding: '40px',
-                        backgroundColor: 'var(--ax-bg-default)',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        justifyContent: 'center',
-                        gap: '24px'
-                    }}>
-                        <div>
-                            <Heading as="h3" size="small" style={{ marginBottom: '12px' }}>
-                                Lag tilpassede grafer og tabeller
-                            </Heading>
-                            <p style={{ margin: 0, color: 'var(--ax-text-subtle)', maxWidth: '700px', fontSize: '18px', lineHeight: '1.5' }}>
-                                Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase.
-                            </p>
-                        </div>
-                        <Link
-                            href="/grafbygger"
-                            className="primary-button"
-                        >
-                            Gå til Grafbyggeren
-                        </Link>
-                    </div>
-                </div>
-            </Page.Block>
-
-            {/* Full-width contact section - Home page only */}
-            <KontaktSeksjon showMarginBottom={true} />
+          <GuidesSection />
+          <FooterSection />
         </>
-    )
+      }
+      offsetHeight={"65px"}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: showBanner ? "auto 1fr" : "1fr",
+          height: "100%",
+        }}
+      >
+        {showBanner && <BannerSection onDismiss={handleDismissBanner} />}
+        <HeroSection />
+      </div>
+    </Page>
+  );
 }
 
-export default Home
+export default Home;

@@ -1,7 +1,7 @@
 // src/routes.tsx
 import Home from './pages/Home.tsx';
 import Komigang from './pages/articles/Komigang.tsx';
-import Oppsett from './pages/topics/Oppsett.tsx';
+import Sporingskoder from './pages/topics/Sporingskoder.tsx';
 import Personvern from "./pages/articles/Personvern.tsx";
 import Tilgjengelighet from "./pages/articles/Tilgjengelighet.tsx";
 
@@ -35,7 +35,7 @@ import Spellings from "./pages/analysis/Spellings.tsx";
 const routes = [
     { path: "/", component: <Home /> },
     { path: "/komigang", component: <Komigang /> },
-    { path: "/oppsett", component: <Oppsett /> },
+    { path: "/sporingskoder", component: <Sporingskoder /> },
     { path: "/personvern", component: <Personvern /> },
     { path: "/tilgjengelighet", component: <Tilgjengelighet /> },
 

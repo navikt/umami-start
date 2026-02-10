@@ -1,8 +1,10 @@
 import {
   MenuHamburgerIcon,
-  CogIcon
+  AreaChartIcon,
+  NumberListIcon,
+  BellIcon
 } from "@navikt/aksel-icons";
-import { Button, Dropdown, Link, Page } from "@navikt/ds-react";
+import { Button, Dropdown, Link, Page, Alert, Heading } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
 import '../../../tailwind.css';
 import { ThemeButton } from '../ThemeButton/ThemeButton';
@@ -13,6 +15,9 @@ interface HeaderProps {
 
 export default function Header({ theme }: HeaderProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [showAlertBadge, setShowAlertBadge] = useState(false);
+  const [isAlertDropdownOpen, setIsAlertDropdownOpen] = useState(false);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -23,6 +28,17 @@ export default function Header({ theme }: HeaderProps) {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('umami-banner-dismissed');
+    setShowAlertBadge(dismissed !== 'true');
+  }, []);
+
+  const handleDismissAlert = () => {
+    localStorage.setItem('umami-banner-dismissed', 'true');
+    setShowAlertBadge(false);
+    setIsAlertDropdownOpen(false);
+  };
 
   const linkButton =
     "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " + (theme === "dark" ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]" : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
@@ -59,6 +75,26 @@ export default function Header({ theme }: HeaderProps) {
           {isMobile ? (
             <div className="flex items-center gap-2">
               <ThemeButton />
+              {/* Alerts Dropdown */}
+              <Dropdown open={isAlertDropdownOpen} onOpenChange={setIsAlertDropdownOpen}>
+                <Button as={Dropdown.Toggle} variant="tertiary" className={`${linkButton} relative`}>
+                  <BellIcon title="varsler" fontSize="1.5rem" />
+                  {showAlertBadge && (
+                    <span 
+                      className="absolute block h-2 w-2 rounded-full bg-red-600"
+                      style={{ top: '4px', right: '4px' }}
+                    ></span>
+                  )}
+                </Button>
+                <Dropdown.Menu className="w-auto" style={{ minWidth: '320px', maxWidth: '400px' }}>
+                  <div style={{ padding: '16px' }}>
+                    <Alert variant="error" closeButton onClose={handleDismissAlert}>
+                      <Heading spacing as="h3" size="xsmall">Nyhet: Hardt skille mellom dev og prod</Heading>
+                      NB: Det arbeides med å flytte over dev-apper til det nye dev-miljøet.
+                    </Alert>
+                  </div>
+                </Dropdown.Menu>
+              </Dropdown>
               <Dropdown>
                 <Button as={Dropdown.Toggle} variant="tertiary" className={linkButton}>
                   <MenuHamburgerIcon title="meny" fontSize="1.5rem" />
@@ -67,11 +103,19 @@ export default function Header({ theme }: HeaderProps) {
                   <Dropdown.Menu.List>
                     <Dropdown.Menu.List.Item
                       as={Link}
-                      href="/oppsett"
+                      href="/grafbygger"
                       className="no-underline"
                     >
-                      <CogIcon aria-hidden fontSize="1.5rem" />
-                      <span className="whitespace-nowrap">Oppsett</span>
+                      <AreaChartIcon aria-hidden fontSize="1.5rem" />
+                      <span className="whitespace-nowrap">Grafbygger</span>
+                    </Dropdown.Menu.List.Item>
+                    <Dropdown.Menu.List.Item
+                      as={Link}
+                      href="/sporingskoder"
+                      className="no-underline"
+                    >
+                      <NumberListIcon aria-hidden fontSize="1.5rem" />
+                      <span className="whitespace-nowrap">Sporingskoder</span>
                     </Dropdown.Menu.List.Item>
                   </Dropdown.Menu.List>
                 </Dropdown.Menu>
@@ -80,18 +124,49 @@ export default function Header({ theme }: HeaderProps) {
           ) : (
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center w-full"></div>
-              <div className="flex flex-grow">
+              <div className="flex flex-grow items-center">
                 <Button
                   as={Link}
                   variant="tertiary"
-                  href="/oppsett"
+                  href="/grafbygger"
                   className={linkButton}
                 >
                   <div className="flex items-center gap-2">
-                    <CogIcon aria-hidden fontSize="1.5rem" />
-                    <span className="whitespace-nowrap">Oppsett</span>
+                    <AreaChartIcon aria-hidden fontSize="1.5rem" />
+                    <span className="whitespace-nowrap">Grafbygger</span>
                   </div>
                 </Button>
+                <Button
+                  as={Link}
+                  variant="tertiary"
+                  href="/sporingskoder"
+                  className={linkButton}
+                >
+                  <div className="flex items-center gap-2">
+                    <NumberListIcon aria-hidden fontSize="1.5rem" />
+                    <span className="whitespace-nowrap">Sporingskoder</span>
+                  </div>
+                </Button>
+                {/* Alerts Dropdown */}
+                <Dropdown open={isAlertDropdownOpen} onOpenChange={setIsAlertDropdownOpen}>
+                  <Button as={Dropdown.Toggle} variant="tertiary" className={`${linkButton} relative`}>
+                    <BellIcon title="varsler" fontSize="1.5rem" />
+                    {showAlertBadge && (
+                      <span 
+                        className="absolute block h-2 w-2 rounded-full bg-red-600"
+                        style={{ top: '4px', right: '4px' }}
+                      ></span>
+                    )}
+                  </Button>
+                  <Dropdown.Menu className="w-auto" style={{ minWidth: '320px', maxWidth: '400px' }}>
+                    <div style={{ padding: '16px' }}>
+                      <Alert variant="error" closeButton onClose={handleDismissAlert}>
+                        <Heading spacing as="h3" size="xsmall">Nyhet: Hardt skille mellom dev og prod</Heading>
+                        NB: Det arbeides med å flytte over dev-apper til det nye dev-miljøet.
+                      </Alert>
+                    </div>
+                  </Dropdown.Menu>
+                </Dropdown>
                 <ThemeButton />
               </div>
             </div>

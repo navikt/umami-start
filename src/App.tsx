@@ -33,7 +33,7 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
     location.pathname === "/" ||
     location.pathname === "/dashboards" ||
     location.pathname === "/dashboard" ||
-    location.pathname === "/oppsett" ||
+    location.pathname === "/sporingskoder" ||
     location.pathname === "/komigang" ||
     location.pathname === "/grafbygger" ||
     location.pathname === "/personvern" ||
@@ -71,8 +71,13 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const storedTheme = localStorage.getItem("umami-theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const storedTheme = localStorage.getItem("umami-theme") as
+      | "light"
+      | "dark"
+      | null;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     return storedTheme || (prefersDark ? "dark" : "light");
   });
 
@@ -84,7 +89,10 @@ function App() {
 
     window.addEventListener("themeChange", handleThemeChange as EventListener);
     return () => {
-      window.removeEventListener("themeChange", handleThemeChange as EventListener);
+      window.removeEventListener(
+        "themeChange",
+        handleThemeChange as EventListener,
+      );
     };
   }, []);
 
@@ -93,12 +101,12 @@ function App() {
       {
         defer: true,
         src: "https://cdn.nav.no/team-researchops/sporing/sporing.js",
-        'data-host-url': "https://umami.nav.no",
-        'data-domains': "startumami.ansatt.nav.no",
-        'data-website-id': "8e935f84-fb1e-4d07-be28-410eb2ab8cb9"
+        "data-host-url": "https://umami.nav.no",
+        "data-domains": "startumami.ansatt.nav.no",
+        "data-website-id": "8e935f84-fb1e-4d07-be28-410eb2ab8cb9",
       },
       {
-        type: 'text/javascript',
+        type: "text/javascript",
         innerHTML: `
           window.SKYRA_CONFIG = {
             org: 'arbeids-og-velferdsetaten-nav'
@@ -106,26 +114,24 @@ function App() {
           var script = document.createElement('script');
           script.src = 'https://survey.skyra.no/skyra-survey.js';
           document.body.appendChild(script);
-        `
-      }
-    ]
+        `,
+      },
+    ],
   });
 
   return (
     <Theme theme={theme}>
-      <Page>
-        <Header theme={theme} />
-        <Router>
-          <PageLayout>
-            <Routes>
-              {routes.map(({ path, component }) => (
-                <Route key={path} path={path} element={component} />
-              ))}
-            </Routes>
-            <ScrollToTopWrapper />
-          </PageLayout>
-        </Router>
-      </Page>
+      <Header theme={theme} />
+      <Router>
+        <PageLayout>
+          <Routes>
+            {routes.map(({ path, component }) => (
+              <Route key={path} path={path} element={component} />
+            ))}
+          </Routes>
+          <ScrollToTopWrapper />
+        </PageLayout>
+      </Router>
       <Footer />
     </Theme>
   );
