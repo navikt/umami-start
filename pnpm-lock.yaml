@@ -11,12 +11,18 @@ importers:
       '@google-cloud/bigquery':
         specifier: ^8.1.1
         version: 8.1.1
+      '@navikt/aksel-icons':
+        specifier: ^8.3.0
+        version: 8.3.0
       '@navikt/oasis':
         specifier: 4.1.1
         version: 4.1.1
       '@toon-format/toon':
         specifier: ^2.1.0
         version: 2.1.0
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       dotenv:
         specifier: ^17.2.3
         version: 17.2.4
