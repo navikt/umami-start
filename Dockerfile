@@ -1,57 +1,64 @@
 # Build stage
-FROM cgr.dev/chainguard/wolfi-base:latest AS builder
+FROM cgr.dev/chainguard/wolfi-base@sha256:1c56f3ceb1c9929611a1cc7ab7a5fde1ec5df87add282029cd1596b8eae5af67 AS base
 
-# Install Node.js and npm
-RUN apk update && apk add --no-cache nodejs npm
+# Install Node.js and enable pnpm
+RUN apk update && apk add --no-cache nodejs-20 npm && npm install -g corepack && corepack enable
 
-# Build arg for GitHub token (provided by NAIS or CI/CD)
-ARG GITHUB_TOKEN
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+FROM base AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml* ./
 
-# Create .npmrc for GitHub NPM registry authentication
-RUN if [ -n "$GITHUB_TOKEN" ]; then \
-    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc && \
-    echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
-    fi
+# Install dependencies with cache mount
+RUN --mount=type=secret,id=NODE_AUTH_TOKEN \
+    --mount=type=cache,id=pnpm,target=/pnpm/store \
+    if [ -f /run/secrets/NODE_AUTH_TOKEN ]; then \
+        export NODE_AUTH_TOKEN=$(cat /run/secrets/NODE_AUTH_TOKEN); \
+        echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc && \
+        echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
+    fi && \
+    pnpm install --frozen-lockfile && \
+    rm -f .npmrc
 
-# Install dependencies
-RUN npm install
-
-# Remove .npmrc for security
-RUN rm -f .npmrc
-
-# Copy source code
+# Copy source code and build
 COPY . .
-
-# Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
-FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25@sha256:337cc0170e162c0b5ed5846919f8af98e587c2f5430e44575762c552cebf1b9e
+FROM cgr.dev/chainguard/wolfi-base@sha256:1c56f3ceb1c9929611a1cc7ab7a5fde1ec5df87add282029cd1596b8eae5af67 AS runtime
 
-# Build arg for GitHub token
-ARG GITHUB_TOKEN
+# Install only Node.js runtime (no npm/corepack needed)
+RUN apk update && apk add --no-cache nodejs-20
 
 WORKDIR /app
 
-# Copy package files and npmrc
-COPY --from=builder /app/package.json /app/package-lock.json ./
+# Copy package files
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 
-# Create .npmrc for GitHub NPM registry authentication
-RUN if [ -n "$GITHUB_TOKEN" ]; then \
-    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > .npmrc && \
-    echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
-    fi
+# Install pnpm for production dependencies
+RUN apk add --no-cache npm && npm install -g corepack && corepack enable
 
-# Install production dependencies using npm
-RUN npm install --production --no-save
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
-# Remove .npmrc for security
-RUN rm -f .npmrc
+# Install production dependencies
+RUN --mount=type=secret,id=NODE_AUTH_TOKEN \
+    --mount=type=cache,id=pnpm,target=/pnpm/store \
+    if [ -f /run/secrets/NODE_AUTH_TOKEN ]; then \
+        export NODE_AUTH_TOKEN=$(cat /run/secrets/NODE_AUTH_TOKEN); \
+        echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc && \
+        echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
+    fi && \
+    pnpm install --prod --frozen-lockfile && \
+    rm -f .npmrc
+
+# Remove corepack/npm after installing dependencies
+RUN apk del npm
 
 # Copy built assets and runtime files from builder
 COPY --from=builder /app/dist ./dist
@@ -60,4 +67,4 @@ COPY --from=builder /app/.nais ./.nais
 
 EXPOSE 8080
 
-CMD ["server.js"]
+CMD ["node", "server.js"]
