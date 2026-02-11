@@ -24,5 +24,4 @@ dist-ssr
 *.sw?
 .env
 service-account-key.json
-.npmrc
 package-lock.json
