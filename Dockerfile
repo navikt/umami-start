@@ -11,19 +11,13 @@ FROM base AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Copy package files and .npmrc
+COPY package.json pnpm-lock.yaml* .npmrc ./
 
 # Install dependencies with cache mount
 RUN --mount=type=secret,id=NODE_AUTH_TOKEN \
     --mount=type=cache,id=pnpm,target=/pnpm/store \
-    if [ -f /run/secrets/NODE_AUTH_TOKEN ]; then \
-        export NODE_AUTH_TOKEN=$(cat /run/secrets/NODE_AUTH_TOKEN); \
-        echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc && \
-        echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
-    fi && \
-    pnpm install --frozen-lockfile && \
-    rm -f .npmrc
+    NODE_AUTH_TOKEN=$(cat /run/secrets/NODE_AUTH_TOKEN) pnpm install --frozen-lockfile
 
 # Copy source code and build
 COPY . .
@@ -37,8 +31,8 @@ RUN apk update && apk add --no-cache nodejs-20
 
 WORKDIR /app
 
-# Copy package files
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+# Copy package files and .npmrc
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/.npmrc ./
 
 # Install pnpm for production dependencies
 RUN apk add --no-cache npm && npm install -g corepack && corepack enable
@@ -49,13 +43,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 # Install production dependencies
 RUN --mount=type=secret,id=NODE_AUTH_TOKEN \
     --mount=type=cache,id=pnpm,target=/pnpm/store \
-    if [ -f /run/secrets/NODE_AUTH_TOKEN ]; then \
-        export NODE_AUTH_TOKEN=$(cat /run/secrets/NODE_AUTH_TOKEN); \
-        echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc && \
-        echo "@navikt:registry=https://npm.pkg.github.com" >> .npmrc; \
-    fi && \
-    pnpm install --prod --frozen-lockfile && \
-    rm -f .npmrc
+    NODE_AUTH_TOKEN=$(cat /run/secrets/NODE_AUTH_TOKEN) pnpm install --prod --frozen-lockfile
 
 # Remove corepack/npm after installing dependencies
 RUN apk del npm
