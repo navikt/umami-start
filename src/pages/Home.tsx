@@ -9,7 +9,8 @@ function Home() {
             minHeight: "100vh",
             display: "flex",
             flexDirection: "column",
-            backgroundColor: "var(--ax-bg-accent-soft)",
+            backgroundColor: "var(--ax-bg-default)",
+            backgroundImage: "linear-gradient(180deg, var(--ax-bg-accent-soft) 0%, var(--ax-bg-default) 68%)",
         }}>
             <section style={{
                 width: "100%",
