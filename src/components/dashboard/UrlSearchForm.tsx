@@ -34,6 +34,12 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
         return cleaned === "nav.no" ? "www.nav.no" : cleaned;
     };
 
+    const navigateToTrafficAnalysis = (website: Website, path: string) => {
+        navigate(
+            `/trafikkanalyse?websiteId=${website.id}&domain=${website.domain}&urlPath=${encodeURIComponent(path)}`
+        );
+    };
+
     const fetchWebsites = async (): Promise<Website[]> => {
         // If we already have data, return it
         if (hasLoadedData && filteredData) {
@@ -156,9 +162,10 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             }, null);
 
             if (matchedWebsite) {
-                // Navigate to traffic analysis
-                // Pass domain/path info if useful
-                navigate(`/trafikkanalyse?websiteId=${matchedWebsite.id}&domain=${matchedWebsite.domain}&urlPath=${encodeURIComponent(decodeURIComponent(urlObj.pathname))}`);
+                navigateToTrafficAnalysis(
+                    matchedWebsite,
+                    decodeURIComponent(urlObj.pathname)
+                );
             } else {
                 setAlertVisible(true);
             }
@@ -198,7 +205,15 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                         <List as="ul">
                             {filteredData && filteredData.map(item => (
                                 <List.Item key={item.id}>
-                                    {item.domain}
+                                    <Link
+                                        href={`/trafikkanalyse?websiteId=${item.id}&domain=${item.domain}&urlPath=%2F`}
+                                        onClick={(event) => {
+                                            event.preventDefault();
+                                            navigateToTrafficAnalysis(item, "/");
+                                        }}
+                                    >
+                                        {item.domain}
+                                    </Link>
                                 </List.Item>
                             ))}
                         </List>
