@@ -42,7 +42,7 @@ function Oppsett() {
     return (
         <>
             <PageHeader
-                title="Oppsett av Umami"
+                title="Teknisk oppsett"
                 description={<>Her finner du utviklerverktøy, veiledning og <Link href="#sporingskoder">sporingskoder</Link> for Umami.</>}
             />
 

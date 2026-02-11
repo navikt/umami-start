@@ -1,6 +1,5 @@
 import {
-  MenuHamburgerIcon,
-  CogIcon
+  MenuHamburgerIcon
 } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link, Page } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
@@ -67,11 +66,19 @@ export default function Header({ theme }: HeaderProps) {
                   <Dropdown.Menu.List>
                     <Dropdown.Menu.List.Item
                       as={Link}
+                      href="/grafbygger"
+                      className="no-underline"
+                    >
+                      <span className="whitespace-nowrap">Grafbygger</span>
+                    </Dropdown.Menu.List.Item>
+                  </Dropdown.Menu.List>
+                  <Dropdown.Menu.List>
+                    <Dropdown.Menu.List.Item
+                      as={Link}
                       href="/oppsett"
                       className="no-underline"
                     >
-                      <CogIcon aria-hidden fontSize="1.5rem" />
-                      <span className="whitespace-nowrap">Oppsett</span>
+                      <span className="whitespace-nowrap">Teknisk oppsett</span>
                     </Dropdown.Menu.List.Item>
                   </Dropdown.Menu.List>
                 </Dropdown.Menu>
@@ -84,12 +91,21 @@ export default function Header({ theme }: HeaderProps) {
                 <Button
                   as={Link}
                   variant="tertiary"
+                  href="/grafbygger"
+                  className={linkButton}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="whitespace-nowrap">Grafbygger</span>
+                  </div>
+                </Button>
+                                <Button
+                  as={Link}
+                  variant="tertiary"
                   href="/oppsett"
                   className={linkButton}
                 >
                   <div className="flex items-center gap-2">
-                    <CogIcon aria-hidden fontSize="1.5rem" />
-                    <span className="whitespace-nowrap">Oppsett</span>
+                    <span className="whitespace-nowrap">Tekninsk oppsett</span>
                   </div>
                 </Button>
                 <ThemeButton />
