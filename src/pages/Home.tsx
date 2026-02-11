@@ -14,14 +14,15 @@ function Home() {
             <section style={{
                 width: "100%",
                 color: "var(--ax-text-default)",
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                paddingTop: "32px",
-                paddingBottom: "32px",
+                flex: "1 0 auto",
+                minHeight: "clamp(440px, 62vh, 760px)",
+                display: "grid",
+                placeItems: "center",
+                paddingTop: "24px",
+                paddingBottom: "24px",
             }}>
-                <Page.Block width="xl" gutters>
-                    <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+                <Page.Block width="2xl" gutters style={{ width: "100%" }}>
+                    <div style={{ width: "100%", maxWidth: "680px", margin: "0 auto" }}>
                         <Heading spacing={true} as="h1" size="xlarge">Mål brukeradferd med Umami</Heading>
                         <UrlSearchForm />
                     </div>
