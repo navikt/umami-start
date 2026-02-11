@@ -1,10 +1,8 @@
-import {
-  MenuHamburgerIcon
-} from "@navikt/aksel-icons";
+import { MenuHamburgerIcon } from "@navikt/aksel-icons";
 import { Button, Dropdown, Link, Page } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
-import '../../../tailwind.css';
-import { ThemeButton } from '../ThemeButton/ThemeButton';
+import "../../../tailwind.css";
+import { ThemeButton } from "../ThemeButton/ThemeButton";
 
 interface HeaderProps {
   theme: "light" | "dark";
@@ -24,13 +22,28 @@ export default function Header({ theme }: HeaderProps) {
   }, []);
 
   const linkButton =
-    "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " + (theme === "dark" ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]" : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
+    "!no-underline !bg-transparent hover:!underline hover:!bg-transparent !font-normal " +
+    (theme === "dark"
+      ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]"
+      : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
   return (
-    <div style={{ background: theme === "dark" ? "var(--ax-bg-default)" : "rgba(19,17,54)" }} className="border-b border-[var(--ax-border-neutral-subtle)]">
+    <div
+      style={{
+        background:
+          theme === "dark" ? "var(--ax-bg-default)" : "rgba(19,17,54)",
+      }}
+      className="border-b border-[var(--ax-border-neutral-subtle)]"
+    >
       <Page.Block width="2xl" gutters>
         <header className="flex py-1 z-10 items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button as={Link} variant="tertiary" className={`${linkButton} !px-0`} href="/" aria-label="Start Umami">
+            <Button
+              as={Link}
+              variant="tertiary"
+              className={`${linkButton} !px-0`}
+              href="/"
+              aria-label="Start Umami"
+            >
               <div className="flex items-center gap-2">
                 <svg
                   width="1em"
@@ -50,7 +63,10 @@ export default function Header({ theme }: HeaderProps) {
                   />
                 </svg>
                 <span className="text-2xl whitespace-nowrap">
-                  Umami{window.location.hostname.includes('.dev.nav.no') ? ' Dev' : ''}
+                  Umami
+                  {window.location.hostname.includes(".dev.nav.no")
+                    ? " Dev"
+                    : ""}
                 </span>
               </div>
             </Button>
@@ -59,7 +75,11 @@ export default function Header({ theme }: HeaderProps) {
             <div className="flex items-center gap-2">
               <ThemeButton />
               <Dropdown>
-                <Button as={Dropdown.Toggle} variant="tertiary" className={linkButton}>
+                <Button
+                  as={Dropdown.Toggle}
+                  variant="tertiary"
+                  className={linkButton}
+                >
                   <MenuHamburgerIcon title="meny" fontSize="1.5rem" />
                 </Button>
                 <Dropdown.Menu className="w-auto">
@@ -98,14 +118,14 @@ export default function Header({ theme }: HeaderProps) {
                     <span className="whitespace-nowrap">Grafbygger</span>
                   </div>
                 </Button>
-                                <Button
+                <Button
                   as={Link}
                   variant="tertiary"
                   href="/oppsett"
                   className={linkButton}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="whitespace-nowrap">Tekninsk oppsett</span>
+                    <span className="whitespace-nowrap">Teknisk oppsett</span>
                   </div>
                 </Button>
                 <ThemeButton />
