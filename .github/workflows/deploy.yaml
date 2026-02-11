@@ -32,8 +32,8 @@ jobs:
           team: team-researchops
           identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
           project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
-          build_args: |
-            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          build_secrets: |
+            "NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
 
 
     outputs:
