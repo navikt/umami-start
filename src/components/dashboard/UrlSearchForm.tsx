@@ -53,10 +53,16 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             // aa113c34-e213-4ed6-a4f0-0aea8a503e6b (Team ResearchOps?)
             // bceb3300-a2fb-4f73-8cec-7e3673072b30 (Another team?)
 
-            const relevantTeams = [
-                'aa113c34-e213-4ed6-a4f0-0aea8a503e6b',
-                'bceb3300-a2fb-4f73-8cec-7e3673072b30'
-            ];
+            const isDevEnvironment =
+                typeof window !== "undefined" &&
+                window.location.hostname.includes(".dev.nav.no");
+
+            const relevantTeams = isDevEnvironment
+                ? ['1937013f-f915-4e73-a12a-fc325b23c7fc']
+                : [
+                    'aa113c34-e213-4ed6-a4f0-0aea8a503e6b',
+                    'bceb3300-a2fb-4f73-8cec-7e3673072b30'
+                ];
 
             const prodWebsites = websitesData.filter((website: Website) =>
                 relevantTeams.includes(website.teamId)
