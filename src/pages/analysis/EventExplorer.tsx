@@ -45,8 +45,8 @@ const EventExplorer = () => {
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<string>('usage');
     const [showAverage, setShowAverage] = useState<boolean>(false);
+    const [showTrendTable, setShowTrendTable] = useState<boolean>(false);
 
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
@@ -395,6 +395,7 @@ const EventExplorer = () => {
         setSelectedEvent('');
         setSeriesData([]);
         setPropertiesData([]);
+        setSelectedParameterForDrilldown(null);
     };
 
     return (
@@ -572,188 +573,183 @@ const EventExplorer = () => {
                         )}
 
                         {!loadingData && seriesData.length > 0 && (
-                            <Tabs value={activeTab} onChange={setActiveTab}>
-                                <Tabs.List>
-                                    <Tabs.Tab value="usage" label="Bruk av hendelse" />
-                                    <Tabs.Tab value="parameters" label="Hendelsdetaljer" />
-                                </Tabs.List>
+                            <div className="flex flex-col gap-8">
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex justify-end gap-6 -mb-5">
+                                        <Switch
+                                            checked={showTrendTable}
+                                            onChange={(e) => setShowTrendTable(e.target.checked)}
+                                            size="small"
+                                        >
+                                            Vis tabell
+                                        </Switch>
+                                        <Switch
+                                            checked={showAverage}
+                                            onChange={(e) => setShowAverage(e.target.checked)}
+                                            size="small"
+                                        >
+                                            Vis gjennomsnitt
+                                        </Switch>
+                                    </div>
+                                    <div style={{ width: '100%', height: '400px' }}>
+                                        {(() => {
+                                            const chartData = prepareLineChartData(showAverage);
+                                            return chartData ? (
+                                                <ResponsiveContainer>
+                                                    <LineChart
+                                                        data={chartData.data}
+                                                        legendsOverflowText={'Overflow Items'}
+                                                        yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                        yAxisTickCount={10}
+                                                        allowMultipleShapesForPoints={false}
+                                                        enablePerfOptimization={true}
+                                                        margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
+                                                        legendProps={{
+                                                            allowFocusOnLegends: true,
+                                                            styles: {
+                                                                text: { color: 'var(--ax-text-default)' },
+                                                            }
+                                                        }}
+                                                    />
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="flex items-center justify-center h-full text-gray-500">
+                                                    Ingen data tilgjengelig for diagram
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
 
-                                {/* Usage Tab */}
-                                <Tabs.Panel value="usage" className="pt-6">
-                                    <div className="flex flex-col gap-8">
-                                        {/* Chart */}
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex justify-end -mb-5">
-                                                <Switch
-                                                    checked={showAverage}
-                                                    onChange={(e) => setShowAverage(e.target.checked)}
-                                                    size="small"
-                                                >
-                                                    Vis gjennomsnitt
-                                                </Switch>
-                                            </div>
-                                            <div style={{ width: '100%', height: '400px' }}>
-                                                {(() => {
-                                                    const chartData = prepareLineChartData(showAverage);
-                                                    return chartData ? (
-                                                        <ResponsiveContainer>
-                                                            <LineChart
-                                                                data={chartData.data}
-                                                                legendsOverflowText={'Overflow Items'}
-                                                                yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
-                                                                yAxisTickCount={10}
-                                                                allowMultipleShapesForPoints={false}
-                                                                enablePerfOptimization={true}
-                                                                margins={{ left: 50, right: 40, top: 20, bottom: 35 }}
-                                                                legendProps={{
-                                                                    allowFocusOnLegends: true,
-                                                                    styles: {
-                                                                        text: { color: 'var(--ax-text-default)' },
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </ResponsiveContainer>
-                                                    ) : (
-                                                        <div className="flex items-center justify-center h-full text-gray-500">
-                                                            Ingen data tilgjengelig for diagram
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                        </div>
-
-                                        {/* Table */}
-                                        <div className="border rounded-lg overflow-hidden">
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
-                                                    <thead className="bg-[var(--ax-bg-neutral-soft)]">
-                                                        <tr>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Dato</th>
-                                                            <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall</th>
+                                {showTrendTable && (
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                                <thead className="bg-[var(--ax-bg-neutral-soft)]">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Dato</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--ax-text-default)] uppercase tracking-wider">Antall</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
+                                                    {seriesData.map((item, index) => (
+                                                        <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
+                                                                {new Date(item.time).toLocaleDateString('nb-NO')}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
+                                                                {item.count.toLocaleString('nb-NO')}
+                                                            </td>
                                                         </tr>
-                                                    </thead>
-                                                    <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
-                                                        {seriesData.map((item, index) => (
-                                                            <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
-                                                                    {new Date(item.time).toLocaleDateString('nb-NO')}
-                                                                </td>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--ax-text-default)]">
-                                                                    {item.count.toLocaleString('nb-NO')}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="small"
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                        const headers = ['Dato', 'Antall'];
+                                                        const csvRows = [
+                                                            headers.join(','),
+                                                            ...seriesData.map((item) => {
+                                                                return [
+                                                                    new Date(item.time).toLocaleDateString('nb-NO'),
+                                                                    item.count
+                                                                ].join(',');
+                                                            })
+                                                        ];
+                                                        const csvContent = csvRows.join('\n');
+                                                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                        const link = document.createElement('a');
+                                                        const url = URL.createObjectURL(blob);
+                                                        link.setAttribute('href', url);
+                                                        link.setAttribute('download', `${selectedEvent}_${new Date().toISOString().slice(0, 10)}.csv`);
+                                                        link.style.visibility = 'hidden';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                        URL.revokeObjectURL(url);
+                                                    }}
+                                                    icon={<Download size={16} />}
+                                                >
+                                                    Last ned CSV
+                                                </Button>
                                             </div>
-                                            <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                                                <div className="flex gap-2">
+                                            {queryStats && (
+                                                <span className="text-sm text-[var(--ax-text-subtle)]">
+                                                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    {!selectedParameterForDrilldown ? (
+                                        <>
+                                            <Heading level="3" size="small" className="mb-4">Hendelsesdetaljer</Heading>
+
+                                            {!hasLoadedValues && propertiesData.length > 0 && (
+                                                <div className="mt-2 mb-4">
                                                     <Button
                                                         size="small"
                                                         variant="secondary"
-                                                        onClick={() => {
-                                                            const headers = ['Dato', 'Antall'];
-                                                            const csvRows = [
-                                                                headers.join(','),
-                                                                ...seriesData.map((item) => {
-                                                                    return [
-                                                                        new Date(item.time).toLocaleDateString('nb-NO'),
-                                                                        item.count
-                                                                    ].join(',');
-                                                                })
-                                                            ];
-                                                            const csvContent = csvRows.join('\n');
-                                                            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                                                            const link = document.createElement('a');
-                                                            const url = URL.createObjectURL(blob);
-                                                            link.setAttribute('href', url);
-                                                            link.setAttribute('download', `${selectedEvent}_${new Date().toISOString().slice(0, 10)}.csv`);
-                                                            link.style.visibility = 'hidden';
-                                                            document.body.appendChild(link);
-                                                            link.click();
-                                                            document.body.removeChild(link);
-                                                            URL.revokeObjectURL(url);
-                                                        }}
-                                                        icon={<Download size={16} />}
+                                                        onClick={fetchAllParameterValues}
+                                                        loading={loadingValues}
                                                     >
-                                                        Last ned CSV
+                                                        Vis utsnitt av verdier
                                                     </Button>
                                                 </div>
-                                                {queryStats && (
-                                                    <span className="text-sm text-[var(--ax-text-subtle)]">
-                                                        Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Tabs.Panel>
-
-                                {/* Parameters Tab */}
-                                <Tabs.Panel value="parameters" className="pt-6">
-                                    <div>
-                                        {!selectedParameterForDrilldown ? (
-                                            <>
-                                                <Heading level="3" size="small" className="mb-4">Hendelsesdetaljer</Heading>
-
-                                                {!hasLoadedValues && propertiesData.length > 0 && (
-                                                    <div className="mb-4">
-                                                        <Button
-                                                            size="small"
-                                                            variant="secondary"
-                                                            onClick={fetchAllParameterValues}
-                                                            loading={loadingValues}
-                                                        >
-                                                            Vis utsnitt av verdier
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                                {propertiesData.length > 0 ? (
-                                                    <div className="overflow-x-auto">
-                                                        <Table size="small">
-                                                            <Table.Header>
-                                                                <Table.Row>
-                                                                    <Table.HeaderCell>Navn</Table.HeaderCell>
-                                                                    <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                                    <Table.HeaderCell></Table.HeaderCell>
+                                            )}
+                                            {propertiesData.length > 0 ? (
+                                                <div className="overflow-x-auto">
+                                                    <Table size="small">
+                                                        <Table.Header>
+                                                            <Table.Row>
+                                                                <Table.HeaderCell>Navn</Table.HeaderCell>
+                                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                                <Table.HeaderCell></Table.HeaderCell>
+                                                            </Table.Row>
+                                                        </Table.Header>
+                                                        <Table.Body>
+                                                            {propertiesData.map((prop, idx) => (
+                                                                <Table.Row key={idx}>
+                                                                    <Table.DataCell>{prop.propertyName}</Table.DataCell>
+                                                                    <Table.DataCell align="right">{prop.total.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                    <Table.DataCell>
+                                                                        <Button
+                                                                            size="xsmall"
+                                                                            variant="secondary"
+                                                                            onClick={() => setSelectedParameterForDrilldown(prop.propertyName)}
+                                                                        >
+                                                                            Utforsk
+                                                                        </Button>
+                                                                    </Table.DataCell>
                                                                 </Table.Row>
-                                                            </Table.Header>
-                                                            <Table.Body>
-                                                                {propertiesData.map((prop, idx) => (
-                                                                    <Table.Row key={idx}>
-                                                                        <Table.DataCell>{prop.propertyName}</Table.DataCell>
-                                                                        <Table.DataCell align="right">{prop.total.toLocaleString('nb-NO')}</Table.DataCell>
-                                                                        <Table.DataCell>
-                                                                            <Button
-                                                                                size="xsmall"
-                                                                                variant="secondary"
-                                                                                onClick={() => setSelectedParameterForDrilldown(prop.propertyName)}
-                                                                            >
-                                                                                Utforsk
-                                                                            </Button>
-                                                                        </Table.DataCell>
-                                                                    </Table.Row>
-                                                                ))}
-                                                            </Table.Body>
-                                                        </Table>
-                                                    </div>
-                                                ) : (
-                                                    <BodyShort>Ingen parametere funnet for denne hendelsen.</BodyShort>
-                                                )}
+                                                            ))}
+                                                        </Table.Body>
+                                                    </Table>
+                                                </div>
+                                            ) : (
+                                                <BodyShort>Ingen parametere funnet for denne hendelsen.</BodyShort>
+                                            )}
 
-                                                {loadingValues && (
-                                                    <div className="flex justify-center items-center py-8">
-                                                        <Loader size="large" title="Henter verdier..." />
-                                                    </div>
-                                                )}
+                                            {loadingValues && (
+                                                <div className="flex justify-center items-center py-8">
+                                                    <Loader size="large" title="Henter verdier..." />
+                                                </div>
+                                            )}
 
-                                                {hasLoadedValues && (Object.keys(allParameterValues).length > 0 || latestEvents.length > 0) && (
-                                                    <div className="mt-6 pt-6 border-t">
-                                                        <Tabs value={parameterValuesTab} onChange={setParameterValuesTab}>
-                                                            <Tabs.List>
-                                                                <Tabs.Tab value="latest" label="Siste 20" />
-                                                                <Tabs.Tab value="top" label="Topp verdier" />
-                                                            </Tabs.List>
+                                            {hasLoadedValues && (Object.keys(allParameterValues).length > 0 || latestEvents.length > 0) && (
+                                                <div className="mt-6 pt-6 border-t">
+                                                    <Tabs value={parameterValuesTab} onChange={setParameterValuesTab}>
+                                                        <Tabs.List>
+                                                            <Tabs.Tab value="latest" label="Siste 20" />
+                                                            <Tabs.Tab value="top" label="Topp verdier" />
+                                                        </Tabs.List>
 
                                                             {/* Latest Events Tab */}
                                                             <Tabs.Panel value="latest" className="pt-4">
@@ -832,69 +828,68 @@ const EventExplorer = () => {
                                                                     })}
                                                                 </div>
                                                             </Tabs.Panel>
-                                                        </Tabs>
-                                                        {parameterValuesQueryStats && (
-                                                            <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                                                                Data prosessert: {parameterValuesQueryStats.totalBytesProcessedGB} GB
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="flex items-center gap-4 mb-4">
-                                                    <Button
-                                                        variant="tertiary"
-                                                        size="small"
-                                                        icon={<ArrowLeft aria-hidden />}
-                                                        onClick={() => setSelectedParameterForDrilldown(null)}
-                                                    >
-                                                        Alle hendelsesdetaljer
-                                                    </Button>
-                                                </div>
-
-                                                <Heading level="3" size="medium" className="mb-6">
-                                                    {selectedParameterForDrilldown}
-                                                </Heading>
-
-                                                <div className="border rounded-lg p-4">
-                                                    <Heading level="4" size="small" className="mb-4">
-                                                        Topp 20 verdier
-                                                    </Heading>
-                                                    {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).length > 0 ? (
-                                                        <div className="overflow-x-auto">
-                                                            <Table size="small">
-                                                                <Table.Header>
-                                                                    <Table.Row>
-                                                                        <Table.HeaderCell>Verdi</Table.HeaderCell>
-                                                                        <Table.HeaderCell align="right">Antall</Table.HeaderCell>
-                                                                    </Table.Row>
-                                                                </Table.Header>
-                                                                <Table.Body>
-                                                                    {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).map((val, idx) => (
-                                                                        <Table.Row key={idx}>
-                                                                            <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
-                                                                                {val.value || '(tom)'}
-                                                                            </Table.DataCell>
-                                                                            <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
-                                                                        </Table.Row>
-                                                                    ))}
-                                                                </Table.Body>
-                                                            </Table>
+                                                    </Tabs>
+                                                    {parameterValuesQueryStats && (
+                                                        <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
+                                                            Data prosessert: {parameterValuesQueryStats.totalBytesProcessedGB} GB
                                                         </div>
-                                                    ) : (
-                                                        <>
-                                                            <Skeleton variant="text" width={80} height={20} />
-                                                            <Skeleton variant="text" width={100} height={20} />
-                                                        </>
                                                     )}
                                                 </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </Tabs.Panel>
-                            </Tabs>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <Button
+                                                    variant="tertiary"
+                                                    size="small"
+                                                    icon={<ArrowLeft aria-hidden />}
+                                                    onClick={() => setSelectedParameterForDrilldown(null)}
+                                                >
+                                                    Alle hendelsesdetaljer
+                                                </Button>
+                                            </div>
+
+                                            <Heading level="3" size="medium" className="mb-6">
+                                                {selectedParameterForDrilldown}
+                                            </Heading>
+
+                                            <div className="border rounded-lg p-4">
+                                                <Heading level="4" size="small" className="mb-4">
+                                                    Topp 20 verdier
+                                                </Heading>
+                                                {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).length > 0 ? (
+                                                    <div className="overflow-x-auto">
+                                                        <Table size="small">
+                                                            <Table.Header>
+                                                                <Table.Row>
+                                                                    <Table.HeaderCell>Verdi</Table.HeaderCell>
+                                                                    <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                                </Table.Row>
+                                                            </Table.Header>
+                                                            <Table.Body>
+                                                                {allParameterValues[selectedParameterForDrilldown]?.slice(0, 20).map((val, idx) => (
+                                                                    <Table.Row key={idx}>
+                                                                        <Table.DataCell className="max-w-md truncate" title={val.value || '(tom)'}>
+                                                                            {val.value || '(tom)'}
+                                                                        </Table.DataCell>
+                                                                        <Table.DataCell align="right">{val.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                                                    </Table.Row>
+                                                                ))}
+                                                            </Table.Body>
+                                                        </Table>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <Skeleton variant="text" width={80} height={20} />
+                                                        <Skeleton variant="text" width={100} height={20} />
+                                                    </>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         )}
 
                         {!loadingData && !seriesData.length && !error && (
