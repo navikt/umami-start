@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { BigQuery } from '@google-cloud/bigquery'
 import { readFile } from 'fs/promises'
+import fetch from 'node-fetch'
 
 // Load .env file BEFORE accessing any process.env values
 dotenv.config()
@@ -452,6 +453,40 @@ app.get('/api/user/me', async (req, res) => {
         console.error('Authentication error:', error);
         res.status(500).json({
             error: 'Authentication failed',
+            details: error.message
+        });
+    }
+});
+
+// Test endpoint to verify frontend can reach backend
+app.get('/api/projects', async (req, res) => {
+    try {
+        const backendUrl = 'https://start-umami-backend.ansatt.dev.nav.no/api/projects';
+        
+        console.log('[Test] Fetching projects from:', backendUrl);
+        
+        const response = await fetch(backendUrl);
+        
+        if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        console.log('[Test] Successfully fetched projects from backend');
+        
+        res.json({
+            success: true,
+            message: 'Successfully connected to backend',
+            data: data,
+            backendUrl: backendUrl
+        });
+        
+    } catch (error) {
+        console.error('[Test] Failed to fetch projects:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch projects from backend',
             details: error.message
         });
     }
