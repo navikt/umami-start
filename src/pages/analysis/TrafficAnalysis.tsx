@@ -712,9 +712,9 @@ const TrafficAnalysis = () => {
 
         return (
             <VStack gap="space-4">
-                <div className="flex justify-between items-end">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
                     <Heading level="3" size="small">{title}</Heading>
-                    <div className="w-64">
+                    <div className="w-full sm:w-64 min-w-0">
                         <TextField
                             label="Søk"
                             hideLabel
@@ -780,8 +780,24 @@ const TrafficAnalysis = () => {
     const externalReferrers = useMemo(() => {
         return externalReferrerData
             .filter(item => item.name !== '(none)') // Filter out direct traffic
-            .map(item => ({ name: item.name, count: item.count }));
+            .map(item => ({ name: item.name, count: Number(item.count) }));
     }, [externalReferrerData]);
+
+    const combinedEntrances = useMemo(() => {
+        const external = externalReferrers.map(item => ({
+            name: item.name,
+            count: item.count,
+            type: 'external' as const
+        }));
+
+        const internal = entrances.map(item => ({
+            name: item.name,
+            count: item.count,
+            type: 'internal' as const
+        }));
+
+        return [...external, ...internal].sort((a, b) => b.count - a.count);
+    }, [externalReferrers, entrances]);
 
     const externalChannels = useMemo(() => {
         const channelMap = new Map<string, number>();
@@ -824,6 +840,171 @@ const TrafficAnalysis = () => {
 
         return externalChannels;
     }, [externalChannels, seriesTotal, submittedMetricType]);
+
+    const CombinedEntrancesTable = ({
+        title,
+        data,
+        onRowClick,
+        selectedWebsite,
+        metricLabel
+    }: {
+        title: string;
+        data: { name: string; count: number; type: 'external' | 'internal' }[];
+        onRowClick?: (name: string) => void;
+        selectedWebsite: Website | null;
+        metricLabel: string;
+    }) => {
+        const [search, setSearch] = useState('');
+        const [typeFilter, setTypeFilter] = useState<'all' | 'external' | 'internal'>('all');
+        const [page, setPage] = useState(1);
+        const rowsPerPage = 10;
+
+        const filteredData = data.filter(row => {
+            const matchesType = typeFilter === 'all' || row.type === typeFilter;
+            const matchesSearch = row.name.toLowerCase().includes(search.toLowerCase());
+            return matchesType && matchesSearch;
+        });
+
+        useEffect(() => {
+            setPage(1);
+        }, [search, typeFilter]);
+
+        const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+        const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+        const isClickableRow = (row: { name: string; type: 'external' | 'internal' }) =>
+            row.type === 'internal' && row.name.startsWith('/') && onRowClick;
+
+        const renderName = (row: { name: string; type: 'external' | 'internal' }) => {
+            if (row.name === '/') return '/ (forside)';
+            if (selectedWebsite && row.name === selectedWebsite.domain) return `Interntrafikk (${row.name})`;
+            return row.name;
+        };
+
+        const downloadCSV = () => {
+            if (!data.length) return;
+
+            const headers = ['Inngang', metricLabel];
+            const csvRows = [
+                headers.join(','),
+                ...data.map((item) => {
+                    return [
+                        item.name,
+                        submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
+                    ].join(',');
+                })
+            ];
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+
+        return (
+            <VStack gap="space-4">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                    <Heading level="3" size="small">{title}</Heading>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
+                        <div className="w-full sm:w-32">
+                            <Select
+                                label="Filter"
+                                hideLabel
+                                size="small"
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'external' | 'internal')}
+                            >
+                                <option value="all">Alle</option>
+                                <option value="external">Eksterne</option>
+                                <option value="internal">Interne</option>
+                            </Select>
+                        </div>
+                        <div className="w-full sm:w-64 min-w-0">
+                            <TextField
+                                label="Søk"
+                                hideLabel
+                                placeholder="Søk..."
+                                size="small"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div className="border rounded-lg overflow-x-auto">
+                    <Table size="small">
+                        <Table.Header>
+                            <Table.Row>
+                                <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                                <Table.HeaderCell>Inngang</Table.HeaderCell>
+                            </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                            {paginatedData.map((row, i) => (
+                                <Table.Row
+                                    key={i}
+                                    className={isClickableRow(row) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
+                                    onClick={() => isClickableRow(row) && onRowClick?.(row.name)}
+                                >
+                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell className="max-w-md" title={row.name}>
+                                        {isClickableRow(row) ? (
+                                            <span className="flex items-center gap-1 max-w-full">
+                                                <span
+                                                    className="truncate text-blue-600 hover:underline cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onRowClick?.(row.name);
+                                                    }}
+                                                >
+                                                    {renderName(row)}
+                                                </span>
+                                                <ExternalLink className="h-3 w-3 shrink-0 text-blue-600" />
+                                            </span>
+                                        ) : (
+                                            <div className="truncate">{renderName(row)}</div>
+                                        )}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            ))}
+                            {filteredData.length === 0 && (
+                                <Table.Row>
+                                    <Table.DataCell colSpan={2} align="center">
+                                        {data.length > 0 ? 'Ingen treff' : 'Ingen data'}
+                                    </Table.DataCell>
+                                </Table.Row>
+                            )}
+                        </Table.Body>
+                    </Table>
+                    <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            onClick={downloadCSV}
+                            icon={<Download size={16} />}
+                        >
+                            Last ned CSV
+                        </Button>
+                    </div>
+                </div>
+                {totalPages > 1 && (
+                    <Pagination
+                        page={page}
+                        onPageChange={setPage}
+                        count={totalPages}
+                        size="small"
+                    />
+                )}
+            </VStack>
+        );
+    };
 
     const TrafficTable = ({ title, data, onRowClick, selectedWebsite, metricLabel }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void; selectedWebsite: Website | null; metricLabel: string }) => {
         const [search, setSearch] = useState('');
@@ -919,9 +1100,9 @@ const TrafficAnalysis = () => {
 
         return (
             <VStack gap="space-4">
-                <div className="flex justify-between items-end">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
                     <Heading level="3" size="small">{title}</Heading>
-                    <div className="w-64">
+                    <div className="w-full sm:w-64 min-w-0">
                         <TextField
                             label="Søk"
                             hideLabel
@@ -1031,9 +1212,9 @@ const TrafficAnalysis = () => {
 
         return (
             <VStack gap="space-4">
-                <div className="flex justify-between items-end">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
                     <Heading level="3" size="small">Trend</Heading>
-                    <div className="w-64">
+                    <div className="w-full sm:w-64 min-w-0">
                         <TextField
                             label={submittedGranularity === 'hour' ? "Søk etter tidspunkt" : "Søk etter dato"}
                             hideLabel
@@ -1305,13 +1486,13 @@ const TrafficAnalysis = () => {
                                 ) : (
                                     <div className="flex flex-col md:flex-row gap-8">
                                         <div className="w-full md:w-1/2 flex flex-col gap-8">
-                                            <ExternalTrafficTable
-                                                title="Eksterne innganger"
-                                                data={externalReferrers}
+                                            <CombinedEntrancesTable
+                                                title="Innganger"
+                                                data={combinedEntrances}
+                                                onRowClick={setSelectedInternalUrl}
+                                                selectedWebsite={selectedWebsite}
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                                websiteDomain={selectedWebsite?.domain}
                                             />
-                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
                                             <ExternalTrafficTable
                                                 title="Kanaler"
                                                 data={externalChannelsWithUnknown}
