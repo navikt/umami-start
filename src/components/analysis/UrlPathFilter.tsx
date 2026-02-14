@@ -41,6 +41,9 @@ export const UrlPathFilter = ({
     showOperator = true,
     className = ""
 }: UrlPathFilterProps) => {
+    const formatPathLabel = (path: string) => (path === "/" ? "/ (forsiden)" : path);
+    const parseFormattedPath = (path: string) => (path === "/ (forsiden)" ? "/" : path);
+
     // Combobox input state
     const [comboInputValue, setComboInputValue] = useState("");
 
@@ -249,11 +252,12 @@ export const UrlPathFilter = ({
     };
 
     const handleToggleSelected = (option: string, isSelected: boolean) => {
+        const rawOption = parseFormattedPath(option);
         // Mark that we're in a selection process
         isSelectingRef.current = true;
 
         if (isSelected) {
-            let normalized = normalizeUrlToPath(option);
+            let normalized = normalizeUrlToPath(rawOption);
             // If missing leading slash, ask user
             if (normalized && !normalized.startsWith('/')) {
                 setPendingMissingSlash(normalized);
@@ -268,11 +272,11 @@ export const UrlPathFilter = ({
             }
         } else {
             // When removing, match against both the raw option and the normalized version
-            let normalized = normalizeUrlToPath(option);
+            let normalized = normalizeUrlToPath(rawOption);
             if (normalized && !normalized.startsWith('/')) {
                 normalized = '/' + normalized;
             }
-            const newPaths = urlPaths.filter(p => p !== option && p !== normalized);
+            const newPaths = urlPaths.filter(p => p !== rawOption && p !== normalized);
             onUrlPathsChange(newPaths);
         }
 
@@ -345,8 +349,8 @@ export const UrlPathFilter = ({
                     size={size}
                     isMultiSelect
                     allowNewValues
-                    options={urlPaths.map(p => ({ label: p, value: p }))}
-                    selectedOptions={urlPaths}
+                    options={urlPaths.map(p => ({ label: formatPathLabel(p), value: formatPathLabel(p) }))}
+                    selectedOptions={urlPaths.map(formatPathLabel)}
                     onToggleSelected={handleToggleSelected}
                     value={comboInputValue}
                     onChange={(val) => setComboInputValue(val)}
