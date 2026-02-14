@@ -22,7 +22,7 @@ const getMetricLabelCapitalized = (type: string): string => {
         case 'pageviews': return 'Sidevisninger';
         case 'proportion': return 'Andel';
         case 'visits': return 'Økter';
-        default: return 'Unike besøkende';
+        default: return 'Besøkende';
     }
 };
 
@@ -726,17 +726,21 @@ const TrafficAnalysis = () => {
                     </div>
                 </div>
                 <div className="border rounded-lg overflow-x-auto">
-                    <Table size="small">
+                    <Table size="small" className="table-fixed w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">
+                        <colgroup>
+                            <col style={{ width: '6.75rem' }} />
+                            <col />
+                        </colgroup>
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                                <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{metricLabel}</Table.HeaderCell>
                                 <Table.HeaderCell>Navn</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
                             {paginatedData.map((row, i) => (
                                 <Table.Row key={i}>
-                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{row.count.toLocaleString('nb-NO')}</Table.DataCell>
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {renderName(row.name)}
                                     </Table.DataCell>
@@ -799,23 +803,39 @@ const TrafficAnalysis = () => {
         return [...external, ...internal].sort((a, b) => b.count - a.count);
     }, [externalReferrers, entrances]);
 
-    const externalChannels = useMemo(() => {
+    const entranceSummary = useMemo(() => {
         const channelMap = new Map<string, number>();
+        const normalizedDomain = selectedWebsite?.domain?.toLowerCase().replace(/^www\./, '');
+
+        const internalTotal = entrances.reduce((sum, row) => sum + Number(row.count || 0), 0);
+        if (internalTotal > 0) {
+            channelMap.set('Interne sider', internalTotal);
+        }
+
         externalReferrerData.forEach(item => {
-            let channel = 'Andre nettsider';
-            const source = item.name.toLowerCase();
+            const rawName = String(item.name || '');
+            const source = rawName.toLowerCase().replace(/^www\./, '');
+            const count = Number(item.count || 0);
+            let channel = 'Eksterne nettsider';
 
-            if (source === '(none)') channel = 'Direkte';
-            else if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo') || source.includes('ecosia') || source.includes('qwant')) channel = 'Søkemotorer';
-            else if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram')) channel = 'Sosiale medier';
+            if (source === '(none)') {
+                channel = 'Direkte';
+            } else if (normalizedDomain && source === normalizedDomain) {
+                channel = 'Interne sider';
+            } else if (source.includes('google') || source.includes('bing') || source.includes('yahoo') || source.includes('duckduckgo') || source.includes('ecosia') || source.includes('qwant')) {
+                channel = 'Søkemotorer';
+            } else if (source.includes('facebook') || source.includes('twitter') || source.includes('linkedin') || source.includes('instagram') || source.includes('tiktok') || source.includes('snapchat')) {
+                channel = 'Sosiale medier';
+            }
 
-            channelMap.set(channel, (channelMap.get(channel) || 0) + item.count);
+            channelMap.set(channel, (channelMap.get(channel) || 0) + count);
         });
 
         return Array.from(channelMap.entries())
             .map(([name, count]) => ({ name, count }))
+            .filter(item => item.count > 0)
             .sort((a, b) => b.count - a.count);
-    }, [externalReferrerData]);
+    }, [externalReferrerData, entrances, selectedWebsite]);
 
     const seriesTotal = useMemo(() => {
         if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
@@ -825,21 +845,21 @@ const TrafficAnalysis = () => {
         return seriesData.reduce((sum, item) => sum + Number(item.count || 0), 0);
     }, [seriesData, seriesTotalCount, submittedMetricType]);
 
-    const externalChannelsWithUnknown = useMemo(() => {
+    const entranceSummaryWithUnknown = useMemo(() => {
         if (submittedMetricType === 'proportion') {
-            return externalChannels;
+            return entranceSummary;
         }
-        if (!seriesTotal || !externalChannels.length) return externalChannels;
+        if (!seriesTotal || !entranceSummary.length) return entranceSummary;
 
-        const channelSum = externalChannels.reduce((sum, item) => sum + Number(item.count || 0), 0);
+        const channelSum = entranceSummary.reduce((sum, item) => sum + Number(item.count || 0), 0);
         const diff = Math.round(seriesTotal - channelSum);
 
         if (diff > 0) {
-            return [...externalChannels, { name: 'Ukjent / Andre', count: diff }];
+            return [...entranceSummary, { name: 'Ukjent / Andre', count: diff }];
         }
 
-        return externalChannels;
-    }, [externalChannels, seriesTotal, submittedMetricType]);
+        return entranceSummary;
+    }, [entranceSummary, seriesTotal, submittedMetricType]);
 
     const CombinedEntrancesTable = ({
         title,
@@ -939,10 +959,14 @@ const TrafficAnalysis = () => {
                     </div>
                 </div>
                 <div className="border rounded-lg overflow-x-auto">
-                    <Table size="small">
+                    <Table size="small" className="table-fixed w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">
+                        <colgroup>
+                            <col style={{ width: '6.75rem' }} />
+                            <col />
+                        </colgroup>
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                                <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{metricLabel}</Table.HeaderCell>
                                 <Table.HeaderCell>Inngang</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
@@ -953,7 +977,7 @@ const TrafficAnalysis = () => {
                                     className={isClickableRow(row) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
                                     onClick={() => isClickableRow(row) && onRowClick?.(row.name)}
                                 >
-                                    <Table.DataCell align="right">{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{row.count.toLocaleString('nb-NO')}</Table.DataCell>
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {isClickableRow(row) ? (
                                             <span className="flex items-center gap-1 max-w-full">
@@ -1114,10 +1138,14 @@ const TrafficAnalysis = () => {
                     </div>
                 </div>
                 <div className="border rounded-lg overflow-x-auto">
-                    <Table size="small">
+                    <Table size="small" className="table-fixed w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">
+                        <colgroup>
+                            <col style={{ width: '6.75rem' }} />
+                            <col />
+                        </colgroup>
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell align="right">
+                                <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: '6.75rem', minWidth: '6.75rem' }}>
                                     {metricLabel}
                                 </Table.HeaderCell>
                                 <Table.HeaderCell>URL-sti</Table.HeaderCell>
@@ -1130,7 +1158,7 @@ const TrafficAnalysis = () => {
                                     className={isClickableRow(row.name) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
                                     onClick={() => isClickableRow(row.name) && onRowClick?.(row.name)}
                                 >
-                                    <Table.DataCell align="right">
+                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>
                                         {row.count.toLocaleString('nb-NO')}
                                     </Table.DataCell>
                                     <Table.DataCell className="max-w-md" title={row.name}>
@@ -1454,7 +1482,15 @@ const TrafficAnalysis = () => {
                                             </div>
 
                                             <div className="flex flex-col md:flex-row gap-8 mt-8">
-                                                {/* Pages Table - Always visible context - Moved to first position */}
+                                                {/* Chart Data Table - First position */}
+                                                <div className="w-full md:w-1/2">
+                                                    <ChartDataTable
+                                                        data={seriesData}
+                                                        metricLabel={getMetricLabelWithCount(submittedMetricType)}
+                                                    />
+                                                </div>
+
+                                                {/* Pages Table - Second position */}
                                                 <div className="w-full md:w-1/2">
                                                     <TrafficTable
                                                         title="Inkluderte sider"
@@ -1462,14 +1498,6 @@ const TrafficAnalysis = () => {
                                                         onRowClick={setSelectedInternalUrl}
                                                         selectedWebsite={selectedWebsite}
                                                         metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                                    />
-                                                </div>
-
-                                                {/* Chart Data Table - Moved to second position with pagination/search */}
-                                                <div className="w-full md:w-1/2">
-                                                    <ChartDataTable
-                                                        data={seriesData}
-                                                        metricLabel={getMetricLabelWithCount(submittedMetricType)}
                                                     />
                                                 </div>
                                             </div>
@@ -1494,8 +1522,8 @@ const TrafficAnalysis = () => {
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                             />
                                             <ExternalTrafficTable
-                                                title="Kanaler"
-                                                data={externalChannelsWithUnknown}
+                                                title="Innganger oppsummert"
+                                                data={entranceSummaryWithUnknown}
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                             />
                                         </div>
