@@ -1310,26 +1310,25 @@ const TrafficAnalysis = () => {
                                         <Loader size="xlarge" title="Henter data..." />
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col gap-8">
-                                        <div className="w-full md:w-1/2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="md:col-start-1">
                                             <ExternalTrafficTable
                                                 title="Kanaler"
                                                 data={externalChannelsWithUnknown}
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                             />
                                         </div>
-                                        <div className="flex flex-col md:flex-row gap-8">
-                                            <div className="w-full md:w-1/2">
-                                                <ExternalTrafficTable
-                                                    title="Eksterne kilder"
-                                                    data={externalReferrers}
-                                                    metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                                    websiteDomain={selectedWebsite?.domain}
-                                                />
-                                            </div>
-                                            <div className="w-full md:w-1/2">
-                                                <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
-                                            </div>
+                                        <div className="hidden md:block" aria-hidden="true" />
+                                        <div className="md:col-start-1">
+                                            <ExternalTrafficTable
+                                                title="Eksterne kilder"
+                                                data={externalReferrers}
+                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
+                                                websiteDomain={selectedWebsite?.domain}
+                                            />
+                                        </div>
+                                        <div className="md:col-start-2">
+                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
                                         </div>
                                     </div>
                                 )}
