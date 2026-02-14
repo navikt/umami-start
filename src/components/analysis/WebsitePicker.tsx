@@ -130,6 +130,7 @@ const WebsitePicker = ({
   // const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
   const [includeParams, setIncludeParams] = useState<boolean>(false);
   const prevIncludeParams = useRef<boolean>(false);
+  const [showDevSites, setShowDevSites] = useState<boolean>(false);
 
   // Reset includeParams when resetIncludeParams prop changes
   useEffect(() => {
@@ -560,6 +561,39 @@ const WebsitePicker = ({
     return a.name.localeCompare(b.name);
   });
 
+  const isProdHost = !window.location.hostname.includes('.dev.nav.no');
+  const isDevWebsite = (website: Website) =>
+    website.domain.includes('.dev.nav.no') ||
+    website.name.includes('.dev.nav.no') ||
+    /\s-\sdev$/i.test(website.name.trim());
+  const devToggleOptionValue = '__toggle_dev_sites__';
+  const toggleDevSitesLabel = showDevSites ? 'Skjul dev sider' : 'Vis dev sider';
+  const getDisplayName = (website: Website) => {
+    const cleanedName = website.name.replace(/\s*-\s*prod$/i, '').trim();
+    if (!cleanedName) return cleanedName;
+    return cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+  };
+
+  const visibleWebsites = sortedWebsites.filter(website => {
+    if (!isProdHost) return true;
+    if (showDevSites) return true;
+    return !isDevWebsite(website);
+  });
+
+  const uniqueVisibleWebsites = visibleWebsites.filter((website, index, self) => {
+    const displayName = getDisplayName(website).toLowerCase().trim();
+    return index === self.findIndex(w => getDisplayName(w).toLowerCase().trim() === displayName);
+  });
+
+  const comboboxOptions = [
+    ...uniqueVisibleWebsites.map(website => ({
+      label: getDisplayName(website),
+      value: getDisplayName(website),
+      website: website
+    })),
+    ...(isProdHost ? [{ label: toggleDevSitesLabel, value: devToggleOptionValue }] : [])
+  ];
+
   return (
     <div className={`${variant === 'minimal' ? '' : ''}`}>
       <div>
@@ -571,16 +605,19 @@ const WebsitePicker = ({
 
         <UNSAFE_Combobox
           size="small"
-          label={customLabel || "Nettside eller app"}
-          options={sortedWebsites.map(website => ({
-            label: website.name,
-            value: website.name,
-            website: website
-          }))}
-          selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+          label={customLabel || "Nettside"}
+          options={comboboxOptions}
+          selectedOptions={selectedWebsite ? [getDisplayName(selectedWebsite)] : []}
           onToggleSelected={(option: string, isSelected: boolean) => {
+            if (option === devToggleOptionValue) {
+              if (isSelected) {
+                setShowDevSites(prev => !prev);
+              }
+              return;
+            }
+
             if (isSelected) {
-              const website = websites.find(w => w.name === option);
+              const website = websites.find(w => getDisplayName(w) === option);
               if (website) {
                 handleWebsiteChange(website);
               }

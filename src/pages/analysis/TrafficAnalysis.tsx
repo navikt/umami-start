@@ -1233,7 +1233,7 @@ const TrafficAnalysis = () => {
                                                         </Switch>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Label size="small" htmlFor="traffic-granularity">Tidsoppløsning</Label>
+                                                        <Label size="small" htmlFor="traffic-granularity">Intervall</Label>
                                                         <Select
                                                             id="traffic-granularity"
                                                             label="Tidsoppløsning"

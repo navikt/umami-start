@@ -355,7 +355,7 @@ const BrokenLinks = () => {
                 <>
                     <TextField
                         size="small"
-                        label="Side eller URL"
+                        label="URL"
                         value={urlPath}
                         onChange={(e) => {
                             const val = e.target.value;

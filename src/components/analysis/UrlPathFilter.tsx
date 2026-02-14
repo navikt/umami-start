@@ -35,7 +35,7 @@ export const UrlPathFilter = ({
     pathOperator,
     onPathOperatorChange,
     selectedWebsiteDomain,
-    label = "Side eller URL",
+    label = "URL",
     size = "small",
     hideLabel = false,
     showOperator = true,

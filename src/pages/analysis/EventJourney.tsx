@@ -615,7 +615,7 @@ const EventJourney = () => {
 
     return (
         <ChartLayout
-            title="Hendelsesflyt"
+            title="Hendelsesforløp"
             description="Se rekkefølgen av hendelser brukere gjør på en spesifikk side."
             currentPage="hendelsesreiser" // Need to update type in AnalyticsNavigation probably
             websiteDomain={selectedWebsite?.domain}
@@ -631,7 +631,7 @@ const EventJourney = () => {
                 <>
                     <TextField
                         size="small"
-                        label="Side eller URL"
+                        label="URL"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
                         onBlur={(e) => setUrlPath(normalizeUrlToPath(e.target.value))}
@@ -740,7 +740,6 @@ const EventJourney = () => {
 
 
                     <div className="mb-4">
-                        <Heading level="2" size="medium" className="mb-3">Hendelsesflyt</Heading>
                         <div className="flex flex-wrap items-end gap-3">
                             {showDecoratorFilter && (
                                 <Select

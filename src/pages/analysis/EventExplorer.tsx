@@ -420,7 +420,7 @@ const EventExplorer = () => {
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
                         className="w-full sm:w-[300px]"
-                        label="Side eller URL"
+                        label="URL"
                         showOperator={true}
 
                     />
@@ -466,7 +466,7 @@ const EventExplorer = () => {
                     return (
                         <div>
                             <div className="flex justify-between items-end mb-4">
-                                <Heading level="3" size="small">Hendelser</Heading>
+                                <Heading level="3" size="small">Egendefinerte hendelser</Heading>
                                 <div className="w-64">
                                     <TextField
                                         label="Søk"

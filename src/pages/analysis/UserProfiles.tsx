@@ -253,7 +253,7 @@ const UserProfiles = () => {
                             pathOperator={pathOperator}
                             onPathOperatorChange={setPathOperator}
                             selectedWebsiteDomain={selectedWebsite?.domain}
-                            label="Side eller URL"
+                            label="URL"
                         />
                     </div>
 

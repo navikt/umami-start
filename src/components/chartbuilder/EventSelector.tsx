@@ -241,7 +241,7 @@ const EventSelector = ({
                       <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
                         <div className="mb-3">
                           <Select
-                            label="Side eller URL"
+                            label="URL"
                             value={urlPathOperator}
                             onChange={(e) => {
                               const newOperator = e.target.value;
