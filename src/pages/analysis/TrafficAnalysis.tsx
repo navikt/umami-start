@@ -1241,7 +1241,7 @@ const TrafficAnalysis = () => {
         return (
             <VStack gap="space-4">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
-                    <Heading level="3" size="small">Trend</Heading>
+                    <Heading level="3" size="small">Oversikt</Heading>
                     <div className="w-full sm:w-64 min-w-0">
                         <TextField
                             label={submittedGranularity === 'hour' ? "Søk etter tidspunkt" : "Søk etter dato"}
@@ -1410,7 +1410,7 @@ const TrafficAnalysis = () => {
 
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
-                                <Tabs.Tab value="visits" label="Trend" />
+                                <Tabs.Tab value="visits" label="Oversikt" />
                                 <Tabs.Tab value="sources" label="Inn- og utganger" />
                             </Tabs.List>
 
