@@ -397,12 +397,6 @@ const TrafficAnalysis = () => {
             }
             return;
         }
-
-        if (activeTab === 'navigation') {
-            if (!hasFetchedBreakdown) {
-                fetchTrafficBreakdown(startDate, endDate, options);
-            }
-        }
     }, [
         activeTab,
         hasAttemptedFetch,
@@ -638,7 +632,7 @@ const TrafficAnalysis = () => {
     const ExternalTrafficTable = ({ title, data, metricLabel, websiteDomain }: { title: string; data: { name: string; count: number }[]; metricLabel: string; websiteDomain?: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
-        const rowsPerPage = 20;
+        const rowsPerPage = 10;
 
         const filteredData = data.filter(row =>
             row.name.toLowerCase().includes(search.toLowerCase())
@@ -834,7 +828,7 @@ const TrafficAnalysis = () => {
     const TrafficTable = ({ title, data, onRowClick, selectedWebsite, metricLabel }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void; selectedWebsite: Website | null; metricLabel: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
-        const rowsPerPage = 20;
+        const rowsPerPage = 10;
 
         const filteredData = data.filter(row =>
             row.name.toLowerCase().includes(search.toLowerCase())
@@ -1015,7 +1009,7 @@ const TrafficAnalysis = () => {
     const ChartDataTable = ({ data, metricLabel }: { data: any[]; metricLabel: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
-        const rowsPerPage = 20;
+        const rowsPerPage = 10;
 
         const formatTime = (time: string) => {
             if (submittedGranularity === 'hour') {
@@ -1208,8 +1202,7 @@ const TrafficAnalysis = () => {
                         <Tabs value={activeTab} onChange={setActiveTab}>
                             <Tabs.List>
                                 <Tabs.Tab value="visits" label="Trend" />
-                                <Tabs.Tab value="sources" label="Trafikkilder" />
-                                <Tabs.Tab value="navigation" label="Navigasjon" />
+                                <Tabs.Tab value="sources" label="Inn- og utganger" />
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
@@ -1310,41 +1303,23 @@ const TrafficAnalysis = () => {
                                         <Loader size="xlarge" title="Henter data..." />
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="md:col-start-1">
+                                    <div className="flex flex-col md:flex-row gap-8">
+                                        <div className="w-full md:w-1/2 flex flex-col gap-8">
+                                            <ExternalTrafficTable
+                                                title="Eksterne innganger"
+                                                data={externalReferrers}
+                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
+                                                websiteDomain={selectedWebsite?.domain}
+                                            />
+                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
                                             <ExternalTrafficTable
                                                 title="Kanaler"
                                                 data={externalChannelsWithUnknown}
                                                 metricLabel={getMetricLabelCapitalized(submittedMetricType)}
                                             />
                                         </div>
-                                        <div className="hidden md:block" aria-hidden="true" />
-                                        <div className="md:col-start-1">
-                                            <ExternalTrafficTable
-                                                title="Eksterne kilder"
-                                                data={externalReferrers}
-                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                                websiteDomain={selectedWebsite?.domain}
-                                            />
-                                        </div>
-                                        <div className="md:col-start-2">
-                                            <TrafficTable title="Interne innganger" data={entrances} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
-                                        </div>
-                                    </div>
-                                )}
-                            </Tabs.Panel>
-
-                            <Tabs.Panel value="navigation" className="pt-4">
-                                {hasAttemptedFetch && (isLoadingBreakdown || !hasFetchedBreakdown) ? (
-                                    <div className="flex justify-center items-center h-full py-16">
-                                        <Loader size="xlarge" title="Henter data..." />
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col md:flex-row gap-8">
-                                        <div className="w-full md:w-1/2">
+                                        <div className="w-full md:w-1/2 flex flex-col gap-8">
                                             <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
-                                        </div>
-                                        <div className="w-full md:w-1/2">
                                             <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">
                                                 <Heading level="3" size="small" className="mb-2">Se vanlige veier gjennom nettstedet</Heading>
                                                 <p className="text-[var(--ax-text-subtle)] mb-4">
