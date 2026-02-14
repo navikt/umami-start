@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
+import React, { useMemo, useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { Button, Tooltip, Loader } from '@navikt/ds-react';
 import { Plus, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import AnalysisActionModal from '../AnalysisActionModal';
@@ -134,6 +134,23 @@ const UmamiJourneyView: React.FC<UmamiJourneyViewProps> = ({ nodes, links, isFul
 
         return { stepsData, nodeValues, adjacency, reverseAdjacency };
     }, [nodes, links, journeyDirection]); // Added journeyDirection dependency
+
+    // Preselect the first node in the first step when new data loads.
+    useEffect(() => {
+        if (!stepsData.length) {
+            setSelectedNodeId(null);
+            return;
+        }
+
+        setSelectedNodeId((prevSelectedNodeId) => {
+            const hasPreviousSelection = prevSelectedNodeId
+                ? stepsData.some((step) => step.items.some((item) => item.nodeId === prevSelectedNodeId))
+                : false;
+
+            if (hasPreviousSelection) return prevSelectedNodeId;
+            return stepsData[0]?.items[0]?.nodeId ?? null;
+        });
+    }, [stepsData]);
 
     // Determine connected nodes for highlighting (Recursive)
     const connectedNodeIds = useMemo(() => {
