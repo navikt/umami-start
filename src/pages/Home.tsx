@@ -24,7 +24,7 @@ function Home() {
             }}>
                 <Page.Block width="2xl" gutters style={{ width: "100%" }}>
                     <div style={{ width: "100%", maxWidth: "680px", margin: "0 auto" }}>
-                        <Heading spacing={true} as="h1" size="xlarge">Mål brukeradferd med Umami</Heading>
+                        <Heading spacing={true} as="h1" size="xlarge">Nav Webstatistikk</Heading>
                         <UrlSearchForm />
                     </div>
                 </Page.Block>
