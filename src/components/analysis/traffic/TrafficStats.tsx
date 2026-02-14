@@ -63,7 +63,8 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
             default: return 'unike besøkende';
         }
     };
-    let box1Label = `Totalt ${getMetricLabel(metricType)}`;
+    const valueSuffix = metricType === 'proportion' ? '' : getMetricLabel(metricType);
+    let box1Label = 'Totalt';
     let box1Value = totalOverride !== undefined ? totalOverride : sum;
 
     let timeUnitLabel = 'dag';
@@ -91,29 +92,44 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
         box3Label = 'Høyeste andel';
         box3Value = max; // Max proportion (0.x)
         box3Subtext = maxLabelText;
+    } else {
+        // Show date/time in the tile heading for top period cards.
+        box3Label = `${box3Label} ${maxLabelText}`;
+        box3Subtext = '';
     }
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box1Label}</div>
-                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline gap-2">
                     {formatValue(box1Value)}
+                    {valueSuffix && (
+                        <span className="text-sm font-normal text-[var(--ax-text-neutral-subtle)]">
+                            {valueSuffix}
+                        </span>
+                    )}
                 </div>
             </div>
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box2Label}</div>
-                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline gap-2">
                     {formatValue(box2Value)}
+                    {valueSuffix && (
+                        <span className="text-sm font-normal text-[var(--ax-text-neutral-subtle)]">
+                            {valueSuffix}
+                        </span>
+                    )}
                 </div>
             </div>
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box3Label}</div>
-                <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline gap-2">
+                <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline flex-wrap gap-2">
                     {formatValue(box3Value)}
-                    {box3Subtext && (
-                        <span className="text-sm font-normal text-gray-500">
-                            {box3Subtext}
+                    {(valueSuffix || box3Subtext) && (
+                        <span className="text-sm font-normal text-[var(--ax-text-neutral-subtle)] inline-flex flex-wrap gap-1">
+                            {valueSuffix && <span>{valueSuffix}</span>}
+                            {box3Subtext && <span>{box3Subtext}</span>}
                         </span>
                     )}
                 </div>
