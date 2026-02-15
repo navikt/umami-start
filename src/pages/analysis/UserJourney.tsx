@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Select, Tabs, ReadMore } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
@@ -61,6 +61,53 @@ const UserJourney = () => {
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [reverseVisualOrder, setReverseVisualOrder] = useState<boolean>(false); // Default off
     const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
+    const sankeyContainerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (activeTab !== 'sankey' || !sankeyContainerRef.current) return;
+
+        const repaintNodesAboveLinks = () => {
+            const svg = sankeyContainerRef.current?.querySelector('svg');
+            if (!svg) return;
+
+            const groups = Array.from(svg.children).filter((el): el is SVGGElement => el.tagName.toLowerCase() === 'g');
+            const nodeGroups = groups.filter((g) => g.querySelector('rect') !== null);
+            const linkGroups = groups.filter((g) => g.querySelector('path') !== null && g.querySelector('rect') === null);
+
+            if (nodeGroups.length === 0 || linkGroups.length === 0) return;
+
+            const firstNodeIndex = groups.indexOf(nodeGroups[0]);
+            const lastLinkIndex = groups.indexOf(linkGroups[linkGroups.length - 1]);
+
+            // Already correct: all links are behind nodes.
+            if (firstNodeIndex > lastLinkIndex) return;
+
+            // In SVG, later siblings are painted on top.
+            nodeGroups.forEach((nodeGroup) => {
+                svg.appendChild(nodeGroup);
+            });
+        };
+
+        const frame1 = requestAnimationFrame(() => {
+            repaintNodesAboveLinks();
+            requestAnimationFrame(repaintNodesAboveLinks);
+        });
+        const svg = sankeyContainerRef.current.querySelector('svg');
+        const observer = svg
+            ? new MutationObserver(() => {
+                repaintNodesAboveLinks();
+            })
+            : null;
+
+        if (svg && observer) {
+            observer.observe(svg, { childList: true, subtree: true });
+        }
+
+        return () => {
+            cancelAnimationFrame(frame1);
+            observer?.disconnect();
+        };
+    }, [activeTab, data, steps, isFullscreen, rawData]);
 
 
     // Auto-submit when URL parameters are present (for shared links)
@@ -459,7 +506,7 @@ const UserJourney = () => {
                             )}
                                  */}
 
-                                <div className="overflow-x-auto w-full">
+                                <div className="overflow-x-auto w-full" ref={sankeyContainerRef}>
                                     <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', minWidth: `${Math.max(1000, steps * 350)}px` }}>
                                         <ResponsiveContainer>
                                             <SankeyChart data={data} />
