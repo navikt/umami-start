@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, InfoCard } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, ReadMore } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -477,14 +477,13 @@ const UserJourney = () => {
                         <Tabs.Panel value="steps" className="pt-4">
                             <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto' : ''}`}>
                                 {!isFullscreen && (
-                                    <InfoCard data-color="info" className="mb-6">
-                                        <InfoCard.Header>
-                                            <InfoCard.Title>Tips</InfoCard.Title>
-                                        </InfoCard.Header>
-                                        <InfoCard.Content>
-                                            Klikk på stegene for å utforske flyt. Legg til steg i en traktanalyse med pluss-ikonet (+).
-                                        </InfoCard.Content>
-                                    </InfoCard>
+                                    <ReadMore header="Slik bruker du denne analysen" defaultOpen={true} size="large" className="mb-6">
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Klikk på et steg-kortene for å utheve flyten via bestemte sider</li>
+                                            <li>Bruk pluss-ikonet (+) for å legge til steg i en traktanalyse.</li>
+                                            <li>Juster reiseretningen, for å se brukerreisen i motsatt retning</li>
+                                        </ul>
+                                    </ReadMore>
                                 )}
                                 {isFullscreen && (
                                     <div className="mb-4 flex justify-end">
