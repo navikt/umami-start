@@ -134,64 +134,63 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Column 1: Trafikk & Hendelser */}
                         <div className="flex flex-col gap-2">
                             <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
-                                Trafikk & Hendelser
+                                Trafikk
                             </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/trafikkanalyse', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
                                 Trafikkoversikt
                             </Button>
-                            {hasMarketing && (
-                                <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className="justify-start">
-                                    Markedsanalyse
-                                </Button>
-                            )}
-                            <Button variant="secondary" onClick={() => openAnalysis('/utforsk-hendelser', 'pagePath')} icon={<Search aria-hidden />} className="justify-start">
-                                Hendelse-utforsker
-                            </Button>
-                        </div>
-
-                        {/* Column 2: Brukere & lojalitet */}
-                        <div className="flex flex-col gap-2">
-                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
-                                Brukere & lojalitet
-                            </div>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
-                                Brukerdetaljer
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukerprofiler', 'pagePath')} icon={<UserSearch aria-hidden />} className="justify-start">
-                                Brukerprofiler
-                            </Button>
-                            <Button variant="secondary" onClick={() => openAnalysis('/brukerlojalitet', 'urlPath')} icon={<Repeat aria-hidden />} className="justify-start">
-                                Brukerlojalitet
-                            </Button>
-                        </div>
-
-                        {/* Column 3: Brukerreiser */}
-                        <div className="flex flex-col gap-2">
-                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
-                                Navigasjon
-                            </div>
                             <Button variant="secondary" onClick={() => openAnalysis('/brukerreiser', 'startUrl')} icon={<Map aria-hidden />} className="justify-start">
                                 Navigasjonsflyt
+                            </Button>
+                            <Button variant="secondary" onClick={() => openAnalysis('/trakt', 'urlPath')} icon={<BarChart2 aria-hidden />} className="justify-start">
+                                Trakt
+                            </Button>
+                            {hasMarketing && (
+                                <Button variant="secondary" onClick={() => openAnalysis('/markedsanalyse', 'urlPath')} icon={<TrendingUp aria-hidden />} className="justify-start">
+                                    Kampanjer
+                                </Button>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
+                                Hendelser
+                            </div>
+                            <Button variant="secondary" onClick={() => openAnalysis('/utforsk-hendelser', 'pagePath')} icon={<Search aria-hidden />} className="justify-start">
+                                Egendefinerte hendelser
                             </Button>
                             <Button variant="secondary" onClick={() => openAnalysis('/hendelsesreiser', 'urlPath')} icon={<Activity aria-hidden />} className="justify-start">
                                 Hendelsesforløp
                             </Button>
                         </div>
 
-                        {/* Column 4: Innholdskvalitet - Only show if Siteimprove is supported */}
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
+                                Brukere
+                            </div>
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukersammensetning', 'pagePath')} icon={<Users aria-hidden />} className="justify-start">
+                                Brukerdetaljer
+                            </Button>
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerprofiler', 'pagePath')} icon={<UserSearch aria-hidden />} className="justify-start">
+                                Enkeltbrukere
+                            </Button>
+                            <Button variant="secondary" onClick={() => openAnalysis('/brukerlojalitet', 'urlPath')} icon={<Repeat aria-hidden />} className="justify-start">
+                                Brukerlojalitet
+                            </Button>
+                        </div>
+
                         {hasSiteimprove && (
                             <div className="flex flex-col gap-2">
                                 <div className="text-xs font-semibold text-[var(--ax-text-subtle)] uppercase tracking-wider mb-1">
                                     Innholdskvalitet
                                 </div>
-                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className="justify-start">
-                                    Stavekontroll
-                                </Button>
                                 <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/odelagte-lenker', 'urlPath')} icon={<Unlink aria-hidden />} className="justify-start">
                                     Ødelagte lenker
+                                </Button>
+                                <Button variant="secondary" onClick={() => openAnalysis('/kvalitet/stavekontroll', 'urlPath')} icon={<SpellCheck aria-hidden />} className="justify-start">
+                                    Stavekontroll
                                 </Button>
                             </div>
                         )}

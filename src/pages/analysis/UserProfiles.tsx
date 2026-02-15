@@ -232,9 +232,9 @@ const UserProfiles = () => {
 
     return (
         <ChartLayout
-            title="Brukerprofiler"
+            title="Enkeltbrukere"
             description="Se individuelle brukere og deres aktivitetslogg."
-            currentPage="brukerprofiler"
+            currentPage="enkeltbrukere"
             websiteDomain={selectedWebsite?.domain}
             websiteName={selectedWebsite?.name}
             sidebarContent={
@@ -300,7 +300,7 @@ const UserProfiles = () => {
                             onClick={handleSearchClick}
                             disabled={!selectedWebsite}
                         >
-                            Vis brukerprofiler
+                            Vis enkeltbrukere
                         </Button>
                     </div>
                 </>
@@ -340,10 +340,10 @@ const UserProfiles = () => {
                     <>
                         <div className="flex justify-between items-end mb-4">
                             <div>
-                                <Heading level="2" size="medium" className="mb-2">
-                                    {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'brukere'}
+                                <Heading level="2" size="medium">
+                                    Viser {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'enkeltbrukere'}
                                 </Heading>
-                                <BodyShort className="text-[var(--ax-text-subtle)] max-w-prose">
+                                <BodyShort className="pt-1 text-[var(--ax-text-subtle)] max-w-prose">
                                     {isCookieRange
                                         ? 'Cookies er aktivert. Brukere identifiseres med cookie‑ID på tvers av økter innen perioden.'
                                         : isMixRange

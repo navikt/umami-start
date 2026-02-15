@@ -2,7 +2,7 @@ import { Link, List, Heading } from '@navikt/ds-react';
 import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
 import { useMarketingSupport } from '../../hooks/useSiteimproveSupport';
 
-export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'brukerprofiler' | 'personvern' | 'hendelsesreiser' | 'sql' | 'grafdeling' | 'odelagte-lenker' | 'stavekontroll';
+export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'enkeltbrukere' | 'personvern' | 'hendelsesreiser' | 'sql' | 'grafdeling' | 'odelagte-lenker' | 'stavekontroll';
 
 interface AnalyticsNavigationProps {
     currentPage?: AnalyticsPage;
@@ -50,9 +50,9 @@ export const analyticsPages = [
         description: 'Se hvor folk faller fra i en prosess'
     },
     {
-        id: 'brukerprofiler',
+        id: 'enkeltbrukere',
         href: '/brukerprofiler',
-        label: 'Brukerprofiler',
+        label: 'Enkeltbrukere',
         description: 'Se info om individuelle besøkende'
     },
     {

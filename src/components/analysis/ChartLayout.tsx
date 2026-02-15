@@ -35,7 +35,7 @@ const chartGroups = [
     {
         title: "Brukere",
         icon: <Users size={18} />,
-        ids: ['brukersammensetning', 'brukerprofiler', 'brukerlojalitet']
+        ids: ['brukersammensetning', 'enkeltbrukere', 'brukerlojalitet']
     },
     {
         title: "Innholdskvalitet",
