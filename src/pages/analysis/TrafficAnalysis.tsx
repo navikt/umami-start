@@ -28,10 +28,10 @@ const getMetricLabelCapitalized = (type: string): string => {
 
 const getMetricLabelWithCount = (type: string): string => {
     switch (type) {
-        case 'pageviews': return 'Antall sidevisninger';
+        case 'pageviews': return 'Sidevisninger';
         case 'proportion': return 'Andel';
-        case 'visits': return 'Antall økter';
-        default: return 'Antall unike besøkende';
+        case 'visits': return 'Økter';
+        default: return 'Besøkende';
     }
 };
 
