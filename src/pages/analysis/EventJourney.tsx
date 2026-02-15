@@ -794,8 +794,8 @@ const EventJourney = () => {
 
                     <Tabs value={activeTab} onChange={setActiveTab}>
                         <Tabs.List>
-                            <Tabs.Tab value="visual" label="Flyt" />
-                            <Tabs.Tab value="table" label="Tabell" />
+                            <Tabs.Tab value="visual" label="Hendelsesforløp" />
+                            <Tabs.Tab value="table" label="Tabellvisning" />
                         </Tabs.List>
 
                         <Tabs.Panel value="visual" className="pt-4">

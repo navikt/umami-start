@@ -483,8 +483,8 @@ const EventExplorer = () => {
                                     <Table size="small">
                                         <Table.Header>
                                             <Table.Row>
-                                                <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
-                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                <Table.HeaderCell>Navn</Table.HeaderCell>
+                                                <Table.HeaderCell align="right">Antall tilfeller</Table.HeaderCell>
                                                 <Table.HeaderCell></Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>
