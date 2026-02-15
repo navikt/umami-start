@@ -1535,9 +1535,9 @@ const TrafficAnalysis = () => {
                                         <div className="w-full md:w-1/2 flex flex-col gap-8">
                                             <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
                                             <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">
-                                                <Heading level="3" size="small" className="mb-2">Se vanlige veier gjennom nettstedet</Heading>
-                                                <p className="text-[var(--ax-text-subtle)] mb-4">
-                                                    Navigasjonsflyt viser hvordan brukerne navigerer mellom flere sider i samme besøk.
+                                                <Heading level="3" size="small" className="mb-2">Vil du se hele brukerreisen?</Heading>
+                                                <p className="text-[var(--ax-text-subtle)] mb-4 mt-3">
+                                                    Siden du er på nå viser hvor besøk starter og slutter. I navigasjonsflyt ser du hele reisen gjennom nettstedet.
                                                 </p>
                                                 <Button
                                                     variant="secondary"
