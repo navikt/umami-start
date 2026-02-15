@@ -374,7 +374,7 @@ const Retention = () => {
 
     return (
         <ChartLayout
-            title="Brukerlojalitet"
+            title="Gjenbesøk"
             description="Se hvor mange som kommer tilbake etter sitt første besøk."
             currentPage="brukerlojalitet"
             websiteDomain={selectedWebsite?.domain}

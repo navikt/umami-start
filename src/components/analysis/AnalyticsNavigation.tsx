@@ -58,7 +58,7 @@ export const analyticsPages = [
     {
         id: 'brukerlojalitet',
         href: '/brukerlojalitet',
-        label: 'Brukerlojalitet',
+        label: 'Gjenbesøk',
         description: 'Se hvor mange som kommer tilbake'
     },
     {
