@@ -646,6 +646,7 @@ const TrafficAnalysis = () => {
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
         const renderName = (name: string) => {
+            if (name === 'Interne sider') return <div className="truncate">Interne sider</div>;
             if (name === 'Ukjent / Andre') {
                 return (
                     <div className="flex items-center gap-2 max-w-full">
@@ -788,29 +789,27 @@ const TrafficAnalysis = () => {
     }, [externalReferrerData]);
 
     const combinedEntrances = useMemo(() => {
+        const normalizedDomain = selectedWebsite?.domain?.toLowerCase().replace(/^www\./, '');
         const external = externalReferrers.map(item => ({
             name: item.name,
             count: item.count,
-            type: 'external' as const
+            type: 'external' as const,
+            isDomainInternal: Boolean(normalizedDomain && item.name.toLowerCase().replace(/^www\./, '') === normalizedDomain)
         }));
 
         const internal = entrances.map(item => ({
             name: item.name,
             count: item.count,
-            type: 'internal' as const
+            type: 'internal' as const,
+            isDomainInternal: false
         }));
 
         return [...external, ...internal].sort((a, b) => b.count - a.count);
-    }, [externalReferrers, entrances]);
+    }, [externalReferrers, entrances, selectedWebsite]);
 
     const entranceSummary = useMemo(() => {
         const channelMap = new Map<string, number>();
         const normalizedDomain = selectedWebsite?.domain?.toLowerCase().replace(/^www\./, '');
-
-        const internalTotal = entrances.reduce((sum, row) => sum + Number(row.count || 0), 0);
-        if (internalTotal > 0) {
-            channelMap.set('Interne sider', internalTotal);
-        }
 
         externalReferrerData.forEach(item => {
             const rawName = String(item.name || '');
@@ -835,7 +834,7 @@ const TrafficAnalysis = () => {
             .map(([name, count]) => ({ name, count }))
             .filter(item => item.count > 0)
             .sort((a, b) => b.count - a.count);
-    }, [externalReferrerData, entrances, selectedWebsite]);
+    }, [externalReferrerData, selectedWebsite]);
 
     const seriesTotal = useMemo(() => {
         if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
@@ -869,7 +868,7 @@ const TrafficAnalysis = () => {
         metricLabel
     }: {
         title: string;
-        data: { name: string; count: number; type: 'external' | 'internal' }[];
+        data: { name: string; count: number; type: 'external' | 'internal'; isDomainInternal?: boolean }[];
         onRowClick?: (name: string) => void;
         selectedWebsite: Website | null;
         metricLabel: string;
@@ -880,7 +879,11 @@ const TrafficAnalysis = () => {
         const rowsPerPage = 10;
 
         const filteredData = data.filter(row => {
-            const matchesType = typeFilter === 'all' || row.type === typeFilter;
+            const matchesType = typeFilter === 'all'
+                ? !row.isDomainInternal
+                : (typeFilter === 'external'
+                    ? row.type === 'external' && !row.isDomainInternal
+                    : row.type === 'internal');
             const matchesSearch = row.name.toLowerCase().includes(search.toLowerCase());
             return matchesType && matchesSearch;
         });
@@ -897,7 +900,9 @@ const TrafficAnalysis = () => {
 
         const renderName = (row: { name: string; type: 'external' | 'internal' }) => {
             if (row.name === '/') return '/ (forside)';
-            if (selectedWebsite && row.name === selectedWebsite.domain) return `Interntrafikk (${row.name})`;
+            if (selectedWebsite && row.name.toLowerCase().replace(/^www\./, '') === selectedWebsite.domain.toLowerCase().replace(/^www\./, '')) {
+                return `Interne sider (${row.name})`;
+            }
             return row.name;
         };
 
