@@ -1319,7 +1319,7 @@ const TrafficAnalysis = () => {
     return (
         <ChartLayout
             title="Trafikkoversikt"
-            description="Se besøk over tid og trafikkilder."
+            description="Se besøk over tid, hvor de kommer fra og hvor de går videre."
             currentPage="trafikkanalyse"
             websiteDomain={selectedWebsite?.domain}
             websiteName={selectedWebsite?.name}
