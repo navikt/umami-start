@@ -160,6 +160,62 @@ function getAnalysisTypeOverride(req, fallback) {
     return fallback;
 }
 
+// Normalize a user-provided URL/path into a safe path for filtering.
+function normalizeUrlPathInput(rawPath, { stripTrailingSlash = false } = {}) {
+    if (typeof rawPath !== 'string') return '';
+
+    let normalizedPath = rawPath.trim();
+    if (!normalizedPath) return '';
+
+    const hashIndex = normalizedPath.indexOf('#');
+    if (hashIndex !== -1) {
+        normalizedPath = normalizedPath.substring(0, hashIndex);
+    }
+
+    try {
+        if (normalizedPath.includes('://')) {
+            normalizedPath = decodeURIComponent(new URL(normalizedPath).pathname);
+        } else if (!normalizedPath.startsWith('/') && normalizedPath.includes('.') && normalizedPath.includes('/')) {
+            normalizedPath = decodeURIComponent(new URL(`https://${normalizedPath}`).pathname);
+        }
+    } catch (_) {
+        // Fall back to the raw value if URL parsing fails.
+    }
+
+    const queryIndex = normalizedPath.indexOf('?');
+    if (queryIndex !== -1) {
+        normalizedPath = normalizedPath.substring(0, queryIndex);
+    }
+
+    if (!normalizedPath.startsWith('/')) {
+        normalizedPath = `/${normalizedPath}`;
+    }
+
+    normalizedPath = normalizedPath.replace(/\/{2,}/g, '/');
+
+    if (stripTrailingSlash && normalizedPath.length > 1) {
+        normalizedPath = normalizedPath.replace(/\/+$/, '');
+    }
+
+    return normalizedPath || '/';
+}
+
+function getNormalizedUrlPath(rawPath) {
+    return normalizeUrlPathInput(rawPath, { stripTrailingSlash: true }) || '/';
+}
+
+function getUrlPathStartsWithPattern(rawPath, { stripTrailingSlash = false } = {}) {
+    const normalizedPath = normalizeUrlPathInput(rawPath, { stripTrailingSlash }) || '/';
+    return `${normalizedPath.toLowerCase()}%`;
+}
+
+function setUrlPathExactFilterParams(params, rawPath) {
+    const normalizedPath = getNormalizedUrlPath(rawPath);
+    params.urlPath = normalizedPath;
+    params.urlPathSlash = normalizedPath === '/' ? '/' : `${normalizedPath}/`;
+    params.urlPathQuery = `${normalizedPath}?%`;
+}
+
 // Helper query to substitute parameters in SQL string for display
 const substituteQueryParameters = (query, params) => {
     if (!query || !params) return query;
@@ -666,16 +722,14 @@ app.get('/api/bigquery/websites/:websiteId/events', async (req, res) => {
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     url_path = @urlPath 
                     OR url_path = @urlPathSlash 
                     OR url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -771,16 +825,14 @@ app.get('/api/bigquery/websites/:websiteId/event-properties', async (req, res) =
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(e.url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     e.url_path = @urlPath 
                     OR e.url_path = @urlPathSlash 
                     OR e.url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -936,16 +988,14 @@ app.get('/api/bigquery/websites/:websiteId/event-series', async (req, res) => {
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     url_path = @urlPath 
                     OR url_path = @urlPathSlash 
                     OR url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -1088,16 +1138,14 @@ app.get('/api/bigquery/websites/:websiteId/event-parameter-values', async (req, 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(e.url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     e.url_path = @urlPath 
                     OR e.url_path = @urlPathSlash 
                     OR e.url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -1204,16 +1252,14 @@ app.get('/api/bigquery/websites/:websiteId/event-latest', async (req, res) => {
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(e.url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     e.url_path = @urlPath 
                     OR e.url_path = @urlPathSlash 
                     OR e.url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -1355,7 +1401,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
                 const condition = `LOWER(${col}url_path) LIKE @urlPathPattern`;
                 urlFilter = `AND ${condition}`;
                 urlFilterCondition = condition;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 const condition = `(
                     ${col}url_path = @urlPath 
@@ -1368,9 +1414,7 @@ app.get('/api/bigquery/websites/:websiteId/traffic-series', async (req, res) => 
                     OR ${col}url_path = @urlPathSlash 
                     OR ${col}url_path LIKE @urlPathQuery
                 `;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -1592,13 +1636,11 @@ app.get('/api/bigquery/websites/:websiteId/traffic-flow', async (req, res) => {
             // Check operator
             const pathOperator = req.query.pathOperator;
             let condition = 'url_path = @urlPath';
-            params.urlPath = req.query.urlPath; // Set urlPath for both cases
+            params.urlPath = getNormalizedUrlPath(req.query.urlPath);
 
             if (pathOperator === 'starts-with') {
                 condition = 'LOWER(url_path) LIKE @urlPathPattern';
-                params.urlPathPattern = req.query.urlPath.toLowerCase() + '%';
-            } else {
-                // params.urlPath is already set above to req.query.urlPath
+                params.urlPathPattern = getUrlPathStartsWithPattern(req.query.urlPath, { stripTrailingSlash: true });
             }
 
 
@@ -1794,16 +1836,14 @@ app.get('/api/bigquery/websites/:websiteId/page-metrics', async (req, res) => {
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(${col}url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     ${col}url_path = @urlPath 
                     OR ${col}url_path = @urlPathSlash 
                     OR ${col}url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -1905,15 +1945,14 @@ app.get('/api/bigquery/websites/:websiteId/traffic-breakdown', async (req, res) 
         }
 
         let condition = 'url_path = @urlPath';
-        params.urlPath = urlPath || '/'; // Default to root if missing, though typically required
+        params.urlPath = getNormalizedUrlPath(urlPath || '/');
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 condition = 'LOWER(url_path) LIKE @urlPathPattern';
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
-                params.urlPathQuery = urlPath + '?%';
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
+                setUrlPathExactFilterParams(params, urlPath);
                 condition = `(
                     url_path = @urlPath 
                     OR url_path = @urlPathSlash 
@@ -2091,6 +2130,12 @@ app.get('/api/bigquery/websites', async (req, res) => {
 app.post('/api/bigquery/journeys', async (req, res) => {
     try {
         const { websiteId, startUrl, startDate, endDate, steps = 3, limit = 30, direction = 'forward' } = req.body;
+        if (typeof startUrl !== 'string' || !startUrl.trim()) {
+            return res.status(400).json({
+                error: 'startUrl is required'
+            });
+        }
+        const normalizedStartUrl = getNormalizedUrlPath(startUrl);
 
         // Get NAV ident from authenticated user for audit logging
         const navIdent = req.user?.navIdent || 'UNKNOWN';
@@ -2209,7 +2254,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
             location: 'europe-north1',
             params: {
                 websiteId,
-                startUrl,
+                startUrl: normalizedStartUrl,
                 startDate,
                 endDate,
                 steps,
@@ -2226,7 +2271,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 location: 'europe-north1',
                 params: {
                     websiteId,
-                    startUrl,
+                    startUrl: normalizedStartUrl,
                     startDate,
                     endDate,
                     steps,
@@ -2288,7 +2333,7 @@ app.post('/api/bigquery/journeys', async (req, res) => {
                 location: 'europe-north1',
                 params: {
                     websiteId,
-                    startUrl,
+                    startUrl: normalizedStartUrl,
                     startDate,
                     endDate,
                     steps,
@@ -2404,6 +2449,16 @@ app.post('/api/bigquery/funnel', async (req, res) => {
                 error: 'At least 2 steps are required for a funnel'
             });
         }
+
+        // Normalize URL steps so /path and /path/ are treated the same.
+        steps = steps.map(step => {
+            if (step?.type !== 'url') return step;
+            const rawValue = typeof step.value === 'string' ? step.value : '';
+            return {
+                ...step,
+                value: rawValue ? getNormalizedUrlPath(rawValue) : rawValue
+            };
+        });
 
         // Determine which event types we need to query
         // 1 = Pageview (for type: 'url')
@@ -2715,16 +2770,14 @@ app.get('/api/bigquery/websites/:websiteId/marketing-stats', async (req, res) =>
         if (urlPath) {
             if (pathOperator === 'starts-with') {
                 urlFilter = `AND LOWER(url_path) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath);
             } else {
                 urlFilter = `AND (
                     url_path = @urlPath 
                     OR url_path = @urlPathSlash 
                     OR url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
@@ -2882,7 +2935,17 @@ app.post('/api/bigquery/funnel-timing', async (req, res) => {
             })
         }
 
-        if (!urls || !Array.isArray(urls) || urls.length < 2) {
+        if (!urls || !Array.isArray(urls)) {
+            return res.status(400).json({
+                error: 'At least 2 URLs are required for a funnel'
+            });
+        }
+
+        urls = urls
+            .filter((url) => typeof url === 'string' && url.trim() !== '')
+            .map((url) => getNormalizedUrlPath(url));
+
+        if (urls.length < 2) {
             return res.status(400).json({
                 error: 'At least 2 URLs are required for a funnel'
             });
@@ -3241,9 +3304,9 @@ app.post('/api/bigquery/retention', async (req, res) => {
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath, { stripTrailingSlash: true });
             } else {
-                params.urlPath = urlPath;
+                params.urlPath = getNormalizedUrlPath(urlPath);
             }
         }
 
@@ -3409,9 +3472,9 @@ app.post('/api/bigquery/composition', async (req, res) => {
 
         if (urlPath) {
             if (pathOperator === 'starts-with') {
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath, { stripTrailingSlash: true });
             } else {
-                params.urlPath = urlPath;
+                params.urlPath = getNormalizedUrlPath(urlPath);
             }
         }
 
@@ -3846,11 +3909,9 @@ app.post('/api/bigquery/users', async (req, res) => {
                 `;
 
                 condition = `LOWER(${normalizeUrlSql}) LIKE @urlPathPattern`;
-                params.urlPathPattern = urlPath.toLowerCase() + '%';
+                params.urlPathPattern = getUrlPathStartsWithPattern(urlPath, { stripTrailingSlash: true });
             } else {
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
 
                 condition = `(
                         url_path = @urlPath
@@ -4220,9 +4281,7 @@ app.post('/api/bigquery/event-journeys', async (req, res) => {
                     OR e.url_path = @urlPathSlash 
                     OR e.url_path LIKE @urlPathQuery
                 )`;
-                params.urlPath = urlPath;
-                params.urlPathSlash = urlPath.endsWith('/') ? urlPath : urlPath + '/';
-                params.urlPathQuery = urlPath + '?%';
+                setUrlPathExactFilterParams(params, urlPath);
             }
         }
 
