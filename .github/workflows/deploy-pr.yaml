@@ -1,0 +1,52 @@
+name: "Deploy PR to Dev"
+run-name: "Deploy PR #${{ github.event.inputs.pr_number }} to Dev"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to deploy"
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: "build"
+    runs-on: "ubuntu-latest"
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: "actions/checkout@v4"
+        with:
+          ref: "refs/pull/${{ github.event.inputs.pr_number }}/head"
+
+      - name: "Build and push"
+        uses: nais/docker-build-push@v0
+        id: docker-build-push
+        with:
+          team: team-researchops
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          build_secrets: |
+            "NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+
+    outputs:
+      image: ${{ steps.docker-build-push.outputs.image }}
+
+  deploy-dev:
+    name: "deploy-dev"
+    needs: build
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Deploy to Dev"
+        uses: "nais/deploy/actions/deploy@v2"
+        env:
+          CLUSTER: "dev-gcp"
+          RESOURCE: .nais/dev/nais-dev.yaml
+          VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
