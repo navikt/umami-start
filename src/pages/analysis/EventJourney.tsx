@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Heading, Table, Modal, Label, Select, UNSAFE_Combobox, Tabs } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Heading, Table, Modal, Select, UNSAFE_Combobox, Tabs } from '@navikt/ds-react';
 import { Share2, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -682,58 +682,44 @@ const EventJourney = () => {
                     {/* Stats Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                         {/* Unique Visitors */}
-                        <div className="bg-[var(--ax-bg-default)] border text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
-                            <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-[var(--ax-text-subtle)]">Unike besøkende</Label>
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Unike besøkende</div>
+                            <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
+                                {formatNumber(queryStats?.total_sessions || 0)}
                             </div>
-                            <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold mb-1">{formatNumber(queryStats?.total_sessions || 0)}</div>
-                                <div className="text-sm font-medium invisible">placeholder</div>
-                            </div>
+                            <div className="text-sm text-[var(--ax-text-subtle)] mt-1">Totalt i utvalget</div>
                         </div>
 
                         {/* Interactive */}
-                        <div className="bg-[var(--ax-bg-accent-soft)] border border-[var(--ax-border-accent-subtle)] text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
-                            <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-[var(--ax-text-accent)]">Utførte handlinger</Label>
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Utførte handlinger</div>
+                            <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
+                                {getPercentage(queryStats?.sessions_with_events || 0, queryStats?.total_sessions || 0)}
                             </div>
-                            <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold text-[var(--ax-text-accent)] mb-1">
-                                    {getPercentage(queryStats?.sessions_with_events || 0, queryStats?.total_sessions || 0)}
-                                </div>
-                                <div className="text-sm font-medium text-[var(--ax-text-accent)] opacity-80">
-                                    {formatNumber(queryStats?.sessions_with_events || 0)} sesjoner
-                                </div>
+                            <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                                {formatNumber(queryStats?.sessions_with_events || 0)} sesjoner
                             </div>
                         </div>
 
                         {/* Navigated No Events */}
-                        <div className="bg-[var(--ax-bg-success-soft)] border border-[var(--ax-border-success-subtle)] text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
-                            <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-[var(--ax-text-success)]">Navigering uten handling</Label>
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Navigering uten handling</div>
+                            <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
+                                {getPercentage(queryStats?.sessions_no_events_navigated || 0, queryStats?.total_sessions || 0)}
                             </div>
-                            <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold text-[var(--ax-text-success)] mb-1">
-                                    {getPercentage(queryStats?.sessions_no_events_navigated || 0, queryStats?.total_sessions || 0)}
-                                </div>
-                                <div className="text-sm font-medium text-[var(--ax-text-success)] opacity-80">
-                                    {formatNumber(queryStats?.sessions_no_events_navigated || 0)} sesjoner
-                                </div>
+                            <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                                {formatNumber(queryStats?.sessions_no_events_navigated || 0)} sesjoner
                             </div>
                         </div>
 
                         {/* Bounced */}
-                        <div className="bg-[var(--ax-bg-danger-soft)] border border-[var(--ax-border-danger-subtle)] text-center rounded-lg p-6 flex flex-col h-full shadow-sm">
-                            <div className="h-12 flex items-center justify-center mb-2">
-                                <Label size="small" className="text-[var(--ax-text-danger)]">Forlot nettstedet</Label>
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                            <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Forlot nettstedet</div>
+                            <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
+                                {getPercentage(queryStats?.sessions_no_events_bounced || 0, queryStats?.total_sessions || 0)}
                             </div>
-                            <div className="flex-1 flex flex-col justify-center">
-                                <div className="text-xl lg:text-2xl font-bold text-[var(--ax-text-danger)] mb-1">
-                                    {getPercentage(queryStats?.sessions_no_events_bounced || 0, queryStats?.total_sessions || 0)}
-                                </div>
-                                <div className="text-sm font-medium text-[var(--ax-text-danger)] opacity-80">
-                                    {formatNumber(queryStats?.sessions_no_events_bounced || 0)} sesjoner
-                                </div>
+                            <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                                {formatNumber(queryStats?.sessions_no_events_bounced || 0)} sesjoner
                             </div>
                         </div>
                     </div>

@@ -24,24 +24,20 @@ const FunnelStats: React.FC<FunnelStatsProps> = ({ data }) => {
             </div>
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Fullførte</div>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-green-600">
-                        {totalCompleted.toLocaleString('nb-NO')}
-                    </span>
-                    <span className="text-sm font-medium text-green-600">
-                        ({completionRate}%)
-                    </span>
+                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                    {completionRate}%
+                </div>
+                <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                    {totalCompleted.toLocaleString('nb-NO')} fullførte
                 </div>
             </div>
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Falt fra</div>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-red-600">
-                        {dropoffCount.toLocaleString('nb-NO')}
-                    </span>
-                    <span className="text-sm font-medium text-red-600">
-                        ({dropoffRate}%)
-                    </span>
+                <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                    {dropoffRate}%
+                </div>
+                <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                    {dropoffCount.toLocaleString('nb-NO')} falt fra
                 </div>
             </div>
         </div>
