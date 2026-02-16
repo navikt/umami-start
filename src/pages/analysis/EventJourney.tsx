@@ -653,7 +653,7 @@ const EventJourney = () => {
                             loading={loading}
                             size="small"
                         >
-                            Vis reiser
+                            Vis
                         </Button>
                     </div>
                 </>
