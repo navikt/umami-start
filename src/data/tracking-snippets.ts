@@ -1,12 +1,7 @@
-const html = (strings: TemplateStringsArray, ...values: unknown[]) =>
-  String.raw({ raw: strings }, ...values);
+import { getUmamiBaseUrl } from '../lib/runtimeConfig';
 
-const getUmamiBaseUrl = (): string => {
-  if (typeof window !== 'undefined' && (window as any).__UMAMI_BASE_URL__) {
-    return (window as any).__UMAMI_BASE_URL__;
-  }
-  return 'https://umami.nav.no';
-};
+const html = (strings: TemplateStringsArray, ...values: Array<string | number>) =>
+  strings.reduce((acc, part, i) => acc + part + (values[i] ?? ''), '');
 
 export const getStandardSnippet = (websiteId: string) => {
   const baseUrl = getUmamiBaseUrl();

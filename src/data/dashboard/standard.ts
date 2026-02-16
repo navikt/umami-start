@@ -1,13 +1,5 @@
 import { DashboardConfig } from './types';
-
-// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
-const getGcpProjectId = (): string => {
-  if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
-    return (window as any).__GCP_PROJECT_ID__;
-  }
-  // Fallback for development/SSR contexts
-  throw new Error('Missing runtime config: GCP_PROJECT_ID');
-};
+import { getGcpProjectId } from '../../lib/runtimeConfig';
 
 const projectId = getGcpProjectId();
 

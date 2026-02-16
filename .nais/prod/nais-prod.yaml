@@ -45,3 +45,5 @@ spec:
       value: "https://umami.nav.no"
     - name: GCP_PROJECT_ID
       value: "team-researchops-prod-01d6"
+    - name: BACKEND_BASE_URL
+      value: "start-umami-backend.team-researchops.svc.cluster.local"

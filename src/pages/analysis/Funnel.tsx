@@ -12,26 +12,10 @@ import FunnelStats from '../../components/analysis/funnel/FunnelStats';
 import SqlViewer from '../../components/chartbuilder/results/SqlViewer';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
+import { getGcpProjectId } from '../../lib/runtimeConfig';
 import { Website } from '../../types/chart';
 
-declare global {
-    interface Window {
-        __GCP_PROJECT_ID__?: string;
-    }
-}
-
-const getGcpProjectId = (): string => {
-    const injectedProjectId =
-        typeof window !== 'undefined' ? window.__GCP_PROJECT_ID__ : undefined;
-    const viteProjectId =
-        typeof import.meta !== 'undefined' ? import.meta.env.VITE_GCP_PROJECT_ID : undefined;
-
-    const pid = injectedProjectId ?? viteProjectId;
-
-    if (!pid) throw new Error('Missing runtime config: GCP_PROJECT_ID');
-    return pid;
-};
-
+// Runtime config is resolved by getGcpProjectId.
 
 const Funnel = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
