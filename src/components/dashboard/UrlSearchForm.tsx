@@ -181,7 +181,7 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
             <form role="search" onSubmit={handleSubmit}>
                 <div style={{ maxWidth: "600px" }}>
                     <Search
-                        label="Lim inn URL for å se webstatistikk"
+                        label="Lim inn URL for å se statistikk"
                         hideLabel={false}
                         variant="primary"
                         value={searchQuery}

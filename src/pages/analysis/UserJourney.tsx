@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { TextField, Button, Alert, Loader, Select, Tabs, InfoCard } from '@navikt/ds-react';
+import { TextField, Button, Alert, Loader, Select, Tabs, ReadMore } from '@navikt/ds-react';
 import { SankeyChart, IChartProps, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Minimize2, Share2, Check, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -61,6 +61,67 @@ const UserJourney = () => {
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [reverseVisualOrder, setReverseVisualOrder] = useState<boolean>(false); // Default off
     const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+    const sankeyContainerRef = useRef<HTMLDivElement | null>(null);
+
+    const buildFilterKey = (stepsOverride = steps) =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            startUrl: normalizeUrlToPath(startUrl),
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+            steps: stepsOverride,
+            limit,
+            journeyDirection,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
+
+    useEffect(() => {
+        if (activeTab !== 'sankey' || !sankeyContainerRef.current) return;
+
+        const repaintNodesAboveLinks = () => {
+            const svg = sankeyContainerRef.current?.querySelector('svg');
+            if (!svg) return;
+
+            const groups = Array.from(svg.children).filter((el): el is SVGGElement => el.tagName.toLowerCase() === 'g');
+            const nodeGroups = groups.filter((g) => g.querySelector('rect') !== null);
+            const linkGroups = groups.filter((g) => g.querySelector('path') !== null && g.querySelector('rect') === null);
+
+            if (nodeGroups.length === 0 || linkGroups.length === 0) return;
+
+            const firstNodeIndex = groups.indexOf(nodeGroups[0]);
+            const lastLinkIndex = groups.indexOf(linkGroups[linkGroups.length - 1]);
+
+            // Already correct: all links are behind nodes.
+            if (firstNodeIndex > lastLinkIndex) return;
+
+            // In SVG, later siblings are painted on top.
+            nodeGroups.forEach((nodeGroup) => {
+                svg.appendChild(nodeGroup);
+            });
+        };
+
+        const frame1 = requestAnimationFrame(() => {
+            repaintNodesAboveLinks();
+            requestAnimationFrame(repaintNodesAboveLinks);
+        });
+        const svg = sankeyContainerRef.current.querySelector('svg');
+        const observer = svg
+            ? new MutationObserver(() => {
+                repaintNodesAboveLinks();
+            })
+            : null;
+
+        if (svg && observer) {
+            observer.observe(svg, { childList: true, subtree: true });
+        }
+
+        return () => {
+            cancelAnimationFrame(frame1);
+            observer?.disconnect();
+        };
+    }, [activeTab, data, steps, isFullscreen, rawData]);
 
 
     // Auto-submit when URL parameters are present (for shared links)
@@ -203,6 +264,7 @@ const UserJourney = () => {
         const { startDate, endDate } = dateRange;
 
         const stepsToFetch = customSteps || steps;
+        const appliedFilterKey = buildFilterKey(stepsToFetch);
 
         try {
             console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl: normalizedStartUrl, steps: stepsToFetch, limit });
@@ -283,6 +345,7 @@ const UserJourney = () => {
 
             // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
 
 
         } catch (err) {
@@ -318,7 +381,7 @@ const UserJourney = () => {
                     <div className="w-full sm:w-[300px]">
                         <TextField
                             size="small"
-                            label="Side eller URL"
+                            label="URL"
                             value={startUrl}
                             onChange={(e) => setStartUrl(e.target.value)}
                             onBlur={(e) => setStartUrl(normalizeUrlToPath(e.target.value))}
@@ -392,7 +455,7 @@ const UserJourney = () => {
                     <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
                             onClick={() => fetchData()}
-                            disabled={!selectedWebsite || loading}
+                            disabled={!selectedWebsite || loading || !hasUnappliedFilterChanges}
                             loading={loading}
                             size="small"
                         >
@@ -459,7 +522,7 @@ const UserJourney = () => {
                             )}
                                  */}
 
-                                <div className="overflow-x-auto w-full">
+                                <div className="overflow-x-auto w-full" ref={sankeyContainerRef}>
                                     <div style={{ height: isFullscreen ? 'calc(100vh - 120px)' : '700px', minWidth: `${Math.max(1000, steps * 350)}px` }}>
                                         <ResponsiveContainer>
                                             <SankeyChart data={data} />
@@ -477,14 +540,13 @@ const UserJourney = () => {
                         <Tabs.Panel value="steps" className="pt-4">
                             <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-[var(--ax-bg-default)] p-8 overflow-auto' : ''}`}>
                                 {!isFullscreen && (
-                                    <InfoCard data-color="info" className="mb-6">
-                                        <InfoCard.Header>
-                                            <InfoCard.Title>Tips</InfoCard.Title>
-                                        </InfoCard.Header>
-                                        <InfoCard.Content>
-                                            Klikk på stegene for å utforske flyt. Legg til steg i en traktanalyse med pluss-ikonet (+).
-                                        </InfoCard.Content>
-                                    </InfoCard>
+                                    <ReadMore header="Slik bruker du denne analysen" defaultOpen={true} size="large" className="mb-6">
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Klikk på et steg-kortene for å utheve flyten via bestemte sider</li>
+                                            <li>Bruk pluss-ikonet (+) for å legge til steg i en traktanalyse.</li>
+                                            <li>Juster reiseretningen, for å se brukerreisen i motsatt retning</li>
+                                        </ul>
+                                    </ReadMore>
                                 )}
                                 {isFullscreen && (
                                     <div className="mb-4 flex justify-end">

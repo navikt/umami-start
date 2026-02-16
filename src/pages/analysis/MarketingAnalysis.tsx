@@ -90,6 +90,19 @@ const MarketingAnalysis = () => {
     const [error, setError] = useState<string | null>(null);
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+
+    const buildFilterKey = () =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            urlPaths,
+            pathOperator,
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+            metricType,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
@@ -100,6 +113,7 @@ const MarketingAnalysis = () => {
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
+        const appliedFilterKey = buildFilterKey();
 
         setLoading(true);
         setError(null);
@@ -160,6 +174,7 @@ const MarketingAnalysis = () => {
 
             // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
 
         } catch (err: any) {
             console.error('Error fetching marketing data:', err);
@@ -428,7 +443,7 @@ const MarketingAnalysis = () => {
                     <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
                             onClick={fetchData}
-                            disabled={!selectedWebsite || loading}
+                            disabled={!selectedWebsite || loading || !hasUnappliedFilterChanges}
                             loading={loading}
                             size="small"
                         >

@@ -50,6 +50,18 @@ const UserComposition = () => {
     const [queryStats, setQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+
+    const buildFilterKey = () =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            urlPaths,
+            pathOperator,
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
@@ -71,6 +83,7 @@ const UserComposition = () => {
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
+        const appliedFilterKey = buildFilterKey();
 
         setLoading(true);
         setError(null);
@@ -135,6 +148,7 @@ const UserComposition = () => {
 
                 // Update URL without navigation
                 window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+                setLastAppliedFilterKey(appliedFilterKey);
             }
         } catch (err) {
             console.error('Error fetching composition data:', err);
@@ -223,7 +237,7 @@ const UserComposition = () => {
                         pathOperator={pathOperator}
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
-                        label="Side eller URL"
+                        label="URL"
                     />
 
                     <PeriodPicker
@@ -238,7 +252,7 @@ const UserComposition = () => {
                     <div className="flex items-end pb-[2px] mt-8 sm:mt-0">
                         <Button
                             onClick={fetchData}
-                            disabled={!selectedWebsite || loading}
+                            disabled={!selectedWebsite || loading || !hasUnappliedFilterChanges}
                             loading={loading}
                             size="small"
                         >

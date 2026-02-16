@@ -11,7 +11,6 @@ import { ReadMore } from '@navikt/ds-react';
 import { translateValue } from '../../lib/translations';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
-import { getGcpProjectId } from '../../lib/runtimeConfig';
 
 type Website = {
     id: string;
@@ -21,6 +20,14 @@ type Website = {
     createdAt: string;
 };
 
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+        return (window as any).__GCP_PROJECT_ID__;
+    }
+    // Fallback for development/SSR contexts
+    throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
 
 const getDefaultQuery = () => `SELECT 
   website_id,
@@ -1059,7 +1066,7 @@ export default function SqlEditor() {
                                 {hasUrlPathFilter && (
                                     <div className="flex-1 min-w-[240px]">
                                         <TextField
-                                            label="Side eller URL"
+                                            label="URL"
                                             size="small"
                                             description="F.eks. / for forsiden"
                                             value={urlPath}

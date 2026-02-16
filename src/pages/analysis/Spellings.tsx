@@ -283,7 +283,7 @@ const Spellings = () => {
                 <>
                     <TextField
                         size="small"
-                        label="Side eller URL"
+                        label="URL"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
                     />

@@ -67,6 +67,18 @@ const EventExplorer = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [eventSearch, setEventSearch] = useState<string>('');
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+
+    const buildFilterKey = () =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            urlPaths,
+            pathOperator,
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
     useEffect(() => {
@@ -98,6 +110,7 @@ const EventExplorer = () => {
     // Fetch available events (triggered by button)
     const fetchEvents = async () => {
         if (!selectedWebsite) return;
+        const appliedFilterKey = buildFilterKey();
 
         setLoadingEvents(true);
         setHasSearched(true);
@@ -152,6 +165,7 @@ const EventExplorer = () => {
 
             // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
         } catch (err) {
             console.error('Error fetching events:', err);
             setError((err as Error).message || 'Kunne ikke hente hendelser.');
@@ -420,7 +434,7 @@ const EventExplorer = () => {
                         onPathOperatorChange={setPathOperator}
                         selectedWebsiteDomain={selectedWebsite?.domain}
                         className="w-full sm:w-[300px]"
-                        label="Side eller URL"
+                        label="URL"
                         showOperator={true}
 
                     />
@@ -437,7 +451,7 @@ const EventExplorer = () => {
                     <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
                             onClick={fetchEvents}
-                            disabled={!selectedWebsite || loadingEvents}
+                            disabled={!selectedWebsite || loadingEvents || !hasUnappliedFilterChanges}
                             loading={loadingEvents}
                             size="small"
                         >
@@ -466,7 +480,7 @@ const EventExplorer = () => {
                     return (
                         <div>
                             <div className="flex justify-between items-end mb-4">
-                                <Heading level="3" size="small">Hendelser</Heading>
+                                <Heading level="3" size="small">Egendefinerte hendelser</Heading>
                                 <div className="w-64">
                                     <TextField
                                         label="Søk"
@@ -483,8 +497,8 @@ const EventExplorer = () => {
                                     <Table size="small">
                                         <Table.Header>
                                             <Table.Row>
-                                                <Table.HeaderCell>Hendelsesnavn</Table.HeaderCell>
-                                                <Table.HeaderCell align="right">Antall</Table.HeaderCell>
+                                                <Table.HeaderCell>Navn</Table.HeaderCell>
+                                                <Table.HeaderCell align="right">Antall tilfeller</Table.HeaderCell>
                                                 <Table.HeaderCell></Table.HeaderCell>
                                             </Table.Row>
                                         </Table.Header>

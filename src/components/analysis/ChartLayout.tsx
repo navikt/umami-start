@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation';
 import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon';
 import { PageHeader } from '../theme/PageHeader/PageHeader';
-import { hasSiteimproveSupport, hasMarketingSupport } from '../../hooks/useSiteimproveSupport';
+import { hasSiteimproveSupport } from '../../hooks/useSiteimproveSupport';
 
 interface ChartLayoutProps {
     title: string;
@@ -23,19 +23,19 @@ interface ChartLayoutProps {
 
 const chartGroups = [
     {
-        title: "Trafikk & hendelser",
+        title: "Trafikk",
+        icon: <BarChart2 size={18} />,
+        ids: ['trafikkanalyse', 'brukerreiser', 'trakt']
+    },
+    {
+        title: "Hendelser",
         icon: <Activity size={18} />,
-        ids: ['trafikkanalyse', 'event-explorer', 'markedsanalyse']
+        ids: ['event-explorer', 'hendelsesreiser']
     },
     {
         title: "Brukere",
         icon: <Users size={18} />,
-        ids: ['brukersammensetning', 'brukerprofiler', 'brukerlojalitet']
-    },
-    {
-        title: "Navigasjon",
-        icon: <BarChart2 size={18} />,
-        ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
+        ids: ['brukersammensetning', 'enkeltbrukere', 'brukerlojalitet']
     },
     {
         title: "Innholdskvalitet",
@@ -57,8 +57,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     hideSidebar = false,
     hideAnalysisSelector = false,
     sidebarContent,
-    websiteDomain,
-    websiteName
+    websiteDomain
 }) => {
     // State for Sidebars
     const isNavOpen = !hideAnalysisSelector;
@@ -69,7 +68,6 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     // Get domain from prop or URL params and check feature support
     const domain = websiteDomain || searchParams.get('domain');
     const showSiteimproveSection = useMemo(() => hasSiteimproveSupport(domain), [domain]);
-    const showMarketingAnalysis = useMemo(() => hasMarketingSupport(domain, websiteName), [domain, websiteName]);
 
     // Filter chart groups based on feature support
     const filteredChartGroups = useMemo(() => {
@@ -80,21 +78,8 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
             groups = groups.filter(group => group.title !== "Innholdskvalitet");
         }
 
-        // Filter out markedsanalyse from "Trafikk & hendelser" if marketing not supported
-        if (!showMarketingAnalysis) {
-            groups = groups.map(group => {
-                if (group.title === "Trafikk & hendelser") {
-                    return {
-                        ...group,
-                        ids: group.ids.filter(id => id !== 'markedsanalyse')
-                    };
-                }
-                return group;
-            });
-        }
-
         return groups;
-    }, [showSiteimproveSection, showMarketingAnalysis]);
+    }, [showSiteimproveSection]);
 
     const getTargetUrl = (href: string) => {
         const currentParams = new URLSearchParams(window.location.search);

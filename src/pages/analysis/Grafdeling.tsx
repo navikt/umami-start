@@ -7,8 +7,15 @@ import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import { subDays, format } from 'date-fns';
-import { getGcpProjectId } from '../../lib/runtimeConfig';
-// Runtime config is resolved by getGcpProjectId.
+
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+const getGcpProjectId = (): string => {
+    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
+        return (window as any).__GCP_PROJECT_ID__;
+    }
+    // Fallback for development/SSR contexts
+    throw new Error('Missing runtime config: GCP_PROJECT_ID');
+};
 
 type Website = {
     id: string;
@@ -553,7 +560,7 @@ export default function Grafdeling() {
             {hasUrlPathFilter && (
                 <div className="pt-4">
                     <TextField
-                        label="Side eller URL"
+                        label="URL"
                         size="small"
                         value={urlPath}
                         onChange={(e) => setUrlPath(e.target.value)}
