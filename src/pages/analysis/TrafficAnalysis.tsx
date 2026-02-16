@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, HelpText } from '@navikt/ds-react';
-import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
-import { Download, Share2, Check, ExternalLink, ArrowRight } from 'lucide-react';
+import { Button, Alert, Loader, Tabs, TextField, Table, Heading, Pagination, VStack, Select, HelpText } from '@navikt/ds-react';
+import { ILineChartDataPoint } from '@fluentui/react-charting';
+import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid, differenceInCalendarDays, subDays } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import TrafficStats from '../../components/analysis/traffic/TrafficStats';
+import OversiktTabContent from '../../components/analysis/traffic/OversiktTabContent';
+import InnOgUtgangerTabContent from '../../components/analysis/traffic/InnOgUtgangerTabContent';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
@@ -1468,7 +1469,7 @@ const TrafficAnalysis = () => {
                 <div className="border rounded-lg overflow-x-auto">
                     <Table
                         size="small"
-                        className="table-fixed w-full text-[0.95rem] [&_th]:!py-2 [&_td]:!py-2 [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2"
+                        className="table-fixed w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2"
                     >
                         <colgroup>
                             <col style={{ width: valueColWidth }} />
@@ -1648,7 +1649,7 @@ const TrafficAnalysis = () => {
                     </div>
                 </div>
                 <div className="border rounded-lg overflow-x-auto">
-                    <Table size="small">
+                    <Table size="small" className="table-fixed w-full">
                         <Table.Header>
                             <Table.Row>
                                 <Table.HeaderCell>{submittedGranularity === 'hour' ? 'Tidspunkt' : 'Dato'}</Table.HeaderCell>
@@ -1837,185 +1838,65 @@ const TrafficAnalysis = () => {
                             </Tabs.List>
 
                             <Tabs.Panel value="visits" className="pt-4">
-                                {hasAttemptedFetch && (isLoadingPageMetrics || !hasFetchedPageMetrics) ? (
-                                    <div className="flex justify-center items-center h-full py-16">
-                                        <Loader size="xlarge" title="Henter data..." />
-                                    </div>
-                                ) : (
-                                    <>
-                                        {!submittedComparePreviousPeriod && (
-                                            <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={totalOverride} granularity={submittedGranularity} />
-                                        )}
-                                        {submittedComparePreviousPeriod && comparisonSummary && comparisonRangeLabel && (
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Denne perioden</div>
-                                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                                        {formatComparisonValue(comparisonSummary.currentValue)}
-                                                    </div>
-                                                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">{comparisonRangeLabel.current}</div>
-                                                </div>
-                                                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Forrige periode</div>
-                                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                                                        {formatComparisonValue(comparisonSummary.previousValue)}
-                                                    </div>
-                                                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">{comparisonRangeLabel.previous}</div>
-                                                </div>
-                                                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Endring</div>
-                                                    <div className={`text-2xl font-bold ${comparisonSummary.deltaPercent !== null ? (comparisonSummary.deltaPercent > 0 ? 'text-green-700' : comparisonSummary.deltaPercent < 0 ? 'text-red-700' : 'text-[var(--ax-text-default)]') : 'text-[var(--ax-text-default)]'}`}>
-                                                        {comparisonSummary.deltaPercent === null
-                                                            ? '–'
-                                                            : `${comparisonSummary.deltaPercent >= 0 ? '+' : ''}${comparisonSummary.deltaPercent.toFixed(1)}%`}
-                                                    </div>
-                                                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                                                        {formatComparisonDelta(comparisonSummary.deltaValue)}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <div className="flex flex-col gap-8">
-                                            <div className="flex flex-col gap-4">
-                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                                                        <Switch
-                                                            checked={showAverage}
-                                                            onChange={(e) => setShowAverage(e.target.checked)}
-                                                            size="small"
-                                                        >
-                                                            Vis gjennomsnitt
-                                                        </Switch>
-                                                        <Switch
-                                                            checked={comparePreviousPeriod}
-                                                            onChange={(e) => setComparePreviousPeriod(e.target.checked)}
-                                                            size="small"
-                                                        >
-                                                            Sammenlign forrige periode
-                                                        </Switch>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Label size="small" htmlFor="traffic-granularity">Intervall</Label>
-                                                        <Select
-                                                            id="traffic-granularity"
-                                                            label="Tidsoppløsning"
-                                                            hideLabel
-                                                            size="small"
-                                                            value={granularity}
-                                                            onChange={(e) => setGranularity(e.target.value as any)}
-                                                        >
-                                                            <option value="day">Daglig</option>
-                                                            <option value="week">Ukentlig</option>
-                                                            <option value="month">Månedlig</option>
-                                                            <option value="hour">Time</option>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-                                                <div style={{ width: '100%', height: '400px' }}>
-                                                    {chartData ? (
-                                                        <ResponsiveContainer>
-                                                            <LineChart
-                                                                key={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}-${previousSeriesData.length}-${submittedComparePreviousPeriod ? 'compare' : 'single'}`}
-                                                                data={chartData.data}
-                                                                legendsOverflowText={'Overflow Items'}
-                                                                yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
-                                                                yAxisTickCount={6}
-                                                                yMaxValue={chartData.yMax}
-                                                                yMinValue={chartData.yMin}
-                                                                allowMultipleShapesForPoints={true}
-                                                                enablePerfOptimization={true}
-                                                                margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
-                                                                legendProps={{
-                                                                    allowFocusOnLegends: true,
-                                                                    styles: {
-                                                                        text: { color: 'var(--ax-text-default)' },
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </ResponsiveContainer>
-                                                    ) : (
-                                                        <div className="flex items-center justify-center h-full text-gray-500">
-                                                            Ingen data tilgjengelig for diagram
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col md:flex-row gap-8 mt-8">
-                                                {/* Chart Data Table - First position */}
-                                                <div className="w-full md:w-1/2">
-                                                    <ChartDataTable
-                                                        data={processedSeriesData}
-                                                        previousData={processedPreviousSeriesData}
-                                                        metricLabel={getMetricLabelWithCount(submittedMetricType)}
-                                                    />
-                                                </div>
-
-                                                {/* Pages Table - Second position */}
-                                                <div className="w-full md:w-1/2">
-                                                    <TrafficTable
-                                                        title="Inkluderte sider"
-                                                        data={includedPagesWithCompare}
-                                                        onRowClick={setSelectedInternalUrl}
-                                                        selectedWebsite={selectedWebsite}
-                                                        metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                                        showCompare={submittedComparePreviousPeriod}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                                <OversiktTabContent
+                                    hasAttemptedFetch={hasAttemptedFetch}
+                                    isLoadingPageMetrics={isLoadingPageMetrics}
+                                    hasFetchedPageMetrics={hasFetchedPageMetrics}
+                                    submittedComparePreviousPeriod={submittedComparePreviousPeriod}
+                                    comparisonSummary={comparisonSummary}
+                                    comparisonRangeLabel={comparisonRangeLabel}
+                                    formatComparisonValue={formatComparisonValue}
+                                    formatComparisonDelta={formatComparisonDelta}
+                                    seriesData={seriesData}
+                                    submittedMetricType={submittedMetricType}
+                                    totalOverride={totalOverride}
+                                    submittedGranularity={submittedGranularity}
+                                    showAverage={showAverage}
+                                    onShowAverageChange={setShowAverage}
+                                    comparePreviousPeriod={comparePreviousPeriod}
+                                    onComparePreviousPeriodChange={setComparePreviousPeriod}
+                                    granularity={granularity}
+                                    onGranularityChange={setGranularity}
+                                    chartData={chartData?.data ?? null}
+                                    chartYMax={chartData?.yMax ?? 0}
+                                    chartYMin={chartData?.yMin ?? 0}
+                                    chartKey={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}-${previousSeriesData.length}-${submittedComparePreviousPeriod ? 'compare' : 'single'}`}
+                                    processedSeriesData={processedSeriesData}
+                                    processedPreviousSeriesData={processedPreviousSeriesData}
+                                    getMetricLabelWithCount={getMetricLabelWithCount}
+                                    includedPagesWithCompare={includedPagesWithCompare}
+                                    onSelectInternalUrl={setSelectedInternalUrl}
+                                    selectedWebsite={selectedWebsite}
+                                    getMetricLabelCapitalized={getMetricLabelCapitalized}
+                                    ChartDataTableComponent={ChartDataTable}
+                                    TrafficTableComponent={TrafficTable}
+                                />
                             </Tabs.Panel>
 
                             <Tabs.Panel value="sources" className="pt-4">
-                                {hasAttemptedFetch && ((isLoadingExternalReferrers || !hasFetchedExternalReferrers) || (isLoadingBreakdown || !hasFetchedBreakdown)) ? (
-                                    <div className="flex justify-center items-center h-full py-16">
-                                        <Loader size="xlarge" title="Henter data..." />
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col md:flex-row gap-8">
-                                        <div className="w-full md:w-1/2 flex flex-col gap-8">
-                                            <CombinedEntrancesTable
-                                                title="Innganger"
-                                                data={combinedEntrances}
-                                                onRowClick={setSelectedInternalUrl}
-                                                selectedWebsite={selectedWebsite}
-                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                            />
-                                            <ExternalTrafficTable
-                                                title="Innganger oppsummert"
-                                                data={entranceSummaryWithUnknown}
-                                                metricLabel={getMetricLabelCapitalized(submittedMetricType)}
-                                            />
-                                        </div>
-                                        <div className="w-full md:w-1/2 flex flex-col gap-8">
-                                            <TrafficTable title="Utganger" data={exits} onRowClick={setSelectedInternalUrl} selectedWebsite={selectedWebsite} metricLabel={getMetricLabelCapitalized(submittedMetricType)} />
-                                            <div className="border border-[var(--ax-border-neutral-subtle)] rounded-lg p-6 bg-[var(--ax-bg-neutral-soft)]">
-                                                <Heading level="3" size="small" className="mb-2">Vil du se hele brukerreisen?</Heading>
-                                                <p className="text-[var(--ax-text-subtle)] mb-4 mt-3">
-                                                    Siden du er på nå viser hvor besøk starter og slutter. I navigasjonsflyt ser du hele reisen gjennom nettstedet.
-                                                </p>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="small"
-                                                    icon={<ArrowRight size={16} />}
-                                                    iconPosition="right"
-                                                    onClick={() => {
-                                                        const params = new URLSearchParams();
-                                                        if (selectedWebsite?.id) params.set('websiteId', selectedWebsite.id);
-                                                        if (period) params.set('period', period);
-                                                        if (urlPaths.length > 0) params.set('urlPath', urlPaths[0]);
-                                                        navigate(`/brukerreiser?${params.toString()}`);
-                                                    }}
-                                                    disabled={!selectedWebsite}
-                                                >
-                                                    Gå til navigasjonsflyt
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                <InnOgUtgangerTabContent
+                                    hasAttemptedFetch={hasAttemptedFetch}
+                                    isLoadingExternalReferrers={isLoadingExternalReferrers}
+                                    hasFetchedExternalReferrers={hasFetchedExternalReferrers}
+                                    isLoadingBreakdown={isLoadingBreakdown}
+                                    hasFetchedBreakdown={hasFetchedBreakdown}
+                                    combinedEntrances={combinedEntrances}
+                                    entranceSummaryWithUnknown={entranceSummaryWithUnknown}
+                                    exits={exits}
+                                    selectedWebsite={selectedWebsite}
+                                    metricLabel={getMetricLabelCapitalized(submittedMetricType)}
+                                    onSelectInternalUrl={setSelectedInternalUrl}
+                                    onNavigateToJourney={() => {
+                                        const params = new URLSearchParams();
+                                        if (selectedWebsite?.id) params.set('websiteId', selectedWebsite.id);
+                                        if (period) params.set('period', period);
+                                        if (urlPaths.length > 0) params.set('urlPath', urlPaths[0]);
+                                        navigate(`/brukerreiser?${params.toString()}`);
+                                    }}
+                                    CombinedEntrancesTableComponent={CombinedEntrancesTable}
+                                    ExternalTrafficTableComponent={ExternalTrafficTable}
+                                    TrafficTableComponent={TrafficTable}
+                                />
                             </Tabs.Panel>
                         </Tabs>
 
