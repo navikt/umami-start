@@ -415,7 +415,7 @@ const Retention = () => {
                             disabled={!selectedWebsite || loading}
                             loading={loading}
                         >
-                            Vis brukerlojalitet
+                            Vis
                         </Button>
                     </div>
                 </>
