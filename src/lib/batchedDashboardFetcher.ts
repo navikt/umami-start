@@ -11,21 +11,23 @@
 
 import { SavedChart } from '../data/dashboard/types';
 import { format, subDays } from 'date-fns';
+import { getGcpProjectId } from './runtimeConfig';
 
+// Runtime config is resolved by getGcpProjectId.
 // Get GCP_PROJECT_ID from runtime-injected global variable
-const getGcpProjectId = (): string => {
-    // 1) Runtime-injected value (browser) - preferred
-    const winProjectId =
-        typeof window !== 'undefined' ? (window as any).__GCP_PROJECT_ID__ : undefined;
-    if (winProjectId) return winProjectId;
+// const getGcpProjectId = (): string => {
+//     // 1) Runtime-injected value (browser) - preferred
+//     const winProjectId =
+//         typeof window !== 'undefined' ? (window as any).__GCP_PROJECT_ID__ : undefined;
+//     if (winProjectId) return winProjectId;
 
-    // 2) Env var (SSR / Node contexts)
-    const envProjectId = (globalThis as any)?.process?.env?.GCP_PROJECT_ID;
-    if (envProjectId) return envProjectId;
+//     // 2) Env var (SSR / Node contexts)
+//     const envProjectId = (globalThis as any)?.process?.env?.GCP_PROJECT_ID;
+//     if (envProjectId) return envProjectId;
 
-    // Fail fast so misconfigured k8s is obvious
-    throw new Error('Missing runtime config: GCP_PROJECT_ID');
-};
+//     // Fail fast so misconfigured k8s is obvious
+//     throw new Error('Missing runtime config: GCP_PROJECT_ID');
+// };
 
 interface Filters {
     urlFilters: string[];
