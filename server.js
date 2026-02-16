@@ -36,8 +36,8 @@ app.use('/api/siteimprove', createSiteimproveProxyRouter({ SITEIMPROVE_BASE_URL 
 // User routes
 app.use('/api/user', createUserRouter({ BACKEND_BASE_URL }));
 
-// BigQuery routes
-app.use('/api/bigquery', createBigQueryRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }));
+// BigQuery routes (router paths already include /api/bigquery)
+app.use(createBigQueryRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }));
 
 // Serve index.html with injected runtime config
 registerFrontend(app, { buildPath, UMAMI_BASE_URL, GCP_PROJECT_ID });
