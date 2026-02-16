@@ -7,12 +7,21 @@ Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde 
 
 ---
 # Utvikling
+Opprett en `.env`-fil i prosjektets rotmappe med følgende innhold, og erstatt `<value>` med de faktiske verdiene for ditt miljø:
+```
+VITE_BACKEND_BASE_URL=<value>
+VITE_SITEIMPROVE_BASE_URL=<value>
+VITE_UMAMI_BASE_URL=<value>
+VITE_GCP_PROJECT_ID=<value>
+```
+Kjør så:
 ```
 pnpm i
 pnpm run dev
 ```
 
 # Env
+- `BACKEND_BASE_URL`: Base URL for the start umami backend, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`) to avoid hardcoded endpoints.
 - `SITEIMPROVE_BASE_URL`: Base URL for the Siteimprove proxy, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`) to avoid hardcoded endpoints.
 - `UMAMI_BASE_URL`: Base URL for the Umami tracking server, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`). This is used in tracking code snippets. **Required** - the application will fail to start if not set.
 - `GCP_PROJECT_ID`: GCP Project ID for BigQuery queries, injected via NAIS (see `.nais/dev/nais-dev.yaml` and `.nais/prod/nais-prod.yaml`). Used in SQL Editor and other BigQuery integrations. **Required** - the application will fail to start if not set.

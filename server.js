@@ -10,9 +10,14 @@ import fetch from 'node-fetch'
 dotenv.config()
 
 const BIGQUERY_TIMEZONE = 'Europe/Oslo';
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL;
 const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL;
 const UMAMI_BASE_URL = process.env.UMAMI_BASE_URL;
 const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
+
+if (!BACKEND_BASE_URL) {
+    throw new Error('Missing env var: BACKEND_BASE_URL');
+}
 
 if (!SITEIMPROVE_BASE_URL) {
     throw new Error('Missing env var: SITEIMPROVE_BASE_URL');
@@ -461,27 +466,27 @@ app.get('/api/user/me', async (req, res) => {
 // Test endpoint to verify frontend can reach backend
 app.get('/api/projects', async (req, res) => {
     try {
-        const backendUrl = 'https://start-umami-backend.ansatt.dev.nav.no/api/projects';
-        
+        const backendUrl = new URL('/api/projects', BACKEND_BASE_URL).toString();
+
         console.log('[Test] Fetching projects from:', backendUrl);
-        
+
         const response = await fetch(backendUrl);
-        
+
         if (!response.ok) {
             throw new Error(`Backend returned ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
-        
+
         console.log('[Test] Successfully fetched projects from backend');
-        
+
         res.json({
             success: true,
             message: 'Successfully connected to backend',
             data: data,
             backendUrl: backendUrl
         });
-        
+
     } catch (error) {
         console.error('[Test] Failed to fetch projects:', error);
         res.status(500).json({

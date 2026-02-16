@@ -51,3 +51,5 @@ spec:
       value: "https://reops-event-proxy.ekstern.dev.nav.no"
     - name: GCP_PROJECT_ID
       value: "team-researchops-dev-4396"
+    - name: BACKEND_BASE_URL
+      value: "start-umami-backend.team-researchops.svc.cluster.local"
