@@ -20,7 +20,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const buildPath = path.join(path.resolve(__dirname, '../dist'));
+const buildPath = path.resolve(__dirname, 'dist');
 
 const app = createApp({ buildPath });
 
