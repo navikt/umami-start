@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort } from '@navikt/ds-react';
+import { Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort, InlineMessage } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink, Download } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -328,6 +328,10 @@ const UserProfiles = () => {
                 const cookieBadge = getCookieBadge(usesCookies, cookieStartDate, startDate, endDate);
                 const isCookieRange = cookieBadge === 'cookie';
                 const isMixRange = cookieBadge === 'mix';
+                const normalizedMaxUsers = Number.isFinite(maxUsers) && maxUsers > 0
+                    ? Math.min(Math.max(maxUsers, MIN_MAX_USERS), MAX_MAX_USERS)
+                    : DEFAULT_MAX_USERS;
+                const isAtMaxUsersLimit = totalUsers >= normalizedMaxUsers;
 
                 const filteredUsers = users.filter(user =>
                     (user.userId && user.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -338,12 +342,21 @@ const UserProfiles = () => {
                 );
                 return (
                     <>
-                        <div className="flex justify-between items-end mb-4">
-                            <div>
+                        <div className="flex justify-between items-end gap-4 mb-4">
+                            <div className="flex-1 min-w-0">
                                 <Heading level="2" size="medium">
                                     Viser {formatNumber(totalUsers)} {totalUsers === 1 ? 'bruker' : 'enkeltbrukere'}
                                 </Heading>
-                                <BodyShort className="pt-1 text-[var(--ax-text-subtle)] max-w-prose">
+                                {isAtMaxUsersLimit && (
+                                    <div className="mt-3 max-w-[72ch] pb-4">
+                                        <InlineMessage status="warning">
+                                            {normalizedMaxUsers === DEFAULT_MAX_USERS
+                                                ? `Begrenset til maks ${formatNumber(DEFAULT_MAX_USERS)} brukere. Øk "Maks brukere" ved behov.`
+                                                : `Begrenset til maks ${formatNumber(normalizedMaxUsers)} brukere. Flere ved behov.`}
+                                        </InlineMessage>
+                                    </div>
+                                )}
+                                <BodyShort className="mt-2 text-[var(--ax-text-subtle)] max-w-[72ch]">
                                     {isCookieRange
                                         ? 'Cookies er aktivert. Brukere identifiseres med cookie‑ID på tvers av økter innen perioden.'
                                         : isMixRange
@@ -351,7 +364,7 @@ const UserProfiles = () => {
                                             : 'Brukere er unike hver måned og får en ny bruker ID ved månedsskifte. På den måten kan de ikke spores over tid, noe som ivaretar personvernet.'}
                                 </BodyShort>
                             </div>
-                            <div className="w-64">
+                            <div className="w-full sm:w-64 flex-shrink-0">
                                 <TextField
                                     label="Søk"
                                     hideLabel
