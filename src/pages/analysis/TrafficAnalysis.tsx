@@ -1891,7 +1891,7 @@ const TrafficAnalysis = () => {
                                                             onChange={(e) => setComparePreviousPeriod(e.target.checked)}
                                                             size="small"
                                                         >
-                                                            Sammenlign med perioden før
+                                                            Sammenlign forrige periode
                                                         </Switch>
                                                     </div>
                                                     <div className="flex items-center gap-2">
