@@ -44,6 +44,17 @@ const EventJourney = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+
+    const buildFilterKey = () =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            urlPath: normalizeUrlToPath(urlPath),
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     // Modal state
     const [selectedStepDetails, setSelectedStepDetails] = useState<{ title: string, details: string[] } | null>(null);
@@ -134,6 +145,7 @@ const EventJourney = () => {
         if (!selectedWebsite) return;
 
         if (!urlPath) return;
+        const appliedFilterKey = buildFilterKey();
 
         setLoading(true);
         setError(null);
@@ -205,6 +217,7 @@ const EventJourney = () => {
             newParams.set('urlPath', urlPath);
             newParams.delete('minEvents');
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
 
         } catch (err) {
             console.error(err);
@@ -649,7 +662,7 @@ const EventJourney = () => {
                     <div className="flex items-end pb-[2px]">
                         <Button
                             onClick={fetchData}
-                            disabled={!selectedWebsite || loading || !urlPath}
+                            disabled={!selectedWebsite || loading || !urlPath || !hasUnappliedFilterChanges}
                             loading={loading}
                             size="small"
                         >

@@ -101,6 +101,20 @@ const TrafficAnalysis = () => {
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [selectedInternalUrl, setSelectedInternalUrl] = useState<string | null>(null);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+
+    const buildFilterKey = (granularityOverride = granularity) =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            urlPaths,
+            pathOperator,
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+            metricType,
+            granularity: granularityOverride,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     const includedPagesData = useMemo(() => {
         if (!pageMetrics.length) return [];
@@ -204,6 +218,7 @@ const TrafficAnalysis = () => {
             effectiveGranularity = 'hour';
             setGranularity('hour'); // Sync UI with the enforced decision
         }
+        const appliedFilterKey = buildFilterKey(effectiveGranularity);
 
         setSubmittedGranularity(effectiveGranularity);
         setSubmittedPeriod(period);
@@ -269,6 +284,7 @@ const TrafficAnalysis = () => {
             }
 
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
 
         } catch (err: any) {
             console.error('Error fetching traffic data:', err);
@@ -1375,7 +1391,7 @@ const TrafficAnalysis = () => {
                     <div className="flex items-end pb-[2px]">
                         <Button
                             onClick={fetchSeriesData}
-                            disabled={!selectedWebsite || loading}
+                            disabled={!selectedWebsite || loading || !hasUnappliedFilterChanges}
                             loading={loading}
                             size="small"
                         >

@@ -74,6 +74,18 @@ const Retention = () => {
     const [queryStats, setQueryStats] = useState<any>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
+
+    const buildFilterKey = () =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            urlPath: normalizeUrlToPath(urlPath),
+            pathOperator,
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     const getRetentionDateRange = () => {
         if (usesCookies) {
@@ -158,6 +170,7 @@ const Retention = () => {
 
     const fetchData = async () => {
         if (!selectedWebsite) return;
+        const appliedFilterKey = buildFilterKey();
 
         setLoading(true);
         setError(null);
@@ -252,6 +265,7 @@ const Retention = () => {
 
                 // Update URL without navigation
                 window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+                setLastAppliedFilterKey(appliedFilterKey);
             }
         } catch (err) {
             console.error('Error fetching retention data:', err);
@@ -412,7 +426,7 @@ const Retention = () => {
                         <Button
                             onClick={fetchData}
                             size="small"
-                            disabled={!selectedWebsite || loading}
+                            disabled={!selectedWebsite || loading || !hasUnappliedFilterChanges}
                             loading={loading}
                         >
                             Vis

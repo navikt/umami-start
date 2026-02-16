@@ -61,7 +61,21 @@ const UserJourney = () => {
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [reverseVisualOrder, setReverseVisualOrder] = useState<boolean>(false); // Default off
     const [selectedTableUrl, setSelectedTableUrl] = useState<string | null>(null);
+    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
     const sankeyContainerRef = useRef<HTMLDivElement | null>(null);
+
+    const buildFilterKey = (stepsOverride = steps) =>
+        JSON.stringify({
+            websiteId: selectedWebsite?.id ?? null,
+            startUrl: normalizeUrlToPath(startUrl),
+            period,
+            customStartDate: customStartDate?.toISOString() ?? null,
+            customEndDate: customEndDate?.toISOString() ?? null,
+            steps: stepsOverride,
+            limit,
+            journeyDirection,
+        });
+    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     useEffect(() => {
         if (activeTab !== 'sankey' || !sankeyContainerRef.current) return;
@@ -250,6 +264,7 @@ const UserJourney = () => {
         const { startDate, endDate } = dateRange;
 
         const stepsToFetch = customSteps || steps;
+        const appliedFilterKey = buildFilterKey(stepsToFetch);
 
         try {
             console.log('Fetching journeys for:', { websiteId: selectedWebsite.id, startUrl: normalizedStartUrl, steps: stepsToFetch, limit });
@@ -330,6 +345,7 @@ const UserJourney = () => {
 
             // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
 
 
         } catch (err) {
@@ -439,7 +455,7 @@ const UserJourney = () => {
                     <div className="w-full sm:w-auto self-end pb-[2px]">
                         <Button
                             onClick={() => fetchData()}
-                            disabled={!selectedWebsite || loading}
+                            disabled={!selectedWebsite || loading || !hasUnappliedFilterChanges}
                             loading={loading}
                             size="small"
                         >
