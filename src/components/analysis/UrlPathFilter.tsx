@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Label, UNSAFE_Combobox, Modal, Textarea, Button } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { normalizeUrlToPath } from "../../lib/utils";
@@ -25,6 +25,8 @@ interface UrlPathFilterProps {
     hideLabel?: boolean;
     /** Whether to show the operator dropdown */
     showOperator?: boolean;
+    /** Whether to show selected paths as combobox suggestions */
+    showSuggestions?: boolean;
     /** Optional additional class names */
     className?: string;
 }
@@ -39,10 +41,12 @@ export const UrlPathFilter = ({
     size = "small",
     hideLabel = false,
     showOperator = true,
+    showSuggestions = false,
     className = ""
 }: UrlPathFilterProps) => {
     const formatPathLabel = (path: string) => (path === "/" ? "/ (forsiden)" : path);
     const parseFormattedPath = (path: string) => (path === "/ (forsiden)" ? "/" : path);
+    const uniqueUrlPaths = useMemo(() => Array.from(new Set(urlPaths)), [urlPaths]);
 
     // Combobox input state
     const [comboInputValue, setComboInputValue] = useState("");
@@ -184,21 +188,21 @@ export const UrlPathFilter = ({
                 const url = new URL(pastedText);
                 const path = decodeURIComponent(url.pathname);
                 // Add if not exists
-                if (!urlPaths.includes(path)) {
+                if (!uniqueUrlPaths.includes(path)) {
                     // Check if we should strict match domain here? User might have said no to switch.
                     // If user said no to switch, maybe they want to track that external URL on THIS site?
                     // Unlikely, but possible. Let's assume they want to add it as path.
                     // But we should verify if it belongs to current domain if we enforce that.
                     // The parseMultipleUrls has strict check for bulk, maybe we should apply it here too?
                     // For now, let's just add the path.
-                    onUrlPathsChange([...urlPaths, path]);
+                    onUrlPathsChange([...uniqueUrlPaths, path]);
                     setComboInputValue("");
                 }
             } catch (e) {
                 // Not a valid URL, treat as text
                 const path = pastedText;
-                if (!urlPaths.includes(path)) {
-                    onUrlPathsChange([...urlPaths, path]);
+                if (!uniqueUrlPaths.includes(path)) {
+                    onUrlPathsChange([...uniqueUrlPaths, path]);
                     setComboInputValue("");
                 }
             }
@@ -220,7 +224,7 @@ export const UrlPathFilter = ({
 
             if (paths.length > 0) {
                 // Add all valid paths
-                const uniqueNewPaths = new Set([...urlPaths, ...paths]);
+                const uniqueNewPaths = new Set([...uniqueUrlPaths, ...paths]);
                 onUrlPathsChange(Array.from(uniqueNewPaths));
                 setComboInputValue("");
             }
@@ -242,7 +246,7 @@ export const UrlPathFilter = ({
         }
 
         // Add to urlPaths (avoiding duplicates)
-        const uniqueNewPaths = new Set([...urlPaths, ...paths]);
+        const uniqueNewPaths = new Set([...uniqueUrlPaths, ...paths]);
         onUrlPathsChange(Array.from(uniqueNewPaths));
 
         // Cleanup
@@ -266,8 +270,8 @@ export const UrlPathFilter = ({
                 setTimeout(() => { isSelectingRef.current = false; }, 100);
                 return;
             }
-            if (normalized && !urlPaths.includes(normalized)) {
-                const newPaths = [...urlPaths, normalized];
+            if (normalized && !uniqueUrlPaths.includes(normalized)) {
+                const newPaths = [...uniqueUrlPaths, normalized];
                 onUrlPathsChange(newPaths);
             }
         } else {
@@ -276,7 +280,7 @@ export const UrlPathFilter = ({
             if (normalized && !normalized.startsWith('/')) {
                 normalized = '/' + normalized;
             }
-            const newPaths = urlPaths.filter(p => p !== rawOption && p !== normalized);
+            const newPaths = uniqueUrlPaths.filter(p => p !== rawOption && p !== normalized);
             onUrlPathsChange(newPaths);
         }
 
@@ -318,8 +322,8 @@ export const UrlPathFilter = ({
                     setComboInputValue("");
                     return;
                 }
-                if (normalized && !urlPaths.includes(normalized)) {
-                    onUrlPathsChange([...urlPaths, normalized]);
+                if (normalized && !uniqueUrlPaths.includes(normalized)) {
+                    onUrlPathsChange([...uniqueUrlPaths, normalized]);
                 }
                 setComboInputValue("");
             }
@@ -349,8 +353,8 @@ export const UrlPathFilter = ({
                     size={size}
                     isMultiSelect
                     allowNewValues
-                    options={urlPaths.map(p => ({ label: formatPathLabel(p), value: formatPathLabel(p) }))}
-                    selectedOptions={urlPaths.map(formatPathLabel)}
+                    options={showSuggestions ? uniqueUrlPaths.map(p => ({ label: formatPathLabel(p), value: formatPathLabel(p) })) : []}
+                    selectedOptions={uniqueUrlPaths.map(formatPathLabel)}
                     onToggleSelected={handleToggleSelected}
                     value={comboInputValue}
                     onChange={(val) => setComboInputValue(val)}
@@ -431,8 +435,8 @@ export const UrlPathFilter = ({
                                 </Button>
                                 <Button
                                     onClick={() => {
-                                        if (pendingMissingSlash && !urlPaths.includes('/' + pendingMissingSlash)) {
-                                            onUrlPathsChange([...urlPaths, '/' + pendingMissingSlash]);
+                                        if (pendingMissingSlash && !uniqueUrlPaths.includes('/' + pendingMissingSlash)) {
+                                            onUrlPathsChange([...uniqueUrlPaths, '/' + pendingMissingSlash]);
                                         }
                                         setIsMissingSlashModalOpen(false);
                                         setPendingMissingSlash(null);
@@ -487,8 +491,8 @@ export const UrlPathFilter = ({
                                 if (path && !path.startsWith('/')) {
                                     path = '/' + path;
                                 }
-                                if (path && !urlPaths.includes(path)) {
-                                    onUrlPathsChange([...urlPaths, path]);
+                                if (path && !uniqueUrlPaths.includes(path)) {
+                                    onUrlPathsChange([...uniqueUrlPaths, path]);
                                 }
                             }
                             setIsSwitchModalOpen(false);
