@@ -1284,7 +1284,7 @@ const EventJourney = () => {
                                         variant="tertiary"
                                         size="medium"
                                         onClick={() => setFunnelSteps([])}
-                                        className="text-white hover:bg-[var(--ax-bg-default)]/10 hover:text-white"
+                                        className="!text-white hover:!text-white hover:!bg-white/10"
                                         icon={<Trash2 size={16} />}
                                     >
                                         Tøm
