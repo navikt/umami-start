@@ -1,5 +1,4 @@
 import express from 'express';
-import fetch from 'node-fetch';
 
 export function createUserRouter({ BACKEND_BASE_URL }) {
   const router = express.Router();

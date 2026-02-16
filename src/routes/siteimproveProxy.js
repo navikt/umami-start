@@ -1,5 +1,4 @@
 import express from 'express';
-import fetch from 'node-fetch';
 import { authenticateUser } from '../middleware/authenticateUser.js';
 
 export function createSiteimproveProxyRouter({ SITEIMPROVE_BASE_URL }) {
