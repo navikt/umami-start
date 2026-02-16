@@ -353,6 +353,8 @@ export const UrlPathFilter = ({
                     size={size}
                     isMultiSelect
                     allowNewValues
+                    isListOpen={showSuggestions ? undefined : false}
+                    toggleListButton={showSuggestions}
                     options={showSuggestions ? uniqueUrlPaths.map(p => ({ label: formatPathLabel(p), value: formatPathLabel(p) })) : []}
                     selectedOptions={uniqueUrlPaths.map(formatPathLabel)}
                     onToggleSelected={handleToggleSelected}
