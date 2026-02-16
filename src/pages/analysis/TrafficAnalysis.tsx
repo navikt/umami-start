@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Switch, Table, Heading, Pagination, VStack, Select, Label, HelpText } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink, ArrowRight } from 'lucide-react';
-import { format, parseISO, startOfWeek, startOfMonth, isValid } from 'date-fns';
+import { format, parseISO, startOfWeek, startOfMonth, isValid, differenceInCalendarDays, subDays } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
@@ -33,6 +33,87 @@ const getMetricLabelWithCount = (type: string): string => {
         case 'visits': return 'Økter';
         default: return 'Besøkende';
     }
+};
+
+const getMetricUnitLabel = (type: string): string => {
+    switch (type) {
+        case 'pageviews': return 'sidevisninger';
+        case 'proportion': return 'prosentpoeng';
+        case 'visits': return 'økter';
+        default: return 'besøkende';
+    }
+};
+
+const isCompareEnabled = (value: string | null): boolean => value === '1' || value === 'true';
+
+const getPreviousDateRange = (startDate: Date, endDate: Date) => {
+    const numberOfDays = Math.max(1, differenceInCalendarDays(endDate, startDate) + 1);
+    return {
+        startDate: subDays(startDate, numberOfDays),
+        endDate: subDays(endDate, numberOfDays),
+    };
+};
+
+const aggregateSeriesData = (
+    data: any[],
+    granularity: 'day' | 'week' | 'month' | 'hour',
+    metricType: string
+) => {
+    if (granularity !== 'week' && granularity !== 'month') {
+        return data;
+    }
+
+    const aggregated = new Map<string, { time: Date; value: number; count: number }>();
+
+    data.forEach((item: any) => {
+        const date = new Date(item.time);
+        if (!isValid(date)) return;
+
+        let key = '';
+        let displayTime = date;
+
+        if (granularity === 'week') {
+            displayTime = startOfWeek(date, { weekStartsOn: 1 });
+            key = format(displayTime, 'yyyy-MM-dd');
+        } else {
+            displayTime = startOfMonth(date);
+            key = format(displayTime, 'yyyy-MM');
+        }
+
+        if (!aggregated.has(key)) {
+            aggregated.set(key, { time: displayTime, value: 0, count: 0 });
+        }
+        const entry = aggregated.get(key)!;
+        entry.value += Number(item.count) || 0;
+        entry.count += 1;
+    });
+
+    return Array.from(aggregated.values())
+        .sort((a, b) => a.time.getTime() - b.time.getTime())
+        .map(entry => ({
+            time: entry.time.toISOString(),
+            count: metricType === 'proportion' ? entry.value / entry.count : entry.value
+        }));
+};
+
+const getComparablePeriodValue = (data: any[], metricType: string, totalCount?: number) => {
+    if (!data.length) return 0;
+
+    if (metricType === 'proportion') {
+        const values = data
+            .map(item => Number(item.count) || 0)
+            .filter(value => value >= 0 && value <= 1.01)
+            .map(value => Math.min(value, 1));
+
+        if (!values.length) return 0;
+        return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    if ((metricType === 'visits' || metricType === 'visitors') && typeof totalCount === 'number') {
+        return totalCount;
+    }
+
+    return data.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
 };
 
 const TrafficAnalysis = () => {
@@ -69,6 +150,11 @@ const TrafficAnalysis = () => {
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
     const [submittedCustomStartDate, setSubmittedCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [submittedCustomEndDate, setSubmittedCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const initialCompareValue = isCompareEnabled(searchParams.get('comparePrevious'));
+    const [comparePreviousPeriod, setComparePreviousPeriod] = useState<boolean>(initialCompareValue);
+    const [submittedComparePreviousPeriod, setSubmittedComparePreviousPeriod] = useState<boolean>(initialCompareValue);
+    const [submittedDateRange, setSubmittedDateRange] = useState<{ startDate: Date; endDate: Date } | null>(null);
+    const [submittedPreviousDateRange, setSubmittedPreviousDateRange] = useState<{ startDate: Date; endDate: Date } | null>(null);
 
     const [granularity, setGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
     const [submittedGranularity, setSubmittedGranularity] = useState<'day' | 'week' | 'month' | 'hour'>('day');
@@ -93,7 +179,10 @@ const TrafficAnalysis = () => {
     // Data states
     const [seriesData, setSeriesData] = useState<any[]>([]);
     const [seriesTotalCount, setSeriesTotalCount] = useState<number | undefined>(undefined);
+    const [previousSeriesData, setPreviousSeriesData] = useState<any[]>([]);
+    const [previousSeriesTotalCount, setPreviousSeriesTotalCount] = useState<number | undefined>(undefined);
     const [pageMetrics, setPageMetrics] = useState<any[]>([]);
+    const [previousPageMetrics, setPreviousPageMetrics] = useState<any[]>([]);
     const [seriesQueryStats, setSeriesQueryStats] = useState<any>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -113,6 +202,7 @@ const TrafficAnalysis = () => {
             customEndDate: customEndDate?.toISOString() ?? null,
             metricType,
             granularity: granularityOverride,
+            comparePreviousPeriod,
         });
     const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
@@ -124,6 +214,45 @@ const TrafficAnalysis = () => {
         }));
     }, [pageMetrics, submittedMetricType]);
 
+    const previousIncludedPagesMap = useMemo(() => {
+        const map = new Map<string, number>();
+        previousPageMetrics.forEach(item => {
+            const value = submittedMetricType === 'pageviews'
+                ? item.pageviews
+                : (submittedMetricType === 'proportion' ? item.proportion : item.visitors);
+            map.set(item.urlPath, Number(value) || 0);
+        });
+        return map;
+    }, [previousPageMetrics, submittedMetricType]);
+
+    const includedPagesWithCompare = useMemo(() => {
+        if (!submittedComparePreviousPeriod) return includedPagesData;
+
+        const rowMap = new Map<string, { name: string; count: number; previousCount: number; deltaCount: number }>();
+
+        includedPagesData.forEach(item => {
+            const previousCount = previousIncludedPagesMap.get(item.name) || 0;
+            rowMap.set(item.name, {
+                name: item.name,
+                count: item.count,
+                previousCount,
+                deltaCount: item.count - previousCount
+            });
+        });
+
+        previousIncludedPagesMap.forEach((previousCount, name) => {
+            if (rowMap.has(name)) return;
+            rowMap.set(name, {
+                name,
+                count: 0,
+                previousCount,
+                deltaCount: -previousCount
+            });
+        });
+
+        return Array.from(rowMap.values()).sort((a, b) => b.count - a.count);
+    }, [includedPagesData, previousIncludedPagesMap, submittedComparePreviousPeriod]);
+
     // Override totals for metrics that cannot be summed across time buckets.
     const totalOverride = useMemo(() => {
         if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
@@ -131,6 +260,13 @@ const TrafficAnalysis = () => {
         }
         return undefined;
     }, [submittedMetricType, seriesTotalCount]);
+
+    const previousTotalOverride = useMemo(() => {
+        if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
+            return previousSeriesTotalCount;
+        }
+        return undefined;
+    }, [submittedMetricType, previousSeriesTotalCount]);
 
 
     const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
@@ -183,6 +319,14 @@ const TrafficAnalysis = () => {
         }
     }, [granularity, submittedGranularity, hasAttemptedFetch, selectedWebsite, loading]);
 
+    // Auto-fetch when compare option changes (after initial fetch).
+    useEffect(() => {
+        if (!hasAttemptedFetch || !selectedWebsite || loading) return;
+        if (comparePreviousPeriod !== submittedComparePreviousPeriod) {
+            fetchSeriesData();
+        }
+    }, [comparePreviousPeriod, submittedComparePreviousPeriod, hasAttemptedFetch, selectedWebsite, loading]);
+
     const fetchSeriesData = async () => {
         if (!selectedWebsite) return;
 
@@ -196,7 +340,10 @@ const TrafficAnalysis = () => {
         setError(null);
         setSeriesData([]);
         setSeriesTotalCount(undefined);
+        setPreviousSeriesData([]);
+        setPreviousSeriesTotalCount(undefined);
         setPageMetrics([]);
+        setPreviousPageMetrics([]);
         setBreakdownData({ sources: [], exits: [] });
         setExternalReferrerData([]);
         setHasFetchedPageMetrics(false);
@@ -211,6 +358,7 @@ const TrafficAnalysis = () => {
         setSubmittedPathOperator(pathOperator);
         setSubmittedCustomStartDate(customStartDate);
         setSubmittedCustomEndDate(customEndDate);
+        setSubmittedComparePreviousPeriod(comparePreviousPeriod);
         let effectiveGranularity = granularity;
 
         // Auto-switch to hourly granularity for short periods upon fetch
@@ -235,6 +383,9 @@ const TrafficAnalysis = () => {
             return;
         }
         const { startDate, endDate } = dateRange;
+        const previousDateRange = comparePreviousPeriod ? getPreviousDateRange(startDate, endDate) : null;
+        setSubmittedDateRange({ startDate, endDate });
+        setSubmittedPreviousDateRange(previousDateRange);
         const { countByParams, countBySwitchAtParam } = getCountByQueryParams(startDate, endDate);
 
         try {
@@ -242,10 +393,19 @@ const TrafficAnalysis = () => {
             const urlPath = urlPaths.length > 0 ? urlPaths[0] : '';
             const normalizedPath = urlPath !== '/' && urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
 
-            let seriesUrl = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${startDate.getTime()}&endAt=${endDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}&interval=${interval}${countByParams}${countBySwitchAtParam}`;
-            if (normalizedPath) {
-                seriesUrl += `&urlPath=${encodeURIComponent(normalizedPath)}`;
-            }
+            const buildSeriesUrl = (
+                rangeStartDate: Date,
+                rangeEndDate: Date,
+                countByQueryParams: { countByParams: string; countBySwitchAtParam: string }
+            ) => {
+                let url = `/api/bigquery/websites/${selectedWebsite.id}/traffic-series?startAt=${rangeStartDate.getTime()}&endAt=${rangeEndDate.getTime()}&pathOperator=${pathOperator}&metricType=${metricType}&interval=${interval}${countByQueryParams.countByParams}${countByQueryParams.countBySwitchAtParam}`;
+                if (normalizedPath) {
+                    url += `&urlPath=${encodeURIComponent(normalizedPath)}`;
+                }
+                return url;
+            };
+
+            const seriesUrl = buildSeriesUrl(startDate, endDate, { countByParams, countBySwitchAtParam });
 
             const seriesResponse = await fetch(seriesUrl);
             if (!seriesResponse.ok) throw new Error('Kunne ikke hente trafikkdata');
@@ -262,10 +422,26 @@ const TrafficAnalysis = () => {
                 setSeriesQueryStats(seriesResult.queryStats);
             }
 
+            if (comparePreviousPeriod && previousDateRange) {
+                const previousCountByParams = getCountByQueryParams(previousDateRange.startDate, previousDateRange.endDate);
+                const previousSeriesUrl = buildSeriesUrl(previousDateRange.startDate, previousDateRange.endDate, previousCountByParams);
+                const previousSeriesResponse = await fetch(previousSeriesUrl);
+                if (!previousSeriesResponse.ok) throw new Error('Kunne ikke hente sammenligningsdata');
+                const previousSeriesResult = await previousSeriesResponse.json();
+
+                setPreviousSeriesData(previousSeriesResult.data || []);
+                setPreviousSeriesTotalCount(typeof previousSeriesResult.totalCount === 'number' ? previousSeriesResult.totalCount : undefined);
+            }
+
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
             newParams.set('period', period);
             newParams.set('metricType', metricType);
+            if (comparePreviousPeriod) {
+                newParams.set('comparePrevious', '1');
+            } else {
+                newParams.delete('comparePrevious');
+            }
             // Handle multiple paths in URL
             newParams.delete('urlPath');
             if (urlPaths.length > 0) {
@@ -345,6 +521,20 @@ const TrafficAnalysis = () => {
 
             if (result.data) {
                 setPageMetrics(result.data);
+            }
+
+            if (submittedComparePreviousPeriod && submittedPreviousDateRange) {
+                const { countByParams: previousCountByParams, countBySwitchAtParam: previousCountBySwitchAtParam } = getCountByQueryParams(
+                    submittedPreviousDateRange.startDate,
+                    submittedPreviousDateRange.endDate
+                );
+                const previousMetricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${submittedPreviousDateRange.startDate.getTime()}&endAt=${submittedPreviousDateRange.endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${activePathOperator}&metricType=${activeMetricType}${previousCountByParams}${previousCountBySwitchAtParam}`;
+                const previousResponse = await fetch(previousMetricsUrl);
+                if (!previousResponse.ok) throw new Error('Kunne ikke hente forrige sidemetrikker');
+                const previousResult = await previousResponse.json();
+                setPreviousPageMetrics(previousResult.data || []);
+            } else {
+                setPreviousPageMetrics([]);
             }
         } catch (err: any) {
             console.error('Error fetching page metrics:', err);
@@ -428,47 +618,19 @@ const TrafficAnalysis = () => {
         hasFetchedBreakdown
     ]);
 
+    const processedSeriesData = useMemo(
+        () => aggregateSeriesData(seriesData, submittedGranularity, submittedMetricType),
+        [seriesData, submittedGranularity, submittedMetricType]
+    );
+
+    const processedPreviousSeriesData = useMemo(
+        () => aggregateSeriesData(previousSeriesData, submittedGranularity, submittedMetricType),
+        [previousSeriesData, submittedGranularity, submittedMetricType]
+    );
+
     // Prepare Chart Data
     const chartData = useMemo(() => {
-        if (!seriesData.length) return null;
-
-        let processedData = seriesData;
-
-        // Apply aggregation if granularity is 'week' or 'month'
-        // For 'hour', we use the data as-is (assuming backend returned hourly data)
-        if (submittedGranularity === 'week' || submittedGranularity === 'month') {
-            const aggregated = new Map<string, { time: Date, value: number, count: number }>();
-
-            seriesData.forEach((item: any) => {
-                const date = new Date(item.time);
-                if (!isValid(date)) return;
-
-                let key = '';
-                let displayTime = date;
-
-                if (submittedGranularity === 'week') {
-                    displayTime = startOfWeek(date, { weekStartsOn: 1 });
-                    key = format(displayTime, 'yyyy-MM-dd');
-                } else { // month
-                    displayTime = startOfMonth(date);
-                    key = format(displayTime, 'yyyy-MM');
-                }
-
-                if (!aggregated.has(key)) {
-                    aggregated.set(key, { time: displayTime, value: 0, count: 0 });
-                }
-                const entry = aggregated.get(key)!;
-                entry.value += Number(item.count) || 0;
-                entry.count += 1;
-            });
-
-            processedData = Array.from(aggregated.values())
-                .sort((a, b) => a.time.getTime() - b.time.getTime())
-                .map(entry => ({
-                    time: entry.time.toISOString(),
-                    count: submittedMetricType === 'proportion' ? entry.value / entry.count : entry.value // Average for proportion, Sum for others
-                }));
-        }
+        if (!processedSeriesData.length) return null;
 
         const getMetricLabel = (type: string) => {
             switch (type) {
@@ -486,57 +648,92 @@ const TrafficAnalysis = () => {
                 default: return 'Unike besøkende';
             }
         };
+        const formatXAxisLabel = (date: Date) => {
+            if (submittedGranularity === 'week') {
+                return `Uke ${format(date, 'w', { locale: nb })}`;
+            }
+            if (submittedGranularity === 'month') {
+                return format(date, 'MMM yyyy', { locale: nb });
+            }
+            if (submittedGranularity === 'hour') {
+                return format(date, 'HH:mm');
+            }
+            return date.toLocaleDateString('nb-NO');
+        };
+        const toChartValue = (rawValue: number) => (
+            submittedMetricType === 'proportion'
+                ? Math.min(rawValue * 100, 100)
+                : rawValue
+        );
+
         const metricLabel = getMetricLabel(submittedMetricType);
         const metricLabelCapitalized = getMetricLabelCapitalized(submittedMetricType);
 
-        const points: ILineChartDataPoint[] = processedData.map((item: any) => {
-            let val = Number(item.count) || 0; // Ensure it's a number, default to 0
+        const points: ILineChartDataPoint[] = processedSeriesData.map((item: any) => {
+            let value = Number(item.count) || 0;
 
             if (submittedMetricType === 'proportion') {
-                // Sanitize proportion data to prevent massive axis scaling
-                if (val > 1.01) val = 0; // Allow slight precision error (1.01 = 101%), typically user bug
-                if (val < 0) val = 0;
+                if (value > 1.01) value = 0;
+                if (value < 0) value = 0;
             }
 
-            let xAxisLabel = '';
-            if (submittedGranularity === 'week') {
-                xAxisLabel = `Uke ${format(new Date(item.time), 'w', { locale: nb })}`;
-            } else if (submittedGranularity === 'month') {
-                xAxisLabel = format(new Date(item.time), 'MMM yyyy', { locale: nb });
-            } else if (submittedGranularity === 'hour') {
-                xAxisLabel = `${format(new Date(item.time), 'HH:mm')}`;
-            } else {
-                xAxisLabel = new Date(item.time).toLocaleDateString('nb-NO');
-            }
+            const pointDate = new Date(item.time);
+            const xAxisLabel = formatXAxisLabel(pointDate);
 
             return {
-                x: new Date(item.time),
-                y: submittedMetricType === 'proportion' ? Math.min(val * 100, 100) : val, // Hard cap visual at 100%
+                x: pointDate,
+                y: toChartValue(value),
                 legend: xAxisLabel,
                 xAxisCalloutData: xAxisLabel,
                 yAxisCalloutData: submittedMetricType === 'proportion'
-                    ? `${(val * 100).toFixed(1)}%`
-                    : `${val.toLocaleString('nb-NO')} ${metricLabel}`
+                    ? `${(value * 100).toFixed(1)}%`
+                    : `${value.toLocaleString('nb-NO')} ${metricLabel}`
             };
         });
 
-        // Calculate Y-axis bounds from actual data
-        const yValues = points.map(p => p.y);
-        const dataMax = Math.max(...yValues, 0);
-
-        // Add 10% padding to max, ensure min is 0 for cleaner charts
-        const yMax = submittedMetricType === 'proportion'
-            ? Math.max(dataMax * 1.1, 1) // At least 1% for proportion, with padding
-            : dataMax * 1.1;
-        const yMin = 0;
-
-        const lines = [
+        const lines: { legend: string; data: ILineChartDataPoint[]; color: string }[] = [
             {
                 legend: metricLabelCapitalized,
                 data: points,
-                color: '#0067c5',
+                color: '#0072B2',
             }
         ];
+
+        if (
+            submittedComparePreviousPeriod &&
+            processedPreviousSeriesData.length > 0 &&
+            submittedDateRange &&
+            submittedPreviousDateRange
+        ) {
+            const offsetMs = submittedDateRange.startDate.getTime() - submittedPreviousDateRange.startDate.getTime();
+            const previousPoints: ILineChartDataPoint[] = processedPreviousSeriesData.map((item: any) => {
+                let value = Number(item.count) || 0;
+
+                if (submittedMetricType === 'proportion') {
+                    if (value > 1.01) value = 0;
+                    if (value < 0) value = 0;
+                }
+
+                const shiftedDate = new Date(new Date(item.time).getTime() + offsetMs);
+                const xAxisLabel = formatXAxisLabel(shiftedDate);
+
+                return {
+                    x: shiftedDate,
+                    y: toChartValue(value),
+                    legend: xAxisLabel,
+                    xAxisCalloutData: `${xAxisLabel} (forrige periode)`,
+                    yAxisCalloutData: submittedMetricType === 'proportion'
+                        ? `${(value * 100).toFixed(1)}%`
+                        : `${value.toLocaleString('nb-NO')} ${metricLabel}`
+                };
+            });
+
+            lines.push({
+                legend: 'Forrige periode',
+                data: previousPoints,
+                color: '#D55E00',
+            });
+        }
 
         if (showAverage) {
             const total = points.reduce((sum, p) => sum + p.y, 0);
@@ -552,18 +749,33 @@ const TrafficAnalysis = () => {
             lines.push({
                 legend: 'Gjennomsnitt',
                 data: avgPoints,
-                color: '#ff9100',
+                color: '#009E73',
             });
         }
+
+        const allYValues = lines.flatMap(line => line.data.map(point => Number(point.y) || 0));
+        const dataMax = Math.max(...allYValues, 0);
+        const yMax = submittedMetricType === 'proportion'
+            ? Math.max(dataMax * 1.1, 1)
+            : dataMax * 1.1;
 
         return {
             data: {
                 lineChartData: lines
             },
             yMax,
-            yMin,
+            yMin: 0,
         };
-    }, [seriesData, showAverage, submittedMetricType, submittedGranularity]);
+    }, [
+        processedSeriesData,
+        processedPreviousSeriesData,
+        showAverage,
+        submittedMetricType,
+        submittedGranularity,
+        submittedComparePreviousPeriod,
+        submittedDateRange,
+        submittedPreviousDateRange
+    ]);
 
     const copyShareLink = async () => {
         try {
@@ -860,6 +1072,64 @@ const TrafficAnalysis = () => {
         return seriesData.reduce((sum, item) => sum + Number(item.count || 0), 0);
     }, [seriesData, seriesTotalCount, submittedMetricType]);
 
+    const comparisonSummary = useMemo(() => {
+        if (!submittedComparePreviousPeriod || !processedSeriesData.length || !processedPreviousSeriesData.length) {
+            return null;
+        }
+
+        const currentValue = getComparablePeriodValue(processedSeriesData, submittedMetricType, totalOverride);
+        const previousValue = getComparablePeriodValue(processedPreviousSeriesData, submittedMetricType, previousTotalOverride);
+        const deltaValue = currentValue - previousValue;
+
+        let deltaPercent: number | null = null;
+        if (previousValue !== 0) {
+            deltaPercent = (deltaValue / previousValue) * 100;
+        } else if (currentValue === 0) {
+            deltaPercent = 0;
+        }
+
+        return {
+            currentValue,
+            previousValue,
+            deltaValue,
+            deltaPercent,
+        };
+    }, [
+        submittedComparePreviousPeriod,
+        processedSeriesData,
+        processedPreviousSeriesData,
+        submittedMetricType,
+        totalOverride,
+        previousTotalOverride
+    ]);
+
+    const formatComparisonValue = (value: number) => {
+        if (submittedMetricType === 'proportion') {
+            return `${(value * 100).toFixed(1)}%`;
+        }
+        return Math.round(value).toLocaleString('nb-NO');
+    };
+
+    const formatComparisonDelta = (value: number) => {
+        const unitLabel = getMetricUnitLabel(submittedMetricType);
+        if (submittedMetricType === 'proportion') {
+            return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)} ${unitLabel}`;
+        }
+        return `${value >= 0 ? '+' : ''}${Math.round(value).toLocaleString('nb-NO')} ${unitLabel}`;
+    };
+
+    const comparisonRangeLabel = useMemo(() => {
+        if (!submittedDateRange || !submittedPreviousDateRange) return null;
+
+        const formatRange = (range: { startDate: Date; endDate: Date }) =>
+            `${format(range.startDate, 'dd.MM.yy')}–${format(range.endDate, 'dd.MM.yy')}`;
+
+        return {
+            current: formatRange(submittedDateRange),
+            previous: formatRange(submittedPreviousDateRange),
+        };
+    }, [submittedDateRange, submittedPreviousDateRange]);
+
     const entranceSummaryWithUnknown = useMemo(() => {
         if (submittedMetricType === 'proportion') {
             return entranceSummary;
@@ -1051,10 +1321,40 @@ const TrafficAnalysis = () => {
         );
     };
 
-    const TrafficTable = ({ title, data, onRowClick, selectedWebsite, metricLabel }: { title: string; data: { name: string; count: number }[]; onRowClick?: (name: string) => void; selectedWebsite: Website | null; metricLabel: string }) => {
+    const TrafficTable = ({
+        title,
+        data,
+        onRowClick,
+        selectedWebsite,
+        metricLabel,
+        showCompare = false
+    }: {
+        title: string;
+        data: { name: string; count: number; previousCount?: number; deltaCount?: number }[];
+        onRowClick?: (name: string) => void;
+        selectedWebsite: Website | null;
+        metricLabel: string;
+        showCompare?: boolean;
+    }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 10;
+        const valueColWidth = showCompare ? '5.75rem' : '6.75rem';
+        const deltaColWidth = '6.5rem';
+
+        const formatMetricValue = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${(value * 100).toFixed(1)}%`;
+            }
+            return Math.round(value).toLocaleString('nb-NO');
+        };
+
+        const formatMetricDelta = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)} pp`;
+            }
+            return `${value >= 0 ? '+' : ''}${Math.round(value).toLocaleString('nb-NO')}`;
+        };
 
         const filteredData = data.filter(row =>
             row.name.toLowerCase().includes(search.toLowerCase())
@@ -1118,14 +1418,21 @@ const TrafficAnalysis = () => {
         const downloadCSV = () => {
             if (!data.length) return;
 
-            const headers = ['URL-sti', metricLabel];
+            const headers = showCompare
+                ? ['URL-sti', metricLabel, 'Forrige', 'Endring']
+                : ['URL-sti', metricLabel];
             const csvRows = [
                 headers.join(','),
                 ...data.map((item) => {
-                    return [
+                    const baseRow = [
                         item.name, // URL-sti name
-                        submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
-                    ].join(',');
+                        formatMetricValue(item.count)
+                    ];
+                    if (showCompare) {
+                        baseRow.push(formatMetricValue(item.previousCount || 0));
+                        baseRow.push(formatMetricDelta(item.deltaCount || 0));
+                    }
+                    return baseRow.join(',');
                 })
             ];
 
@@ -1159,16 +1466,31 @@ const TrafficAnalysis = () => {
                     </div>
                 </div>
                 <div className="border rounded-lg overflow-x-auto">
-                    <Table size="small" className="table-fixed w-full [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2">
+                    <Table
+                        size="small"
+                        className="table-fixed w-full text-[0.95rem] [&_th]:!py-2 [&_td]:!py-2 [&_th:first-child]:!pl-2 [&_th:first-child]:!pr-2 [&_td:first-child]:!pl-2 [&_td:first-child]:!pr-2"
+                    >
                         <colgroup>
-                            <col style={{ width: '6.75rem' }} />
+                            <col style={{ width: valueColWidth }} />
+                            {showCompare && <col style={{ width: valueColWidth }} />}
+                            {showCompare && <col style={{ width: deltaColWidth }} />}
                             <col />
                         </colgroup>
                         <Table.Header>
                             <Table.Row>
-                                <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: '6.75rem', minWidth: '6.75rem' }}>
+                                <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: valueColWidth, minWidth: valueColWidth }}>
                                     {metricLabel}
                                 </Table.HeaderCell>
+                                {showCompare && (
+                                    <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: valueColWidth, minWidth: valueColWidth }}>
+                                        Forrige
+                                    </Table.HeaderCell>
+                                )}
+                                {showCompare && (
+                                    <Table.HeaderCell align="right" className="whitespace-normal leading-tight" style={{ width: deltaColWidth, minWidth: deltaColWidth }}>
+                                        Endring
+                                    </Table.HeaderCell>
+                                )}
                                 <Table.HeaderCell>URL-sti</Table.HeaderCell>
                             </Table.Row>
                         </Table.Header>
@@ -1179,10 +1501,24 @@ const TrafficAnalysis = () => {
                                     className={isClickableRow(row.name) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
                                     onClick={() => isClickableRow(row.name) && onRowClick?.(row.name)}
                                 >
-                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>
-                                        {row.count.toLocaleString('nb-NO')}
+                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: valueColWidth, minWidth: valueColWidth }}>
+                                        {formatMetricValue(row.count)}
                                     </Table.DataCell>
-                                    <Table.DataCell className="max-w-md" title={row.name}>
+                                    {showCompare && (
+                                        <Table.DataCell align="right" className="tabular-nums" style={{ width: valueColWidth, minWidth: valueColWidth }}>
+                                            {formatMetricValue(row.previousCount || 0)}
+                                        </Table.DataCell>
+                                    )}
+                                    {showCompare && (
+                                        <Table.DataCell
+                                            align="right"
+                                            className={`tabular-nums font-medium ${((row.deltaCount || 0) > 0) ? 'text-green-700' : ((row.deltaCount || 0) < 0) ? 'text-red-700' : ''}`}
+                                            style={{ width: deltaColWidth, minWidth: deltaColWidth }}
+                                        >
+                                            {formatMetricDelta(row.deltaCount || 0)}
+                                        </Table.DataCell>
+                                    )}
+                                    <Table.DataCell className="max-w-[13rem] sm:max-w-md" title={row.name}>
                                         {isClickableRow(row.name) ? (
                                             <span className="flex items-center gap-1 max-w-full">
                                                 <span
@@ -1204,7 +1540,7 @@ const TrafficAnalysis = () => {
                             ))}
                             {filteredData.length === 0 && (
                                 <Table.Row>
-                                    <Table.DataCell colSpan={2} align="center">
+                                    <Table.DataCell colSpan={showCompare ? 4 : 2} align="center">
                                         {data.length > 0 ? 'Ingen treff' : 'Ingen data'}
                                     </Table.DataCell>
                                 </Table.Row>
@@ -1236,10 +1572,24 @@ const TrafficAnalysis = () => {
         );
     };
 
-    const ChartDataTable = ({ data, metricLabel }: { data: any[]; metricLabel: string }) => {
+    const ChartDataTable = ({ data, previousData, metricLabel }: { data: any[]; previousData: any[]; metricLabel: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 10;
+
+        const formatMetricValue = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${(value * 100).toFixed(1)}%`;
+            }
+            return Math.round(value).toLocaleString('nb-NO');
+        };
+
+        const formatMetricDelta = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)} pp`;
+            }
+            return `${value >= 0 ? '+' : ''}${Math.round(value).toLocaleString('nb-NO')}`;
+        };
 
         const formatTime = (time: string) => {
             if (submittedGranularity === 'hour') {
@@ -1247,6 +1597,29 @@ const TrafficAnalysis = () => {
             }
             return new Date(time).toLocaleDateString('nb-NO');
         };
+
+        const shouldShowCompareColumns = Boolean(
+            submittedComparePreviousPeriod &&
+            previousData.length &&
+            submittedDateRange &&
+            submittedPreviousDateRange
+        );
+
+        const previousByShiftedTime = useMemo(() => {
+            const map = new Map<string, number>();
+
+            if (!shouldShowCompareColumns || !submittedDateRange || !submittedPreviousDateRange) {
+                return map;
+            }
+
+            const offsetMs = submittedDateRange.startDate.getTime() - submittedPreviousDateRange.startDate.getTime();
+            previousData.forEach((item: any) => {
+                const shiftedIso = new Date(new Date(item.time).getTime() + offsetMs).toISOString();
+                map.set(shiftedIso, Number(item.count) || 0);
+            });
+
+            return map;
+        }, [shouldShowCompareColumns, previousData, submittedDateRange, submittedPreviousDateRange]);
 
         const filteredData = data.filter(item =>
             formatTime(item.time).includes(search)
@@ -1280,22 +1653,50 @@ const TrafficAnalysis = () => {
                             <Table.Row>
                                 <Table.HeaderCell>{submittedGranularity === 'hour' ? 'Tidspunkt' : 'Dato'}</Table.HeaderCell>
                                 <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                                {shouldShowCompareColumns && (
+                                    <Table.HeaderCell align="right">Forrige</Table.HeaderCell>
+                                )}
+                                {shouldShowCompareColumns && (
+                                    <Table.HeaderCell align="right">Endring</Table.HeaderCell>
+                                )}
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
                             {paginatedData.map((item, index) => (
-                                <Table.Row key={index}>
-                                    <Table.DataCell>
-                                        {formatTime(item.time)}
-                                    </Table.DataCell>
-                                    <Table.DataCell align="right">
-                                        {submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count.toLocaleString('nb-NO')}
-                                    </Table.DataCell>
-                                </Table.Row>
+                                (() => {
+                                    const currentValue = Number(item.count) || 0;
+                                    const previousValue = previousByShiftedTime.get(new Date(item.time).toISOString());
+                                    const hasPreviousValue = typeof previousValue === 'number';
+                                    const deltaValue = hasPreviousValue ? currentValue - previousValue : null;
+
+                                    return (
+                                        <Table.Row key={index}>
+                                            <Table.DataCell>
+                                                {formatTime(item.time)}
+                                            </Table.DataCell>
+                                            <Table.DataCell align="right" className="tabular-nums">
+                                                {formatMetricValue(currentValue)}
+                                            </Table.DataCell>
+                                            {shouldShowCompareColumns && (
+                                                <Table.DataCell align="right" className="tabular-nums">
+                                                    {hasPreviousValue ? formatMetricValue(previousValue) : '-'}
+                                                </Table.DataCell>
+                                            )}
+                                            {shouldShowCompareColumns && (
+                                                <Table.DataCell
+                                                    align="right"
+                                                    className={`tabular-nums font-medium ${deltaValue && deltaValue > 0 ? 'text-green-700' : deltaValue && deltaValue < 0 ? 'text-red-700' : ''}`}
+                                                >
+                                                    {deltaValue === null ? '-' : formatMetricDelta(deltaValue)}
+                                                </Table.DataCell>
+                                            )}
+                                        </Table.Row>
+                                    );
+                                })()
                             ))}
                             {filteredData.length === 0 && (
                                 <Table.Row>
-                                    <Table.DataCell colSpan={2} align="center">
+                                    <Table.DataCell colSpan={shouldShowCompareColumns ? 4 : 2} align="center">
                                         {data.length > 0 ? 'Ingen treff (Data: ' + data.length + ')' : 'Ingen data'}
                                     </Table.DataCell>
                                 </Table.Row>
@@ -1442,17 +1843,55 @@ const TrafficAnalysis = () => {
                                     </div>
                                 ) : (
                                     <>
-                                        <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={totalOverride} granularity={submittedGranularity} />
+                                        {!submittedComparePreviousPeriod && (
+                                            <TrafficStats data={seriesData} metricType={submittedMetricType} totalOverride={totalOverride} granularity={submittedGranularity} />
+                                        )}
+                                        {submittedComparePreviousPeriod && comparisonSummary && comparisonRangeLabel && (
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Denne perioden</div>
+                                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                                        {formatComparisonValue(comparisonSummary.currentValue)}
+                                                    </div>
+                                                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">{comparisonRangeLabel.current}</div>
+                                                </div>
+                                                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Forrige periode</div>
+                                                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
+                                                        {formatComparisonValue(comparisonSummary.previousValue)}
+                                                    </div>
+                                                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">{comparisonRangeLabel.previous}</div>
+                                                </div>
+                                                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
+                                                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Endring</div>
+                                                    <div className={`text-2xl font-bold ${comparisonSummary.deltaPercent !== null ? (comparisonSummary.deltaPercent > 0 ? 'text-green-700' : comparisonSummary.deltaPercent < 0 ? 'text-red-700' : 'text-[var(--ax-text-default)]') : 'text-[var(--ax-text-default)]'}`}>
+                                                        {comparisonSummary.deltaPercent === null
+                                                            ? '–'
+                                                            : `${comparisonSummary.deltaPercent >= 0 ? '+' : ''}${comparisonSummary.deltaPercent.toFixed(1)}%`}
+                                                    </div>
+                                                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                                                        {formatComparisonDelta(comparisonSummary.deltaValue)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="flex flex-col gap-8">
                                             <div className="flex flex-col gap-4">
                                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                                                    <div className="flex items-center gap-4">
+                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
                                                         <Switch
                                                             checked={showAverage}
                                                             onChange={(e) => setShowAverage(e.target.checked)}
                                                             size="small"
                                                         >
                                                             Vis gjennomsnitt
+                                                        </Switch>
+                                                        <Switch
+                                                            checked={comparePreviousPeriod}
+                                                            onChange={(e) => setComparePreviousPeriod(e.target.checked)}
+                                                            size="small"
+                                                        >
+                                                            Sammenlign med perioden før
                                                         </Switch>
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -1476,14 +1915,14 @@ const TrafficAnalysis = () => {
                                                     {chartData ? (
                                                         <ResponsiveContainer>
                                                             <LineChart
-                                                                key={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}`}
+                                                                key={`${submittedMetricType}-${submittedPeriod}-${seriesData.length}-${previousSeriesData.length}-${submittedComparePreviousPeriod ? 'compare' : 'single'}`}
                                                                 data={chartData.data}
                                                                 legendsOverflowText={'Overflow Items'}
                                                                 yAxisTickFormat={(d: any) => submittedMetricType === 'proportion' ? `${d.toFixed(1)}%` : d.toLocaleString('nb-NO')}
                                                                 yAxisTickCount={6}
                                                                 yMaxValue={chartData.yMax}
                                                                 yMinValue={chartData.yMin}
-                                                                allowMultipleShapesForPoints={false}
+                                                                allowMultipleShapesForPoints={true}
                                                                 enablePerfOptimization={true}
                                                                 margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
                                                                 legendProps={{
@@ -1506,7 +1945,8 @@ const TrafficAnalysis = () => {
                                                 {/* Chart Data Table - First position */}
                                                 <div className="w-full md:w-1/2">
                                                     <ChartDataTable
-                                                        data={seriesData}
+                                                        data={processedSeriesData}
+                                                        previousData={processedPreviousSeriesData}
                                                         metricLabel={getMetricLabelWithCount(submittedMetricType)}
                                                     />
                                                 </div>
@@ -1515,10 +1955,11 @@ const TrafficAnalysis = () => {
                                                 <div className="w-full md:w-1/2">
                                                     <TrafficTable
                                                         title="Inkluderte sider"
-                                                        data={includedPagesData}
+                                                        data={includedPagesWithCompare}
                                                         onRowClick={setSelectedInternalUrl}
                                                         selectedWebsite={selectedWebsite}
                                                         metricLabel={getMetricLabelCapitalized(submittedMetricType)}
+                                                        showCompare={submittedComparePreviousPeriod}
                                                     />
                                                 </div>
                                             </div>
