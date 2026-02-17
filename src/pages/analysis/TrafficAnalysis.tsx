@@ -889,6 +889,10 @@ const TrafficAnalysis = () => {
             return { entrances: [], exits: [] };
         }
 
+        const normalizePathValue = (value: string) =>
+            value !== '/' && value.endsWith('/') ? value.slice(0, -1) : value;
+        const submittedPathSet = new Set(submittedUrlPaths.map(normalizePathValue));
+
         const sources = breakdownData.sources.map((s: BreakdownEntry) => ({
             name: s.name,
             count: Number(s.visitors)
@@ -897,15 +901,17 @@ const TrafficAnalysis = () => {
         const exitsList = breakdownData.exits.map((e: BreakdownEntry) => ({
             name: e.name,
             count: Number(e.visitors)
-        })).sort((a, b) => b.count - a.count);
+        }))
+            // Hide self-loop exits (same path as the analyzed URL path).
+            .filter(e => {
+                if (!e.name.startsWith('/')) return true;
+                return !submittedPathSet.has(normalizePathValue(e.name));
+            })
+            .sort((a, b) => b.count - a.count);
 
         // Filter Sources for internal entrances only, excluding the current URL path(s) being analyzed
         const entrancesList = sources
-            .filter(s => s.name.startsWith('/') && !submittedUrlPaths.some(path => {
-                const normalizedPath = path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path;
-                const normalizedName = s.name !== '/' && s.name.endsWith('/') ? s.name.slice(0, -1) : s.name;
-                return normalizedName === normalizedPath;
-            }))
+            .filter(s => s.name.startsWith('/') && !submittedPathSet.has(normalizePathValue(s.name)))
             .sort((a, b) => b.count - a.count);
 
         return { entrances: entrancesList, exits: exitsList };
