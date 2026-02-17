@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Tabs, UNSAFE_Combobox } from '@navikt/ds-react';
-import { Share2, Check } from 'lucide-react';
+import { Share2, Check, ArrowRight } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
@@ -9,6 +9,59 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import type { Website } from '../../types/chart';
 import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
+type ParsedStepDetail = {
+    key: string;
+    value: string;
+};
+
+type ParsedJourneyStep = {
+    eventName: string;
+    details: ParsedStepDetail[];
+};
+
+type JourneyStats = {
+    total_sessions?: number;
+    sessions_with_events?: number;
+    sessions_no_events_navigated?: number;
+    sessions_no_events_bounced?: number;
+    totalBytesProcessedGB?: number;
+    estimatedCostUSD?: number;
+};
+
+type EventJourneyResponse = {
+    journeys?: { path: string[]; count: number }[];
+    journeyStats?: JourneyStats;
+};
+
+const parseJourneyStep = (step: string): ParsedJourneyStep => {
+    const separatorIndex = step.indexOf(': ');
+    if (separatorIndex === -1) {
+        return {
+            eventName: step.trim(),
+            details: [],
+        };
+    }
+
+    const eventName = step.slice(0, separatorIndex).trim();
+    const rawDetails = step.slice(separatorIndex + 2);
+    const details = rawDetails
+        .split('||')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => {
+            const detailSeparatorIndex = part.indexOf(':');
+            if (detailSeparatorIndex === -1) {
+                return { key: part, value: '' };
+            }
+
+            return {
+                key: part.slice(0, detailSeparatorIndex).trim(),
+                value: part.slice(detailSeparatorIndex + 1).trim(),
+            };
+        });
+
+    return { eventName, details };
+};
 
 const EventJourney = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -36,15 +89,6 @@ const EventJourney = () => {
     // Client-side filter state
     const [filterText, setFilterText] = useState<string>('');
 
-    type JourneyStats = {
-        total_sessions?: number;
-        sessions_with_events?: number;
-        sessions_no_events_navigated?: number;
-        sessions_no_events_bounced?: number;
-        totalBytesProcessedGB?: number;
-        estimatedCostUSD?: number;
-    };
-
     const [data, setData] = useState<{ path: string[], count: number }[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -65,6 +109,7 @@ const EventJourney = () => {
 
     const [excludedEventTypes, setExcludedEventTypes] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState<string>('visual');
+    const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
 
     const fetchData = useCallback(async () => {
         if (!selectedWebsite) return;
@@ -131,9 +176,9 @@ const EventJourney = () => {
                 throw new Error('Failed to fetch event journeys');
             }
 
-            const result = await response.json();
+            const result: EventJourneyResponse = await response.json() as EventJourneyResponse;
             setData(result.journeys || []);
-            setQueryStats(result.journeyStats);
+            setQueryStats(result.journeyStats || null);
 
             // Update URL
             const newParams = new URLSearchParams(window.location.search);
@@ -163,7 +208,7 @@ const EventJourney = () => {
         const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath');
         if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
             setHasAutoSubmitted(true);
-            fetchData();
+            void fetchData();
         }
     }, [selectedWebsite, searchParams, hasAutoSubmitted, loading, fetchData]);
 
@@ -241,6 +286,7 @@ const EventJourney = () => {
         if (!total) return '0.0%';
         return ((count / total) * 100).toFixed(1) + '%';
     };
+    const totalJourneySessions = data.reduce((total, journey) => total + journey.count, 0);
 
 
     const copyShareLink = async () => {
@@ -251,6 +297,12 @@ const EventJourney = () => {
         } catch (err) {
             console.error('Failed to copy link:', err);
         }
+    };
+    const toggleDetailsExpansion = (stepKey: string) => {
+        setExpandedDetails((current) => ({
+            ...current,
+            [stepKey]: !current[stepKey],
+        }));
     };
 
     return (
@@ -353,7 +405,7 @@ const EventJourney = () => {
                         </div>
 
                         {/* Bounced */}
-                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle] shadow-sm">
+                        <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Forlot nettstedet</div>
                             <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
                                 {getPercentage(queryStats?.sessions_no_events_bounced || 0, queryStats?.total_sessions || 0)}
@@ -412,17 +464,66 @@ const EventJourney = () => {
                         <Tabs.Panel value="visual" className="pt-4">
                             <div className="bg-[var(--ax-bg-default)] border rounded-lg p-4">
                                 {filteredData.length > 0 ? (
-                                    filteredData.map((journey, idx) => (
-                                        <div key={idx} className="mb-6 last:mb-0">
-                                            <div className="flex items-center text-sm text-gray-500 mb-2">
-                                                <span className="font-semibold text-[var(--ax-text-default)] mr-2">{formatNumber(journey.count)} sesjoner</span>
-                                                <span>({((journey.count / data.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1)}% av totalt)</span>
+                                    <div className="space-y-4">
+                                        {filteredData.map((journey, idx) => (
+                                            <div key={idx} className="rounded-xl border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-default)] p-4">
+                                                <div className="flex items-center gap-2 text-sm text-[var(--ax-text-subtle)] mb-3">
+                                                    <span className="font-semibold text-[var(--ax-text-default)]">{formatNumber(journey.count)} sesjoner</span>
+                                                    <span>({((journey.count / totalJourneySessions) * 100).toFixed(1)}% av totalt)</span>
+                                                </div>
+
+                                                <div className="overflow-x-auto pb-1">
+                                                    <div className="flex min-w-max items-stretch gap-2">
+                                                        {journey.path.map((step, stepIndex) => {
+                                                            const parsedStep = parseJourneyStep(step);
+                                                            const stepKey = `${idx}-${stepIndex}`;
+                                                            const isExpanded = expandedDetails[stepKey] === true;
+                                                            const detailsToRender = isExpanded ? parsedStep.details : parsedStep.details.slice(0, 4);
+                                                            const hiddenDetailsCount = parsedStep.details.length - detailsToRender.length;
+
+                                                            return (
+                                                                <div key={`${step}-${stepIndex}`} className="flex items-center gap-2">
+                                                                    <div className="w-[320px] min-h-[120px] rounded-lg border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] p-3">
+                                                                        <div className="text-xs font-medium text-[var(--ax-text-subtle)] mb-1">
+                                                                            Steg {stepIndex + 1}
+                                                                        </div>
+                                                                        <div className="text-sm font-semibold text-[var(--ax-text-default)] break-words">
+                                                                            {parsedStep.eventName}
+                                                                        </div>
+                                                                        {detailsToRender.length > 0 && (
+                                                                            <div className="mt-2 space-y-1">
+                                                                                {detailsToRender.map((detail, detailIndex) => (
+                                                                                    <div key={`${detail.key}-${detail.value}-${detailIndex}`} className="text-sm leading-5">
+                                                                                        <span className="font-bold text-[var(--ax-text-default)]">{detail.key}:</span>{' '}
+                                                                                        <span className="text-[var(--ax-text-default)] break-words">{detail.value}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                                {parsedStep.details.length > 4 && (
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        size="xsmall"
+                                                                                        variant="secondary"
+                                                                                        data-color="neutral" 
+                                                                                        onClick={() => toggleDetailsExpansion(stepKey)}
+                                                                                        className="mt-1 w-fit"
+                                                                                    >
+                                                                                        {isExpanded ? 'Vis færre felter' : `Vis alle felter (+${hiddenDetailsCount})`}
+                                                                                    </Button>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {stepIndex < journey.path.length - 1 && (
+                                                                        <ArrowRight size={16} className="text-[var(--ax-text-subtle)] flex-shrink-0" />
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-[var(--ax-text-default)] break-words">
-                                                {journey.path.join(' → ')}
-                                            </div>
-                                        </div>
-                                    ))
+                                        ))}
+                                    </div>
                                 ) : (
                                     <div className="text-center text-gray-500 py-8">
                                         Ingen reiser matcher søket ditt.
@@ -446,8 +547,10 @@ const EventJourney = () => {
                                             {filteredData.map((journey, idx) => (
                                                 <tr key={idx} className="hover:bg-[var(--ax-bg-neutral-soft)]">
                                                     <td className="px-4 py-2 text-sm text-[var(--ax-text-default)]">{journey.count}</td>
-                                                    <td className="px-4 py-2 text-sm text-[var(--ax-text-default)]">{((journey.count / data.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1)}%</td>
-                                                    <td className="px-4 py-2 text-sm text-[var(--ax-text-default)] break-words">{journey.path.join(' → ')}</td>
+                                                    <td className="px-4 py-2 text-sm text-[var(--ax-text-default)]">{((journey.count / totalJourneySessions) * 100).toFixed(1)}%</td>
+                                                    <td className="px-4 py-2 text-sm text-[var(--ax-text-default)] break-words">
+                                                        {journey.path.map((step) => parseJourneyStep(step).eventName).join(' → ')}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
