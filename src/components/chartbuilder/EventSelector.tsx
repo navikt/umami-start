@@ -867,7 +867,7 @@ const EventSelector = ({
                                 {uniqueParameters.map(param => (
                                   <option
                                     key={`param_${param.key}`}
-                                    value={`param_${getCleanParamDisplayName(param)}`}
+                                    value={`param_${getCleanParamName(param)}`}
                                   >
                                     {getParamDisplayName(param)}
                                   </option>
