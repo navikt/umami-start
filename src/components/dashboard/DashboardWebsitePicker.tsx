@@ -560,7 +560,7 @@ const DashboardWebsitePicker = ({
     });
 
     const isWebsitesLoading = websites.length === 0 && !websitesLoaded.current;
-    const optionLabels = sortedWebsites.map(w => w.name);
+    const optionLabels = sortedWebsites.map(w => ({ label: w.name, value: w.id }));
     return (
         <div className={`${variant === 'minimal' ? '' : ''}`}>
             <div>
@@ -574,10 +574,10 @@ const DashboardWebsitePicker = ({
                     label="Nettside eller app"
                     size={size}
                     options={optionLabels}
-                    selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
+                    selectedOptions={selectedWebsite ? [selectedWebsite.id] : []}
                     onToggleSelected={(value, isSelected) => {
                         if (isSelected) {
-                            const website = sortedWebsites.find(w => w.name === value);
+                            const website = sortedWebsites.find(w => w.id === value);
                             if (website) {
                                 selectedWebsiteRef.current = website;
                                 handleWebsiteChange(website);
@@ -585,13 +585,15 @@ const DashboardWebsitePicker = ({
                             return;
                         }
 
-                        if (selectedWebsiteRef.current?.name === value) {
+                        if (selectedWebsiteRef.current?.id === value) {
                             selectedWebsiteRef.current = null;
                             handleWebsiteChange(null);
                         }
                     }}
                     className="w-full"
                     isLoading={isWebsitesLoading}
+                    isMultiSelect={false}
+                    clearButton
                 />
 
                 {!isWebsitesLoading && sortedWebsites.length === 0 && (
