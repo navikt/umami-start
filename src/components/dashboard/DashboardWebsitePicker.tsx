@@ -556,8 +556,7 @@ const DashboardWebsitePicker = ({
     });
 
     const isWebsitesLoading = websites.length === 0 && !websitesLoaded.current;
-    const optionLabels = sortedWebsites.map(w => ({ value: w.id, label: w.name }));
-
+    const optionLabels = sortedWebsites.map(w => w.name);
     return (
         <div className={`${variant === 'minimal' ? '' : ''}`}>
             <div>
@@ -571,10 +570,10 @@ const DashboardWebsitePicker = ({
                     label="Nettside eller app"
                     size={size}
                     options={optionLabels}
-                    selectedOptions={selectedWebsite ? [selectedWebsite.id] : []}
+                    selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
                     onToggleSelected={(value, isSelected) => {
                         if (isSelected) {
-                            const website = websites.find(w => w.id === value);
+                            const website = websites.find(w => w.name === value);
                             if (website) handleWebsiteChange(website);
                         } else {
                             handleWebsiteChange(null);
