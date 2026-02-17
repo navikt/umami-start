@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
@@ -11,6 +11,7 @@ import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
 import { Website } from '../../types/chart';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams } from '../../lib/utils';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
+import type { IVerticalBarChartProps } from '@fluentui/react-charting';
 
 
 const UserComposition = () => {
@@ -43,16 +44,32 @@ const UserComposition = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const [data, setData] = useState<any>(null);
+
+    type CompositionRow = {
+        category: string;
+        value: string;
+        count: number;
+    };
+
+    type QueryStatsLike = {
+        totalBytesProcessedGB?: string;
+        estimatedCostUSD?: string;
+    };
+
+    type CompositionApiResponse =
+        | { error: string }
+        | { data: CompositionRow[]; queryStats?: QueryStatsLike };
+
+    const [data, setData] = useState<CompositionRow[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<string>('browser');
-    const [queryStats, setQueryStats] = useState<any>(null);
+    const [queryStats, setQueryStats] = useState<QueryStatsLike | null>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
 
-    const buildFilterKey = () =>
+    const buildFilterKey = useCallback(() =>
         JSON.stringify({
             websiteId: selectedWebsite?.id ?? null,
             urlPaths,
@@ -60,28 +77,10 @@ const UserComposition = () => {
             period,
             customStartDate: customStartDate?.toISOString() ?? null,
             customEndDate: customEndDate?.toISOString() ?? null,
-        });
+        }), [selectedWebsite?.id, urlPaths, pathOperator, period, customStartDate, customEndDate]);
     const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
-    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
-    useEffect(() => {
-        if (selectedWebsite && !hasAutoSubmitted && !loading) {
-            setHasAutoSubmitted(true);
-            fetchData();
-        }
-    }, [selectedWebsite]);
-
-    const copyShareLink = async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy link:', err);
-        }
-    };
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!selectedWebsite) return;
         const appliedFilterKey = buildFilterKey();
 
@@ -90,7 +89,6 @@ const UserComposition = () => {
         setData(null);
         setQueryStats(null);
 
-        // Calculate date range based on period using centralized utility
         const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
         if (!dateRange) {
             setError('Vennligst velg en gyldig periode.');
@@ -103,9 +101,7 @@ const UserComposition = () => {
         try {
             const response = await fetch('/api/bigquery/composition', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     websiteId: selectedWebsite.id,
                     startDate: startDate.toISOString(),
@@ -117,44 +113,58 @@ const UserComposition = () => {
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error('Kunne ikke hente data');
-            }
+            if (!response.ok) throw new Error('Kunne ikke hente data');
 
-            const result = await response.json();
+            const result: CompositionApiResponse = await response.json();
 
-            if (result.error) {
+            if ('error' in result) {
                 setError(result.error);
-            } else {
-                setData(result.data);
-                // If current tab is 'custom' but no custom data exists, switch to 'browser'
-                if (activeCategory === 'custom' && !result.data.some((item: any) => item.category === 'custom')) {
-                    setActiveCategory('browser');
-                }
-                setQueryStats(result.queryStats);
-
-                // Update URL with configuration for sharing
-                const newParams = new URLSearchParams(window.location.search);
-                newParams.set('period', period);
-                if (urlPaths.length > 0) {
-                    newParams.set('urlPath', urlPaths[0]);
-                    newParams.set('pathOperator', pathOperator);
-                    newParams.delete('pagePath');
-                } else {
-                    newParams.delete('urlPath');
-                    newParams.delete('pathOperator');
-                    newParams.delete('pagePath');
-                }
-
-                // Update URL without navigation
-                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-                setLastAppliedFilterKey(appliedFilterKey);
+                return;
             }
-        } catch (err) {
-            console.error('Error fetching composition data:', err);
+
+            setData(result.data);
+
+            if (activeCategory === 'custom' && !result.data.some((item) => item.category === 'custom')) {
+                setActiveCategory('browser');
+            }
+
+            setQueryStats(result.queryStats ?? null);
+
+            const newParams = new URLSearchParams(window.location.search);
+            newParams.set('period', period);
+            if (urlPaths.length > 0) {
+                newParams.set('urlPath', urlPaths[0]);
+                newParams.set('pathOperator', pathOperator);
+                newParams.delete('pagePath');
+            } else {
+                newParams.delete('urlPath');
+                newParams.delete('pathOperator');
+                newParams.delete('pagePath');
+            }
+            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            setLastAppliedFilterKey(appliedFilterKey);
+        } catch {
             setError('Det oppstod en feil ved henting av data.');
         } finally {
             setLoading(false);
+        }
+    }, [selectedWebsite, buildFilterKey, period, customStartDate, customEndDate, usesCookies, cookieStartDate, urlPaths, pathOperator, activeCategory]);
+
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
+    useEffect(() => {
+        if (selectedWebsite && !hasAutoSubmitted && !loading) {
+            setHasAutoSubmitted(true);
+            fetchData();
+        }
+    }, [selectedWebsite, hasAutoSubmitted, loading, fetchData]);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch {
+            // ignore
         }
     };
 
@@ -162,57 +172,50 @@ const UserComposition = () => {
     const getCategoryData = () => {
         if (!data) return null;
 
-        // Filter data by the active category
-        // The backend should return rows with 'category', 'value', 'count'
-        const categoryData = data.filter((row: any) => row.category === activeCategory);
+        const categoryData = data.filter((row) => row.category === activeCategory);
+        const total = categoryData.reduce((sum, row) => sum + row.count, 0);
 
-        // Calculate total for percentage
-        const total = categoryData.reduce((sum: number, row: any) => sum + row.count, 0);
-
-        // Transform to what ResultsDisplay expects (array of objects)
-        // We want to show the value (e.g., "Chrome"), the count, and the percentage
         return {
-            data: categoryData.map((row: any) => {
+            data: categoryData.map((row) => {
                 const percentage = total > 0 ? ((row.count / total) * 100).toFixed(1) : '0.0';
                 return {
                     [activeCategory]: row.value,
-                    'Antall': row.count,
-                    'Andel': `${percentage}%`
+                    Antall: row.count,
+                    Andel: `${percentage}%`,
                 };
-            })
+            }),
         };
     };
 
-    const prepareBarChartData = () => {
+    const prepareBarChartData = (): IVerticalBarChartProps | null => {
         const currentData = getCategoryData();
-        if (!currentData || !currentData.data) return null;
+        if (!currentData?.data || currentData.data.length === 0) return null;
 
         return {
-            data: currentData.data.map((row: any) => ({
-                x: row[activeCategory],
-                y: row['Antall']
+            data: currentData.data.map((row) => ({
+                x: String(row[activeCategory]),
+                y: Number(row.Antall),
             })),
             barWidth: 20,
-            yAxisTickCount: 5
+            yAxisTickCount: 5,
         };
     };
 
-    const preparePieChartData = () => {
+    const preparePieChartData = (): { data: Array<{ x: string; y: number }>; total: number } | null => {
         const currentData = getCategoryData();
-        if (!currentData || !currentData.data) return null;
+        if (!currentData?.data || currentData.data.length === 0) return null;
 
-        const total = currentData.data.reduce((sum: number, row: any) => sum + row['Antall'], 0);
+        const total = currentData.data.reduce((sum, row) => sum + Number(row.Antall), 0);
 
         return {
-            data: currentData.data.map((row: any) => ({
-                x: row[activeCategory],
-                y: row['Antall']
+            data: currentData.data.map((row) => ({
+                x: String(row[activeCategory]),
+                y: Number(row.Antall),
             })),
-            total
+            total,
         };
     };
 
-    // We don't really use line chart for this aggregation, but ResultsDisplay requires the prop
     const prepareLineChartData = () => null;
 
     return (
@@ -284,7 +287,7 @@ const UserComposition = () => {
                             <Tabs.Tab value="screen" label="Skjerm" />
                             <Tabs.Tab value="language" label="Språk" />
                             <Tabs.Tab value="country" label="Land" />
-                            {data?.data?.some((item: any) => item.category === 'custom') && (
+                            {data.some((item: CompositionRow) => item.category === 'custom') && (
                                 <Tabs.Tab value="custom" label="Egendefinert" />
                             )}
                         </Tabs.List>

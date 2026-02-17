@@ -1,10 +1,15 @@
-
 import { subDays, format } from 'date-fns';
+
+declare global {
+    interface Window {
+        __GCP_PROJECT_ID__?: string;
+    }
+}
 
 // Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
 const getGcpProjectId = (): string => {
-    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
-        return (window as any).__GCP_PROJECT_ID__;
+    if (typeof window !== 'undefined' && window.__GCP_PROJECT_ID__) {
+        return window.__GCP_PROJECT_ID__;
     }
     // Fallback for development/SSR contexts
     throw new Error('Missing runtime config: GCP_PROJECT_ID');
@@ -93,14 +98,14 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
     // 4. Handle metric type substitutions
     if (filters.metricType === 'pageviews') {
         processedSql = processedSql.replace(
-            /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_\.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
+            /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
             'COUNT(*) as Sidevisninger'
         );
         processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Sidevisninger');
     } else if (filters.metricType === 'proportion') {
         const totalSiteVisitorsSubquery = `(SELECT COUNT(DISTINCT session_id) FROM \`${projectId}.umami_views.event\` WHERE website_id = '${websiteId}' AND event_type = 1 AND created_at BETWEEN ${fromSql} AND ${toSql})`;
         processedSql = processedSql.replace(
-            /COUNT\s*\(\s*DISTINCT\s+(?:([a-zA-Z_\.]+)\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
+            /COUNT\s*\(\s*DISTINCT\s+(?:([a-zA-Z_.]+)\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
             (_match, tablePrefix) => {
                 const sessionRef = tablePrefix ? `${tablePrefix}.session_id` : 'session_id';
                 return `CONCAT(CAST(ROUND(COUNT(DISTINCT ${sessionRef}) * 100.0 / ${totalSiteVisitorsSubquery}, 1) AS STRING), '%') as Andel`;
@@ -109,7 +114,7 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
         processedSql = processedSql.replace(/\bUnike_besokende\b/g, 'Andel');
     } else if (filters.metricType === 'visits') {
         processedSql = processedSql.replace(
-            /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_\.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
+            /COUNT\s*\(\s*DISTINCT\s+(?:[a-zA-Z_.]+\.)?session_id\s*\)\s+as\s+Unike_besokende/gi,
             'COUNT(DISTINCT visit_id) as `Antall økter`'
         );
         processedSql = processedSql.replace(/\bUnike_besokende\b/g, '`Antall økter`');

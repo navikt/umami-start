@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Heading, BodyShort } from '@navikt/ds-react';
 import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
@@ -65,18 +64,29 @@ const Retention = () => {
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
 
-    const [retentionData, setRetentionData] = useState<any[]>([]);
+    type RetentionRow = {
+        day: number;
+        percentage: number;
+        returning_users: number;
+    };
+
+    type QueryStats = {
+        totalBytesProcessedGB?: number;
+        estimatedCostUSD?: number;
+    };
+
+    const [retentionData, setRetentionData] = useState<RetentionRow[]>([]);
     const [chartData, setChartData] = useState<ILineChartProps | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('chart');
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
-    const [queryStats, setQueryStats] = useState<any>(null);
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
 
-    const buildFilterKey = () =>
+    const buildFilterKey = useCallback(() =>
         JSON.stringify({
             websiteId: selectedWebsite?.id ?? null,
             urlPath: normalizeUrlToPath(urlPath),
@@ -84,10 +94,10 @@ const Retention = () => {
             period,
             customStartDate: customStartDate?.toISOString() ?? null,
             customEndDate: customEndDate?.toISOString() ?? null,
-        });
+        }), [selectedWebsite?.id, urlPath, pathOperator, period, customStartDate, customEndDate]);
     const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
-    const getRetentionDateRange = () => {
+    const getRetentionDateRange = useCallback(() => {
         if (usesCookies) {
             return getDateRangeFromPeriod(period, customStartDate, customEndDate);
         }
@@ -128,7 +138,7 @@ const Retention = () => {
         }
 
         return { startDate, endDate };
-    };
+    }, [usesCookies, period, customStartDate, customEndDate]);
 
     const cookieBadge = useMemo(() => {
         const range = getRetentionDateRange();
@@ -139,20 +149,12 @@ const Retention = () => {
             range.startDate,
             range.endDate
         );
-    }, [usesCookies, cookieStartDate, period, customStartDate, customEndDate]);
+    }, [usesCookies, cookieStartDate, getRetentionDateRange]);
     const isPreCookieRange = useMemo(() => {
         const range = getRetentionDateRange();
         if (!range || !cookieStartDate) return false;
         return range.endDate.getTime() < cookieStartDate.getTime();
-    }, [cookieStartDate, period, customStartDate, customEndDate]);
-
-    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
-    useEffect(() => {
-        if (selectedWebsite && !hasAutoSubmitted && !loading) {
-            setHasAutoSubmitted(true);
-            fetchData();
-        }
-    }, [selectedWebsite]);
+    }, [cookieStartDate, getRetentionDateRange]);
 
     const copyShareLink = async () => {
         try {
@@ -168,7 +170,7 @@ const Retention = () => {
 
 
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!selectedWebsite) return;
         const appliedFilterKey = buildFilterKey();
 
@@ -225,7 +227,7 @@ const Retention = () => {
                 setRetentionData(result.data);
 
                 // Prepare data for FluentUI LineChart
-                const points: ILineChartDataPoint[] = result.data.map((item: any) => ({
+                const points: ILineChartDataPoint[] = result.data.map((item: RetentionRow) => ({
                     x: item.day,
                     y: item.percentage,
                     legend: `Dag ${item.day} `,
@@ -273,7 +275,15 @@ const Retention = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedWebsite, buildFilterKey, urlPath, getRetentionDateRange, usesCookies, cookieStartDate, pathOperator, period]);
+
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
+    useEffect(() => {
+        if (selectedWebsite && !hasAutoSubmitted && !loading) {
+            setHasAutoSubmitted(true);
+            fetchData();
+        }
+    }, [selectedWebsite, hasAutoSubmitted, loading, fetchData]);
 
     const downloadCSV = () => {
         if (!retentionData || retentionData.length === 0) return;
@@ -307,20 +317,15 @@ const Retention = () => {
     const retentionStats = useMemo(() => {
         if (!retentionData || retentionData.length === 0) return null;
 
-        const returningData = retentionData.filter((item: any) => item.day > 0);
+        const returningData = retentionData.filter((item: RetentionRow) => item.day > 0);
         if (returningData.length === 0) return null;
 
-        const day0Data = retentionData.find((item: any) => item.day === 0);
-        const baseline = day0Data?.returning_users || Math.max(...retentionData.map((item: any) => item.returning_users));
-
-
-
-
-
+        const day0Data = retentionData.find((item: RetentionRow) => item.day === 0);
+        const baseline = day0Data?.returning_users || Math.max(...retentionData.map((item: RetentionRow) => item.returning_users));
 
         // Find Day 1 and Day 7 data for specific loyalty checkpoints
-        const day1 = retentionData.find((item: any) => item.day === 1);
-        const day7 = retentionData.find((item: any) => item.day === 7);
+        const day1 = retentionData.find((item: RetentionRow) => item.day === 1);
+        const day7 = retentionData.find((item: RetentionRow) => item.day === 7);
         // Fallback to last day if Day 7 isn't available but we have data (e.g. short ranges)
         const lastDay = returningData[returningData.length - 1];
 
@@ -510,7 +515,7 @@ const Retention = () => {
                                         <LineChart
                                             data={chartData.data}
                                             legendsOverflowText={'Overflow Items'}
-                                            yAxisTickFormat={(d: any) => `${d}% `}
+                                            yAxisTickFormat={(d: number | string) => `${Number(d)}% `}
                                             legendProps={{
                                                 allowFocusOnLegends: true,
                                                 styles: {
@@ -541,7 +546,7 @@ const Retention = () => {
                                         </thead>
                                         <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                             {retentionData.map((item, index) => (
-                                                <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft]">
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
                                                         Dag {item.day}
                                                     </td>

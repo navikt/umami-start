@@ -26,12 +26,30 @@ const PATTERNS: Record<string, RegExp> = {
     'Redacted': /\[.*?\]/g
 };
 
-const HighlightedText = ({ text, type }: { text: string, type: string }) => {
-    const pattern = PATTERNS[type];
-    if (!pattern) return <span>{text}</span>;
+type PrivacyRow = {
+    match_type: string;
+    examples?: string[];
+    count: number;
+    unique_count?: number;
+    nav_count?: number;
+    unique_nav_count?: number;
+    unique_other_count?: number;
+    website_id?: string;
+    website_name?: string;
+    table_name: string;
+    column_name: string;
+};
 
-    // Reset regex lastIndex
-    pattern.lastIndex = 0;
+type QueryStats = {
+    totalBytesProcessedGB?: number;
+    estimatedCostUSD?: number;
+};
+
+const HighlightedText = ({ text, type }: { text: string, type: string }) => {
+    const sourcePattern = PATTERNS[type];
+    if (!sourcePattern) return <span>{text}</span>;
+
+    const pattern = new RegExp(sourcePattern.source, sourcePattern.flags);
 
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -62,7 +80,7 @@ const HighlightedText = ({ text, type }: { text: string, type: string }) => {
     return <>{parts}</>;
 };
 
-const ExampleList = ({ examples, type }: { examples: string[], type: string }) => {
+const ExampleList = ({ examples, type }: { examples?: string[], type: string }) => {
     const [showAll, setShowAll] = useState(false);
 
     if (!examples || examples.length === 0) return null;
@@ -123,14 +141,14 @@ const PrivacyCheck = () => {
 
     const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
     const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const [data, setData] = useState<any[] | null>(null);
+    const [data, setData] = useState<PrivacyRow[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [queryStats, setQueryStats] = useState<any>(null);
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
     const [activeTab, setActiveTab] = useState<string>('summary');
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [showEmpty, setShowEmpty] = useState<boolean>(false);
-    const [dryRunStats, setDryRunStats] = useState<any>(null);
+    const [dryRunStats, setDryRunStats] = useState<QueryStats | null>(null);
     const [showDryRunWarning, setShowDryRunWarning] = useState<boolean>(false);
     const [detailsPage, setDetailsPage] = useState<number>(1);
     const [redactedPage, setRedactedPage] = useState<number>(1);
@@ -243,7 +261,7 @@ const PrivacyCheck = () => {
             } else {
                 // Filter out false positives
                 const uuidPattern = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
-                const filteredData = result.data.filter((row: any) => {
+                const filteredData = result.data.filter((row: PrivacyRow) => {
                     // Filter out names that start with Nav or Viser, or contain Modia Personoversikt
                     if (row.match_type === 'Mulig navn') {
                         const hasInvalidName = row.examples?.some((ex: string) =>
@@ -268,7 +286,7 @@ const PrivacyCheck = () => {
 
                 console.log('[Privacy Check] Raw data from API:', result.data.length, 'rows');
                 console.log('[Privacy Check] Filtered data:', filteredData.length, 'rows');
-                console.log('[Privacy Check] Redacted items:', result.data.filter((r: any) => r.match_type === 'Redacted'));
+                console.log('[Privacy Check] Redacted items:', result.data.filter((r: PrivacyRow) => r.match_type === 'Redacted'));
 
                 setData(filteredData);
                 setQueryStats(result.queryStats);

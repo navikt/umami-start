@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switch, TextField } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
@@ -48,28 +48,53 @@ const EventExplorer = () => {
     const [showAverage, setShowAverage] = useState<boolean>(false);
     const [showTrendTable, setShowTrendTable] = useState<boolean>(false);
 
+    type SeriesPoint = {
+        time: string;
+        count: number;
+    };
+
+    type EventProperty = {
+        propertyName: string;
+        total: number;
+    };
+
+    type QueryStats = {
+        totalBytesProcessedGB?: number;
+        estimatedCostUSD?: number;
+    };
+
+    type ParameterValue = {
+        value: string;
+        count: number;
+    };
+
+    type LatestEvent = {
+        created_at: string;
+        properties?: Record<string, string | undefined>;
+    };
+
     // Data states
-    const [seriesData, setSeriesData] = useState<any[]>([]);
-    const [propertiesData, setPropertiesData] = useState<any[]>([]);
+    const [seriesData, setSeriesData] = useState<SeriesPoint[]>([]);
+    const [propertiesData, setPropertiesData] = useState<EventProperty[]>([]);
     const [loadingData, setLoadingData] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [queryStats, setQueryStats] = useState<any>(null);
-    const [eventsQueryStats, setEventsQueryStats] = useState<any>(null);
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
+    const [eventsQueryStats, setEventsQueryStats] = useState<QueryStats | null>(null);
 
     // Parameter values state - now storing values for ALL parameters
-    const [allParameterValues, setAllParameterValues] = useState<Record<string, { value: string; count: number }[]>>({});
+    const [allParameterValues, setAllParameterValues] = useState<Record<string, ParameterValue[]>>({});
     const [loadingValues, setLoadingValues] = useState<boolean>(false);
     const [hasLoadedValues, setHasLoadedValues] = useState<boolean>(false);
     const [parameterValuesTab, setParameterValuesTab] = useState<string>('latest');
-    const [latestEvents, setLatestEvents] = useState<any[]>([]);
+    const [latestEvents, setLatestEvents] = useState<LatestEvent[]>([]);
     const [selectedParameterForDrilldown, setSelectedParameterForDrilldown] = useState<string | null>(null);
-    const [parameterValuesQueryStats, setParameterValuesQueryStats] = useState<any>(null);
+    const [parameterValuesQueryStats, setParameterValuesQueryStats] = useState<QueryStats | null>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [eventSearch, setEventSearch] = useState<string>('');
     const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
 
-    const buildFilterKey = () =>
+    const buildFilterKey = useCallback(() =>
         JSON.stringify({
             websiteId: selectedWebsite?.id ?? null,
             urlPaths,
@@ -77,38 +102,20 @@ const EventExplorer = () => {
             period,
             customStartDate: customStartDate?.toISOString() ?? null,
             customEndDate: customEndDate?.toISOString() ?? null,
-        });
+        }), [selectedWebsite?.id, urlPaths, pathOperator, period, customStartDate, customEndDate]);
     const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
-    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
-    useEffect(() => {
-        if (selectedWebsite && !hasAutoSubmitted && !loadingEvents) {
-            setHasAutoSubmitted(true);
-            fetchEvents();
-        }
-    }, [selectedWebsite]);
-
-    const copyShareLink = async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy link:', err);
-        }
-    };
-
     // Calculate dates based on selection using centralized utility
-    const getDates = () => {
+    const getDates = useCallback(() => {
         const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
         if (!dateRange) {
             throw new Error('Vennligst velg en gyldig periode.');
         }
         return { startAt: dateRange.startDate, endAt: dateRange.endDate };
-    };
+    }, [period, customStartDate, customEndDate]);
 
     // Fetch available events (triggered by button)
-    const fetchEvents = async () => {
+    const fetchEvents = useCallback(async () => {
         if (!selectedWebsite) return;
         const appliedFilterKey = buildFilterKey();
 
@@ -172,106 +179,127 @@ const EventExplorer = () => {
         } finally {
             setLoadingEvents(false);
         }
+    }, [selectedWebsite, buildFilterKey, getDates, urlPaths, pathOperator, period, customStartDate, customEndDate]);
+
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
+    useEffect(() => {
+        if (selectedWebsite && !hasAutoSubmitted && !loadingEvents) {
+            setHasAutoSubmitted(true);
+            fetchEvents();
+        }
+    }, [selectedWebsite, hasAutoSubmitted, loadingEvents, fetchEvents]);
+
+    const copyShareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
     };
 
     // Fetch data when an event is selected
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!selectedWebsite || !selectedEvent) return;
+    const fetchEventData = useCallback(async () => {
+        if (!selectedWebsite || !selectedEvent) return;
 
-            setLoadingData(true);
-            setError(null);
-            setSeriesData([]);
-            setPropertiesData([]);
-            setQueryStats(null);
-            setAllParameterValues({});
-            setHasLoadedValues(false);
+        setLoadingData(true);
+        setError(null);
+        setSeriesData([]);
+        setPropertiesData([]);
+        setQueryStats(null);
+        setAllParameterValues({});
+        setHasLoadedValues(false);
 
-            try {
-                const { startAt, endAt } = getDates();
+        try {
+            const { startAt, endAt } = getDates();
 
-                // Fetch Series Data
-                const seriesParams = new URLSearchParams({
-                    eventName: selectedEvent,
-                    interval: 'day',
-                    startAt: startAt.getTime().toString(),
-                    endAt: endAt.getTime().toString()
-                });
-                const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
-                if (pagePath) {
-                    seriesParams.append('urlPath', pagePath);
-                    seriesParams.append('pathOperator', pathOperator);
-                }
-
-                const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-series?${seriesParams.toString()}`);
-                if (!seriesResponse.ok) throw new Error('Failed to fetch event series');
-                const seriesResult = await seriesResponse.json();
-                setSeriesData(seriesResult.data || []);
-
-                // Fetch Properties Data
-                const propsParams = new URLSearchParams({
-                    eventName: selectedEvent,
-                    includeParams: 'true',
-                    startAt: startAt.getTime().toString(),
-                    endAt: endAt.getTime().toString()
-                });
-                if (pagePath) {
-                    propsParams.append('urlPath', pagePath);
-                    propsParams.append('pathOperator', pathOperator);
-                }
-
-                const propsResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-properties?${propsParams.toString()}`);
-                if (!propsResponse.ok) throw new Error('Failed to fetch event properties');
-                const propsResult = await propsResponse.json();
-
-                setPropertiesData(propsResult.properties || []);
-                if (propsResult.gbProcessed) {
-                    setQueryStats({
-                        totalBytesProcessedGB: propsResult.gbProcessed,
-                        estimatedCostUSD: ((parseFloat(propsResult.gbProcessed) / 1024) * 6.25).toFixed(3)
-                    });
-                }
-
-                // Update URL with selected event for sharing
-                const newParams = new URLSearchParams(window.location.search);
-                newParams.set('period', period);
-                newParams.set('event', selectedEvent);
-                // Handle multiple paths in URL
-                newParams.delete('urlPath');
-                newParams.delete('pagePath');
-                if (urlPaths.length > 0) {
-                    urlPaths.forEach(p => newParams.append('urlPath', p));
-                    newParams.set('pathOperator', pathOperator);
-                } else {
-                    newParams.delete('pathOperator');
-                }
-
-                // Persist custom dates
-                if (period === 'custom' && customStartDate && customEndDate) {
-                    newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
-                    newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
-                } else {
-                    newParams.delete('from');
-                    newParams.delete('to');
-                }
-
-                // Update URL without navigation
-                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-
-
-            } catch (err) {
-                console.error('Error fetching data:', err);
-                setError('Det oppstod en feil ved henting av data.');
-            } finally {
-                setLoadingData(false);
+            // Fetch Series Data
+            const seriesParams = new URLSearchParams({
+                eventName: selectedEvent,
+                interval: 'day',
+                startAt: startAt.getTime().toString(),
+                endAt: endAt.getTime().toString()
+            });
+            const pagePath = urlPaths.length > 0 ? urlPaths[0] : '';
+            if (pagePath) {
+                seriesParams.append('urlPath', pagePath);
+                seriesParams.append('pathOperator', pathOperator);
             }
-        };
 
-        fetchData();
-    }, [selectedEvent, selectedWebsite]);
+            const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-series?${seriesParams.toString()}`);
+            if (!seriesResponse.ok) throw new Error('Failed to fetch event series');
+            const seriesResult = await seriesResponse.json();
+            setSeriesData(seriesResult.data || []);
+
+            // Fetch Properties Data
+            const propsParams = new URLSearchParams({
+                eventName: selectedEvent,
+                includeParams: 'true',
+                startAt: startAt.getTime().toString(),
+                endAt: endAt.getTime().toString()
+            });
+            if (pagePath) {
+                propsParams.append('urlPath', pagePath);
+                propsParams.append('pathOperator', pathOperator);
+            }
+
+            const propsResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-properties?${propsParams.toString()}`);
+            if (!propsResponse.ok) throw new Error('Failed to fetch event properties');
+            const propsResult = await propsResponse.json();
+
+            setPropertiesData(propsResult.properties || []);
+            if (propsResult.gbProcessed) {
+                const gbProcessed = Number(propsResult.gbProcessed);
+                setQueryStats({
+                    totalBytesProcessedGB: Number.isFinite(gbProcessed) ? gbProcessed : undefined,
+                    estimatedCostUSD: Number.isFinite(gbProcessed)
+                        ? parseFloat(((gbProcessed / 1024) * 6.25).toFixed(3))
+                        : undefined
+                });
+            }
+
+            // Update URL with selected event for sharing
+            const newParams = new URLSearchParams(window.location.search);
+            newParams.set('period', period);
+            newParams.set('event', selectedEvent);
+            // Handle multiple paths in URL
+            newParams.delete('urlPath');
+            newParams.delete('pagePath');
+            if (urlPaths.length > 0) {
+                urlPaths.forEach(p => newParams.append('urlPath', p));
+                newParams.set('pathOperator', pathOperator);
+            } else {
+                newParams.delete('pathOperator');
+            }
+
+            // Persist custom dates
+            if (period === 'custom' && customStartDate && customEndDate) {
+                newParams.set('from', format(customStartDate, 'yyyy-MM-dd'));
+                newParams.set('to', format(customEndDate, 'yyyy-MM-dd'));
+            } else {
+                newParams.delete('from');
+                newParams.delete('to');
+            }
+
+            // Update URL without navigation
+            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+
+
+        } catch (err) {
+            console.error('Error fetching data:', err);
+            setError('Det oppstod en feil ved henting av data.');
+        } finally {
+            setLoadingData(false);
+        }
+    }, [selectedWebsite, selectedEvent, getDates, urlPaths, pathOperator, period, customStartDate, customEndDate]);
+
+    useEffect(() => {
+        fetchEventData();
+    }, [fetchEventData]);
 
     // Fetch values for ALL parameters
-    const fetchAllParameterValues = async () => {
+    const fetchAllParameterValues = useCallback(async () => {
         if (!selectedWebsite || !selectedEvent || propertiesData.length === 0) return;
 
         setLoadingValues(true);
@@ -308,8 +336,8 @@ const EventExplorer = () => {
             const results = await Promise.all(fetchPromises);
 
             // Convert array to object for easier lookup
-            const valuesMap: Record<string, { value: string; count: number }[]> = {};
-            let combinedQueryStats: any = null;
+            const valuesMap: Record<string, ParameterValue[]> = {};
+            let combinedQueryStats: QueryStats | null = null;
             results.forEach(result => {
                 valuesMap[result.parameterName] = result.values;
                 // Store the first queryStats we find (they should all be similar)
@@ -353,14 +381,14 @@ const EventExplorer = () => {
         } finally {
             setLoadingValues(false);
         }
-    };
+    }, [selectedWebsite, selectedEvent, propertiesData, getDates, urlPaths, pathOperator]);
 
     // Auto-fetch values when drilling down into a parameter
     useEffect(() => {
         if (selectedParameterForDrilldown && !hasLoadedValues && !loadingValues) {
             fetchAllParameterValues();
         }
-    }, [selectedParameterForDrilldown]);
+    }, [selectedParameterForDrilldown, hasLoadedValues, loadingValues, fetchAllParameterValues]);
 
 
     const prepareLineChartData = (includeAverage: boolean = false): ILineChartProps | null => {
@@ -371,7 +399,7 @@ const EventExplorer = () => {
             y: item.count
         }));
 
-        const lineChartData: any[] = [{
+        const lineChartData: { legend: string; data: { x: Date; y: number }[]; color: string; lineOptions?: { lineBorderWidth: number } }[] = [{
             legend: selectedEvent,
             data: dataPoints,
             color: '#0067c5'
@@ -390,8 +418,7 @@ const EventExplorer = () => {
                 })),
                 color: '#ff6b6b',
                 lineOptions: {
-                    lineBorderWidth: '2',
-                    strokeDasharray: '5 5'
+                    lineBorderWidth: 2
                 }
             });
         }
@@ -613,7 +640,7 @@ const EventExplorer = () => {
                                                     <LineChart
                                                         data={chartData.data}
                                                         legendsOverflowText={'Overflow Items'}
-                                                        yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                        yAxisTickFormat={(d: number | string) => Number(d).toLocaleString('nb-NO')}
                                                         yAxisTickCount={10}
                                                         allowMultipleShapesForPoints={false}
                                                         enablePerfOptimization={true}
@@ -647,7 +674,7 @@ const EventExplorer = () => {
                                                 </thead>
                                                 <tbody className="bg-[var(--ax-bg-default)] divide-y divide-[var(--ax-border-neutral-subtle)]">
                                                     {seriesData.map((item, index) => (
-                                                        <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft)]">
+                                                        <tr key={index} className="hover:bg-[var(--ax-bg-neutral-soft]">
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--ax-text-default)]">
                                                                 {new Date(item.time).toLocaleDateString('nb-NO')}
                                                             </td>

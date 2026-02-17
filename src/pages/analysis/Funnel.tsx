@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check, Code2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -17,18 +17,52 @@ import { Website } from '../../types/chart';
 
 // Runtime config is resolved by getGcpProjectId.
 
+type StepParam = { key: string; value: string; operator: 'equals' | 'contains' };
+type FunnelStep = {
+    type: 'url' | 'event';
+    value: string;
+    eventScope?: 'current-path' | 'anywhere';
+    params?: StepParam[];
+};
+
+type QueryStats = {
+    totalBytesProcessedGB?: string;
+    totalBytesProcessed?: number;
+};
+
+type FunnelResultRow = {
+    step: number;
+    url: string;
+    count: number;
+    params?: StepParam[];
+};
+
+type TimingResultRow = {
+    fromStep: number; // -1 for total row
+    toStep: number;
+    fromUrl?: string;
+    toUrl?: string;
+    avgSeconds: number | null;
+    medianSeconds: number | null;
+};
+
+type FunnelApiResponse =
+    | { error: string }
+    | { data: Omit<FunnelResultRow, 'params'>[]; sql?: string; queryStats?: QueryStats };
+
+type TimingApiResponse =
+    | { error: string }
+    | { data: TimingResultRow[]; sql?: string; queryStats?: QueryStats };
+
+type EventsApiResponse = { events?: { name: string }[] };
+
 const Funnel = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [searchParams] = useSearchParams();
     const [isStepsOpen, setIsStepsOpen] = useState(true);
 
     // Initialize state from URL params
-    const [steps, setSteps] = useState<{
-        type: 'url' | 'event';
-        value: string;
-        eventScope?: 'current-path' | 'anywhere';
-        params?: { key: string; value: string; operator: 'equals' | 'contains' }[]
-    }[]>(() => {
+    const [steps, setSteps] = useState<FunnelStep[]>(() => {
         const stepParams = searchParams.getAll('step');
         if (stepParams.length === 0) return [{ type: 'url', value: '' }, { type: 'url', value: '' }];
 
@@ -40,7 +74,7 @@ const Funnel = () => {
 
                 // Find scope (usually distinct values)
                 let scope: 'current-path' | 'anywhere' = 'current-path';
-                const params: { key: string; value: string; operator: 'equals' | 'contains' }[] = [];
+                const params: StepParam[] = [];
 
                 for (let i = 1; i < parts.length; i++) {
                     const part = parts[i];
@@ -89,21 +123,21 @@ const Funnel = () => {
         return param === null ? true : param === 'true';
     });
 
-    const [funnelData, setFunnelData] = useState<any[]>([]);
+    const [funnelData, setFunnelData] = useState<FunnelResultRow[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>('vertical');
     const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
 
     // Timing data state
-    const [timingData, setTimingData] = useState<any[]>([]);
+    const [timingData, setTimingData] = useState<TimingResultRow[]>([]);
     const [timingLoading, setTimingLoading] = useState<boolean>(false);
     const [timingError, setTimingError] = useState<string | null>(null);
     const [showTiming, setShowTiming] = useState<boolean>(false);
-    const [timingQueryStats, setTimingQueryStats] = useState<any>(null);
+    const [timingQueryStats, setTimingQueryStats] = useState<QueryStats | null>(null);
     const [timingSql, setTimingSql] = useState<string | null>(null);
     const [funnelSql, setFunnelSql] = useState<string | null>(null);
-    const [funnelQueryStats, setFunnelQueryStats] = useState<any>(null);
+    const [funnelQueryStats, setFunnelQueryStats] = useState<QueryStats | null>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [metabaseCopySuccess, setMetabaseCopySuccess] = useState<boolean>(false);
     const [timingMetabaseCopySuccess, setTimingMetabaseCopySuccess] = useState<boolean>(false);
@@ -122,17 +156,18 @@ const Funnel = () => {
             if (!selectedWebsite) return;
             setLoadingEvents(true);
             try {
-                // Fetch events from the last 30 days to populate the list
-                const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/events?startAt=${Date.now() - 30 * 24 * 60 * 60 * 1000}`);
+                const response = await fetch(
+                    `/api/bigquery/websites/${selectedWebsite.id}/events?startAt=${Date.now() - 30 * 24 * 60 * 60 * 1000}`
+                );
                 if (response.ok) {
-                    const data = await response.json();
+                    const data: EventsApiResponse = await response.json();
                     if (data.events) {
-                        const eventNames = data.events.map((e: any) => e.name).sort((a: string, b: string) => a.localeCompare(b));
+                        const eventNames = data.events
+                            .map((e) => e.name)
+                            .sort((a, b) => a.localeCompare(b));
                         setAvailableEvents(eventNames);
                     }
                 }
-            } catch (err) {
-                console.error('Failed to fetch events', err);
             } finally {
                 setLoadingEvents(false);
             }
@@ -140,6 +175,94 @@ const Funnel = () => {
 
         fetchEvents();
     }, [selectedWebsite]);
+
+    const fetchData = useCallback(async () => {
+        if (!selectedWebsite) return;
+
+        setHasAttemptedFetch(true);
+
+        const normalizedSteps = steps
+            .map(s => (s.type === 'url' ? { ...s, value: normalizeUrlToPath(s.value) } : s))
+            .filter(s => s.value.trim() !== '');
+
+        if (normalizedSteps.length < 2) {
+            setError('Du må legge inn minst to gyldige steg.');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        setFunnelData([]);
+        setFunnelSql(null);
+
+        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
+        if (!dateRange) {
+            setError('Vennligst velg en gyldig periode.');
+            setLoading(false);
+            return;
+        }
+        const { startDate, endDate } = dateRange;
+
+        try {
+            const response = await fetch('/api/bigquery/funnel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    websiteId: selectedWebsite.id,
+                    steps: normalizedSteps,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    onlyDirectEntry
+                }),
+            });
+
+            if (!response.ok) throw new Error('Kunne ikke hente traktdata');
+
+            const data: FunnelApiResponse = await response.json();
+
+            if ('error' in data) {
+                setError(data.error);
+                setFunnelData([]);
+            } else {
+                const mergedData: FunnelResultRow[] = data.data.map((item) => {
+                    const stepConfig = normalizedSteps[item.step];
+                    return {
+                        ...item,
+                        params: stepConfig?.params,
+                    };
+                });
+
+                setFunnelData(mergedData);
+                setFunnelQueryStats(data.queryStats ?? null);
+                setFunnelSql(data.sql ?? null);
+
+                // Update URL with funnel configuration for sharing
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.set('period', period);
+                newParams.set('strict', String(onlyDirectEntry));
+
+                // Add steps
+                newParams.delete('step');
+                normalizedSteps.forEach(step => {
+                    let paramValue: string;
+                    if (step.type === 'event') {
+                        paramValue = `event:${step.value}|${step.eventScope || 'current-path'}`;
+                    } else {
+                        paramValue = step.value;
+                    }
+                    newParams.append('step', paramValue);
+                });
+
+                // Update URL without navigation
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+            }
+        } catch {
+            setError('Det oppstod en feil ved henting av data.');
+            setFunnelData([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [customEndDate, customStartDate, onlyDirectEntry, period, selectedWebsite, steps]);
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -150,7 +273,7 @@ const Funnel = () => {
             setHasAutoSubmitted(true);
             fetchData();
         }
-    }, [selectedWebsite]);
+    }, [fetchData, hasAutoSubmitted, loading, searchParams, selectedWebsite, steps]);
 
     // Reset timing data when configuration changes
     useEffect(() => {
@@ -161,7 +284,7 @@ const Funnel = () => {
             setTimingError(null);
             setTimingSql(null);
         }
-    }, [steps, period, customStartDate, customEndDate, onlyDirectEntry, selectedWebsite]);
+    }, [customEndDate, customStartDate, onlyDirectEntry, period, selectedWebsite, steps, timingData.length]);
 
     const copyShareLink = async () => {
         try {
@@ -491,7 +614,7 @@ FROM timing_data`;
                 const nextItem = funnelData[index + 1];
                 const percentageOfNext = nextItem && item.count > 0 ? Math.round((nextItem.count / item.count) * 100) : null;
                 const dropoffPercentage = percentageOfNext !== null ? 100 - percentageOfNext : null;
-                const escapeCSV = (val: any) => {
+                const escapeCSV = (val: unknown) => {
                     const str = val !== null && val !== undefined ? String(val) : '';
                     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
                         return '"' + str.replace(/"/g, '""') + '"';
@@ -574,116 +697,17 @@ FROM timing_data`;
     const updateStepParam = (index: number, pIndex: number, field: 'key' | 'value' | 'operator', val: string) => {
         const newSteps = [...steps];
         if (newSteps[index].params && newSteps[index].params![pIndex]) {
-            // @ts-ignore
-            newSteps[index].params![pIndex][field] = val;
+            if (field === 'operator') {
+                // @ts-expect-error val is a string at runtime; constrain to allowed operators
+                newSteps[index].params![pIndex][field] = val;
+            } else {
+                newSteps[index].params![pIndex][field] = val;
+            }
         }
         setSteps(newSteps);
     };
 
-
-
-    const fetchData = async () => {
-        if (!selectedWebsite) return;
-
-        setHasAttemptedFetch(true);
-
-        // Validate Steps
-        // For URLs, normalize them. For Events, keep as is.
-        const normalizedSteps = steps.map(s => {
-            if (s.type === 'url') {
-                return { ...s, value: normalizeUrlToPath(s.value) };
-            }
-            return s;
-        }).filter(s => s.value.trim() !== '');
-
-        if (normalizedSteps.length < 2) {
-            setError('Du må legge inn minst to gyldige steg.');
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-        setFunnelData([]);
-        setFunnelSql(null);
-
-        // Calculate date range based on period using centralized utility
-        const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
-        if (!dateRange) {
-            setError('Vennligst velg en gyldig periode.');
-            setLoading(false);
-            return;
-        }
-        const { startDate, endDate } = dateRange;
-
-        try {
-            const response = await fetch('/api/bigquery/funnel', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    websiteId: selectedWebsite.id,
-                    steps: normalizedSteps,
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                    onlyDirectEntry
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Kunne ikke hente traktdata');
-            }
-
-            const data = await response.json();
-
-            if (data.error) {
-                setError(data.error);
-                setFunnelData([]);
-
-            } else {
-                // Merge params from config steps
-                const mergedData = data.data.map((item: any) => {
-                    const stepConfig = normalizedSteps[item.step];
-                    return {
-                        ...item,
-                        params: stepConfig?.params
-                    };
-                });
-                setFunnelData(mergedData);
-                if (data.queryStats) {
-                    setFunnelQueryStats(data.queryStats);
-                }
-                setFunnelSql(data.sql);
-
-                // Update URL with funnel configuration for sharing
-                const newParams = new URLSearchParams(window.location.search);
-                newParams.set('period', period);
-                newParams.set('strict', String(onlyDirectEntry));
-
-                // Add steps
-                newParams.delete('step');
-                normalizedSteps.forEach(step => {
-                    let paramValue: string;
-                    if (step.type === 'event') {
-                        paramValue = `event:${step.value}|${step.eventScope || 'current-path'}`;
-                    } else {
-                        paramValue = step.value;
-                    }
-                    newParams.append('step', paramValue);
-                });
-
-                // Update URL without navigation
-                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-            }
-        } catch (err) {
-            console.error('Error fetching funnel data:', err);
-            setError('Det oppstod en feil ved henting av data.');
-            setFunnelData([]);
-
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Fetch data function removed as it is now defined earlier
 
     const fetchTimingData = async () => {
         if (!selectedWebsite || funnelData.length === 0) return;
@@ -723,25 +747,22 @@ FROM timing_data`;
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error('Kunne ikke hente tidsdata');
-            }
+            if (!response.ok) throw new Error('Kunne ikke hente tidsdata');
 
-            const data = await response.json();
+            const data: TimingApiResponse = await response.json();
 
-            if (data.error) {
+            if ('error' in data) {
                 setTimingError(data.error);
                 setTimingData([]);
                 setTimingQueryStats(null);
                 setTimingSql(null);
             } else {
                 setTimingData(data.data);
-                setTimingQueryStats(data.queryStats);
-                setTimingSql(data.sql);
+                setTimingQueryStats(data.queryStats ?? null);
+                setTimingSql(data.sql ?? null);
                 setShowTiming(true);
             }
-        } catch (err) {
-            console.error('Error fetching timing data:', err);
+        } catch {
             setTimingError('Det oppstod en feil ved henting av tidsdata.');
             setTimingData([]);
         } finally {
@@ -1309,7 +1330,7 @@ FROM timing_data`;
                                                                                         {timing.fromUrl && selectedWebsite ? (
                                                                                             <span
                                                                                                 className="text-base text-blue-600 hover:underline cursor-pointer break-all flex items-center gap-1"
-                                                                                                onClick={() => setSelectedTimingUrl(timing.fromUrl)}
+                                                                                                onClick={() => setSelectedTimingUrl(timing.fromUrl || null)}
                                                                                             >
                                                                                                 {timing.fromUrl} <ExternalLink className="h-4 w-4 flex-shrink-0" />
                                                                                             </span>
@@ -1324,7 +1345,7 @@ FROM timing_data`;
                                                                                         {timing.toUrl && selectedWebsite ? (
                                                                                             <span
                                                                                                 className="text-base text-blue-600 hover:underline cursor-pointer break-all flex items-center gap-1"
-                                                                                                onClick={() => setSelectedTimingUrl(timing.toUrl)}
+                                                                                                onClick={() => setSelectedTimingUrl(timing.toUrl || null)}
                                                                                             >
                                                                                                 {timing.toUrl} <ExternalLink className="h-4 w-4 flex-shrink-0" />
                                                                                             </span>

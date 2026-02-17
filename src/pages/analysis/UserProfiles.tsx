@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Heading, Table, Pagination, Modal, Link, BodyShort, InlineMessage } from '@navikt/ds-react';
 import { Monitor, Smartphone, Globe, Clock, User, Laptop, Tablet, ExternalLink, Download } from 'lucide-react';
@@ -18,6 +18,42 @@ const ROWS_PER_PAGE = 50;
 const DEFAULT_MAX_USERS = 1000;
 const MIN_MAX_USERS = 50;
 const MAX_MAX_USERS = 100000;
+
+type UserProfile = {
+    userId?: string;
+    idType?: string;
+    sessionIds?: string[];
+    distinctId?: string;
+    country?: string;
+    browser?: string;
+    device?: string;
+    os?: string;
+    firstSeen: string;
+    lastSeen: string;
+    primarySessionId?: string;
+};
+
+type ActivityItem = {
+    type: string;
+    name?: string;
+    title?: string;
+    url?: string;
+    createdAt: string;
+};
+
+type QueryStats = {
+    totalBytesProcessedGB?: number;
+};
+
+type UsersApiResponse = {
+    users: UserProfile[];
+    total: number;
+    queryStats?: QueryStats | null;
+};
+
+type ActivityApiResponse = {
+    activity: ActivityItem[];
+};
 
 const UserProfiles = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -45,44 +81,30 @@ const UserProfiles = () => {
     const [pagePath, setPagePath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
     const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [totalUsers, setTotalUsers] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState<number>(1);
     const [maxUsers, setMaxUsers] = useState<number>(DEFAULT_MAX_USERS);
-    const [queryStats, setQueryStats] = useState<any>(null);
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
 
     // Details Modal State
-    const [selectedSession, setSelectedSession] = useState<any>(null);
+    const [selectedSession, setSelectedSession] = useState<UserProfile | null>(null);
     const [activityLoading, setActivityLoading] = useState<boolean>(false);
-    const [activityData, setActivityData] = useState<any[]>([]);
+    const [activityData, setActivityData] = useState<ActivityItem[]>([]);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [selectedActivityUrl, setSelectedActivityUrl] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (selectedWebsite) {
-            handleSearchClick(); // Trigger fetch when website/period changes
-        }
-    }, [selectedWebsite, period, page]);
-
-    // Handle "Enter" key in search fields
-
-
-    const handleSearchClick = () => {
-        setPage(1);
-        fetchUsers(1);
-    };
-
-    const getDateRange = () => {
+    const getDateRange = useCallback(() => {
         const dateRange = getDateRangeFromPeriod(period, customStartDate, customEndDate);
         if (!dateRange) {
             throw new Error('Vennligst velg en gyldig periode.');
         }
         return dateRange;
-    };
+    }, [period, customStartDate, customEndDate]);
 
-    const fetchUsers = async (pageOverride?: number) => {
+    const fetchUsers = useCallback(async (pageOverride?: number) => {
         if (!selectedWebsite) return;
 
         setLoading(true);
@@ -131,10 +153,10 @@ const UserProfiles = () => {
 
             if (!response.ok) throw new Error('Kunne ikke hente brukere');
 
-            const result = await response.json();
+            const result: UsersApiResponse = await response.json();
             setUsers(result.users);
             setTotalUsers(result.total);
-            setQueryStats(result.queryStats);
+            setQueryStats(result.queryStats ?? null);
 
             // Update URL with configuration for sharing
             const newParams = new URLSearchParams(window.location.search);
@@ -151,13 +173,27 @@ const UserProfiles = () => {
 
             // Update URL without navigation
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-        } catch (err: any) {
-            console.error(err);
-            setError(err.message || 'En feil oppstod');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'En feil oppstod';
+            setError(message);
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedWebsite, page, maxUsers, searchQuery, pagePath, pathOperator, usesCookies, cookieStartDate, getDateRange, period]);
+
+    const handleSearchClick = useCallback(() => {
+        setPage(1);
+        fetchUsers(1);
+    }, [fetchUsers]);
+
+    useEffect(() => {
+        if (selectedWebsite) {
+            handleSearchClick(); // Trigger fetch when website/period changes
+        }
+    }, [selectedWebsite, period, page, handleSearchClick]);
+
+    // Handle "Enter" key in search fields
+
 
     const fetchUserActivity = async (sessionId: string) => {
         if (!selectedWebsite) return;
@@ -178,10 +214,8 @@ const UserProfiles = () => {
 
             if (!response.ok) throw new Error('Kunne ikke hente aktivitet');
 
-            const result = await response.json();
+            const result: ActivityApiResponse = await response.json();
             setActivityData(result.activity);
-        } catch (err) {
-            console.error(err);
         } finally {
             setActivityLoading(false);
         }
@@ -189,10 +223,10 @@ const UserProfiles = () => {
 
 
 
-    const handleRowClick = (user: any) => {
+    const handleRowClick = (user: UserProfile) => {
         setSelectedSession(user);
         setIsModalOpen(true);
-        fetchUserActivity(user.primarySessionId || user.sessionIds?.[0] || user.userId);
+        fetchUserActivity(user.primarySessionId || user.sessionIds?.[0] || user.userId || '');
     };
 
     const formatDate = (dateString: string) => {
@@ -210,7 +244,7 @@ const UserProfiles = () => {
         return num.toLocaleString('no-NO');
     };
 
-    const getDeviceIcon = (device: string) => {
+    const getDeviceIcon = (device?: string) => {
         switch (device?.toLowerCase()) {
             case 'mobile': return <Smartphone size={16} />;
             case 'tablet': return <Tablet size={16} />;
@@ -220,7 +254,7 @@ const UserProfiles = () => {
         }
     };
 
-    const translateDevice = (device: string) => {
+    const translateDevice = (device?: string) => {
         switch (device?.toLowerCase()) {
             case 'mobile': return 'Mobil';
             case 'tablet': return 'Nettbrett';
@@ -403,7 +437,7 @@ const UserProfiles = () => {
                                                     </Link>
                                                 </Table.DataCell>
                                                 <Table.DataCell>{formatDate(user.lastSeen)}</Table.DataCell>
-                                                <Table.DataCell>{translateCountry(user.country)}</Table.DataCell>
+                                                <Table.DataCell>{translateCountry(user.country ?? '')}</Table.DataCell>
                                                 <Table.DataCell>
                                                     <div className="flex items-center gap-2">
                                                         {getDeviceIcon(user.device)}
@@ -566,7 +600,7 @@ const UserProfiles = () => {
                                     <Heading level="3" size="xsmall" className="mb-1 text-gray-500">Land</Heading>
                                     <div className="flex items-center gap-2">
                                         <Globe size={16} className="text-gray-400" />
-                                        <span>{translateCountry(selectedSession.country)}</span>
+                                        <span>{translateCountry(selectedSession.country ?? '')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -625,7 +659,9 @@ const UserProfiles = () => {
                                                     {item.url && (
                                                         <code
                                                             className="text-sm text-blue-600 hover:underline cursor-pointer mt-1 bg-[var(--ax-bg-neutral-soft)] p-1.5 rounded w-fit flex items-center gap-1"
-                                                            onClick={() => setSelectedActivityUrl(item.url)}
+                                                            onClick={() => {
+                                                                if (item.url) setSelectedActivityUrl(item.url);
+                                                            }}
                                                         >
                                                             {item.url} <ExternalLink className="h-3 w-3" />
                                                         </code>

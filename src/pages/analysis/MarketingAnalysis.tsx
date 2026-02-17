@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Select, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
@@ -83,8 +83,20 @@ const MarketingAnalysis = () => {
     };
 
     // Data states
-    const [marketingData, setMarketingData] = useState<any>({});
-    const [queryStats, setQueryStats] = useState<any>(null);
+    type MarketingRow = {
+        name: string;
+        count: number;
+    };
+
+    type MarketingData = Record<string, MarketingRow[]>;
+
+    type QueryStats = {
+        totalBytesProcessedGB?: number;
+        estimatedCostUSD?: number;
+    };
+
+    const [marketingData, setMarketingData] = useState<MarketingData>({});
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -92,7 +104,7 @@ const MarketingAnalysis = () => {
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
 
-    const buildFilterKey = () =>
+    const buildFilterKey = useCallback(() =>
         JSON.stringify({
             websiteId: selectedWebsite?.id ?? null,
             urlPaths,
@@ -101,17 +113,10 @@ const MarketingAnalysis = () => {
             customStartDate: customStartDate?.toISOString() ?? null,
             customEndDate: customEndDate?.toISOString() ?? null,
             metricType,
-        });
+        }), [selectedWebsite?.id, urlPaths, pathOperator, period, customStartDate, customEndDate, metricType]);
     const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
-    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
-    useEffect(() => {
-        if (selectedWebsite && !hasAttemptedFetch) {
-            fetchData();
-        }
-    }, [selectedWebsite]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!selectedWebsite) return;
         const appliedFilterKey = buildFilterKey();
 
@@ -176,13 +181,21 @@ const MarketingAnalysis = () => {
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             setLastAppliedFilterKey(appliedFilterKey);
 
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching marketing data:', err);
-            setError(err.message || 'Det oppstod en feil ved henting av data.');
+            const message = err instanceof Error ? err.message : 'Det oppstod en feil ved henting av data.';
+            setError(message);
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedWebsite, buildFilterKey, metricType, period, customStartDate, customEndDate, urlPaths, pathOperator, usesCookies, cookieStartDate]);
+
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
+    useEffect(() => {
+        if (selectedWebsite && !hasAttemptedFetch) {
+            fetchData();
+        }
+    }, [selectedWebsite, hasAttemptedFetch, fetchData]);
 
     const copyShareLink = async () => {
         try {
@@ -196,7 +209,7 @@ const MarketingAnalysis = () => {
 
 
 
-    const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, metricType }: { title: string, data: any[], metricLabel: string, queryStats: any, selectedWebsite: Website | null, metricType: string }) => {
+    const AnalysisTable = ({ title, data, metricLabel, queryStats, selectedWebsite, metricType }: { title: string, data: MarketingRow[], metricLabel: string, queryStats: QueryStats | null, selectedWebsite: Website | null, metricType: string }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 20;
@@ -227,7 +240,7 @@ const MarketingAnalysis = () => {
             const headers = ['Navn', metricLabel];
             const csvRows = [
                 headers.join(','),
-                ...data.map((item: any) => {
+                ...data.map((item) => {
                     return [
                         `"${item.name}"`,
                         metricType === 'proportion' ? `${item.count.toFixed(1)}%` : item.count
@@ -313,7 +326,7 @@ const MarketingAnalysis = () => {
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
-                            {paginatedData.map((row: any, i: number) => (
+                            {paginatedData.map((row, i) => (
                                 <Table.Row key={i}>
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {renderName(row.name)}
@@ -427,12 +440,7 @@ const MarketingAnalysis = () => {
                             onChange={(e) => setMetricType(e.target.value)}
                         >
                             <option value="visitors">{currentDateRange
-                                ? getVisitorLabelWithBadge(
-                                    usesCookies,
-                                    cookieStartDate,
-                                    currentDateRange.startDate,
-                                    currentDateRange.endDate
-                                )
+                                ? getVisitorLabelWithBadge()
                                 : 'Unike besøkende'}</option>
                             <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>

@@ -72,7 +72,7 @@ export function createUserRouter({ BACKEND_BASE_URL }) {
           if (name.includes('Ã')) {
               try {
                   name = Buffer.from(name, 'latin1').toString('utf-8');
-              } catch (e) {
+              } catch {
                   // Keep original if fixing fails
                   console.warn('[Auth] Failed to fix encoding for name:', name);
               }
