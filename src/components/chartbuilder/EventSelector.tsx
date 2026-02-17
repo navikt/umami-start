@@ -976,23 +976,6 @@ const EventSelector = ({
               </div>
             )}
           </Tabs.Panel>
-
-          {/* Fix TS2345 by keeping the found Parameter in a variable and guarding undefined */}
-          {/* (this block is inside the Column Selector <Select> where stagingFilter.column.startsWith('param_') was handled) */}
-          {/*
-            {parameters.length > 0 && (
-              <>
-                <option value="_custom_param_">Hendelsesdetaljer</option>
-                {stagingFilter.column.startsWith('param_') && (
-                  <option value={stagingFilter.column}>
-                    {uniqueParameters.find(p => `param_${getCleanParamName(p)}` === stagingFilter.column) ?
-                      getParamDisplayName(uniqueParameters.find(p => `param_${getCleanParamName(p)}` === stagingFilter.column)) :
-                      stagingFilter.column.replace('param_', '')}
-                  </option>
-                )}
-              </>
-            )}
-          */}
         </Tabs>
       </div>
     </div >
@@ -1000,16 +983,3 @@ const EventSelector = ({
 };
 
 export default EventSelector;
-
-/*
-NOTE: Apply this targeted fix in the "Keep the current parameter in the list..." JSX:
-
-Replace:
-  uniqueParameters.find(...) ? getParamDisplayName(uniqueParameters.find(...)) : ...
-
-With:
-  const selectedParam = uniqueParameters.find(...);
-  selectedParam ? getParamDisplayName(selectedParam) : ...
-
-(Shown as comment because surrounding JSX is large; keep it inline as an IIFE in JSX if preferred.)
-*/

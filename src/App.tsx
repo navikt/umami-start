@@ -1,12 +1,12 @@
 import { Page, Theme } from "@navikt/ds-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Route,
   Routes,
   useLocation,
 } from "react-router-dom";
-import routes from "./routes";
+import routes, { isFullWidthPath } from "./routes";
 import Footer from "./components/theme/Footer/Footer.tsx";
 import ScrollToTop from "./components/theme/ScrollToTop/ScrollToTop.tsx";
 import Header from "./components/theme/Header/Header.tsx";
@@ -29,34 +29,7 @@ const ScrollToTopWrapper = () => {
 // Create a wrapper component for Page Layout
 const PageLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isFullWidthPage =
-    location.pathname === "/" ||
-    location.pathname === "/dashboards" ||
-    location.pathname === "/dashboard" ||
-    location.pathname === "/oppsett" ||
-    location.pathname === "/komigang" ||
-    location.pathname === "/grafbygger" ||
-    location.pathname === "/personvern" ||
-    location.pathname === "/tilgjengelighet" ||
-    location.pathname === "/taksonomi" ||
-    location.pathname === "/metabase" ||
-    location.pathname.startsWith("/trafikkanalyse") ||
-    location.pathname.startsWith("/markedsanalyse") ||
-    location.pathname.startsWith("/utforsk-hendelser") ||
-    location.pathname.startsWith("/datastruktur") ||
-    location.pathname.startsWith("/brukerprofiler") ||
-    location.pathname.startsWith("/brukerlojalitet") ||
-    location.pathname.startsWith("/brukersammensetning") ||
-    location.pathname.startsWith("/brukerreiser") ||
-    location.pathname.startsWith("/hendelsesreiser") ||
-    location.pathname.startsWith("/trakt") ||
-    location.pathname.startsWith("/personvernssjekk") ||
-    location.pathname.startsWith("/diagnose") ||
-    location.pathname.startsWith("/grafdeling") ||
-    location.pathname.startsWith("/profil") ||
-    location.pathname.startsWith("/kvalitet/odelagte-lenker") ||
-    location.pathname.startsWith("/kvalitet/stavekontroll") ||
-    location.pathname.startsWith("/sql");
+  const isFullWidthPage = isFullWidthPath(location.pathname);
 
   if (isFullWidthPage) {
     return <main style={{ width: "100%" }}>{children}</main>;
@@ -117,11 +90,13 @@ function App() {
         <Header theme={theme} />
         <Router>
           <PageLayout>
-            <Routes>
-              {routes.map(({ path, component }) => (
-                <Route key={path} path={path} element={component} />
-              ))}
-            </Routes>
+            <Suspense fallback={null}>
+              <Routes>
+                {routes.map(({ path, component }) => (
+                  <Route key={path} path={path} element={component} />
+                ))}
+              </Routes>
+            </Suspense>
             <ScrollToTopWrapper />
           </PageLayout>
         </Router>

@@ -440,7 +440,7 @@ export default function Grafdeling() {
             const label = String(translatedLabel || 'Ukjent');
             return { x: label, y: value, xAxisCalloutData: label, yAxisCalloutData: `${value} (${percentage}%)`, color: ['#0067C5', '#FF9100', '#06893A', '#C30000', '#634689', '#A8874C', '#005B82', '#E18AAA'][index % 8], legend: label };
         });
-        return { data: barChartData, barWidth: 'auto' as 'auto', yAxisTickCount: 5, enableReflow: true, legendProps: { allowFocusOnLegends: true, canSelectMultipleLegends: false, styles: { root: { display: 'flex', flexWrap: 'wrap', rowGap: '8px', columnGap: '16px', maxWidth: '100%', fontSize: '16px' }, legend: { marginRight: 0, fontSize: '16px' } } } };
+        return { data: barChartData, barWidth: 'auto' as const, yAxisTickCount: 5, enableReflow: true, legendProps: { allowFocusOnLegends: true, canSelectMultipleLegends: false, styles: { root: { display: 'flex', flexWrap: 'wrap', rowGap: '8px', columnGap: '16px', maxWidth: '100%', fontSize: '16px' }, legend: { marginRight: 0, fontSize: '16px' } } } };
     };
 
     const preparePieChartData = () => {

@@ -9,6 +9,12 @@ Derfor tilbyr Team ResearchOps Umami – en løsning som kombinerer ferdigbygde 
 # Utvikling
 Opprett en `.env`-fil i prosjektets rotmappe med følgende innhold, og erstatt `<value>` med de faktiske verdiene for ditt miljø:
 ```
+BACKEND_BASE_URL=<value>
+SITEIMPROVE_BASE_URL=<value>
+UMAMI_BASE_URL=<value>
+GCP_PROJECT_ID=<value>
+
+# Alternativt kan du bruke VITE_-prefiksene (støttes av både server og Vite):
 VITE_BACKEND_BASE_URL=<value>
 VITE_SITEIMPROVE_BASE_URL=<value>
 VITE_UMAMI_BASE_URL=<value>
