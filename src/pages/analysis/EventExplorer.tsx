@@ -8,8 +8,8 @@ import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
-import { Website } from '../../types/chart';
-import { ILineChartProps } from '@fluentui/react-charting';
+import type { Website } from '../../types/chart';
+import type { ILineChartProps } from '@fluentui/react-charting';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
 
@@ -71,6 +71,107 @@ const EventExplorer = () => {
     type LatestEvent = {
         created_at: string;
         properties?: Record<string, string | undefined>;
+    };
+
+    type EventsResponse = {
+        events?: { name: string; count: number }[];
+        queryStats?: QueryStats;
+    };
+
+    type SeriesResponse = {
+        data?: SeriesPoint[];
+    };
+
+    type PropertiesResponse = {
+        properties?: EventProperty[];
+        gbProcessed?: number | string;
+    };
+
+    type ParameterValuesResponse = {
+        values?: ParameterValue[];
+        queryStats?: QueryStats;
+    };
+
+    type LatestEventsResponse = {
+        events?: LatestEvent[];
+    };
+
+    const isRecord = (value: unknown): value is Record<string, unknown> => {
+        return typeof value === 'object' && value !== null;
+    };
+
+    const isSeriesPoint = (value: unknown): value is SeriesPoint => {
+        return isRecord(value)
+            && typeof value.time === 'string'
+            && typeof value.count === 'number';
+    };
+
+    const isEventProperty = (value: unknown): value is EventProperty => {
+        return isRecord(value)
+            && typeof value.propertyName === 'string'
+            && typeof value.total === 'number';
+    };
+
+    const isParameterValue = (value: unknown): value is ParameterValue => {
+        return isRecord(value)
+            && typeof value.value === 'string'
+            && typeof value.count === 'number';
+    };
+
+    const isLatestEvent = (value: unknown): value is LatestEvent => {
+        return isRecord(value)
+            && typeof value.created_at === 'string'
+            && (!('properties' in value) || value.properties === undefined || isRecord(value.properties));
+    };
+
+    const parseQueryStats = (value: unknown): QueryStats | null => {
+        if (!isRecord(value)) return null;
+        const totalBytesProcessedGB = typeof value.totalBytesProcessedGB === 'number'
+            ? value.totalBytesProcessedGB
+            : undefined;
+        const estimatedCostUSD = typeof value.estimatedCostUSD === 'number'
+            ? value.estimatedCostUSD
+            : undefined;
+        return totalBytesProcessedGB !== undefined || estimatedCostUSD !== undefined
+            ? { totalBytesProcessedGB, estimatedCostUSD }
+            : null;
+    };
+
+    const parseEventsResponse = (value: unknown): EventsResponse => {
+        if (!isRecord(value)) return {};
+        const events = Array.isArray(value.events)
+            ? value.events.filter(item => isRecord(item) && typeof item.name === 'string' && typeof item.count === 'number')
+            : undefined;
+        const queryStats = parseQueryStats(value.queryStats) ?? undefined;
+        return { events, queryStats };
+    };
+
+    const parseSeriesResponse = (value: unknown): SeriesResponse => {
+        if (!isRecord(value)) return {};
+        const data = Array.isArray(value.data) ? value.data.filter(isSeriesPoint) : undefined;
+        return { data };
+    };
+
+    const parsePropertiesResponse = (value: unknown): PropertiesResponse => {
+        if (!isRecord(value)) return {};
+        const properties = Array.isArray(value.properties) ? value.properties.filter(isEventProperty) : undefined;
+        const gbProcessed = typeof value.gbProcessed === 'number' || typeof value.gbProcessed === 'string'
+            ? value.gbProcessed
+            : undefined;
+        return { properties, gbProcessed };
+    };
+
+    const parseParameterValuesResponse = (value: unknown): ParameterValuesResponse => {
+        if (!isRecord(value)) return {};
+        const values = Array.isArray(value.values) ? value.values.filter(isParameterValue) : undefined;
+        const queryStats = parseQueryStats(value.queryStats) ?? undefined;
+        return { values, queryStats };
+    };
+
+    const parseLatestEventsResponse = (value: unknown): LatestEventsResponse => {
+        if (!isRecord(value)) return {};
+        const events = Array.isArray(value.events) ? value.events.filter(isLatestEvent) : undefined;
+        return { events };
     };
 
     // Data states
@@ -142,10 +243,11 @@ const EventExplorer = () => {
             const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/events?${params.toString()}`);
             if (!response.ok) throw new Error('Failed to fetch events');
 
-            const result = await response.json();
-            setEvents(result.events || []);
-            if (result.queryStats) {
-                setEventsQueryStats(result.queryStats);
+            const result = await response.json() as unknown;
+            const parsed = parseEventsResponse(result);
+            setEvents(parsed.events ?? []);
+            if (parsed.queryStats) {
+                setEventsQueryStats(parsed.queryStats);
             }
 
             // Update URL with configuration for sharing
@@ -185,7 +287,7 @@ const EventExplorer = () => {
     useEffect(() => {
         if (selectedWebsite && !hasAutoSubmitted && !loadingEvents) {
             setHasAutoSubmitted(true);
-            fetchEvents();
+            void fetchEvents();
         }
     }, [selectedWebsite, hasAutoSubmitted, loadingEvents, fetchEvents]);
 
@@ -229,8 +331,9 @@ const EventExplorer = () => {
 
             const seriesResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-series?${seriesParams.toString()}`);
             if (!seriesResponse.ok) throw new Error('Failed to fetch event series');
-            const seriesResult = await seriesResponse.json();
-            setSeriesData(seriesResult.data || []);
+            const seriesResult = await seriesResponse.json() as unknown;
+            const parsedSeries = parseSeriesResponse(seriesResult);
+            setSeriesData(parsedSeries.data ?? []);
 
             // Fetch Properties Data
             const propsParams = new URLSearchParams({
@@ -246,11 +349,12 @@ const EventExplorer = () => {
 
             const propsResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-properties?${propsParams.toString()}`);
             if (!propsResponse.ok) throw new Error('Failed to fetch event properties');
-            const propsResult = await propsResponse.json();
+            const propsResult = await propsResponse.json() as unknown;
+            const parsedProps = parsePropertiesResponse(propsResult);
 
-            setPropertiesData(propsResult.properties || []);
-            if (propsResult.gbProcessed) {
-                const gbProcessed = Number(propsResult.gbProcessed);
+            setPropertiesData(parsedProps.properties ?? []);
+            if (parsedProps.gbProcessed !== undefined) {
+                const gbProcessed = Number(parsedProps.gbProcessed);
                 setQueryStats({
                     totalBytesProcessedGB: Number.isFinite(gbProcessed) ? gbProcessed : undefined,
                     estimatedCostUSD: Number.isFinite(gbProcessed)
@@ -295,7 +399,7 @@ const EventExplorer = () => {
     }, [selectedWebsite, selectedEvent, getDates, urlPaths, pathOperator, period, customStartDate, customEndDate]);
 
     useEffect(() => {
-        fetchEventData();
+        void fetchEventData();
     }, [fetchEventData]);
 
     // Fetch values for ALL parameters
@@ -325,11 +429,12 @@ const EventExplorer = () => {
                 const response = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-parameter-values?${params.toString()}`);
                 if (!response.ok) throw new Error(`Failed to fetch values for ${prop.propertyName}`);
 
-                const result = await response.json();
+                const result = await response.json() as unknown;
+                const parsed = parseParameterValuesResponse(result);
                 return {
                     parameterName: prop.propertyName,
-                    values: result.values || [],
-                    queryStats: result.queryStats
+                    values: parsed.values ?? [],
+                    queryStats: parsed.queryStats ?? undefined
                 };
             });
 
@@ -366,9 +471,9 @@ const EventExplorer = () => {
             const latestResponse = await fetch(`/api/bigquery/websites/${selectedWebsite.id}/event-latest?${latestParams.toString()}`);
             console.log('Latest events response status:', latestResponse.status);
             if (latestResponse.ok) {
-                const latestResult = await latestResponse.json();
-                console.log('Latest events result:', latestResult);
-                setLatestEvents(latestResult.events || []);
+                const latestResult = await latestResponse.json() as unknown;
+                const parsedLatest = parseLatestEventsResponse(latestResult);
+                setLatestEvents(parsedLatest.events ?? []);
             } else {
                 const errorText = await latestResponse.text();
                 console.error('Failed to fetch latest events:', errorText);
@@ -386,7 +491,7 @@ const EventExplorer = () => {
     // Auto-fetch values when drilling down into a parameter
     useEffect(() => {
         if (selectedParameterForDrilldown && !hasLoadedValues && !loadingValues) {
-            fetchAllParameterValues();
+            void fetchAllParameterValues();
         }
     }, [selectedParameterForDrilldown, hasLoadedValues, loadingValues, fetchAllParameterValues]);
 

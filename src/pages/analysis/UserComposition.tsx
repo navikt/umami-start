@@ -8,7 +8,7 @@ import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams } from '../../lib/utils';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 import type { IVerticalBarChartProps } from '@fluentui/react-charting';

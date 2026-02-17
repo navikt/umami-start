@@ -8,7 +8,7 @@ import MetricSelector from '../../components/chartbuilder/MetricSelector';
 import GroupingOptions from '../../components/chartbuilder/GroupingOptions';
 import AlertWithCloseButton from '../../components/chartbuilder/AlertWithCloseButton';
 import { FILTER_COLUMNS } from '../../lib/constants';
-import {
+import type {
   Parameter,
   Metric,
   DateFormat,
@@ -82,6 +82,34 @@ const sanitizeFieldNameForBigQuery = (name: string): string => {
   return name
     .replace(/[^\w]/g, '_') // Replace non-word characters with underscore
     .replace(/^[0-9]/, '_$&'); // Prefix with underscore if first char is a number
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const safeParseJson = (value: string): unknown => {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+};
+
+const isMetricArray = (value: unknown): value is Metric[] => {
+  return Array.isArray(value) && value.every(item => isRecord(item) && typeof item.function === 'string');
+};
+
+const isWebsiteLike = (value: unknown): value is Website => {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.domain === 'string';
+};
+
+const isFilterLike = (value: unknown): value is Filter => {
+  return isRecord(value) && typeof value.column === 'string' && typeof value.operator === 'string';
+};
+
+const isFilterArray = (value: unknown): value is Filter[] => {
+  return Array.isArray(value) && value.every(isFilterLike);
 };
 
 // Now define getMetricColumns which uses sanitizeColumnName
@@ -407,15 +435,26 @@ const ChartsPage = () => {
     // Apply config from URL if provided (from chartbuilder-created charts)
     if (configFromUrl) {
       try {
-        const parsedConfig = JSON.parse(configFromUrl);
-        setConfig(prev => ({
-          ...prev,
-          ...parsedConfig,
-          // Keep the website we just set if config doesn't have one
-          website: prev.website || parsedConfig.website
-        }));
-        if (parsedConfig.metrics && parsedConfig.metrics.length > 0) {
-          setHasUserSelectedMetrics(true);
+        const parsedConfig = safeParseJson(configFromUrl);
+        if (parsedConfig && isRecord(parsedConfig)) {
+          const parsedWebsite = isWebsiteLike(parsedConfig.website) ? parsedConfig.website : null;
+          const parsedMetrics = isMetricArray(parsedConfig.metrics) ? parsedConfig.metrics : undefined;
+          const parsedConfigSafe: Partial<ChartConfig> = {
+            ...parsedConfig,
+            website: parsedWebsite,
+            metrics: parsedMetrics
+          };
+
+          setConfig(prev => ({
+            ...prev,
+            ...parsedConfigSafe,
+            // Keep the website we just set if config doesn't have one
+            website: prev.website ?? parsedConfigSafe.website ?? null
+          }));
+
+          if (parsedMetrics && parsedMetrics.length > 0) {
+            setHasUserSelectedMetrics(true);
+          }
         }
       } catch (e) {
         console.error('Failed to parse config from URL:', e);
@@ -428,8 +467,10 @@ const ChartsPage = () => {
     // Apply filters from URL if provided
     if (filtersFromUrl) {
       try {
-        const parsedFilters = JSON.parse(filtersFromUrl);
-        filtersToApply.push(...parsedFilters);
+        const parsedFilters = safeParseJson(filtersFromUrl);
+        if (isFilterArray(parsedFilters)) {
+          filtersToApply.push(...parsedFilters);
+        }
       } catch (e) {
         console.error('Failed to parse filters from URL:', e);
       }
@@ -1743,7 +1784,7 @@ const ChartsPage = () => {
                   clearOrderBy={clearOrderBy}
                   setDateFormat={(format) => setConfig(prev => ({
                     ...prev,
-                    dateFormat: format as DateFormat['value']
+                    dateFormat: format
                   }))}
                   setParamAggregation={setParamAggregation}
                   setLimit={setLimit}

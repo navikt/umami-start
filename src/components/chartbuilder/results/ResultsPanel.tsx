@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton, Select, Label } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
-import { LineChart, ILineChartProps, VerticalBarChart, IVerticalBarChartProps, IVerticalBarChartDataPoint, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
+import type { ILineChartProps, IVerticalBarChartProps, IVerticalBarChartDataPoint} from '@fluentui/react-charting';
+import { LineChart, VerticalBarChart, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../../lib/translations';
 import { format, startOfWeek, startOfMonth, isValid } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -882,7 +883,7 @@ const ResultsPanel = ({
                       if (chartData.data.length > 12) {
                         const top11 = chartData.data.slice(0, 11);
                         const others = chartData.data.slice(11);
-                        const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
+                        const otherSum = others.reduce((sum, item) => sum + (item.y), 0);
 
                         displayData = [
                           ...top11,
@@ -962,7 +963,7 @@ const ResultsPanel = ({
                       if (chartData.data.length > 12) {
                         const top11 = chartData.data.slice(0, 11);
                         const others = chartData.data.slice(11);
-                        const otherSum = others.reduce((sum, item) => sum + (item.y as number), 0);
+                        const otherSum = others.reduce((sum, item) => sum + (item.y), 0);
 
                         displayData = [
                           ...top11,

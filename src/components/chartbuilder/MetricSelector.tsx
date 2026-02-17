@@ -1,7 +1,7 @@
 import { Button, Heading, Select, TextField, HelpText, Tabs, Label, UNSAFE_Combobox } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Users, BarChart2, PieChart, Clock, LogOut } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
-import {
+import type {
   Parameter,
   Metric,
   MetricOption,

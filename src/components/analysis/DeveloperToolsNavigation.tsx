@@ -1,5 +1,3 @@
-import { Link, List, Heading } from '@navikt/ds-react';
-
 export const developerTools = [
     {
         id: 'grafbygger',
@@ -44,22 +42,3 @@ export const developerTools = [
         description: 'Oversikt over hendelser og egenskaper'
     }
 ];
-
-const DeveloperToolsNavigation = () => {
-    return (
-        <div className="mt-8">
-            <Heading as="h2" size="medium" className="mb-2">
-                Utviklerverktøy
-            </Heading>
-            <List as="ul" className="pt-2">
-                {developerTools.map(tool => (
-                    <List.Item key={tool.id}>
-                        <strong><Link href={tool.href}>{tool.label}:</Link></strong> {tool.description}.
-                    </List.Item>
-                ))}
-            </List>
-        </div>
-    );
-};
-
-export default DeveloperToolsNavigation;

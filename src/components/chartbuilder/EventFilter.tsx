@@ -1,6 +1,6 @@
 import { Button, Heading } from '@navikt/ds-react';
 import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { Filter, Parameter } from '../../types/chart';
+import type { Filter, Parameter } from '../../types/chart';
 import { FILTER_COLUMNS, OPERATORS } from '../../lib/constants';
 import DateRangeSelector from './DateRangeSelector';
 import AlertWithCloseButton from './AlertWithCloseButton';
@@ -85,6 +85,8 @@ const EventFilter = forwardRef(({
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Add a ref for staging alert timeout
   const stagingAlertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didInitPageviewsRef = useRef<boolean>(false);
+  const didInitDateRangeRef = useRef<boolean>(false);
 
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -432,39 +434,53 @@ const EventFilter = forwardRef(({
 
   // Add useEffect to apply initial pageviews filter
   useEffect(() => {
+    if (didInitPageviewsRef.current) return;
+
     if (filters.length === 0) {
       const pageviewsFilter = FILTER_SUGGESTIONS.find(s => s.id === 'pageviews');
       if (pageviewsFilter) {
-        setFilters([...pageviewsFilter.filters]);
+        const timer = setTimeout(() => {
+          setFilters([...pageviewsFilter.filters]);
+        }, 0);
+        return () => clearTimeout(timer);
       }
     }
-  }, []); // Empty dependency array means this runs once on mount
+
+    didInitPageviewsRef.current = true;
+  }, [filters, setFilters]);
 
   // Add useEffect to apply default date range (last 7 days) on mount
   useEffect(() => {
+    if (didInitDateRangeRef.current) return;
+
     if (filters.length > 0 && !filters.some(f => f.column === 'created_at')) {
       const last7daysSQL = {
         fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
         toSQL: "CURRENT_TIMESTAMP()"
       };
 
-      setFilters([
-        ...filters,
-        {
-          column: 'created_at',
-          operator: '>=',
-          value: last7daysSQL.fromSQL,
-          dateRangeType: 'dynamic'
-        },
-        {
-          column: 'created_at',
-          operator: '<=',
-          value: last7daysSQL.toSQL,
-          dateRangeType: 'dynamic'
-        }
-      ]);
+      const timer = setTimeout(() => {
+        setFilters([
+          ...filters,
+          {
+            column: 'created_at',
+            operator: '>=',
+            value: last7daysSQL.fromSQL,
+            dateRangeType: 'dynamic'
+          },
+          {
+            column: 'created_at',
+            operator: '<=',
+            value: last7daysSQL.toSQL,
+            dateRangeType: 'dynamic'
+          }
+        ]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [filters.length]); // Run when filters change from 0 to 1 (after pageviews is added)
+
+    didInitDateRangeRef.current = true;
+  }, [filters, setFilters]);
 
   // Create a Set to track unique parameters
   const uniqueParameters = useMemo(() => {
@@ -670,3 +686,4 @@ const EventFilter = forwardRef(({
 });
 
 export default EventFilter;
+

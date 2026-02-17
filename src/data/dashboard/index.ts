@@ -1,7 +1,7 @@
 import { standardDashboard } from './standard';
 import { fylkeskontorDashboard } from './fylkeskontor';
 import { hjelpemiddelsentralDashboard } from './hjelpemiddelsentral';
-import { DashboardConfig } from './types';
+import type { DashboardConfig } from './types';
 
 export * from './types';
 

@@ -40,8 +40,10 @@ interface ApiCache {
     }
 }
 
-interface WebsiteApiResponse {
-    data: Website[];
+interface EventPropertiesResponse {
+    properties?: EventProperty[];
+    gbProcessed?: number;
+    estimatedGbProcessed?: number;
 }
 
 const API_TIMEOUT_MS = 120000; // timeout
@@ -52,8 +54,52 @@ const getHostPrefix = () => window.location.hostname.replace(/\./g, '_');
 const WEBSITES_CACHE_KEY = `umami_websites_cache_${getHostPrefix()}`;
 const SELECTED_WEBSITE_CACHE_KEY = `umami_selected_website_${getHostPrefix()}`;
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null;
+};
+
+const isWebsiteLike = (value: unknown): value is Website => {
+    return isRecord(value)
+        && typeof value.id === 'string'
+        && typeof value.name === 'string'
+        && typeof value.domain === 'string'
+        && typeof value.teamId === 'string'
+        && typeof value.createdAt === 'string';
+};
+
+const isEventProperty = (value: unknown): value is EventProperty => {
+    return isRecord(value)
+        && typeof value.eventName === 'string'
+        && typeof value.propertyName === 'string'
+        && typeof value.total === 'number'
+        && (value.type === undefined || value.type === 'string' || value.type === 'number');
+};
+
+const parseEventPropertiesResponse = (value: unknown): EventPropertiesResponse => {
+    if (!isRecord(value)) return {};
+    const properties = Array.isArray(value.properties)
+        ? value.properties.filter(isEventProperty)
+        : [];
+    const gbProcessed = typeof value.gbProcessed === 'number' ? value.gbProcessed : undefined;
+    const estimatedGbProcessed = typeof value.estimatedGbProcessed === 'number' ? value.estimatedGbProcessed : undefined;
+    return { properties, gbProcessed, estimatedGbProcessed };
+};
+
+const parseWebsitesResponse = (value: unknown): Website[] => {
+    if (!isRecord(value) || !Array.isArray(value.data)) return [];
+    return value.data.filter(isWebsiteLike);
+};
+
+const safeParseJson = (value: string): unknown => {
+    try {
+        return JSON.parse(value) as unknown;
+    } catch {
+        return null;
+    }
+};
+
 // LocalStorage helper functions
-const saveToLocalStorage = (key: string, data: any) => {
+const saveToLocalStorage = (key: string, data: unknown) => {
     try {
         const item = {
             data,
@@ -70,7 +116,11 @@ const getFromLocalStorage = <T,>(key: string, maxAgeMs: number = CACHE_EXPIRY_MS
         const itemStr = localStorage.getItem(key);
         if (!itemStr) return null;
 
-        const item = JSON.parse(itemStr);
+        const item = safeParseJson(itemStr);
+        if (!isRecord(item) || typeof item.timestamp !== 'number' || !('data' in item)) {
+            return null;
+        }
+
         const now = Date.now();
 
         // Check if cache has expired
@@ -112,7 +162,6 @@ const DashboardWebsitePicker = ({
 }: WebsitePickerProps) => {
     const [websites, setWebsites] = useState<Website[]>([]);
     const [loadedWebsiteId, setLoadedWebsiteId] = useState<string | null>(null);
-    const [setMaxDaysAvailable] = useState<number>(30);
     const [dateRangeInDays, setDateRangeInDays] = useState<number>(externalDateRange || 14);
     const apiCache = useRef<ApiCache>({});
     const fetchInProgress = useRef<{ [key: string]: boolean }>({});
@@ -121,13 +170,7 @@ const DashboardWebsitePicker = ({
     const prevShouldReload = useRef<boolean>(shouldReload);
     const initialUrlChecked = useRef<boolean>(false);
 
-    // @ts-ignore
-    const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [showLoading, setShowLoading] = useState<boolean>(false);
-    const loadingTimerRef = useRef<number | null>(null);
-    // const [gbProcessed, setGbProcessed] = useState<string | null>(null);
-    // const [estimatedGbProcessed, setEstimatedGbProcessed] = useState<string | null>(null);
     const [includeParams, setIncludeParams] = useState<boolean>(false);
     const prevIncludeParams = useRef<boolean>(false);
 
@@ -234,37 +277,11 @@ const DashboardWebsitePicker = ({
         if (onLoadingChange) {
             onLoadingChange(loading);
         }
-
-        if (loading) {
-            loadingTimerRef.current = window.setTimeout(() => {
-                setShowLoading(true);
-            }, 600);
-        } else {
-            // Clear both loading states
-            setShowLoading(false);
-
-            // Clear any pending timers
-            if (loadingTimerRef.current) {
-                window.clearTimeout(loadingTimerRef.current);
-                loadingTimerRef.current = null;
-            }
-        }
-    }, [onLoadingChange]); // Remove showLoading dependency since we handle it directly
-
-    // Clean up timer on unmount
-    useEffect(() => {
-        return () => {
-            if (loadingTimerRef.current) {
-                window.clearTimeout(loadingTimerRef.current);
-            }
-        };
-    }, []);
+    }, [onLoadingChange]);
 
     const [fullEventsLoadedId, setFullEventsLoadedId] = useState<string | null>(null);
 
-    // @ts-ignore
-    // @ts-ignore
-    const fetchEventNames = useCallback(async (website: Website, forceFresh = false, daysToFetch = dateRangeInDays, metadataOnly = false) => {
+    const fetchEventNames = useCallback(async (website: Website, _forceFresh = false, daysToFetch = dateRangeInDays, metadataOnly = false) => {
         const websiteId = website.id;
         if (fetchInProgress.current[websiteId]) return;
 
@@ -291,8 +308,6 @@ const DashboardWebsitePicker = ({
 
         fetchInProgress.current[websiteId] = true;
         setError(null); // Clear any previous errors
-        // setGbProcessed(null); // Clear previous GB count
-        // setEstimatedGbProcessed(null); // Clear previous estimated GB
 
         try {
             // Show loading UI
@@ -315,23 +330,19 @@ const DashboardWebsitePicker = ({
             const propertiesResponse = await Promise.race([
                 fetch(`${apiBase}/websites/${websiteId}/event-properties?startAt=${startAt}&endAt=${endAt}&includeParams=${includeParams}`),
                 timeoutPromise(API_TIMEOUT_MS)
-            ]);// @ts-ignore
-            const responseData = await propertiesResponse.json();
+            ]);
+            if (!(propertiesResponse instanceof Response)) {
+                throw new Error('Unexpected response from event properties request');
+            }
+            const responseData = await propertiesResponse.json() as unknown;
 
             console.log('API Response:', responseData);
 
             // Extract properties and GB processed from response
-            const properties: EventProperty[] = responseData.properties || [];
-            const gbProcessedValue = responseData.gbProcessed;
-            const estimatedGbValue = responseData.estimatedGbProcessed;
-
-            /* if (gbProcessedValue) {
-              setGbProcessed(gbProcessedValue);
-            }
-      
-            if (estimatedGbValue) {
-              setEstimatedGbProcessed(estimatedGbValue);
-            } */
+            const parsedResponse = parseEventPropertiesResponse(responseData);
+            const properties: EventProperty[] = parsedResponse.properties || [];
+            const gbProcessedValue = parsedResponse.gbProcessed;
+            const estimatedGbValue = parsedResponse.estimatedGbProcessed;
 
             console.log(`Fetched ${properties.length} event entries from the API, estimated ${estimatedGbValue} GB, actual ${gbProcessedValue} GB`);
 
@@ -380,15 +391,13 @@ const DashboardWebsitePicker = ({
         } finally {
             fetchInProgress.current[websiteId] = false;
         }
-    }, [onEventsLoad, setMaxDaysAvailable, handleLoadingState, includeParams]);
+    }, [onEventsLoad, handleLoadingState, includeParams, dateRangeInDays]);
 
     // Load websites on mount
     useEffect(() => {
         if (websitesLoaded.current) {
             return;
         }
-
-        setIsInitialLoading(true);
 
         // Try to load websites from cache first
         const cachedWebsites = getFromLocalStorage<Website[]>(WEBSITES_CACHE_KEY);
@@ -397,7 +406,6 @@ const DashboardWebsitePicker = ({
             console.log('Using cached websites list');
             setWebsites(cachedWebsites);
             websitesLoaded.current = true;
-            setIsInitialLoading(false);
             return;
         }
 
@@ -405,20 +413,18 @@ const DashboardWebsitePicker = ({
         const baseUrl = '';
 
         fetch(`${baseUrl}/api/bigquery/websites`)
-            .then(response => response.json() as Promise<WebsiteApiResponse>)
+            .then(response => response.json() as Promise<unknown>)
             .then((response) => {
-                const websitesData = response.data || [];
+                const websitesData = parseWebsitesResponse(response);
                 const uniqueWebsites = websitesData.filter((website: Website, index: number, self: Website[]) =>
                     index === self.findIndex((w) => w.name === website.name)
                 );
                 setWebsites(uniqueWebsites);
                 saveToLocalStorage(WEBSITES_CACHE_KEY, uniqueWebsites);
                 websitesLoaded.current = true;
-                setIsInitialLoading(false);
             })
             .catch(error => {
                 console.error("Error fetching websites:", error);
-                setIsInitialLoading(false);
             });
     }, []);
 
@@ -478,20 +484,20 @@ const DashboardWebsitePicker = ({
         if (isNewWebsite) {
             if (disableAutoEvents && !requestLoadEvents) {
                 // Metadata only fetch
-                fetchEventNames(selectedWebsite, false, dateRangeInDays, true);
+                void fetchEventNames(selectedWebsite, false, dateRangeInDays, true);
                 setLoadedWebsiteId(selectedWebsite.id);
                 setFullEventsLoadedId(null);
             } else {
                 // Full fetch
                 apiCache.current = {};
-                fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+                void fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
                 setLoadedWebsiteId(selectedWebsite.id);
                 setFullEventsLoadedId(selectedWebsite.id);
             }
         } else if (needsFullLoad) {
             // We are on the same website, but now requesting full load
             apiCache.current = {};
-            fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+            void fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
             setFullEventsLoadedId(selectedWebsite.id);
         }
     }, [selectedWebsite, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, disableAutoEvents, requestLoadEvents, fullEventsLoadedId]);
@@ -501,7 +507,7 @@ const DashboardWebsitePicker = ({
         if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current && onEventsLoad) {
             prevIncludeParams.current = includeParams;
             apiCache.current[selectedWebsite.id] = {};
-            fetchEventNames(selectedWebsite, true, dateRangeInDays);
+            void fetchEventNames(selectedWebsite, true, dateRangeInDays);
         }
     }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
@@ -532,7 +538,7 @@ const DashboardWebsitePicker = ({
             apiCache.current[selectedWebsite.id] = {};
 
             // Always use API data when explicitly reloading
-            fetchEventNames(selectedWebsite, true, externalDateRange || dateRangeInDays);
+            void fetchEventNames(selectedWebsite, true, externalDateRange || dateRangeInDays);
         }
     }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
@@ -549,7 +555,8 @@ const DashboardWebsitePicker = ({
         return a.name.localeCompare(b.name);
     });
 
-
+    const isWebsitesLoading = websites.length === 0 && !websitesLoaded.current;
+    const optionLabels = sortedWebsites.map(w => w.name);
 
     return (
         <div className={`${variant === 'minimal' ? '' : ''}`}>
@@ -563,74 +570,39 @@ const DashboardWebsitePicker = ({
                 <UNSAFE_Combobox
                     label="Nettside eller app"
                     size={size}
-                    options={sortedWebsites.map(website => ({
-                        label: website.name,
-                        value: website.name,
-                        website: website
-                    }))}
+                    options={optionLabels}
                     selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
-                    onToggleSelected={(option: string, isSelected: boolean) => {
+                    onToggleSelected={(value, isSelected) => {
                         if (isSelected) {
-                            const website = websites.find(w => w.name === option);
-                            if (website) {
-                                handleWebsiteChange(website);
-                            }
+                            const website = websites.find(w => w.name === value);
+                            if (website) handleWebsiteChange(website);
                         } else {
                             handleWebsiteChange(null);
                         }
                     }}
-                    clearButton
-                    isMultiSelect={false}
+                    className="w-full"
+                    isLoading={isWebsitesLoading}
                 />
-                {!selectedWebsite && (
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="text-sm">Hurtigvalg:</span>
+                {!isWebsitesLoading && sortedWebsites.length === 0 && (
+                    <div className="mt-2 text-sm">Ingen nettsteder tilgjengelig</div>
+                )}
+
+                {selectedWebsite && (
+                    <div className="mt-4">
                         <Button
-                            size="xsmall"
                             variant="secondary"
-                            onClick={() => {
-                                const website = websites.find(w => w.id === '35abb2b7-3f97-42ce-931b-cf547d40d967');
-                                if (website) {
-                                    handleWebsiteChange(website);
-                                }
-                            }}
+                            onClick={() => handleWebsiteChange(null)}
+                            size={size}
                         >
-                            nav.no
-                        </Button>
-                        <Button
-                            size="xsmall"
-                            variant="secondary"
-                            onClick={() => {
-                                const website = websites.find(w => w.id === '83b80c84-b551-4dff-a679-f21be5fa0453');
-                                if (website) {
-                                    handleWebsiteChange(website);
-                                }
-                            }}
-                        >
-                            navet
+                            Fjern valg
                         </Button>
                     </div>
                 )}
             </div>
-
-            {/* {selectedWebsite && includeParams && (
-          <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-            <div className="text-sm text-[var(--ax-text-default)]">
-              Hentet hendelser med hendelsesdetaljer for siste {dateRangeInDays} {dateRangeInDays === 1 ? 'dag' : 'dager'}.
-            </div>
-          </div>
-          )}  
-        */}
-
-            {
-                showLoading && (
-                    <>
-                        {/* Show loading content here if needed */}
-                    </>
-                )
-            }
         </div>
     );
 };
 
 export default DashboardWebsitePicker;
+
+

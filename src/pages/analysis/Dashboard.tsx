@@ -20,6 +20,19 @@ type Website = {
 
 type BatchedRow = Record<string, unknown>;
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value !== null;
+};
+
+const isWebsiteLike = (value: unknown): value is Website => {
+    return isRecord(value)
+        && typeof value.id === "string"
+        && typeof value.name === "string"
+        && typeof value.domain === "string"
+        && typeof value.teamId === "string"
+        && typeof value.createdAt === "string";
+};
+
 const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const websiteId = searchParams.get("websiteId");
@@ -138,7 +151,7 @@ const Dashboard = () => {
         dateRange: dateRangeFromUrl || "current_month",
         customStartDate: initialCustomStartDate,
         customEndDate: initialCustomEndDate,
-        metricType: (metricTypeFromUrl || 'visitors') as 'visitors' | 'pageviews' | 'proportion' | 'visits'
+        metricType: (metricTypeFromUrl || 'visitors')
     });
 
     // Active website state to ensure widget only updates on "Oppdater"
@@ -177,8 +190,10 @@ const Dashboard = () => {
             try {
                 // Fetch websites list
                 const response = await fetch('/api/bigquery/websites');
-                const data: { data?: Website[] } = await response.json();
-                const websitesData = data.data || [];
+                const data = await response.json() as unknown;
+                const websitesData = isRecord(data) && Array.isArray(data.data)
+                    ? data.data.filter(isWebsiteLike)
+                    : [];
 
                 // Filter for prod websites - same team IDs as metadashboard.tsx
                 const relevantTeams = [
@@ -239,7 +254,7 @@ const Dashboard = () => {
             }
         };
 
-        resolveDomainToWebsiteId();
+        void resolveDomainToWebsiteId();
     }, [domainFromUrl, websiteId, searchParams, setSearchParams]);
 
     // Auto-apply filters when coming from an external link with paths
@@ -338,7 +353,7 @@ const Dashboard = () => {
             }
         };
 
-        fetchBatchedData();
+        void fetchBatchedData();
     }, [effectiveWebsiteId, activeFilters, dashboard.charts]);
 
     const handleUpdate = (overridePathOperator?: string) => {
@@ -891,7 +906,7 @@ const Dashboard = () => {
         // Don't nudge if it's already the root path
         if (activeFilters.urlFilters[0] === '/') return false;
 
-        const counts = Object.values(stats).map(s => s.count).filter(c => c !== undefined) as number[];
+        const counts = Object.values(stats).map(s => s.count).filter(c => c !== undefined);
         if (counts.length === 0) return false;
 
         // If the maximum count across all metric charts is between 1 and 10

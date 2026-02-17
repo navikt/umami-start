@@ -9,8 +9,9 @@ import {
   Tabs,
   TextField,
 } from "@navikt/ds-react";
+import type {
+  IChartProps} from "@fluentui/react-charting";
 import {
-  IChartProps,
   ResponsiveContainer,
   SankeyChart,
 } from "@fluentui/react-charting";
@@ -22,7 +23,7 @@ import WebsitePicker from "../../components/analysis/WebsitePicker";
 import PeriodPicker from "../../components/analysis/PeriodPicker";
 import UmamiJourneyView from "../../components/analysis/journey/UmamiJourneyView";
 import AnalysisActionModal from "../../components/analysis/AnalysisActionModal";
-import { Website } from "../../types/chart";
+import type { Website } from "../../types/chart";
 import {
   getDateRangeFromPeriod,
   normalizeUrlToPath,

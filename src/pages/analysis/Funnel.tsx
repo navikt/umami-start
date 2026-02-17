@@ -13,7 +13,7 @@ import SqlViewer from '../../components/chartbuilder/results/SqlViewer';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 import { getGcpProjectId } from '../../lib/runtimeConfig';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 
 // Runtime config is resolved by getGcpProjectId.
 
@@ -689,19 +689,19 @@ FROM timing_data`;
     const removeStepParam = (index: number, pIndex: number) => {
         const newSteps = [...steps];
         if (newSteps[index].params) {
-            newSteps[index].params = newSteps[index].params!.filter((_, i) => i !== pIndex);
+            newSteps[index].params = newSteps[index].params.filter((_, i) => i !== pIndex);
         }
         setSteps(newSteps);
     };
 
     const updateStepParam = (index: number, pIndex: number, field: 'key' | 'value' | 'operator', val: string) => {
         const newSteps = [...steps];
-        if (newSteps[index].params && newSteps[index].params![pIndex]) {
+        if (newSteps[index].params && newSteps[index].params[pIndex]) {
             if (field === 'operator') {
                 // @ts-expect-error val is a string at runtime; constrain to allowed operators
-                newSteps[index].params![pIndex][field] = val;
+                newSteps[index].params[pIndex][field] = val;
             } else {
-                newSteps[index].params![pIndex][field] = val;
+                newSteps[index].params[pIndex][field] = val;
             }
         }
         setSteps(newSteps);

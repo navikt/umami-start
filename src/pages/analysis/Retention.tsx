@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Heading, BodyShort } from '@navikt/ds-react';
-import { LineChart, ILineChartDataPoint, ILineChartProps, ResponsiveContainer } from '@fluentui/react-charting';
+import type { ILineChartDataPoint, ILineChartProps} from '@fluentui/react-charting';
+import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
@@ -10,7 +11,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import CookieMixNotice from '../../components/analysis/CookieMixNotice';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { normalizeUrlToPath, getStoredPeriod, getDateRangeFromPeriod, getCookieBadge, getCookieCountByParams } from '../../lib/utils';
 
 

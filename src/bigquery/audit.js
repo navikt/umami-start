@@ -37,7 +37,7 @@ function getAnalysisTypeOverride(req, fallback) {
             const url = new URL(referer);
             if (url.pathname === '/trafikkanalyse') return 'trafikkanalyse';
             if (url.pathname === '/markedsanalyse') return 'markedsanalyse';
-        } catch (_) {
+        } catch {
             // Ignore invalid referer
         }
     }

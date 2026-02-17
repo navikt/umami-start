@@ -5,7 +5,7 @@ import { ExternalLink, Download } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
 import InfoCard from '../../components/InfoCard';
 
@@ -50,6 +50,35 @@ type TeamData = {
     [key: string]: unknown;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === 'object';
+
+const isBrokenLink = (value: unknown): value is BrokenLink =>
+    isRecord(value) && typeof value.id === 'number' && typeof value.url === 'string' && typeof value.pages === 'number';
+
+const isPageWithBrokenLinks = (value: unknown): value is PageWithBrokenLinks =>
+    isRecord(value) && typeof value.id === 'number' && typeof value.url === 'string' && typeof value.broken_links === 'number';
+
+const isPageBrokenLink = (value: unknown): value is PageBrokenLink =>
+    isRecord(value) && typeof value.url === 'string';
+
+const isBrokenLinkPage = (value: unknown): value is BrokenLinkPage =>
+    isRecord(value) && typeof value.url === 'string';
+
+const isCrawlData = (value: unknown): value is CrawlData =>
+    isRecord(value)
+    && typeof value.last_crawl === 'string'
+    && typeof value.next_crawl === 'string'
+    && typeof value.is_crawl_enabled === 'boolean'
+    && typeof value.is_crawl_running === 'boolean'
+    && typeof value.permission === 'string';
+
+const parseListResponse = <T,>(value: unknown, itemGuard: (item: unknown) => item is T): SiteimproveListResponse<T> => {
+    if (!isRecord(value)) return { items: [] };
+    const rawItems = Array.isArray(value.items) ? value.items : [];
+    return { items: rawItems.filter(itemGuard) };
+};
+
 const getUrlPath = (urlString: string) => {
     try {
         const url = new URL(urlString);
@@ -85,7 +114,11 @@ function PageBrokenLinksContent({
                 throw new Error('Kunne ikke hente ødelagte lenker for denne siden.');
             }
 
-            const data: SiteimproveListResponse<PageBrokenLink> = await response.json();
+            const pageLinksJson: unknown = await response.json();
+            const data: SiteimproveListResponse<PageBrokenLink> = parseListResponse(
+                pageLinksJson,
+                isPageBrokenLink,
+            );
             setPageBrokenLinks(data.items ?? []);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Feil ved henting av ødelagte lenker.';
@@ -96,7 +129,7 @@ function PageBrokenLinksContent({
     }, [pageId, siteimproveBaseUrl, siteimproveId]);
 
     useEffect(() => {
-        fetchPageBrokenLinks();
+        void fetchPageBrokenLinks();
     }, [fetchPageBrokenLinks]);
 
     if (loadingPageLinks) {
@@ -171,7 +204,11 @@ function BrokenLinkPagesContent({
                 throw new Error('Kunne ikke hente sider for denne lenken.');
             }
 
-            const data: SiteimproveListResponse<BrokenLinkPage> = await response.json();
+            const pagesJson: unknown = await response.json();
+            const data: SiteimproveListResponse<BrokenLinkPage> = parseListResponse(
+                pagesJson,
+                isBrokenLinkPage,
+            );
             setPages(data.items ?? []);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Feil ved henting av sider.';
@@ -182,7 +219,7 @@ function BrokenLinkPagesContent({
     }, [linkId, siteimproveBaseUrl, siteimproveId]);
 
     useEffect(() => {
-        fetchBrokenLinkPages();
+        void fetchBrokenLinkPages();
     }, [fetchBrokenLinkPages]);
 
     if (loadingPages) {
@@ -302,7 +339,11 @@ const BrokenLinks = () => {
                 throw new Error('Kunne ikke hente data fra Siteimprove.');
             }
 
-            const brokenLinksData: SiteimproveListResponse<BrokenLink> = await brokenLinksResponse.json();
+            const brokenLinksJson: unknown = await brokenLinksResponse.json();
+            const brokenLinksData: SiteimproveListResponse<BrokenLink> = parseListResponse(
+                brokenLinksJson,
+                isBrokenLink,
+            );
             if (brokenLinksData.items) {
                 const sortedLinks = brokenLinksData.items.sort((a, b) => b.pages - a.pages);
                 setBrokenLinks(sortedLinks);
@@ -313,7 +354,11 @@ const BrokenLinks = () => {
             const pagesResponse = await fetch(pagesUrl, { credentials });
 
             if (pagesResponse.ok) {
-                const pagesData: SiteimproveListResponse<PageWithBrokenLinks> = await pagesResponse.json();
+                const pagesJson: unknown = await pagesResponse.json();
+                const pagesData: SiteimproveListResponse<PageWithBrokenLinks> = parseListResponse(
+                    pagesJson,
+                    isPageWithBrokenLinks,
+                );
                 if (pagesData.items) {
                     const sortedPages = pagesData.items.sort((a, b) => b.broken_links - a.broken_links);
                     setPagesWithBrokenLinks(sortedPages);
@@ -325,8 +370,10 @@ const BrokenLinks = () => {
             const crawlResponse = await fetch(crawlUrl, { credentials });
 
             if (crawlResponse.ok) {
-                const crawlData: CrawlData = await crawlResponse.json();
-                setCrawlInfo(crawlData);
+                const crawlData: unknown = await crawlResponse.json();
+                if (isCrawlData(crawlData)) {
+                    setCrawlInfo(crawlData);
+                }
             }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Det oppstod en feil ved henting av ødelagte lenker.';
@@ -351,7 +398,7 @@ const BrokenLinks = () => {
 
         const idStr = String(resolvedSiteimproveId);
         setSiteimproveId(idStr);
-        fetchSiteimproveData(idStr);
+        void fetchSiteimproveData(idStr);
     }, [selectedWebsite]);
 
     const filteredPages = pagesWithBrokenLinks.filter(page => !urlPath || page.url.toLowerCase().includes(urlPath.toLowerCase()));
@@ -588,7 +635,7 @@ const BrokenLinks = () => {
                                 {brokenLinks.length === 0 ? (
                                     <Alert variant="success">Fant ingen ødelagte lenker! 🎉</Alert>
                                 ) : (
-                                    <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-default)]">
+                                    <div className="border rounded-lg overflow-x-auto bg-[var(--ax-bg-neutral)]">
                                         <Table size="small" zebraStripes>
                                             <Table.Header>
                                                 <Table.Row>

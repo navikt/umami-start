@@ -1,17 +1,4 @@
-import { Link, List, Heading } from '@navikt/ds-react';
-import Kontaktboks from '../theme/Kontaktboks/Kontaktboks';
-import { useMarketingSupport } from '../../hooks/useSiteimproveSupport';
-
 export type AnalyticsPage = 'brukerreiser' | 'trakt' | 'brukerlojalitet' | 'grafbygger' | 'brukersammensetning' | 'event-explorer' | 'trafikkanalyse' | 'markedsanalyse' | 'diagnose' | 'enkeltbrukere' | 'personvern' | 'hendelsesreiser' | 'sql' | 'grafdeling' | 'odelagte-lenker' | 'stavekontroll';
-
-interface AnalyticsNavigationProps {
-    currentPage?: AnalyticsPage;
-
-    className?: string;
-    domain?: string;
-    websiteName?: string;
-}
-
 export const analyticsPages = [
     {
         id: 'grafbygger',
@@ -104,34 +91,3 @@ export const analyticsPages = [
         description: 'Se stavefeil fra Siteimprove'
     }
 ];
-
-const AnalyticsNavigation = ({ currentPage, className = '', domain, websiteName }: AnalyticsNavigationProps) => {
-    const hasMarketing = useMarketingSupport(domain, websiteName);
-
-    // Filter out the current page if specified
-    const displayPages = (currentPage
-        ? analyticsPages.filter(page => page.id !== currentPage)
-        : analyticsPages
-    ).filter(page => {
-        if (page.id === 'markedsanalyse' && !hasMarketing) return false;
-        return true;
-    });
-
-    return (
-        <div className="mt-12">
-            <Heading as="h3" size="medium">Andre graftyper</Heading>
-            <List as="ul" className={`pt-2 ${className}`}>
-                {displayPages.map(page => (
-                    <List.Item key={page.id}>
-                        <strong><Link href={page.href}>{page.label}:</Link></strong> {page.description}.
-                    </List.Item>
-                ))}
-            </List>
-            <div className="mt-12">
-                <Kontaktboks />
-            </div>
-        </div>
-    );
-};
-
-export default AnalyticsNavigation;

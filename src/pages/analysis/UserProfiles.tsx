@@ -8,7 +8,7 @@ import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import AnalysisActionModal from '../../components/analysis/AnalysisActionModal';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { translateCountry } from '../../lib/translations';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams, getCookieBadge } from '../../lib/utils';
 import { TextField } from '@navikt/ds-react';

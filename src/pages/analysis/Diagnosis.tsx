@@ -5,10 +5,11 @@ import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { format, parseISO } from 'date-fns';
 import { nb } from 'date-fns/locale';
-import { LineChart, ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
+import type { ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
+import { LineChart } from '@fluentui/react-charting';
 
 interface DiagnosisData {
     website_id: string;
@@ -28,6 +29,70 @@ interface HistoryData {
 type QueryStats = {
     totalBytesProcessedGB?: number;
     estimatedCostUSD?: number;
+};
+
+type DiagnosisResponse = {
+    error?: string;
+    data?: DiagnosisData[];
+    queryStats?: QueryStats;
+};
+
+type DiagnosisHistoryResponse = {
+    history?: HistoryData[];
+    lastEventAt?: string | null;
+    queryStats?: QueryStats;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null;
+};
+
+const isDiagnosisData = (value: unknown): value is DiagnosisData => {
+    return isRecord(value)
+        && typeof value.website_id === 'string'
+        && typeof value.website_name === 'string'
+        && (value.domain === null || typeof value.domain === 'string')
+        && typeof value.pageviews === 'number'
+        && typeof value.custom_events === 'number'
+        && (value.last_event_at === null || typeof value.last_event_at === 'string');
+};
+
+const isHistoryData = (value: unknown): value is HistoryData => {
+    return isRecord(value)
+        && typeof value.month === 'string'
+        && typeof value.pageviews === 'number'
+        && typeof value.custom_events === 'number';
+};
+
+const parseQueryStats = (value: unknown): QueryStats | null => {
+    if (!isRecord(value)) return null;
+    const totalBytesProcessedGB = typeof value.totalBytesProcessedGB === 'number'
+        ? value.totalBytesProcessedGB
+        : undefined;
+    const estimatedCostUSD = typeof value.estimatedCostUSD === 'number'
+        ? value.estimatedCostUSD
+        : undefined;
+    return totalBytesProcessedGB !== undefined || estimatedCostUSD !== undefined
+        ? { totalBytesProcessedGB, estimatedCostUSD }
+        : null;
+};
+
+const parseDiagnosisResponse = (value: unknown): DiagnosisResponse => {
+    if (!isRecord(value)) return {};
+    const error = typeof value.error === 'string' ? value.error : undefined;
+    const data = Array.isArray(value.data) ? value.data.filter(isDiagnosisData) : undefined;
+    const queryStats = parseQueryStats(value.queryStats);
+    return { error, data, queryStats: queryStats ?? undefined };
+};
+
+const parseDiagnosisHistoryResponse = (value: unknown): DiagnosisHistoryResponse => {
+    if (!isRecord(value)) return {};
+    const history = Array.isArray(value.history) ? value.history.filter(isHistoryData) : undefined;
+    const lastEventAt = value.lastEventAt === null || typeof value.lastEventAt === 'string'
+        ? value.lastEventAt
+        : undefined;
+    const queryStats = parseQueryStats(value.queryStats);
+    return { history, lastEventAt, queryStats: queryStats ?? undefined };
 };
 
 const Diagnosis = () => {
@@ -117,13 +182,14 @@ const Diagnosis = () => {
                 throw new Error('Kunne ikke hente data');
             }
 
-            const result = await response.json();
+            const resultPayload = await response.json() as unknown;
+            const parsed = parseDiagnosisResponse(resultPayload);
 
-            if (result.error) {
-                setError(result.error);
+            if (parsed.error) {
+                setError(parsed.error);
             } else {
-                setData(result.data);
-                setQueryStats(result.queryStats);
+                setData(parsed.data ?? []);
+                setQueryStats(parsed.queryStats ?? null);
             }
         } catch (err) {
             console.error('Error fetching diagnosis data:', err);
@@ -135,7 +201,7 @@ const Diagnosis = () => {
 
     // Fetch data when period changes
     useEffect(() => {
-        fetchData();
+        void fetchData();
     }, [period, fetchData]);
 
     const [sort, setSort] = useState<{ orderBy: string; direction: 'ascending' | 'descending' }>({
@@ -234,10 +300,11 @@ const Diagnosis = () => {
 
             if (!response.ok) throw new Error('Failed to fetch history');
 
-            const result = await response.json();
-            setHistoryData(result.history);
-            setAbsoluteLastEvent(result.lastEventAt);
-            setHistoryQueryStats(result.queryStats);
+            const resultPayload = await response.json() as unknown;
+            const parsed = parseDiagnosisHistoryResponse(resultPayload);
+            setHistoryData(parsed.history ?? []);
+            setAbsoluteLastEvent(parsed.lastEventAt ?? null);
+            setHistoryQueryStats(parsed.queryStats ?? null);
         } catch (error) {
             console.error('Error fetching history:', error);
         } finally {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { Page, Accordion } from "@navikt/ds-react";
 import { BarChart2, Users, FileSearch, Activity } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -46,7 +46,50 @@ const chartGroups = [
 
 const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate', 'from', 'to', 'websiteId', 'domain', 'pathOperator'];
 
+interface SidebarNavigationContentProps {
+    filteredChartGroups: typeof chartGroups;
+    currentPage?: AnalyticsPage;
+    onNavigate: (e: React.MouseEvent, href: string) => void;
+}
 
+const SidebarNavigationContent: React.FC<SidebarNavigationContentProps> = ({
+    filteredChartGroups,
+    currentPage,
+    onNavigate
+}) => (
+    <>
+        {filteredChartGroups.map((group) => (
+            <div key={group.title}>
+                <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
+                    {group.icon}
+                    <span>{group.title}</span>
+                </div>
+                <ul className="space-y-0.5">
+                    {group.ids.map(id => {
+                        const page = analyticsPages.find(p => p.id === id);
+                        if (!page) return null;
+                        const isActive = currentPage === page.id;
+                        return (
+                            <li key={page.id}>
+                                <a
+                                    href={page.href}
+                                    onClick={(e) => onNavigate(e, page.href)}
+                                    className={`block px-3 py-2 text-base font-medium rounded-md transition-all duration-200 truncate ${isActive
+                                        ? 'bg-[var(--ax-bg-accent-strong)] text-white shadow-sm'
+                                        : 'text-[var(--ax-text-default)] hover:bg-[var(--ax-bg-neutral-moderate)] hover:text-[var(--ax-text-strong)]'
+                                        }`}
+                                    title={page.label}
+                                >
+                                    {page.label}
+                                </a>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
+        ))}
+    </>
+);
 
 const ChartLayout: React.FC<ChartLayoutProps> = ({
     title,
@@ -81,7 +124,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
         return groups;
     }, [showSiteimproveSection]);
 
-    const getTargetUrl = (href: string) => {
+    const getTargetUrl = useCallback((href: string) => {
         const currentParams = new URLSearchParams(window.location.search);
         const preservedParams = new URLSearchParams();
 
@@ -94,13 +137,13 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
         const queryString = preservedParams.toString();
         return queryString ? `${href}?${queryString}` : href;
-    };
+    }, []);
 
-    const handleNavigation = (e: React.MouseEvent, href: string) => {
+    const handleNavigation = useCallback((e: React.MouseEvent, href: string) => {
         e.preventDefault();
         const targetUrl = getTargetUrl(href);
-        navigate(targetUrl);
-    };
+        void navigate(targetUrl);
+    }, [getTargetUrl, navigate]);
 
     // Trigger resize for charts when sidebar widths change
     useEffect(() => {
@@ -109,43 +152,6 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
         }, 100);
         return () => clearTimeout(timer);
     }, [isNavOpen]);
-
-    // Calculate closed/open states for showing the "Expand" buttons on the left edge
-
-    const SidebarNavigationContent = () => (
-        <>
-            {filteredChartGroups.map((group) => (
-                <div key={group.title}>
-                    <div className="flex items-center gap-2 px-3 mb-2 text-sm font-semibold text-[var(--ax-text-subtle)] tracking-wide mt-4">
-                        {group.icon}
-                        <span>{group.title}</span>
-                    </div>
-                    <ul className="space-y-0.5">
-                        {group.ids.map(id => {
-                            const page = analyticsPages.find(p => p.id === id);
-                            if (!page) return null;
-                            const isActive = currentPage === page.id;
-                            return (
-                                <li key={page.id}>
-                                    <a
-                                        href={page.href}
-                                        onClick={(e) => handleNavigation(e, page.href)}
-                                        className={`block px-3 py-2 text-base font-medium rounded-md transition-all duration-200 truncate ${isActive
-                                            ? 'bg-[var(--ax-bg-accent-strong)] text-white shadow-sm'
-                                            : 'text-[var(--ax-text-default)] hover:bg-[var(--ax-bg-neutral-moderate)] hover:text-[var(--ax-text-strong)]'
-                                            }`}
-                                        title={page.label}
-                                    >
-                                        {page.label}
-                                    </a>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </div>
-            ))}
-        </>
-    );
 
     return (
         <>
@@ -190,7 +196,11 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
                                             <Accordion.Header>Velg analyse</Accordion.Header>
                                             <Accordion.Content className="p-0 border-t border-[var(--ax-border-neutral-subtle)]">
                                                 <div className="p-4 bg-[var(--ax-bg-neutral-soft)]">
-                                                    <SidebarNavigationContent />
+                                                    <SidebarNavigationContent
+                                                        filteredChartGroups={filteredChartGroups}
+                                                        currentPage={currentPage}
+                                                        onNavigate={handleNavigation}
+                                                    />
                                                 </div>
                                             </Accordion.Content>
                                         </Accordion.Item>
@@ -199,7 +209,11 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
                                 {/* Desktop: Standard View */}
                                 <div className="hidden md:flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-[250px] p-4 space-y-6">
-                                    <SidebarNavigationContent />
+                                    <SidebarNavigationContent
+                                        filteredChartGroups={filteredChartGroups}
+                                        currentPage={currentPage}
+                                        onNavigate={handleNavigation}
+                                    />
                                 </div>
                             </div>
                         )}

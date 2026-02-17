@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Loader, Alert, Table, Pagination, Button } from '@navikt/ds-react';
-import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
+import type { ILineChartDataPoint} from '@fluentui/react-charting';
+import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { ExternalLink, MoreVertical } from 'lucide-react';
-import { SavedChart } from '../../data/dashboard';
+import type { SavedChart } from '../../data/dashboard';
 import { format } from 'date-fns';
 import { translateValue } from '../../lib/translations';
 import AnalysisActionModal from '../analysis/AnalysisActionModal';
@@ -21,6 +22,26 @@ interface JsonObject {
 type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 
 type DashboardRow = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null;
+};
+
+const getErrorMessage = (value: unknown, fallback: string): string => {
+    if (isRecord(value) && typeof value.error === 'string') {
+        return value.error;
+    }
+    return fallback;
+};
+
+const parseDashboardResponse = (value: unknown): { data: DashboardRow[]; totalBytesProcessed?: number } => {
+    if (!isRecord(value)) return { data: [] };
+    const data = Array.isArray(value.data) ? value.data.filter(isRecord) : [];
+    const totalBytesProcessed = isRecord(value.queryStats) && typeof value.queryStats.totalBytesProcessed === 'number'
+        ? value.queryStats.totalBytesProcessed
+        : undefined;
+    return { data, totalBytesProcessed };
+};
 
 type SelectedWebsite = {
     domain: string;
@@ -75,6 +96,17 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         return typeof val === 'string' && val.startsWith('/') && val !== '/';
     };
 
+    const formatTableValue = (val: unknown): string => {
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'string') return val;
+        if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+        try {
+            return JSON.stringify(val);
+        } catch {
+            return '';
+        }
+    };
+
     // If prefetchedData is available, use it directly instead of fetching
     useEffect(() => {
         if (prefetchedData !== undefined) {
@@ -121,12 +153,13 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 });
 
                 if (!response.ok) {
-                    const err: { error?: string } = await response.json();
-                    throw new Error(err.error || 'Feil ved henting av data');
+                    const errPayload = await response.json() as unknown;
+                    throw new Error(getErrorMessage(errPayload, 'Feil ved henting av data'));
                 }
 
-                const result: { data?: DashboardRow[]; queryStats?: { totalBytesProcessed?: number } } = await response.json();
-                const resultData = result.data || [];
+                const resultPayload = await response.json() as unknown;
+                const parsed = parseDashboardResponse(resultPayload);
+                const resultData = parsed.data;
                 setData(resultData);
 
                 let totalCount = 0;
@@ -142,8 +175,8 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                     }
                 }
 
-                if (result.queryStats && onDataLoaded) {
-                    const bytes = result.queryStats.totalBytesProcessed ?? 0;
+                if (onDataLoaded) {
+                    const bytes = parsed.totalBytesProcessed ?? 0;
                     const gb = bytes ? bytes / (1024 ** 3) : 0;
                     onDataLoaded({
                         id: chart.id || '',
@@ -163,7 +196,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             }
         };
 
-        fetchData();
+        void fetchData();
     }, [
         chart.sql,
         chart.id,
@@ -397,16 +430,17 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                                         <Table.Row key={i}>
                                             {keys.map((key, j) => {
                                                 const val = (row as Record<string, unknown>)[key];
-                                                const translatedVal = translateValue(key, val);
-                                                const displayVal = typeof translatedVal === 'number'
-                                                    ? translatedVal.toLocaleString('nb-NO')
-                                                    : String(translatedVal);
+                                                const rawString = formatTableValue(val);
+                                                const translatedVal = translateValue(key, rawString);
+                                                const displayVal = typeof val === 'number'
+                                                    ? val.toLocaleString('nb-NO')
+                                                    : translatedVal;
                                                 const clickable = isClickablePath(val);
                                                 return (
                                                     <Table.DataCell
                                                         key={j}
                                                         className={`whitespace-nowrap ${clickable ? 'cursor-pointer' : ''}`}
-                                                        title={String(val)}
+                                                        title={rawString}
                                                         onClick={clickable ? () => setSelectedUrl(val) : undefined}
                                                     >
                                                         {clickable ? (

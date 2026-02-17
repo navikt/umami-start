@@ -1,4 +1,4 @@
-import { DashboardConfig } from './types';
+import type { DashboardConfig } from './types';
 import { getGcpProjectId } from '../../lib/runtimeConfig';
 import navkontorData from '../navkontor.json';
 

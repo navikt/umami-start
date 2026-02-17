@@ -6,7 +6,7 @@ import { parseISO } from 'date-fns';
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../lib/utils';
 
 

@@ -14,7 +14,7 @@ export const formatAzureName = (name = '') => {
   if (normalized.includes('Ã')) {
     try {
       normalized = Buffer.from(normalized, 'latin1').toString('utf-8');
-    } catch (error) {
+    } catch  {
       console.warn('[Auth] Failed to fix encoding for name:', normalized);
     }
   }

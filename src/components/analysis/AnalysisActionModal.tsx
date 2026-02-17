@@ -13,6 +13,27 @@ interface AnalysisActionModalProps {
     websiteName?: string;  // Website name for dev environment detection
 }
 
+type Website = {
+    id: string;
+    domain?: string;
+    name?: string;
+};
+
+type WebsitesResponse = {
+    data: Website[];
+};
+
+const isWebsitesResponse = (value: unknown): value is WebsitesResponse => {
+    if (!value || typeof value !== 'object') return false;
+    const record = value as Record<string, unknown>;
+    if (!Array.isArray(record.data)) return false;
+    return record.data.every((item) => {
+        if (!item || typeof item !== 'object') return false;
+        const website = item as Record<string, unknown>;
+        return typeof website.id === 'string';
+    });
+};
+
 const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     open,
     onClose,
@@ -23,32 +44,40 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     websiteName: propWebsiteName
 }) => {
     const [copySuccess, setCopySuccess] = useState(false);
-    const [domain, setDomain] = useState<string>(propDomain || 'nav.no');
-    const [websiteName, setWebsiteName] = useState<string | undefined>(propWebsiteName);
+    const [resolvedDomain, setResolvedDomain] = useState<string | null>(null);
+    const [resolvedWebsiteName, setResolvedWebsiteName] = useState<string | undefined>(undefined);
+    const domain = propDomain ?? resolvedDomain ?? 'nav.no';
+    const websiteName = propWebsiteName ?? resolvedWebsiteName;
     const hasSiteimprove = useSiteimproveSupport(domain);
     const hasMarketing = useMarketingSupport(domain, websiteName);
 
     useEffect(() => {
-        if (propDomain) {
-            setDomain(propDomain);
-            return;
-        }
+        const shouldResolveDomain = !propDomain;
+        const shouldResolveWebsiteName = !propWebsiteName;
+        if (!websiteId || (!shouldResolveDomain && !shouldResolveWebsiteName)) return;
+
+        let isActive = true;
+
+        const applyWebsite = (website: Website | undefined) => {
+            if (!isActive || !website) return;
+            if (shouldResolveDomain && website.domain) {
+                setResolvedDomain(website.domain);
+            }
+            if (shouldResolveWebsiteName && website.name) {
+                setResolvedWebsiteName(website.name);
+            }
+        };
 
         const findDomain = async () => {
-            if (!websiteId) return;
-
             // 1. Try to find in localStorage cache (shared with WebsitePicker)
             try {
                 const cached = localStorage.getItem('umami_websites_cache');
                 if (cached) {
-                    const parsed = JSON.parse(cached);
-                    if (parsed && parsed.data) {
-                        const website = parsed.data.find((w: any) => w.id === websiteId);
-                        if (website && website.domain) {
-                            setDomain(website.domain);
-                            setWebsiteName(website.name);
-                            return;
-                        }
+                    const parsed: unknown = JSON.parse(cached);
+                    if (isWebsitesResponse(parsed)) {
+                        const website = parsed.data.find((w) => w.id === websiteId);
+                        applyWebsite(website);
+                        if (website) return;
                     }
                 }
             } catch (e) {
@@ -58,21 +87,23 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
             // 2. Fetch if not found
             try {
                 const response = await fetch('/api/bigquery/websites');
-                const result = await response.json();
-                if (result && result.data) {
-                    const website = result.data.find((w: any) => w.id === websiteId);
-                    if (website && website.domain) {
-                        setDomain(website.domain);
-                        setWebsiteName(website.name);
-                    }
+                if (!response.ok) return;
+                const result: unknown = await response.json();
+                if (isWebsitesResponse(result)) {
+                    const website = result.data.find((w) => w.id === websiteId);
+                    applyWebsite(website);
                 }
             } catch (e) {
                 console.error('Failed to fetch websites', e);
             }
         };
 
-        findDomain();
-    }, [websiteId, propDomain]);
+        void findDomain();
+
+        return () => {
+            isActive = false;
+        };
+    }, [websiteId, propDomain, propWebsiteName]);
 
     if (!urlPath || !websiteId) return null;
 

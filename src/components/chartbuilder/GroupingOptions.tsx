@@ -1,7 +1,7 @@
 import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs, Search, Accordion, Pagination } from '@navikt/ds-react';
 import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
-import {
+import type {
   Parameter,
   DateFormat,
   ColumnGroup,
