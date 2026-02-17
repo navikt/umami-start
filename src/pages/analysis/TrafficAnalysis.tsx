@@ -928,6 +928,20 @@ const TrafficAnalysis = () => {
         const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
+        const formatMetricValue = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${(value * 100).toFixed(1)}%`;
+            }
+            return Math.round(value).toLocaleString('nb-NO');
+        };
+
+        const formatCsvValue = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${(value * 100).toFixed(1)}%`;
+            }
+            return Math.round(value);
+        };
+
         const renderName = (name: string) => {
             if (name === 'Interne sider') return <div className="truncate">Interne sider</div>;
             if (name === 'Ukjent / Andre') {
@@ -976,7 +990,7 @@ const TrafficAnalysis = () => {
                 ...data.map((item) => {
                     return [
                         item.name,
-                        submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
+                        formatCsvValue(item.count)
                     ].join(',');
                 })
             ];
@@ -1024,7 +1038,7 @@ const TrafficAnalysis = () => {
                         <Table.Body>
                             {paginatedData.map((row, i) => (
                                 <Table.Row key={i}>
-                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{formatMetricValue(row.count)}</Table.DataCell>
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {renderName(row.name)}
                                     </Table.DataCell>
@@ -1068,8 +1082,13 @@ const TrafficAnalysis = () => {
     const externalReferrers = useMemo(() => {
         return externalReferrerData
             .filter(item => item.name !== '(none)') // Filter out direct traffic
-            .map(item => ({ name: item.name, count: Number(item.count) }));
-    }, [externalReferrerData]);
+            .map(item => ({
+                name: item.name,
+                count: submittedMetricType === 'proportion'
+                    ? Number(item.count) / 100
+                    : Number(item.count)
+            }));
+    }, [externalReferrerData, submittedMetricType]);
 
     const combinedEntrances = useMemo(() => {
         const normalizedDomain = selectedWebsite?.domain?.toLowerCase().replace(/^www\./, '');
@@ -1097,7 +1116,9 @@ const TrafficAnalysis = () => {
         externalReferrerData.forEach(item => {
             const rawName = String(item.name || '');
             const source = rawName.toLowerCase().replace(/^www\./, '');
-            const count = Number(item.count || 0);
+            const count = submittedMetricType === 'proportion'
+                ? Number(item.count || 0) / 100
+                : Number(item.count || 0);
             let channel = 'Eksterne nettsider';
 
             if (source === '(none)') {
@@ -1117,7 +1138,7 @@ const TrafficAnalysis = () => {
             .map(([name, count]) => ({ name, count }))
             .filter(item => item.count > 0)
             .sort((a, b) => b.count - a.count);
-    }, [externalReferrerData, selectedWebsite]);
+    }, [externalReferrerData, selectedWebsite, submittedMetricType]);
 
     const seriesTotal = useMemo(() => {
         if (submittedMetricType === 'visits' || submittedMetricType === 'visitors') {
@@ -1236,6 +1257,20 @@ const TrafficAnalysis = () => {
         const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
         const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
+        const formatMetricValue = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${(value * 100).toFixed(1)}%`;
+            }
+            return Math.round(value).toLocaleString('nb-NO');
+        };
+
+        const formatCsvValue = (value: number) => {
+            if (submittedMetricType === 'proportion') {
+                return `${(value * 100).toFixed(1)}%`;
+            }
+            return Math.round(value);
+        };
+
         const isClickableRow = (row: { name: string; type: 'external' | 'internal' }) =>
             row.type === 'internal' && row.name.startsWith('/') && onRowClick;
 
@@ -1256,7 +1291,7 @@ const TrafficAnalysis = () => {
                 ...data.map((item) => {
                     return [
                         item.name,
-                        submittedMetricType === 'proportion' ? `${(item.count * 100).toFixed(1)}%` : item.count
+                        formatCsvValue(item.count)
                     ].join(',');
                 })
             ];
@@ -1323,7 +1358,7 @@ const TrafficAnalysis = () => {
                                     className={isClickableRow(row) ? 'cursor-pointer hover:bg-[var(--ax-bg-neutral-soft)]' : ''}
                                     onClick={() => isClickableRow(row) && onRowClick?.(row.name)}
                                 >
-                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{row.count.toLocaleString('nb-NO')}</Table.DataCell>
+                                    <Table.DataCell align="right" className="tabular-nums" style={{ width: '6.75rem', minWidth: '6.75rem' }}>{formatMetricValue(row.count)}</Table.DataCell>
                                     <Table.DataCell className="max-w-md" title={row.name}>
                                         {isClickableRow(row) ? (
                                             <span className="flex items-center gap-1 max-w-full">
