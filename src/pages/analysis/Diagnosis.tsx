@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from '@navikt/ds-react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
@@ -25,6 +25,11 @@ interface HistoryData {
     custom_events: number;
 }
 
+type QueryStats = {
+    totalBytesProcessedGB?: number;
+    estimatedCostUSD?: number;
+};
+
 const Diagnosis = () => {
     const [searchParams] = useSearchParams();
 
@@ -42,7 +47,7 @@ const Diagnosis = () => {
     const [data, setData] = useState<DiagnosisData[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [queryStats, setQueryStats] = useState<any>(null);
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
     const [environment, setEnvironment] = useState<string>('all');
     const [activeTab, setActiveTab] = useState<string>('all');
     const [selectedWebsiteFilter, setSelectedWebsiteFilter] = useState<Website | null>(null);
@@ -53,9 +58,9 @@ const Diagnosis = () => {
     const [historyLoading, setHistoryLoading] = useState<boolean>(false);
     const [absoluteLastEvent, setAbsoluteLastEvent] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [historyQueryStats, setHistoryQueryStats] = useState<any>(null);
+    const [historyQueryStats, setHistoryQueryStats] = useState<QueryStats | null>(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         setData(null);
@@ -126,12 +131,12 @@ const Diagnosis = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [period, customStartDate, customEndDate]);
 
     // Fetch data when period changes
     useEffect(() => {
         fetchData();
-    }, [period]);
+    }, [period, fetchData]);
 
     const [sort, setSort] = useState<{ orderBy: string; direction: 'ascending' | 'descending' }>({
         orderBy: 'total',
@@ -171,7 +176,8 @@ const Diagnosis = () => {
 
     const sortedData = [...filteredData].sort((a, b) => {
         const { orderBy, direction } = sort;
-        let aValue: any, bValue: any;
+        let aValue: number;
+        let bValue: number;
 
         if (orderBy === 'pageviews') {
             aValue = a.pageviews;
@@ -549,7 +555,7 @@ const Diagnosis = () => {
                                                 <LineChart
                                                     data={chartData.data}
                                                     legendsOverflowText={'Overflow Items'}
-                                                    yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                                                    yAxisTickFormat={(d: number | string) => Number(d).toLocaleString('nb-NO')}
                                                     yAxisTickCount={5}
                                                     allowMultipleShapesForPoints={false}
                                                     enablePerfOptimization={true}

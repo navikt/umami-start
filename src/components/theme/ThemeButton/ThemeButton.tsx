@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ThemeIcon } from "@navikt/aksel-icons";
 import { Button, Tooltip } from "@navikt/ds-react";
 
@@ -6,19 +6,7 @@ function ThemeButton() {
     const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
     const [isMounted, setIsMounted] = useState(false);
 
-    useEffect(() => {
-        setIsMounted(true);
-
-        // Check system preference and localStorage
-        const storedTheme = localStorage.getItem("umami-theme") as "light" | "dark" | null;
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-        const initialTheme = storedTheme || (prefersDark ? "dark" : "light");
-        setResolvedTheme(initialTheme);
-        applyTheme(initialTheme);
-    }, []);
-
-    const applyTheme = (newTheme: "light" | "dark") => {
+    const applyTheme = useCallback((newTheme: "light" | "dark") => {
         const root = document.documentElement;
         const themeElement = document.querySelector(".aksel-theme");
 
@@ -33,15 +21,30 @@ function ThemeButton() {
         if (themeElement) {
             themeElement.classList.add(newTheme);
         }
-    };
+    }, []);
 
-    const setTheme = (newTheme: "light" | "dark") => {
-        setResolvedTheme(newTheme);
-        localStorage.setItem("umami-theme", newTheme);
-        applyTheme(newTheme);
-        // Dispatch event so other components (like App.tsx) can sync
-        window.dispatchEvent(new CustomEvent("themeChange", { detail: newTheme }));
-    };
+    useEffect(() => {
+        setIsMounted(true);
+
+        // Check system preference and localStorage
+        const storedTheme = localStorage.getItem("umami-theme") as "light" | "dark" | null;
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        const initialTheme = storedTheme || (prefersDark ? "dark" : "light");
+        setResolvedTheme(initialTheme);
+        applyTheme(initialTheme);
+    }, [applyTheme]);
+
+    const setTheme = useCallback(
+        (newTheme: "light" | "dark") => {
+            setResolvedTheme(newTheme);
+            localStorage.setItem("umami-theme", newTheme);
+            applyTheme(newTheme);
+            // Dispatch event so other components (like App.tsx) can sync
+            window.dispatchEvent(new CustomEvent("themeChange", { detail: newTheme }));
+        },
+        [applyTheme]
+    );
 
     return (
         <Tooltip

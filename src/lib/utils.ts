@@ -37,7 +37,7 @@ export const normalizeUrlToPath = (input: string): string => {
       const url = new URL('https://' + trimmed);
       return decodeURIComponent(url.pathname);
     }
-  } catch (e) {
+  } catch {
     // Ignore
   }
   return trimmed;
@@ -191,14 +191,15 @@ export const getDateRangeFromPeriod = (
       endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       break;
 
-    case 'custom':
+    case 'custom': {
       if (!customStartDate || !customEndDate) {
         return null;
       }
       startDate = new Date(customStartDate);
       startDate.setHours(0, 0, 0, 0);
 
-      const isToday = customEndDate.getDate() === now.getDate() &&
+      const isToday =
+        customEndDate.getDate() === now.getDate() &&
         customEndDate.getMonth() === now.getMonth() &&
         customEndDate.getFullYear() === now.getFullYear();
 
@@ -209,6 +210,7 @@ export const getDateRangeFromPeriod = (
         endDate.setHours(23, 59, 59, 999);
       }
       break;
+    }
 
     default:
       // Default to current month if period is not recognized
@@ -255,11 +257,6 @@ export const getCookieBadge = (
   return countBySwitchAt ? 'mix' : 'cookie';
 };
 
-export const getVisitorLabelWithBadge = (
-  _usesCookies: boolean,
-  _cookieStartDate: Date | null | undefined,
-  _startDate: Date,
-  _endDate: Date
-): string => {
+export const getVisitorLabelWithBadge = (): string => {
   return 'Unike besøkende';
 };

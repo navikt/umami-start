@@ -7,10 +7,37 @@ import AlertWithCloseButton from '../AlertWithCloseButton';
 import ResultsPanel from './ResultsPanel';
 import { translateValue } from '../../../lib/translations';
 
-// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+type JsonPrimitive = string | number | boolean | null;
+interface JsonObject {
+  [key: string]: JsonValue;
+}
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+
+type Row = Record<string, JsonValue | undefined>;
+
+type QueryStats = {
+  totalBytesProcessedGB: string;
+  totalBytesProcessed?: number;
+  estimatedCostUSD?: string;
+};
+
+type QueryResult = {
+  data?: Row[];
+  error?: string;
+};
+
+type EstimateResponse = QueryStats & { error?: string };
+
+declare global {
+  interface Window {
+    __GCP_PROJECT_ID__?: string;
+  }
+}
+
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__)
 const getGcpProjectId = (): string => {
-  if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
-    return (window as any).__GCP_PROJECT_ID__;
+  if (typeof window !== 'undefined' && window.__GCP_PROJECT_ID__) {
+    return window.__GCP_PROJECT_ID__;
   }
   // Fallback for development/SSR contexts
   throw new Error('Missing runtime config: GCP_PROJECT_ID');
@@ -24,16 +51,16 @@ interface QueryPreviewProps {
   filters?: Array<{ column: string; interactive?: boolean; metabaseParam?: boolean }>;
   metrics?: Array<{ column?: string }>;
   groupByFields?: string[];
-  onResetAll?: () => void; // Add new prop for reset functionality
+  onResetAll?: () => void;
   availableEvents?: string[];
   isEventsLoading?: boolean;
-  websiteId?: string; // Optional for AnalysisActionModal
+  websiteId?: string;
 }
 
 const API_TIMEOUT_MS = 60000; // timeout
 
 const timeoutPromise = (ms: number) => {
-  return new Promise((_, reject) => {
+  return new Promise<never>((_, reject) => {
     setTimeout(() => {
       const seconds = Math.round(ms / 1000);
       reject(new Error(`Forespørsel feilet etter å ha ventet ${seconds} sekunder`));
@@ -57,15 +84,15 @@ const QueryPreview = ({
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
-  const [estimate, setEstimate] = useState<any>(null);
+  const [estimate, setEstimate] = useState<EstimateResponse | null>(null);
   const [estimating, setEstimating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<'copy' | 'estimate' | 'execute' | 'run' | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingQueryEstimate, setPendingQueryEstimate] = useState<any>(null);
-  const [queryStats, setQueryStats] = useState<any>(null);
+  const [pendingQueryEstimate, setPendingQueryEstimate] = useState<EstimateResponse | null>(null);
+  const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
 
   // Metabase Date Filter State
@@ -188,108 +215,83 @@ const QueryPreview = ({
 
   // Helper function to prepare data for LineChart
   const prepareLineChartData = (includeAverage: boolean = true): ILineChartProps | null => {
-    if (!result || !result.data || result.data.length === 0) return null;
+    if (!result?.data || result.data.length === 0) return null;
 
     const data = result.data;
-    const keys = Object.keys(data[0]);
-
-    // Need at least 2 columns (x-axis and y-axis)
+    const keys = Object.keys(data[0] ?? {});
     if (keys.length < 2) return null;
 
-    console.log('Preparing LineChart with keys:', keys);
-    console.log('Sample row:', data[0]);
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      const n = parseFloat(String(v));
+      return Number.isFinite(n) ? n : 0;
+    };
 
-    // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
+    const toDateOrNumber = (xValue: unknown, fallback: number): Date | number => {
+      if (typeof xValue === 'number') return xValue;
+      if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(xValue);
+      const parsed = new Date(String(xValue));
+      return !isNaN(parsed.getTime()) ? parsed : fallback;
+    };
+
     if (keys.length === 3) {
       const xKey = keys[0];
-      const seriesKey = keys[1]; // e.g., 'browser'
-      const yKey = keys[2]; // e.g., 'Unike_besokende'
+      const seriesKey = keys[1];
+      const yKey = keys[2];
 
-      // Group data by series
-      const seriesMap = new Map<string, any[]>();
+      const seriesMap = new Map<string, Array<{ x: Date | number; y: number; xAxisCalloutData: string; yAxisCalloutData: string }>>();
 
-      data.forEach((row: any) => {
+      data.forEach((row, idx) => {
         const rawSeriesValue = row[seriesKey];
-        const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
+        const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue ?? 'Ukjent');
         const seriesValue = String(translatedSeriesValue || 'Ukjent');
-        if (!seriesMap.has(seriesValue)) {
-          seriesMap.set(seriesValue, []);
-        }
+        if (!seriesMap.has(seriesValue)) seriesMap.set(seriesValue, []);
 
         const xValue = row[xKey];
-        const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-
-        let x: number | Date;
-        if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-          x = new Date(xValue);
-        } else if (typeof xValue === 'number') {
-          x = xValue;
-        } else {
-          x = new Date(xValue).getTime() || 0;
-        }
+        const yValue = toNumber(row[yKey]);
 
         seriesMap.get(seriesValue)!.push({
-          x,
+          x: toDateOrNumber(xValue, idx),
           y: yValue,
           xAxisCalloutData: String(xValue),
           yAxisCalloutData: String(yValue),
         });
       });
 
-      // Convert to line chart format with colors
-      // Using colorblind-friendly palette with good contrast
-      const colors = [
-        '#0067C5', // Blue (NAV blue)
-        '#FF9100', // Orange
-        '#06893A', // Green
-        '#C30000', // Red
-        '#634689', // Purple
-        '#A8874C', // Brown/Gold
-        '#005B82', // Teal
-        '#E18AAA', // Pink
-      ];
+      const colors = ['#0067C5', '#FF9100', '#06893A', '#C30000', '#634689', '#A8874C', '#005B82', '#E18AAA'];
       const lineChartData = Array.from(seriesMap.entries()).map(([seriesName, points], index) => ({
         legend: seriesName,
         data: points,
         color: colors[index % colors.length],
-        lineOptions: {
-          lineBorderWidth: '2',
-        },
+        lineOptions: { lineBorderWidth: '2' },
       }));
 
-      // Calculate average line across all data points (only if requested)
       if (includeAverage) {
-        // Collect all unique x values
         const allXValues = new Set<number>();
         lineChartData.forEach(series => {
-          series.data.forEach((point: any) => {
+          (series.data as Array<{ x: Date | number; y: number }>).forEach(point => {
             const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
             allXValues.add(xVal);
           });
         });
 
-        // For each x value, calculate the average y value across all series
         const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
           const yValues: number[] = [];
           lineChartData.forEach(series => {
-            const point = series.data.find((p: any) => {
+            const point = (series.data as Array<{ x: Date | number; y: number; xAxisCalloutData?: string }>).find((p) => {
               const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
               return pxVal === xVal;
             });
-            if (point) {
-              yValues.push(point.y);
-            }
+            if (point) yValues.push(point.y);
           });
 
-          const avgY = yValues.length > 0
-            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
-            : 0;
+          const avgY = yValues.length ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length : 0;
 
-          // Find original xAxisCalloutData from any series
-          const originalPoint = lineChartData[0].data.find((p: any) => {
-            const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
-            return pxVal === xVal;
-          });
+          const originalPoint = (lineChartData[0]?.data as Array<{ x: Date | number; xAxisCalloutData?: string }> | undefined)
+            ?.find((p) => {
+              const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
+              return pxVal === xVal;
+            });
 
           return {
             x: new Date(xVal),
@@ -299,134 +301,90 @@ const QueryPreview = ({
           };
         });
 
-        // Add average line to the chart
         lineChartData.push({
           legend: 'Gjennomsnitt',
           data: averagePoints,
-          color: '#262626', // Dark gray for average line
+          color: '#262626',
           lineOptions: {
             lineBorderWidth: '2',
-            strokeDasharray: '5 5',
-          } as any,
+          },
         });
       }
 
-      console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
-
-      return {
-        data: {
-          lineChartData,
-        },
-        enabledLegendsWrapLines: true,
-      };
+      return { data: { lineChartData }, enabledLegendsWrapLines: true };
     }
 
-    // Single line: assume first column is x-axis and second is y-axis
     const xKey = keys[0];
     const yKey = keys[1];
 
-    const chartPoints = data.map((row: any, index: number) => {
+    const chartPoints = data.map((row, index) => {
       const xValue = row[xKey];
-      const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
-
-      let x: number | Date;
-      if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-        x = new Date(xValue);
-      } else if (typeof xValue === 'number') {
-        x = xValue;
-      } else {
-        x = index;
-      }
+      const yValue = toNumber(row[yKey]);
 
       return {
-        x,
+        x: toDateOrNumber(xValue, index),
         y: yValue,
         xAxisCalloutData: String(xValue),
         yAxisCalloutData: String(yValue),
       };
     });
 
-    console.log('Single-line chart points:', chartPoints.slice(0, 3));
-
-    // Build the line chart data array
-    const lineChartData: any[] = [{
+    const lineChartData: Array<{
+      legend: string;
+      data: typeof chartPoints;
+      color: string;
+      lineOptions: Record<string, string>;
+    }> = [{
       legend: yKey,
       data: chartPoints,
       color: '#0067C5',
-      lineOptions: {
-        lineBorderWidth: '2',
-      },
+      lineOptions: { lineBorderWidth: '2' },
     }];
 
-    // Add average line (only if requested)
     if (includeAverage) {
-      // Calculate average y value for horizontal average line
-      const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
-
-      // Create average line points (horizontal line across all x values)
-      const averageLinePoints = chartPoints.map((point: any) => ({
+      const avgY = chartPoints.reduce((sum, point) => sum + point.y, 0) / (chartPoints.length || 1);
+      const averageLinePoints = chartPoints.map((point) => ({
         x: point.x,
         y: avgY,
         xAxisCalloutData: point.xAxisCalloutData,
         yAxisCalloutData: avgY.toFixed(2),
       }));
-
       lineChartData.push({
         legend: 'Gjennomsnitt',
         data: averageLinePoints,
         color: '#262626',
-        lineOptions: {
-          lineBorderWidth: '2',
-          strokeDasharray: '5 5',
-        } as any,
+        lineOptions: { lineBorderWidth: '2' },
       });
     }
 
-    return {
-      data: {
-        lineChartData,
-      },
-      enabledLegendsWrapLines: true,
-    };
+    return { data: { lineChartData }, enabledLegendsWrapLines: true };
   };
 
-  // Helper function to prepare data for VerticalBarChart
-  // Helper function to prepare data for VerticalBarChart
   const prepareBarChartData = (): IVerticalBarChartProps | null => {
-    if (!result || !result.data || result.data.length === 0) return null;
-
+    if (!result?.data || result.data.length === 0) return null;
     const data = result.data;
-
-    // Only show bar chart if 10 or fewer items
     if (data.length > 12) return null;
 
-    const keys = Object.keys(data[0]);
-
-    // Need at least 2 columns (label and value)
+    const keys = Object.keys(data[0] ?? {});
     if (keys.length < 2) return null;
 
-    // Assume first column is label and second is value
     const labelKey = keys[0];
     const valueKey = keys[1];
 
-    console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
-    console.log('Sample row:', data[0]);
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      const n = parseFloat(String(v));
+      return Number.isFinite(n) ? n : 0;
+    };
 
-    // Calculate total for percentages
-    const total = data.reduce((sum: number, row: any) => {
-      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
-      return sum + value;
-    }, 0);
+    const total = data.reduce((sum, row) => sum + toNumber(row[valueKey]), 0);
 
-    console.log('Total value for bar chart:', total);
-
-    const barChartData = data.map((row: any) => {
-      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+    const barChartData = data.map((row) => {
+      const value = toNumber(row[valueKey]);
       const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
 
-      // Use label for x-axis, with translation
       const rawLabel = row[labelKey];
-      const translatedLabel = translateValue(labelKey, rawLabel);
+      const translatedLabel = translateValue(labelKey, rawLabel ?? 'Ukjent');
       const label = String(translatedLabel || 'Ukjent');
 
       return {
@@ -434,12 +392,10 @@ const QueryPreview = ({
         y: value,
         xAxisCalloutData: label,
         yAxisCalloutData: `${value} (${percentage}%)`,
-        color: '#0067C5', // NAV blue color
+        color: '#0067C5',
         legend: label,
       };
     });
-
-    console.log('VerticalBarChart data points:', barChartData.slice(0, 3)); // Log first 3 points
 
     return {
       data: barChartData,
@@ -450,68 +406,41 @@ const QueryPreview = ({
         allowFocusOnLegends: true,
         canSelectMultipleLegends: false,
         styles: {
-          root: {
-            display: 'flex',
-            flexWrap: 'wrap',
-            rowGap: '8px',
-            columnGap: '16px',
-            maxWidth: '100%',
-          },
-          legend: {
-            marginRight: 0,
-          },
+          root: { display: 'flex', flexWrap: 'wrap', rowGap: '8px', columnGap: '16px', maxWidth: '100%' },
+          legend: { marginRight: 0 },
         },
       },
     };
   };
 
-  // Helper function to prepare data for PieChart
   const preparePieChartData = (): { data: Array<{ y: number; x: string }>; total: number } | null => {
-    if (!result || !result.data || result.data.length === 0) return null;
-
+    if (!result?.data || result.data.length === 0) return null;
     const data = result.data;
-
-    // Only show pie chart if 10 or fewer items
     if (data.length > 12) return null;
 
-    const keys = Object.keys(data[0]);
-
-    // Need at least 2 columns (label and value)
+    const keys = Object.keys(data[0] ?? {});
     if (keys.length < 2) return null;
 
-    // Assume first column is label and second is value
     const labelKey = keys[0];
     const valueKey = keys[1];
 
-    console.log('Preparing PieChart with keys:', { labelKey, valueKey });
-    console.log('Sample row:', data[0]);
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      const n = parseFloat(String(v));
+      return Number.isFinite(n) ? n : 0;
+    };
 
-    // Calculate total for percentages
-    const total = data.reduce((sum: number, row: any) => {
-      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
-      return sum + value;
-    }, 0);
+    const total = data.reduce((sum, row) => sum + toNumber(row[valueKey]), 0);
 
-    console.log('Total value for pie chart:', total);
-
-    const pieChartData = data.map((row: any) => {
-      const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+    const pieChartData = data.map((row) => {
+      const value = toNumber(row[valueKey]);
       const rawLabel = row[labelKey];
-      const translatedLabel = translateValue(labelKey, rawLabel);
+      const translatedLabel = translateValue(labelKey, rawLabel ?? 'Ukjent');
       const label = String(translatedLabel || 'Ukjent');
-
-      return {
-        y: value,
-        x: label,
-      };
+      return { y: value, x: label };
     });
 
-    console.log('PieChart data points:', pieChartData.slice(0, 3)); // Log first 3 points
-
-    return {
-      data: pieChartData,
-      total,
-    };
+    return { data: pieChartData, total };
   };
 
   const handleCopy = async () => {
@@ -519,32 +448,26 @@ const QueryPreview = ({
     navigator.clipboard.writeText(metabaseSql);
     setCopied(true);
 
-    // Also run cost estimation
     setEstimating(true);
     setLastAction('copy');
 
     try {
-      const response = await Promise.race([
+      const response = (await Promise.race([
         fetch('/api/bigquery/estimate', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
-      ]) as Response;
+      ])) as Response;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Estimation failed');
-      }
+      const data: EstimateResponse = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Estimation failed');
 
       setEstimate(data);
-    } catch (err: any) {
-      // Record a non-fatal error so user can retry if it was a timeout
-      setError(err.message || 'En feil oppstod');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'En feil oppstod';
+      setError(message);
     } finally {
       setEstimating(false);
     }
@@ -553,40 +476,27 @@ const QueryPreview = ({
   };
 
   const executeQuery = async () => {
-    // First, estimate the cost
     setLoading(true);
     setError(null);
     setLastAction('execute');
 
     try {
       const processedSql = getProcessedSql();
-      const estimateResponse = await Promise.race([
+      const estimateResponse = (await Promise.race([
         fetch('/api/bigquery/estimate', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
-      ]) as Response;
+      ])) as Response;
 
-      const estimateData = await estimateResponse.json();
+      const estimateData: EstimateResponse = await estimateResponse.json();
+      if (!estimateResponse.ok) throw new Error(estimateData.error || 'Estimation failed');
 
-      if (!estimateResponse.ok) {
-        throw new Error(estimateData.error || 'Estimation failed');
-      }
+      const gb = Number(estimateData.totalBytesProcessedGB ?? 0);
+      const shouldWarn = gb >= 50;
 
-      const gb = parseFloat(estimateData.totalBytesProcessedGB);
-
-      // Check if we should warn the user
-      let shouldWarn = false;
-
-      if (gb >= 50) {
-        shouldWarn = true;
-      }
-
-      // If warning threshold is met, show modal for confirmation
       if (shouldWarn) {
         setPendingQueryEstimate(estimateData);
         setShowConfirmModal(true);
@@ -594,10 +504,10 @@ const QueryPreview = ({
         return;
       }
 
-      // Proceed with the actual query for small queries
       await runQuery();
-    } catch (err: any) {
-      setError(err.message || 'En feil oppstod');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'En feil oppstod';
+      setError(message);
       setLoading(false);
     }
   };
@@ -609,107 +519,83 @@ const QueryPreview = ({
     setQueryStats(null);
     setLastAction('run');
 
-    // Update executed params
-    setExecutedParams({
-      dateRange,
-      urlPath,
-      eventName
-    });
+    setExecutedParams({ dateRange, urlPath, eventName });
 
     try {
       const processedSql = getProcessedSql();
-      const response = await Promise.race([
+      const response = (await Promise.race([
         fetch('/api/bigquery', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
-      ]) as Response;
+      ])) as Response;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Query failed');
-      }
+      const data: QueryResult = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Query failed');
 
       setResult(data);
 
-      // Also get the query stats by running estimate (it's fast and gives us the GB info)
       try {
-        const estimateResponse = await Promise.race([
+        const estimateResponse = (await Promise.race([
           fetch('/api/bigquery/estimate', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
           }),
           timeoutPromise(API_TIMEOUT_MS)
-        ]) as Response;
-        const estimateData = await estimateResponse.json();
-        if (estimateResponse.ok) {
-          setQueryStats(estimateData);
-        }
+        ])) as Response;
+
+        const estimateData: EstimateResponse = await estimateResponse.json();
+        if (estimateResponse.ok) setQueryStats(estimateData);
       } catch {
-        // If estimate fails, it's not critical
+        // not critical
       }
-    } catch (err: any) {
-      setError(err.message || 'En feil oppstod');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'En feil oppstod';
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Retry handler based on the lastAction
   const handleRetry = async () => {
     if (!lastAction) return;
 
     setError(null);
 
-    if (lastAction === 'copy') {
-      // Retry the estimate used in the copy flow
-      setEstimating(true);
-      try {
-        const response = await Promise.race([
-          fetch('/api/bigquery/estimate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
-          }),
-          timeoutPromise(API_TIMEOUT_MS),
-        ]) as Response;
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Estimation failed');
-        setEstimate(data);
-      } catch (err: any) {
-        setError(err.message || 'En feil oppstod');
-      } finally {
-        setEstimating(false);
+    const runEstimate = async () => {
+      const response = (await Promise.race([
+        fetch('/api/bigquery/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
+        }),
+        timeoutPromise(API_TIMEOUT_MS),
+      ])) as Response;
+
+      const data: EstimateResponse = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Estimation failed');
+      setEstimate(data);
+    };
+
+    try {
+      if (lastAction === 'copy') {
+        setEstimating(true);
+        await runEstimate();
+      } else if (lastAction === 'execute') {
+        await executeQuery();
+      } else if (lastAction === 'run') {
+        await runQuery();
+      } else if (lastAction === 'estimate') {
+        await runEstimate();
       }
-    } else if (lastAction === 'execute') {
-      await executeQuery();
-    } else if (lastAction === 'run') {
-      await runQuery();
-    } else if (lastAction === 'estimate') {
-      // generic estimate
-      try {
-        const response = await Promise.race([
-          fetch('/api/bigquery/estimate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
-          }),
-          timeoutPromise(API_TIMEOUT_MS),
-        ]) as Response;
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Estimation failed');
-        setEstimate(data);
-      } catch (err: any) {
-        setError(err.message || 'En feil oppstod');
-      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'En feil oppstod';
+      setError(message);
+    } finally {
+      if (lastAction === 'copy') setEstimating(false);
     }
   };
 
@@ -855,7 +741,6 @@ const QueryPreview = ({
           </div> */}
           </>
         ) : (
-          // Show the original SQL preview instructions
           <div>
             {/* Results Section with Integrated Date Filter */}
             <div>
@@ -915,7 +800,9 @@ const QueryPreview = ({
                       <DatePicker
                         mode="range"
                         selected={dateRange}
-                        onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })}
+                        onSelect={(range: { from?: Date; to?: Date } | undefined) =>
+                          setDateRange(range ? { from: range.from, to: range.to } : { from: undefined, to: undefined })
+                        }
                         showWeekNumber
                       >
                         <div className="flex flex-wrap items-end gap-4">
@@ -961,12 +848,11 @@ const QueryPreview = ({
                             label="Hendelsesnavn"
                             options={availableEvents.map(e => ({ label: e, value: e }))}
                             selectedOptions={eventName ? [eventName] : []}
-                            onToggleSelected={(option, isSelected) => {
+                            onToggleSelected={(option: string, isSelected: boolean) => {
                               setEventName(isSelected ? option : '');
                             }}
                             isMultiSelect={false}
                             size="small"
-                            // @ts-ignore
                             disabled={isEventsLoading}
                           />
                         </div>
@@ -1054,9 +940,9 @@ const QueryPreview = ({
                   )}
 
                   {estimate && !estimating && (() => {
-                    const gb = parseFloat(estimate.totalBytesProcessedGB);
+                    const gb = Number(estimate.totalBytesProcessedGB ?? 0);
                     // Calculate cost if not provided by backend (approx $6.25 per TB)
-                    const cost = parseFloat(estimate.estimatedCostUSD) || (gb * 0.00625);
+                    const cost = Number(estimate.estimatedCostUSD ?? NaN) || (gb * 0.00625);
 
                     let variant: 'info' | 'warning' | 'error' = 'info';
                     let showAsAlert = false;
@@ -1156,9 +1042,8 @@ const QueryPreview = ({
       >
         <Modal.Body>
           {pendingQueryEstimate && (() => {
-            const gb = parseFloat(pendingQueryEstimate.totalBytesProcessedGB);
-            // Calculate cost if not provided by backend (approx $6.25 per TB)
-            const cost = parseFloat(pendingQueryEstimate.estimatedCostUSD) || (gb * 0.00625);
+            const gb = Number(pendingQueryEstimate.totalBytesProcessedGB ?? 0);
+            const cost = Number(pendingQueryEstimate.estimatedCostUSD ?? NaN) || (gb * 0.00625);
             let variant: 'info' | 'warning' | 'error' = 'info';
             let message = '';
 

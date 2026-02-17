@@ -9,44 +9,41 @@
  * and compute all aggregates client-side.
  */
 
-import { SavedChart } from '../data/dashboard/types';
+import { SavedChart } from '../data/dashboard';
 import { format, subDays } from 'date-fns';
 import { getGcpProjectId } from './runtimeConfig';
 
-// Runtime config is resolved by getGcpProjectId.
-// Get GCP_PROJECT_ID from runtime-injected global variable
-// const getGcpProjectId = (): string => {
-//     // 1) Runtime-injected value (browser) - preferred
-//     const winProjectId =
-//         typeof window !== 'undefined' ? (window as any).__GCP_PROJECT_ID__ : undefined;
-//     if (winProjectId) return winProjectId;
+type JsonPrimitive = string | number | boolean | null | undefined;
+interface JsonObject {
+    [key: string]: JsonValue;
+}
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 
-//     // 2) Env var (SSR / Node contexts)
-//     const envProjectId = (globalThis as any)?.process?.env?.GCP_PROJECT_ID;
-//     if (envProjectId) return envProjectId;
+type MetricType = 'visitors' | 'pageviews' | 'proportion' | 'visits';
 
-//     // Fail fast so misconfigured k8s is obvious
-//     throw new Error('Missing runtime config: GCP_PROJECT_ID');
-// };
+type SessionRow = {
+    session_id: string;
+    visit_id?: string;
+} & Partial<Record<(typeof SESSION_FIELDS)[number], string | null>>;
 
 interface Filters {
     urlFilters: string[];
     dateRange: string;
     pathOperator: string;
-    metricType: 'visitors' | 'pageviews' | 'proportion' | 'visits';
+    metricType: MetricType;
     customStartDate?: Date;
     customEndDate?: Date;
 }
 
-interface FetchResult {
-    data: any[];
+interface FetchResult<TData extends JsonObject = JsonObject> {
+    data: TData[];
     queryStats?: {
         totalBytesProcessed: number;
     };
 }
 
 interface BatchedFetchResult {
-    chartResults: Map<string, any[]>;
+    chartResults: Map<string, JsonObject[]>;
     totalBytesProcessed: number;
     chartBytes: Map<string, number>;
 }
@@ -174,122 +171,107 @@ LIMIT 100000
  * Supports unique visitors (COUNT DISTINCT session_id), pageviews (COUNT *), and proportion (%)
  * For proportion mode, totalSiteVisitors should be provided to calculate percentage against all site visitors
  */
-function aggregateByField(rawData: any[], field: string, metricType: 'visitors' | 'pageviews' | 'proportion' | 'visits', totalSiteVisitors?: number): any[] {
+function aggregateByField(
+    rawData: SessionRow[],
+    field: (typeof SESSION_FIELDS)[number],
+    metricType: MetricType,
+    totalSiteVisitors?: number
+): JsonObject[] {
     if (metricType === 'pageviews') {
-        // COUNT(*) - count total rows (events) per field value
         const counts = new Map<string, number>();
 
         for (const row of rawData) {
-            const key = row[field] || 'Ukjent';
-            counts.set(key, (counts.get(key) || 0) + 1);
+            const key = row[field] ?? 'Ukjent';
+            counts.set(String(key), (counts.get(String(key)) || 0) + 1);
         }
 
-        // Convert to sorted array
         const result = Array.from(counts.entries())
             .map(([value, count]) => ({
                 [field]: value,
-                Sidevisninger: count
+                Sidevisninger: count,
             }))
-            .sort((a, b) => b.Sidevisninger - a.Sidevisninger);
+            .sort((a, b) => Number(b.Sidevisninger) - Number(a.Sidevisninger));
 
-        // Apply device filter if needed (device NOT LIKE '%x%')
         if (field === 'device') {
             return result.filter(row => !String(row.device).includes('x'));
         }
 
-        return result.slice(0, 1000); // Match original LIMIT
+        return result.slice(0, 1000);
     } else if (metricType === 'proportion') {
-        // Proportion - percentage of unique visitors per field value
         const counts = new Map<string, Set<string>>();
         const allSessions = new Set<string>();
 
         for (const row of rawData) {
-            const key = row[field] || 'Ukjent';
-            if (!counts.has(key)) {
-                counts.set(key, new Set());
-            }
-            counts.get(key)!.add(row.session_id);
+            const key = row[field] ?? 'Ukjent';
+            const keyStr = String(key);
+            if (!counts.has(keyStr)) counts.set(keyStr, new Set());
+            counts.get(keyStr)!.add(row.session_id);
             allSessions.add(row.session_id);
         }
 
-        // Use totalSiteVisitors if provided (for correct proportion against all site visitors)
-        // Otherwise fall back to counted sessions from filtered data
         const totalSessions = totalSiteVisitors ?? allSessions.size;
 
-        // Build array with raw values for sorting, then map to final format
         const sortedEntries = Array.from(counts.entries())
             .map(([value, sessions]) => ({
                 value,
-                rawPercent: totalSessions > 0 ? (sessions.size / totalSessions) * 100 : 0
+                rawPercent: totalSessions > 0 ? (sessions.size / totalSessions) * 100 : 0,
             }))
             .sort((a, b) => b.rawPercent - a.rawPercent);
 
-        // Convert to final format with only Andel column
         const result = sortedEntries.map(entry => ({
             [field]: entry.value,
-            Andel: entry.rawPercent.toFixed(1) + '%'
+            Andel: `${entry.rawPercent.toFixed(1)}%`,
         }));
 
-        // Apply device filter if needed (device NOT LIKE '%x%')
         if (field === 'device') {
             return result.filter(row => !String(row[field]).includes('x'));
         }
 
-        return result.slice(0, 1000); // Match original LIMIT
+        return result.slice(0, 1000);
     } else if (metricType === 'visits') {
-        // COUNT(DISTINCT visit_id) - count unique visits per field value
         const counts = new Map<string, Set<string>>();
 
         for (const row of rawData) {
-            const key = row[field] || 'Ukjent';
-            if (!counts.has(key)) {
-                counts.set(key, new Set());
-            }
-            if (row.visit_id) {
-                counts.get(key)!.add(row.visit_id);
-            }
+            const key = row[field] ?? 'Ukjent';
+            const keyStr = String(key);
+            if (!counts.has(keyStr)) counts.set(keyStr, new Set());
+            if (row.visit_id) counts.get(keyStr)!.add(row.visit_id);
         }
 
-        // Convert to sorted array
         const result = Array.from(counts.entries())
             .map(([value, visits]) => ({
                 [field]: value,
-                'Antall økter': visits.size
+                'Antall økter': visits.size,
             }))
-            .sort((a, b) => b['Antall økter'] - a['Antall økter']);
+            .sort((a, b) => Number(b['Antall økter']) - Number(a['Antall økter']));
 
-        // Apply device filter if needed (device NOT LIKE '%x%')
         if (field === 'device') {
             return result.filter(row => !String(row.device).includes('x'));
         }
 
-        return result.slice(0, 1000); // Match original LIMIT
+        return result.slice(0, 1000);
     } else {
-        // COUNT(DISTINCT session_id) - count unique sessions per field value
         const counts = new Map<string, Set<string>>();
 
         for (const row of rawData) {
-            const key = row[field] || 'Ukjent';
-            if (!counts.has(key)) {
-                counts.set(key, new Set());
-            }
-            counts.get(key)!.add(row.session_id);
+            const key = row[field] ?? 'Ukjent';
+            const keyStr = String(key);
+            if (!counts.has(keyStr)) counts.set(keyStr, new Set());
+            counts.get(keyStr)!.add(row.session_id);
         }
 
-        // Convert to sorted array
         const result = Array.from(counts.entries())
             .map(([value, sessions]) => ({
                 [field]: value,
-                Unike_besokende: sessions.size
+                Unike_besokende: sessions.size,
             }))
-            .sort((a, b) => b.Unike_besokende - a.Unike_besokende);
+            .sort((a, b) => Number(b.Unike_besokende) - Number(a.Unike_besokende));
 
-        // Apply device filter if needed (device NOT LIKE '%x%')
         if (field === 'device') {
             return result.filter(row => !String(row.device).includes('x'));
         }
 
-        return result.slice(0, 1000); // Match original LIMIT
+        return result.slice(0, 1000);
     }
 }
 
@@ -301,7 +283,7 @@ export async function fetchDashboardDataBatched(
     websiteId: string,
     filters: Filters
 ): Promise<BatchedFetchResult> {
-    const chartResults = new Map<string, any[]>();
+    const chartResults = new Map<string, JsonObject[]>();
     const chartBytes = new Map<string, number>();
     let totalBytesProcessed = 0;
 
@@ -344,8 +326,8 @@ export async function fetchDashboardDataBatched(
                 throw new Error('Failed to fetch batched session data');
             }
 
-            const result: FetchResult = await response.json();
-            const rawData = result.data || [];
+            const result: FetchResult<SessionRow> = await response.json();
+            const rawData: SessionRow[] = result.data || [];
 
             const batchBytes = result.queryStats?.totalBytesProcessed || 0;
             totalBytesProcessed += batchBytes;
@@ -407,7 +389,7 @@ export async function fetchDashboardDataBatched(
             for (const chart of sessionCharts) {
                 const field = getSessionField(chart);
                 if (field) {
-                    const aggregated = aggregateByField(rawData, field, filters.metricType, totalSiteVisitors);
+                    const aggregated = aggregateByField(rawData, field as (typeof SESSION_FIELDS)[number], filters.metricType, totalSiteVisitors);
                     chartResults.set(chart.id!, aggregated);
                     chartBytes.set(chart.id!, bytesPerChart);
                 }

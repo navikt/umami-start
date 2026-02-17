@@ -1,7 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label, Skeleton } from '@navikt/ds-react';
 import { Filter, Parameter } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton';
+
+type Option = { label: string; value: string };
+
+type FilterColumn = { value: string; label: string };
+type FilterColumnGroup = { label: string; columns: FilterColumn[] };
+type FilterColumns = Record<string, FilterColumnGroup>;
 
 interface EventSelectorProps {
   selectedEventTypes: string[];
@@ -29,11 +35,11 @@ interface EventSelectorProps {
   addFilter?: (column: string) => void;
   commitStagingFilter?: () => void;
   parameters?: Parameter[];
-  uniqueParameters?: any[];
-  stagingAlertInfo?: { show: boolean, message: string };
+  uniqueParameters?: Parameter[];
+  stagingAlertInfo?: { show: boolean; message: string };
   handleStagingAlertClose?: () => void;
-  FILTER_COLUMNS?: any;
-  EVENT_TYPES?: any[];
+  FILTER_COLUMNS?: FilterColumns;
+  EVENT_TYPES?: Option[];
   // Active filter props
   removeFilter: (index: number) => void;
   updateFilter: (index: number, updates: Partial<Filter>) => void;
@@ -61,8 +67,7 @@ const EventSelector = ({
   customEvents,
   handleCustomEventsChange,
   onEnableCustomEvents,
-  filters, // Ensure filters is destructured
-  // Advanced filters props
+  filters,
   stagingFilter,
   setStagingFilter,
   addFilter,
@@ -73,7 +78,6 @@ const EventSelector = ({
   handleStagingAlertClose,
   FILTER_COLUMNS,
   EVENT_TYPES,
-  // Active filter props
   removeFilter,
   updateFilter,
   isDateRangeFilter,
@@ -92,20 +96,14 @@ const EventSelector = ({
   };
 
   // Helper function for combobox options
-  const getOptionsForColumn = (column: string, customEventsList: string[], availablePaths: string[]): { label: string, value: string }[] => {
+  const getOptionsForColumn = (column: string, customEventsListIn: string[], availablePathsIn: string[]): Option[] => {
     switch (column) {
       case 'event_name':
-        return customEventsList.map(event => ({
-          label: event || '',
-          value: event || ''
-        }));
+        return customEventsListIn.map(event => ({ label: event || '', value: event || '' }));
       case 'url_path':
-        return availablePaths.map(path => ({
-          label: path,
-          value: path
-        }));
+        return availablePathsIn.map(path => ({ label: path, value: path }));
       case 'event_type':
-        return EVENT_TYPES || [];
+        return EVENT_TYPES ?? [];
       default:
         return [];
     }
@@ -117,19 +115,11 @@ const EventSelector = ({
   const [selectedEventParam, setSelectedEventParam] = useState<string>('');
   const [eventParamOperator, setEventParamOperator] = useState<string>('=');
   const [eventParamValue, setEventParamValue] = useState<string>('');
-  const [isParamsLoading, setIsParamsLoading] = useState<boolean>(false);
 
-  // Sync isParamsLoading with the global isEventsLoading prop
-  // This ensures isParamsLoading turns off when the actual data loading finishes
-  const prevIsEventsLoading = useRef(isEventsLoading);
+  // Track whether user requested params for this session; derive loading state from props
+  const [hasRequestedParams, setHasRequestedParams] = useState(false);
 
-  useEffect(() => {
-    // If loading finished (went from true to false), turn off params loading
-    if (prevIsEventsLoading.current && !isEventsLoading) {
-      setIsParamsLoading(false);
-    }
-    prevIsEventsLoading.current = isEventsLoading;
-  }, [isEventsLoading]);
+  const isParamsLoading = hasRequestedParams && isEventsLoading;
 
   // Get parameters filtered by selected events
   const filteredParameters = parameters.filter(param => {
@@ -180,11 +170,8 @@ const EventSelector = ({
 
   // Handle fetching params for events
   const handleFetchEventParams = () => {
-    setIsParamsLoading(true);
-    if (onEnableCustomEvents) {
-      onEnableCustomEvents(true);
-    }
-    // Loading state will be controlled by useEffect based on isEventsLoading prop
+    setHasRequestedParams(true);
+    if (onEnableCustomEvents) onEnableCustomEvents(true);
   };
 
   return (
@@ -193,7 +180,7 @@ const EventSelector = ({
         Hva vil du inkludere?
       </Heading>
 
-      <div className="mt-3 bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-inner">
+      <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-inner">
         <Tabs defaultValue="sidestier" size="small">
           <Tabs.List>
             <Tabs.Tab value="sidestier" label="Sidevisninger" />
@@ -238,7 +225,7 @@ const EventSelector = ({
 
                   <div className="mt-4">
                     {pageViewsMode === 'specific' && (
-                      <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
+                      <div className="bg-(--ax-bg-default) p-4 rounded border">
                         <div className="mb-3">
                           <Select
                             label="URL"
@@ -277,7 +264,7 @@ const EventSelector = ({
                               value: path
                             }))}
                             selectedOptions={selectedPaths}
-                            onToggleSelected={(option, isSelected) => {
+                            onToggleSelected={(option: string, isSelected: boolean) => {
                               if (option) {
                                 const newSelection = isSelected
                                   ? [...selectedPaths, option]
@@ -287,7 +274,6 @@ const EventSelector = ({
                             }}
                             isMultiSelect
                             size="small"
-                            clearButton
                             allowNewValues
                           />
                         ) : (
@@ -304,28 +290,27 @@ const EventSelector = ({
                               value: path
                             }))}
                             selectedOptions={selectedPaths.length > 0 ? [selectedPaths[0]] : []}
-                            onToggleSelected={(option, isSelected) => {
+                            onToggleSelected={(option: string, isSelected: boolean) => {
                               if (option) {
                                 handlePathsChange(isSelected ? [option] : [], urlPathOperator);
                               }
                             }}
                             isMultiSelect={false}
                             size="small"
-                            clearButton
                             allowNewValues
                           />
                         )}
                         {selectedPaths.length === 0 && (
-                          <div className="mt-2 text-xs text-[var(--ax-text-subtle)]">
+                          <div className="mt-2 text-xs text-(--ax-text-subtle)">
                             Når tom vises alle sidevisninger
                           </div>
                         )}
                       </div>
                     )}
                     {pageViewsMode === 'interactive' && (
-                      <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
+                      <div className="bg-(--ax-bg-default) p-4 rounded border">
                         <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
+                          <div className="shrink-0">
                             <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
                               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-green-600">
                                 <path d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" fill="currentColor" />
@@ -333,7 +318,7 @@ const EventSelector = ({
                             </span>
                           </div>
                           <div>
-                            <p className="text-[var(--ax-text-default)]">URL-sti kan velges som et filtervalg</p>
+                            <p className="text-(--ax-text-default)">URL-sti kan velges som et filtervalg</p>
                           </div>
                         </div>
                       </div>
@@ -388,7 +373,7 @@ const EventSelector = ({
               </RadioGroup>
               <div className="mt-4">
                 {(customEventsMode === 'specific') && (
-                  <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
+                  <div className="bg-(--ax-bg-default) p-4 rounded border">
                     {isEventsLoading && !isParamsLoading && customEventsList.length === 0 && (
                       <div className="mb-4 space-y-3">
                         <Skeleton variant="text" width="40%" />
@@ -439,7 +424,7 @@ const EventSelector = ({
                               value: event
                             }))}
                             selectedOptions={customEvents}
-                            onToggleSelected={(option, isSelected) => {
+                            onToggleSelected={(option: string, isSelected: boolean) => {
                               if (option) {
                                 const newSelection = isSelected
                                   ? [...customEvents, option]
@@ -449,7 +434,6 @@ const EventSelector = ({
                             }}
                             isMultiSelect
                             size="small"
-                            clearButton
                             allowNewValues
                           />
                         ) : (
@@ -466,14 +450,13 @@ const EventSelector = ({
                               value: event
                             }))}
                             selectedOptions={customEvents.length > 0 ? [customEvents[0]] : []}
-                            onToggleSelected={(option, isSelected) => {
+                            onToggleSelected={(option: string, isSelected: boolean) => {
                               if (option) {
                                 handleCustomEventsChange(isSelected ? [option] : [], eventNameOperator);
                               }
                             }}
                             isMultiSelect={false}
                             size="small"
-                            clearButton
                             allowNewValues
                           />
                         )}
@@ -482,7 +465,7 @@ const EventSelector = ({
 
 
                     {/* Hendelsesdata filter section */}
-                    <div className="mt-6 pt-4 border-t border-[var(--ax-border-neutral-subtle)]">
+                    <div className="mt-6 pt-4 border-t border-(--ax-border-neutral-subtle)">
                       {(isParamsLoading || isEventsLoading) ? (
                         <div className="space-y-3">
                           <Skeleton variant="text" width="50%" />
@@ -515,7 +498,7 @@ const EventSelector = ({
                               value: `param_${getCleanParamName(param)}`
                             }))}
                             selectedOptions={selectedEventParam ? [selectedEventParam] : []}
-                            onToggleSelected={(option, isSelected) => {
+                            onToggleSelected={(option: string, isSelected: boolean) => {
                               if (isSelected && option) {
                                 setSelectedEventParam(option);
                                 setEventParamValue('');
@@ -551,11 +534,10 @@ const EventSelector = ({
                                     label="Verdi"
                                     options={[]}
                                     selectedOptions={eventParamValue ? [eventParamValue] : []}
-                                    onToggleSelected={(option, isSelected) => {
+                                    onToggleSelected={(option: string, isSelected: boolean) => {
                                       if (option) {
                                         const newValue = isSelected ? option : '';
                                         setEventParamValue(newValue);
-                                        // Auto-apply filter when value is set (pass value directly)
                                         if (isSelected && newValue && selectedEventParam) {
                                           handleAddEventParamFilter(newValue);
                                         }
@@ -575,9 +557,9 @@ const EventSelector = ({
                   </div>
                 )}
                 {customEventsMode === 'interactive' && (
-                  <div className="bg-[var(--ax-bg-default)] p-4 rounded border">
+                  <div className="bg-(--ax-bg-default) p-4 rounded border">
                     <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
                           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-green-600">
                             <path d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" fill="currentColor" />
@@ -585,7 +567,7 @@ const EventSelector = ({
                         </span>
                       </div>
                       <div>
-                        <p className="text-[var(--ax-text-default)]">Hendelsesnavn kan velges som filtervalg</p>
+                        <p className="text-(--ax-text-default)">Hendelsesnavn kan velges som filtervalg</p>
                       </div>
                     </div>
                   </div>
@@ -597,7 +579,7 @@ const EventSelector = ({
 
           <Tabs.Panel value="flere_valg" className="pt-6">
             <div className="mb-4">
-              <div className="flex gap-2 items-center bg-[var(--ax-bg-default)] p-3 rounded-md border border-[var(--ax-border-neutral)] mt-3 mb-6">
+              <div className="flex gap-2 items-center bg-(--ax-bg-default) p-3 rounded-md border border-(--ax-border-neutral) mt-3 mb-6">
                 <Select
                   label="Legg til filtre"
                   onChange={(e) => {
@@ -621,22 +603,23 @@ const EventSelector = ({
                     }
                   }}
                   size="small"
-                  className="flex-grow"
+                  className="grow"
                 >
                   <option value="">Velg filter...</option>
-                  {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]: [string, any]) => (
+                  {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
                     <optgroup key={groupKey} label={group.label}>
                       {group.columns
-                        .filter((col: any) => col.value !== 'created_at')
-                        .map((col: any) => (
-                          <>
-                            <option key={col.value} value={col.value}>
+                        .filter((col) => col.value !== 'created_at')
+                        .map((col) => (
+                          <span key={col.value}>
+                            {/* keyed fragment substitute */}
+                            <option value={col.value}>
                               {col.label}
                             </option>
                             {col.value === 'event_name' && (
-                              <option key="_custom_param_" value="_custom_param_">Hendelsesdetaljer</option>
+                              <option value="_custom_param_">Hendelsesdetaljer</option>
                             )}
-                          </>
+                          </span>
                         ))}
                     </optgroup>
                   ))}
@@ -652,7 +635,7 @@ const EventSelector = ({
               )}
 
               {stagingFilter && setStagingFilter && (
-                <div className="mt-3 bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-sm">
+                <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-sm">
                   <div className="flex-1">
                     <div className="grid gap-4">
                       {/* Column Selector */}
@@ -663,9 +646,9 @@ const EventSelector = ({
                           onChange={(e) => setStagingFilter({ ...stagingFilter, column: e.target.value, operator: '=', value: '' })}
                           size="small"
                         >
-                          {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]: [string, any]) => (
+                          {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
                             <optgroup key={groupKey} label={group.label}>
-                              {group.columns.map((col: any) => (
+                              {group.columns.map((col) => (
                                 <option key={col.value} value={col.value}>
                                   {col.label}
                                 </option>
@@ -676,13 +659,16 @@ const EventSelector = ({
                             <>
                               <option value="_custom_param_">Hendelsesdetaljer</option>
                               {/* Keep the current parameter in the list if it's selected, so the Select shows the right label */}
-                              {stagingFilter.column.startsWith('param_') && (
-                                <option value={stagingFilter.column}>
-                                  {uniqueParameters.find(p => `param_${getCleanParamName(p)}` === stagingFilter.column) ?
-                                    getParamDisplayName(uniqueParameters.find(p => `param_${getCleanParamName(p)}` === stagingFilter.column)) :
-                                    stagingFilter.column.replace('param_', '')}
-                                </option>
-                              )}
+                              {stagingFilter.column.startsWith('param_') && (() => {
+                                const selectedParam = uniqueParameters.find(
+                                  p => `param_${getCleanParamName(p)}` === stagingFilter.column
+                                );
+                                return (
+                                  <option value={stagingFilter.column}>
+                                    {selectedParam ? getParamDisplayName(selectedParam) : stagingFilter.column.replace('param_', '')}
+                                  </option>
+                                );
+                              })()}
                             </>
                           )}
                         </Select>
@@ -698,7 +684,7 @@ const EventSelector = ({
                             </div>
                           ) : parameters.length === 0 ? (
                             <div className="flex flex-col gap-2">
-                              <p className="text-sm text-[var(--ax-text-subtle)]">Fant ingen hendelsesdetaljer. Du må hente data før du kan filtrere.</p>
+                              <p className="text-sm text-(--ax-text-subtle)">Fant ingen hendelsesdetaljer. Du må hente data før du kan filtrere.</p>
                               <Button
                                 variant="secondary"
                                 size="small"
@@ -738,7 +724,7 @@ const EventSelector = ({
                       {/* Operator and Value Selectors (Visible when a valid column is selected) */}
                       {stagingFilter.column !== '_custom_param_' && (
                         <div className="flex gap-2 items-end">
-                          {stagingFilter.column !== 'created_at' && (
+                          {stagingFilter.column !== 'created_at' && !stagingFilter.interactive && (
                             <Select
                               label="Operator"
                               value={stagingFilter.operator || '='}
@@ -762,7 +748,7 @@ const EventSelector = ({
                                 <p className="font-medium text-xs">
                                   Mottaker velger selv
                                 </p>
-                                <p className="text-xs text-[var(--ax-text-subtle)] truncate">
+                                <p className="text-xs text-(--ax-text-subtle) truncate">
                                   Param: {stagingFilter.column === 'url_path' ? 'url_sti' :
                                     stagingFilter.column === 'event_name' ? 'hendelse' :
                                       stagingFilter.column.toLowerCase().replace(/[^a-z0-9_]/g, '_')}
@@ -794,7 +780,7 @@ const EventSelector = ({
                                     options={getOptionsForColumn(stagingFilter.column, customEventsList, availablePaths)}
                                     selectedOptions={stagingFilter.multipleValues?.map(v => v || '') ||
                                       (stagingFilter.value ? [stagingFilter.value as string] : [])}
-                                    onToggleSelected={(option, isSelected) => {
+                                    onToggleSelected={(option: string, isSelected: boolean) => {
                                       if (option) {
                                         const currentValues = stagingFilter.multipleValues ||
                                           (stagingFilter.value ? [stagingFilter.value as string] : []);
@@ -812,7 +798,6 @@ const EventSelector = ({
                                     }}
                                     isMultiSelect={true}
                                     size="small"
-                                    clearButton
                                     allowNewValues={stagingFilter.column !== 'event_type'}
                                     shouldAutocomplete={false}
                                   />
@@ -828,7 +813,7 @@ const EventSelector = ({
                     <Button
                       variant="primary"
                       size="small"
-                      onClick={commitStagingFilter}
+                      onClick={() => commitStagingFilter?.()}
                       disabled={!stagingFilter.operator || (!['IS NULL', 'IS NOT NULL', 'INTERACTIVE'].includes(stagingFilter.operator) && !stagingFilter.value)}
                     >
                       Legg til filter
@@ -848,7 +833,7 @@ const EventSelector = ({
 
           <Tabs.Panel value="active_filters" className="pt-6">
             {filters.length === 0 && (
-              <div className="text-sm text-[var(--ax-text-subtle)]">
+              <div className="text-sm text-(--ax-text-subtle)">
                 Ingen aktive filtre. Legg til et filter for å få mer spesifikke data.
               </div>
             )}
@@ -857,7 +842,7 @@ const EventSelector = ({
               <div className="space-y-3">
                 {/* Only show non-date range filters in the regular filter list */}
                 {filters.map((filter, index) => !isDateRangeFilter(filter) && (
-                  <div key={index} className="bg-[var(--ax-bg-default)] p-3 rounded border border-[var(--ax-border-neutral)]">
+                  <div key={index} className="bg-(--ax-bg-default) p-3 rounded border border-(--ax-border-neutral)">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 space-y-2">
                         <div className="flex gap-2 items-end flex-wrap">
@@ -868,9 +853,9 @@ const EventSelector = ({
                             size="small"
                             className="min-w-[150px]"
                           >
-                            {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]: [string, any]) => (
+                            {FILTER_COLUMNS && Object.entries(FILTER_COLUMNS).map(([groupKey, group]) => (
                               <optgroup key={groupKey} label={group.label}>
-                                {group.columns.map((col: any) => (
+                                {group.columns.map((col) => (
                                   <option key={col.value} value={col.value}>
                                     {col.label}
                                   </option>
@@ -953,7 +938,7 @@ const EventSelector = ({
                                 options={getOptionsForColumn(filter.column, customEventsList, availablePaths)} // Pass correct arrays
                                 selectedOptions={Array.isArray(filter.multipleValues) ? filter.multipleValues.map(v => v || '') :
                                   (filter.value ? [filter.value as string] : [])}
-                                onToggleSelected={(option, isSelected) => {
+                                onToggleSelected={(option: string, isSelected: boolean) => {
                                   if (option) {
                                     const currentValues = Array.isArray(filter.multipleValues) ? filter.multipleValues :
                                       (filter.value ? [filter.value as string] : []);
@@ -970,7 +955,6 @@ const EventSelector = ({
                                 }}
                                 isMultiSelect={true}
                                 size="small"
-                                clearButton
                                 allowNewValues={filter.column !== 'event_type'}
                                 shouldAutocomplete={false}
                               />
@@ -992,6 +976,23 @@ const EventSelector = ({
               </div>
             )}
           </Tabs.Panel>
+
+          {/* Fix TS2345 by keeping the found Parameter in a variable and guarding undefined */}
+          {/* (this block is inside the Column Selector <Select> where stagingFilter.column.startsWith('param_') was handled) */}
+          {/*
+            {parameters.length > 0 && (
+              <>
+                <option value="_custom_param_">Hendelsesdetaljer</option>
+                {stagingFilter.column.startsWith('param_') && (
+                  <option value={stagingFilter.column}>
+                    {uniqueParameters.find(p => `param_${getCleanParamName(p)}` === stagingFilter.column) ?
+                      getParamDisplayName(uniqueParameters.find(p => `param_${getCleanParamName(p)}` === stagingFilter.column)) :
+                      stagingFilter.column.replace('param_', '')}
+                  </option>
+                )}
+              </>
+            )}
+          */}
         </Tabs>
       </div>
     </div >
@@ -999,3 +1000,16 @@ const EventSelector = ({
 };
 
 export default EventSelector;
+
+/*
+NOTE: Apply this targeted fix in the "Keep the current parameter in the list..." JSX:
+
+Replace:
+  uniqueParameters.find(...) ? getParamDisplayName(uniqueParameters.find(...)) : ...
+
+With:
+  const selectedParam = uniqueParameters.find(...);
+  selectedParam ? getParamDisplayName(selectedParam) : ...
+
+(Shown as comment because surrounding JSX is large; keep it inline as an IIFE in JSX if preferred.)
+*/

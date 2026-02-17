@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Table, Heading, Pagination, VStack, Select, HelpText } from '@navikt/ds-react';
 import { ILineChartDataPoint } from '@fluentui/react-charting';
@@ -56,7 +56,7 @@ const getPreviousDateRange = (startDate: Date, endDate: Date) => {
 };
 
 const aggregateSeriesData = (
-    data: any[],
+    data: SeriesPoint[],
     granularity: 'day' | 'week' | 'month' | 'hour',
     metricType: string
 ) => {
@@ -66,7 +66,7 @@ const aggregateSeriesData = (
 
     const aggregated = new Map<string, { time: Date; value: number; count: number }>();
 
-    data.forEach((item: any) => {
+    data.forEach((item) => {
         const date = new Date(item.time);
         if (!isValid(date)) return;
 
@@ -97,7 +97,7 @@ const aggregateSeriesData = (
         }));
 };
 
-const getComparablePeriodValue = (data: any[], metricType: string, totalCount?: number) => {
+const getComparablePeriodValue = (data: SeriesPoint[], metricType: string, totalCount?: number) => {
     if (!data.length) return 0;
 
     if (metricType === 'proportion') {
@@ -115,6 +115,59 @@ const getComparablePeriodValue = (data: any[], metricType: string, totalCount?: 
     }
 
     return data.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+};
+
+type SeriesPoint = {
+    time: string;
+    count: number;
+};
+
+type PageMetricRow = {
+    urlPath: string;
+    pageviews: number;
+    proportion: number;
+    visitors: number;
+};
+
+type BreakdownEntry = {
+    name: string;
+    visitors: number;
+};
+
+type BreakdownData = {
+    sources: BreakdownEntry[];
+    exits: BreakdownEntry[];
+};
+
+type ExternalReferrerRow = {
+    name: string;
+    count: number;
+};
+
+type QueryStats = {
+    totalBytesProcessedGB?: number;
+    estimatedCostUSD?: number;
+};
+
+type SeriesResponse = {
+    data?: SeriesPoint[];
+    totalCount?: number;
+    queryStats?: QueryStats;
+};
+
+type BreakdownResponse = {
+    sources?: BreakdownEntry[];
+    exits?: BreakdownEntry[];
+};
+
+type PageMetricsResponse = {
+    data?: PageMetricRow[];
+};
+
+type ExternalReferrerResponse = {
+    data?: {
+        referrer?: ExternalReferrerRow[];
+    };
 };
 
 const TrafficAnalysis = () => {
@@ -178,13 +231,13 @@ const TrafficAnalysis = () => {
 
 
     // Data states
-    const [seriesData, setSeriesData] = useState<any[]>([]);
+    const [seriesData, setSeriesData] = useState<SeriesPoint[]>([]);
     const [seriesTotalCount, setSeriesTotalCount] = useState<number | undefined>(undefined);
-    const [previousSeriesData, setPreviousSeriesData] = useState<any[]>([]);
+    const [previousSeriesData, setPreviousSeriesData] = useState<SeriesPoint[]>([]);
     const [previousSeriesTotalCount, setPreviousSeriesTotalCount] = useState<number | undefined>(undefined);
-    const [pageMetrics, setPageMetrics] = useState<any[]>([]);
-    const [previousPageMetrics, setPreviousPageMetrics] = useState<any[]>([]);
-    const [seriesQueryStats, setSeriesQueryStats] = useState<any>(null);
+    const [pageMetrics, setPageMetrics] = useState<PageMetricRow[]>([]);
+    const [previousPageMetrics, setPreviousPageMetrics] = useState<PageMetricRow[]>([]);
+    const [seriesQueryStats, setSeriesQueryStats] = useState<QueryStats | null>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -193,7 +246,7 @@ const TrafficAnalysis = () => {
     const [selectedInternalUrl, setSelectedInternalUrl] = useState<string | null>(null);
     const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
 
-    const buildFilterKey = (granularityOverride = granularity) =>
+    const buildFilterKey = useCallback((granularityOverride = granularity) =>
         JSON.stringify({
             websiteId: selectedWebsite?.id ?? null,
             urlPaths,
@@ -204,7 +257,7 @@ const TrafficAnalysis = () => {
             metricType,
             granularity: granularityOverride,
             comparePreviousPeriod,
-        });
+        }), [selectedWebsite?.id, urlPaths, pathOperator, period, customStartDate, customEndDate, metricType, granularity, comparePreviousPeriod]);
     const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
 
     const includedPagesData = useMemo(() => {
@@ -270,8 +323,8 @@ const TrafficAnalysis = () => {
     }, [submittedMetricType, previousSeriesTotalCount]);
 
 
-    const [breakdownData, setBreakdownData] = useState<{ sources: any[], exits: any[] }>({ sources: [], exits: [] });
-    const [externalReferrerData, setExternalReferrerData] = useState<any[]>([]); // Data from marketing-stats API
+    const [breakdownData, setBreakdownData] = useState<BreakdownData>({ sources: [], exits: [] });
+    const [externalReferrerData, setExternalReferrerData] = useState<ExternalReferrerRow[]>([]); // Data from marketing-stats API
     const [hasFetchedPageMetrics, setHasFetchedPageMetrics] = useState<boolean>(false);
     const [hasFetchedBreakdown, setHasFetchedBreakdown] = useState<boolean>(false);
     const [hasFetchedExternalReferrers, setHasFetchedExternalReferrers] = useState<boolean>(false);
@@ -279,13 +332,13 @@ const TrafficAnalysis = () => {
     const [isLoadingBreakdown, setIsLoadingBreakdown] = useState<boolean>(false);
     const [isLoadingExternalReferrers, setIsLoadingExternalReferrers] = useState<boolean>(false);
 
-    const getCountByQueryParams = (startDate: Date, endDate: Date) => {
+    const getCountByQueryParams = useCallback((startDate: Date, endDate: Date) => {
         const { countBy, countBySwitchAt } = getCookieCountByParams(usesCookies, cookieStartDate, startDate, endDate);
         return {
             countByParams: countBy ? `&countBy=${countBy}` : '',
             countBySwitchAtParam: countBySwitchAt ? `&countBySwitchAt=${countBySwitchAt}` : ''
         };
-    };
+    }, [usesCookies, cookieStartDate]);
 
     const currentDateRange = useMemo(() => getDateRangeFromPeriod(period, customStartDate, customEndDate), [period, customStartDate, customEndDate]);
     const cookieBadge = useMemo(() => {
@@ -302,33 +355,7 @@ const TrafficAnalysis = () => {
         return currentDateRange.endDate.getTime() < cookieStartDate.getTime();
     }, [currentDateRange, cookieStartDate]);
 
-    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
-    useEffect(() => {
-        if (selectedWebsite && !hasAttemptedFetch) {
-            fetchSeriesData();
-        }
-    }, [selectedWebsite]); // Only run when selectedWebsite changes
-
-    // Auto-fetch when filters change (after initial fetch) - Removed manual fetch enforcement
-    // No useEffect here for auto-fetch to save costs as per user request
-
-    // Auto-fetch when granularity changes (after initial fetch).
-    useEffect(() => {
-        if (!hasAttemptedFetch || !selectedWebsite || loading) return;
-        if (granularity !== submittedGranularity) {
-            fetchSeriesData();
-        }
-    }, [granularity, submittedGranularity, hasAttemptedFetch, selectedWebsite, loading]);
-
-    // Auto-fetch when compare option changes (after initial fetch).
-    useEffect(() => {
-        if (!hasAttemptedFetch || !selectedWebsite || loading) return;
-        if (comparePreviousPeriod !== submittedComparePreviousPeriod) {
-            fetchSeriesData();
-        }
-    }, [comparePreviousPeriod, submittedComparePreviousPeriod, hasAttemptedFetch, selectedWebsite, loading]);
-
-    const fetchSeriesData = async () => {
+    const fetchSeriesData = useCallback(async () => {
         if (!selectedWebsite) return;
 
         // Validation for proportion view
@@ -410,7 +437,7 @@ const TrafficAnalysis = () => {
 
             const seriesResponse = await fetch(seriesUrl);
             if (!seriesResponse.ok) throw new Error('Kunne ikke hente trafikkdata');
-            const seriesResult = await seriesResponse.json();
+            const seriesResult: SeriesResponse = await seriesResponse.json();
 
             if (seriesResult.data) {
                 console.log('[TrafficAnalysis] Received series data:', seriesResult.data.length, 'records');
@@ -428,7 +455,7 @@ const TrafficAnalysis = () => {
                 const previousSeriesUrl = buildSeriesUrl(previousDateRange.startDate, previousDateRange.endDate, previousCountByParams);
                 const previousSeriesResponse = await fetch(previousSeriesUrl);
                 if (!previousSeriesResponse.ok) throw new Error('Kunne ikke hente sammenligningsdata');
-                const previousSeriesResult = await previousSeriesResponse.json();
+                const previousSeriesResult: SeriesResponse = await previousSeriesResponse.json();
 
                 setPreviousSeriesData(previousSeriesResult.data || []);
                 setPreviousSeriesTotalCount(typeof previousSeriesResult.totalCount === 'number' ? previousSeriesResult.totalCount : undefined);
@@ -463,15 +490,39 @@ const TrafficAnalysis = () => {
             window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             setLastAppliedFilterKey(appliedFilterKey);
 
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching traffic data:', err);
-            setError(err.message || 'Det oppstod en feil ved henting av data.');
+            const message = err instanceof Error ? err.message : 'Det oppstod en feil ved henting av data.';
+            setError(message);
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedWebsite, metricType, urlPaths, pathOperator, customStartDate, customEndDate, comparePreviousPeriod, granularity, period, buildFilterKey, getCountByQueryParams]);
 
-    const fetchTrafficBreakdown = async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
+    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
+    useEffect(() => {
+        if (selectedWebsite && !hasAttemptedFetch) {
+            fetchSeriesData();
+        }
+    }, [selectedWebsite, hasAttemptedFetch, fetchSeriesData]);
+
+    // Auto-fetch when granularity changes (after initial fetch).
+    useEffect(() => {
+        if (!hasAttemptedFetch || !selectedWebsite || loading) return;
+        if (granularity !== submittedGranularity) {
+            fetchSeriesData();
+        }
+    }, [granularity, submittedGranularity, hasAttemptedFetch, selectedWebsite, loading, fetchSeriesData]);
+
+    // Auto-fetch when compare option changes (after initial fetch).
+    useEffect(() => {
+        if (!hasAttemptedFetch || !selectedWebsite || loading) return;
+        if (comparePreviousPeriod !== submittedComparePreviousPeriod) {
+            fetchSeriesData();
+        }
+    }, [comparePreviousPeriod, submittedComparePreviousPeriod, hasAttemptedFetch, selectedWebsite, loading, fetchSeriesData]);
+
+    const fetchTrafficBreakdown = useCallback(async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
         if (!selectedWebsite) return;
 
         try {
@@ -486,7 +537,7 @@ const TrafficAnalysis = () => {
 
             const response = await fetch(breakdownUrl);
             if (!response.ok) throw new Error('Kunne ikke hente trafikkdetaljer');
-            const result = await response.json();
+            const result: BreakdownResponse = await response.json();
 
             if (result.sources || result.exits) {
                 setBreakdownData({
@@ -494,16 +545,16 @@ const TrafficAnalysis = () => {
                     exits: result.exits || []
                 });
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching traffic breakdown:', err);
         } finally {
             setHasFetchedBreakdown(true);
             setIsLoadingBreakdown(false);
         }
-    };
+    }, [selectedWebsite, submittedUrlPaths, submittedPathOperator, submittedMetricType, getCountByQueryParams]);
 
 
-    const fetchPageMetrics = async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
+    const fetchPageMetrics = useCallback(async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
         if (!selectedWebsite) return;
 
         try {
@@ -518,7 +569,7 @@ const TrafficAnalysis = () => {
 
             const response = await fetch(metricsUrl);
             if (!response.ok) throw new Error('Kunne ikke hente sidemetrikker');
-            const result = await response.json();
+            const result: PageMetricsResponse = await response.json();
 
             if (result.data) {
                 setPageMetrics(result.data);
@@ -532,21 +583,21 @@ const TrafficAnalysis = () => {
                 const previousMetricsUrl = `/api/bigquery/websites/${selectedWebsite.id}/page-metrics?startAt=${submittedPreviousDateRange.startDate.getTime()}&endAt=${submittedPreviousDateRange.endDate.getTime()}&limit=1000${normalizedPath ? `&urlPath=${encodeURIComponent(normalizedPath)}` : ''}&pathOperator=${activePathOperator}&metricType=${activeMetricType}${previousCountByParams}${previousCountBySwitchAtParam}`;
                 const previousResponse = await fetch(previousMetricsUrl);
                 if (!previousResponse.ok) throw new Error('Kunne ikke hente forrige sidemetrikker');
-                const previousResult = await previousResponse.json();
+                const previousResult: PageMetricsResponse = await previousResponse.json();
                 setPreviousPageMetrics(previousResult.data || []);
             } else {
                 setPreviousPageMetrics([]);
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching page metrics:', err);
         } finally {
             setHasFetchedPageMetrics(true);
             setIsLoadingPageMetrics(false);
         }
-    };
+    }, [selectedWebsite, submittedUrlPaths, submittedPathOperator, submittedMetricType, submittedComparePreviousPeriod, submittedPreviousDateRange, getCountByQueryParams]);
 
     // Fetch external referrer data from marketing-stats API (same as MarketingAnalysis)
-    const fetchExternalReferrers = async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
+    const fetchExternalReferrers = useCallback(async (startDate: Date, endDate: Date, options?: { urlPaths?: string[]; pathOperator?: string; metricType?: string }) => {
         if (!selectedWebsite) return;
 
         try {
@@ -561,18 +612,18 @@ const TrafficAnalysis = () => {
 
             const response = await fetch(url);
             if (!response.ok) throw new Error('Kunne ikke hente eksterne trafikkilder');
-            const result = await response.json();
+            const result: ExternalReferrerResponse = await response.json();
 
             if (result.data && result.data.referrer) {
                 setExternalReferrerData(result.data.referrer);
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching external referrers:', err);
         } finally {
             setHasFetchedExternalReferrers(true);
             setIsLoadingExternalReferrers(false);
         }
-    };
+    }, [selectedWebsite, submittedUrlPaths, submittedPathOperator, submittedMetricType, getCountByQueryParams]);
 
     // Lazy-load tab data to avoid unnecessary queries
     useEffect(() => {
@@ -616,7 +667,10 @@ const TrafficAnalysis = () => {
         submittedPathOperator,
         hasFetchedPageMetrics,
         hasFetchedExternalReferrers,
-        hasFetchedBreakdown
+        hasFetchedBreakdown,
+        fetchPageMetrics,
+        fetchExternalReferrers,
+        fetchTrafficBreakdown
     ]);
 
     const processedSeriesData = useMemo(
@@ -670,7 +724,7 @@ const TrafficAnalysis = () => {
         const metricLabel = getMetricLabel(submittedMetricType);
         const metricLabelCapitalized = getMetricLabelCapitalized(submittedMetricType);
 
-        const points: ILineChartDataPoint[] = processedSeriesData.map((item: any) => {
+        const points: ILineChartDataPoint[] = processedSeriesData.map((item: SeriesPoint) => {
             let value = Number(item.count) || 0;
 
             if (submittedMetricType === 'proportion') {
@@ -707,7 +761,7 @@ const TrafficAnalysis = () => {
             submittedPreviousDateRange
         ) {
             const offsetMs = submittedDateRange.startDate.getTime() - submittedPreviousDateRange.startDate.getTime();
-            const previousPoints: ILineChartDataPoint[] = processedPreviousSeriesData.map((item: any) => {
+            const previousPoints: ILineChartDataPoint[] = processedPreviousSeriesData.map((item: SeriesPoint) => {
                 let value = Number(item.count) || 0;
 
                 if (submittedMetricType === 'proportion') {
@@ -805,7 +859,7 @@ const TrafficAnalysis = () => {
         const headers = [dateHeader, metricLabel];
         const csvRows = [
             headers.join(','),
-            ...seriesData.map((item) => {
+            ...seriesData.map((item: SeriesPoint) => {
                 const timeStr = submittedGranularity === 'hour'
                     ? `${new Date(item.time).toLocaleDateString('nb-NO')} ${new Date(item.time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`
                     : new Date(item.time).toLocaleDateString('nb-NO');
@@ -835,12 +889,12 @@ const TrafficAnalysis = () => {
             return { entrances: [], exits: [] };
         }
 
-        const sources = breakdownData.sources.map(s => ({
+        const sources = breakdownData.sources.map((s: BreakdownEntry) => ({
             name: s.name,
             count: Number(s.visitors)
         }));
 
-        const exitsList = breakdownData.exits.map(e => ({
+        const exitsList = breakdownData.exits.map((e: BreakdownEntry) => ({
             name: e.name,
             count: Number(e.visitors)
         })).sort((a, b) => b.count - a.count);
@@ -1549,16 +1603,14 @@ const TrafficAnalysis = () => {
                         </Table.Body>
                     </Table>
                     <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
-                        <div className="flex gap-2">
-                            <Button
-                                size="small"
-                                variant="secondary"
-                                onClick={downloadCSV}
-                                icon={<Download size={16} />}
-                            >
-                                Last ned CSV
-                            </Button>
-                        </div>
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            onClick={downloadCSV}
+                            icon={<Download size={16} />}
+                        >
+                            Last ned CSV
+                        </Button>
                     </div>
                 </div>
                 {totalPages > 1 && (
@@ -1573,7 +1625,19 @@ const TrafficAnalysis = () => {
         );
     };
 
-    const ChartDataTable = ({ data, previousData, metricLabel }: { data: any[]; previousData: any[]; metricLabel: string }) => {
+    const ChartDataTable = ({
+        data,
+        previousData,
+        metricLabel,
+        submittedDateRange,
+        submittedPreviousDateRange
+    }: {
+        data: SeriesPoint[];
+        previousData: SeriesPoint[];
+        metricLabel: string;
+        submittedDateRange: { startDate: Date; endDate: Date } | null;
+        submittedPreviousDateRange: { startDate: Date; endDate: Date } | null;
+    }) => {
         const [search, setSearch] = useState('');
         const [page, setPage] = useState(1);
         const rowsPerPage = 10;
@@ -1614,7 +1678,7 @@ const TrafficAnalysis = () => {
             }
 
             const offsetMs = submittedDateRange.startDate.getTime() - submittedPreviousDateRange.startDate.getTime();
-            previousData.forEach((item: any) => {
+            previousData.forEach((item: SeriesPoint) => {
                 const shiftedIso = new Date(new Date(item.time).getTime() + offsetMs).toISOString();
                 map.set(shiftedIso, Number(item.count) || 0);
             });
@@ -1777,12 +1841,7 @@ const TrafficAnalysis = () => {
                             onChange={(e) => setMetricType(e.target.value)}
                         >
                             <option value="visitors">{currentDateRange
-                                ? getVisitorLabelWithBadge(
-                                    usesCookies,
-                                    cookieStartDate,
-                                    currentDateRange.startDate,
-                                    currentDateRange.endDate
-                                )
+                                ? getVisitorLabelWithBadge()
                                 : 'Unike besøkende'}</option>
                             <option value="visits">Økter / besøk</option>
                             <option value="pageviews">Sidevisninger</option>
@@ -1845,6 +1904,8 @@ const TrafficAnalysis = () => {
                                     submittedComparePreviousPeriod={submittedComparePreviousPeriod}
                                     comparisonSummary={comparisonSummary}
                                     comparisonRangeLabel={comparisonRangeLabel}
+                                    submittedDateRange={submittedDateRange}
+                                    submittedPreviousDateRange={submittedPreviousDateRange}
                                     formatComparisonValue={formatComparisonValue}
                                     formatComparisonDelta={formatComparisonDelta}
                                     seriesData={seriesData}

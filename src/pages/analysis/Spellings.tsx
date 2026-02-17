@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink } from '@navikt/ds-react';
 import { Download } from 'lucide-react';
@@ -35,6 +35,24 @@ interface CrawlData {
     is_crawl_running?: boolean;
 }
 
+interface SiteimprovePageItem {
+    id: number;
+    url: string;
+}
+
+interface SiteimprovePageResponse {
+    items?: SiteimprovePageItem[];
+}
+
+interface SiteimproveSpellingResponse {
+    items?: SpellingIssue[];
+}
+
+type TeamDataEntry = {
+    teamDomain?: string;
+    teamSiteimproveSite?: string | number;
+};
+
 const Spellings = () => {
     const siteimproveBaseUrl = '/api/siteimprove';
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -54,8 +72,8 @@ const Spellings = () => {
     const [searchParams] = useSearchParams();
     const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
 
-    const getSiteimproveId = (domain: string) => {
-        let team = null;
+    const getSiteimproveId = useCallback((domain: string) => {
+        let team: TeamDataEntry | undefined;
         let siteDomain = domain;
         if (!siteDomain.startsWith('http')) {
             siteDomain = `https://${siteDomain}`;
@@ -64,7 +82,7 @@ const Spellings = () => {
         try {
             const urlObj = new URL(siteDomain);
             const domainOrigin = urlObj.origin;
-            team = teamsData.find((t: any) => {
+            team = (teamsData as TeamDataEntry[]).find((t) => {
                 if (!t.teamDomain) return false;
                 try {
                     const teamUrl = new URL(t.teamDomain);
@@ -74,13 +92,13 @@ const Spellings = () => {
                 }
             });
         } catch {
-            return teamsData.find((t: any) => t.teamDomain === domain || domain.includes(t.teamDomain));
+            team = (teamsData as TeamDataEntry[]).find((t) => t.teamDomain === domain || (t.teamDomain ? domain.includes(t.teamDomain) : false));
         }
 
         return team?.teamSiteimproveSite;
-    };
+    }, []);
 
-    const fetchPageId = async (siteId: string, path: string) => {
+    const fetchPageId = useCallback(async (siteId: string, path: string) => {
         const baseUrl = siteimproveBaseUrl;
         const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
 
@@ -90,15 +108,15 @@ const Spellings = () => {
         const response = await fetch(url, { credentials });
         if (!response.ok) return null;
 
-        const data = await response.json();
+        const data: SiteimprovePageResponse = await response.json();
         if (data && data.items && data.items.length > 0) {
-            const match = data.items.find((p: any) => p.url.includes(path));
+            const match = data.items.find((p) => p.url.includes(path));
             return match ? match.id : data.items[0].id;
         }
         return null;
-    };
+    }, []);
 
-    const fetchSpellingData = async () => {
+    const fetchSpellingData = useCallback(async () => {
         if (!siteimproveId) return;
 
         setLoading(true);
@@ -127,7 +145,7 @@ const Spellings = () => {
                     }
                 }
                 if (crawlResponse.ok) {
-                    const crawlData = await crawlResponse.json();
+                    const crawlData: CrawlData = await crawlResponse.json();
                     setCrawlInfo(crawlData);
                 }
             } else {
@@ -157,15 +175,15 @@ const Spellings = () => {
                     }
                 }
                 if (crawlResponse.ok) {
-                    const crawlData = await crawlResponse.json();
+                    const crawlData: CrawlData = await crawlResponse.json();
                     setCrawlInfo(crawlData);
                 }
                 if (misResponse.ok) {
-                    const data = await misResponse.json();
+                    const data: SiteimproveSpellingResponse = await misResponse.json();
                     setMisspellings(data.items || []);
                 }
                 if (potResponse.ok) {
-                    const data = await potResponse.json();
+                    const data: SiteimproveSpellingResponse = await potResponse.json();
                     setPotentialMisspellings(data.items || []);
                 }
 
@@ -179,13 +197,14 @@ const Spellings = () => {
                 window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
             }
 
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching spelling data:', err);
-            setError(err.message || 'Det oppstod en feil ved henting av data.');
+            const message = err instanceof Error ? err.message : 'Det oppstod en feil ved henting av data.';
+            setError(message);
         } finally {
             setLoading(false);
         }
-    };
+    }, [siteimproveId, urlPath, fetchPageId]);
 
     useEffect(() => {
         if (!selectedWebsite) return;
@@ -197,7 +216,7 @@ const Spellings = () => {
             return;
         }
         setSiteimproveId(String(sid));
-    }, [selectedWebsite]);
+    }, [selectedWebsite, getSiteimproveId]);
 
     // Auto-submit when URL parameters are present (for shared links)
     useEffect(() => {
@@ -208,7 +227,7 @@ const Spellings = () => {
             // Auto-fetch overview when website is selected
             fetchSpellingData();
         }
-    }, [siteimproveId]);
+    }, [siteimproveId, hasAttemptedFetch, searchParams, urlPath, fetchSpellingData]);
 
     const renderTable = (items: SpellingIssue[], emptyMsg: string, filename: string) => {
         if (items.length === 0) {

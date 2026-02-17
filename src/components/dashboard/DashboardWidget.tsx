@@ -2,20 +2,42 @@ import { useState, useEffect } from 'react';
 import { Loader, Alert, Table, Pagination, Button } from '@navikt/ds-react';
 import { ILineChartDataPoint, LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { ExternalLink, MoreVertical } from 'lucide-react';
-import { SavedChart } from '../../data/dashboard/types';
+import { SavedChart } from '../../data/dashboard';
 import { format } from 'date-fns';
 import { translateValue } from '../../lib/translations';
 import AnalysisActionModal from '../analysis/AnalysisActionModal';
-// @ts-ignore
+// @ts-expect-error Untyped JS module
 import SiteScores from '../siteimprove/SiteScores';
-// @ts-ignore
+// @ts-expect-error Untyped JS module
 import SiteGroupScores from '../siteimprove/SiteGroupScores';
 import teamsData from '../../data/teamsData.json';
+import { processDashboardSql } from './dashboardQueryUtils.ts';
+import ChartActionModal from '../analysis/ChartActionModal';
+
+type JsonPrimitive = string | number | boolean | null;
+interface JsonObject {
+    [key: string]: JsonValue;
+}
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+
+type DashboardRow = Record<string, unknown>;
+
+type SelectedWebsite = {
+    domain: string;
+    // allow extra fields without using `any`
+    [key: string]: unknown;
+};
+
+type TeamData = {
+    teamDomain?: string;
+    teamSiteimproveSite?: string | number | boolean;
+    [key: string]: unknown;
+};
 
 interface DashboardWidgetProps {
     chart: SavedChart;
     websiteId: string;
-    selectedWebsite?: any;
+    selectedWebsite?: SelectedWebsite;
     filters: {
         urlFilters: string[];
         dateRange: string;
@@ -26,7 +48,7 @@ interface DashboardWidgetProps {
     };
     onDataLoaded?: (stats: { id: string; gb: number; title: string; totalCount?: number }) => void;
     // Pre-fetched data from batched query (optional - if provided, skip individual fetch)
-    prefetchedData?: any[];
+    prefetchedData?: DashboardRow[];
     // If true, this chart is being batch-loaded and should wait instead of fetching individually
     shouldWaitForBatch?: boolean;
     // Siteimprove group ID for group-level scoring (from custom filter selection)
@@ -34,16 +56,10 @@ interface DashboardWidgetProps {
     dashboardTitle?: string;
 }
 
-// ... imports ...
-import { processDashboardSql } from '../dashboard/dashboardQueryUtils';
-import ChartActionModal from '../analysis/ChartActionModal';
-
-// ... interface ...
-
-export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId, dashboardTitle }: DashboardWidgetProps) => { // Removed useNavigate
+export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId, dashboardTitle }: DashboardWidgetProps) => {
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState<DashboardRow[]>([]);
     const [page, setPage] = useState(1);
     // Track if individual fetch has been done to prevent repeat fetches
     const [hasFetchedIndividually, setHasFetchedIndividually] = useState(false);
@@ -55,7 +71,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
 
 
     // Helper to check if a value is a clickable URL path
-    const isClickablePath = (val: any): boolean => {
+    const isClickablePath = (val: unknown): val is string => {
         return typeof val === 'string' && val.startsWith('/') && val !== '/';
     };
 
@@ -96,7 +112,6 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             setError(null);
 
             try {
-                // Use centralized utility to process SQL
                 const processedSql = processDashboardSql(chart.sql, websiteId, filters);
 
                 const response = await fetch('/api/bigquery', {
@@ -106,49 +121,60 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 });
 
                 if (!response.ok) {
-                    const err = await response.json();
+                    const err: { error?: string } = await response.json();
                     throw new Error(err.error || 'Feil ved henting av data');
                 }
 
-                const result = await response.json();
+                const result: { data?: DashboardRow[]; queryStats?: { totalBytesProcessed?: number } } = await response.json();
                 const resultData = result.data || [];
                 setData(resultData);
 
-                // Calculate total count for "low number" nudge (sum of the metric column)
                 let totalCount = 0;
                 if (resultData.length > 0) {
                     const keys = Object.keys(resultData[0]);
                     if (keys.length >= 2) {
                         const metricKey = keys[1];
-                        totalCount = resultData.reduce((acc: number, row: any) => {
-                            const val = parseFloat(String(row[metricKey]));
-                            return isNaN(val) ? acc : acc + (val || 0);
+                        totalCount = resultData.reduce((acc: number, row) => {
+                            const raw = row[metricKey];
+                            const val = typeof raw === 'number' ? raw : parseFloat(String(raw));
+                            return Number.isFinite(val) ? acc + val : acc;
                         }, 0);
                     }
                 }
 
                 if (result.queryStats && onDataLoaded) {
-                    const gb = result.queryStats.totalBytesProcessed ? (result.queryStats.totalBytesProcessed / (1024 ** 3)) : 0;
+                    const bytes = result.queryStats.totalBytesProcessed ?? 0;
+                    const gb = bytes ? bytes / (1024 ** 3) : 0;
                     onDataLoaded({
                         id: chart.id || '',
-                        gb: gb,
+                        gb,
                         title: chart.title,
-                        totalCount: totalCount
+                        totalCount,
                     });
                 }
 
-                setPage(1); // Reset to first page on new data
-                setHasFetchedIndividually(true); // Mark as fetched to prevent re-fetch
-            } catch (err: any) {
-                console.error(err);
-                setError(err.message);
+                setPage(1);
+                setHasFetchedIndividually(true);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : 'Ukjent feil';
+                setError(message);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [chart.sql, websiteId, filters, prefetchedData, shouldWaitForBatch, hasFetchedIndividually]);
+    }, [
+        chart.sql,
+        chart.id,
+        chart.title,
+        websiteId,
+        filters,
+        prefetchedData,
+        shouldWaitForBatch,
+        hasFetchedIndividually,
+        onDataLoaded,
+    ]);
 
     // Render logic based on chart.type
     // Calculate span based on 20-column grid
@@ -215,7 +241,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         // Otherwise, use page-level scoring (original behavior)
         if (!selectedWebsite) return null;
 
-        let team = null;
+        let team: TeamData | null = null;
         let siteDomain = selectedWebsite.domain;
         if (!siteDomain.startsWith('http')) {
             siteDomain = `https://${siteDomain}`;
@@ -225,7 +251,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             // Try to match by origin if valid URL
             const urlObj = new URL(siteDomain);
             const domain = urlObj.origin;
-            team = teamsData.find((t: any) => {
+            team = (teamsData as TeamData[]).find((t) => {
                 if (!t.teamDomain) return false;
                 // Normalize team domain to origin to ensure safely matching
                 try {
@@ -235,17 +261,20 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                     // Fallback if teamDomain in matching data is weird
                     return domain.startsWith(t.teamDomain);
                 }
-            });
-            console.log('[DashboardWidget] Matched team by origin:', team, 'for domain:', domain);
-        } catch (e) {
-            console.error('Error parsing URL:', e);
+            }) ?? null;
+        } catch {
             // Fallback to direct string match or partial match
-            team = teamsData.find((t: any) => t.teamDomain === selectedWebsite.domain || selectedWebsite.domain.includes(t.teamDomain) || t.teamDomain.includes(selectedWebsite.domain));
-            console.log('[DashboardWidget] Matched team by string fallback:', team, 'for domain:', selectedWebsite.domain);
+            team =
+                (teamsData as TeamData[]).find(
+                    (t) =>
+                        !!t.teamDomain &&
+                        (t.teamDomain === selectedWebsite.domain ||
+                            selectedWebsite.domain.includes(t.teamDomain) ||
+                            t.teamDomain.includes(selectedWebsite.domain))
+                ) ?? null;
         }
 
-        if (!team || !team.teamSiteimproveSite) {
-            console.log('[DashboardWidget] No compatible team found or missing Siteimprove ID');
+        if (!team || !team.teamSiteimproveSite || !team.teamDomain) {
             return null;
         }
 
@@ -280,16 +309,23 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         if (!data || data.length === 0) return <div className="text-[var(--ax-text-subtle)] p-8 text-center">Ingen data funnet</div>;
 
         if (chart.type === 'line') {
-            const points: ILineChartDataPoint[] = data.map((row: any) => {
+            const points: ILineChartDataPoint[] = data.map((row) => {
                 const keys = Object.keys(row);
-                const xVal = row[keys[0]].value || row[keys[0]]; // Handle BQ format if needed
-                const yVal = parseFloat(row[keys[1]]) || 0;
+                const rawX = (row as Record<string, unknown>)[keys[0]];
+                const xVal =
+                    rawX && typeof rawX === 'object' && 'value' in (rawX as JsonObject)
+                        ? (rawX as JsonObject).value
+                        : rawX;
+
+                const rawY = (row as Record<string, unknown>)[keys[1]];
+                const yVal = typeof rawY === 'number' ? rawY : parseFloat(String(rawY)) || 0;
+
                 return {
-                    x: new Date(xVal),
+                    x: new Date(String(xVal)),
                     y: yVal,
-                    legend: format(new Date(xVal), 'dd.MM'),
-                    xAxisCalloutData: format(new Date(xVal), 'dd.MM'),
-                    yAxisCalloutData: String(yVal)
+                    legend: format(new Date(String(xVal)), 'dd.MM'),
+                    xAxisCalloutData: format(new Date(String(xVal)), 'dd.MM'),
+                    yAxisCalloutData: String(yVal),
                 };
             });
 
@@ -311,7 +347,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                         <LineChart
                             key={chartKey}
                             data={{ lineChartData: lines }}
-                            yAxisTickFormat={(d: any) => d.toLocaleString('nb-NO')}
+                            yAxisTickFormat={(d: number) => d.toLocaleString('nb-NO')}
                             margins={{ left: 60, right: 20, top: 20, bottom: 40 }}
                             styles={{
                                 xAxis: { text: { fill: 'var(--ax-text-subtle)' } },
@@ -331,7 +367,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             let tableData = data;
 
             if (chart.showTotal) {
-                tableData = data.filter((row: any) => !Object.values(row).includes('__TOTAL__'));
+                tableData = data.filter((row) => !Object.values(row).includes('__TOTAL__'));
             }
 
             const rowsPerPage = 10;
@@ -360,7 +396,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                                     return (
                                         <Table.Row key={i}>
                                             {keys.map((key, j) => {
-                                                const val = row[key];
+                                                const val = (row as Record<string, unknown>)[key];
                                                 const translatedVal = translateValue(key, val);
                                                 const displayVal = typeof translatedVal === 'number'
                                                     ? translatedVal.toLocaleString('nb-NO')
@@ -409,11 +445,11 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
 
     // Extract total value for tables with showTotal
     const tableTotalValue = chart.showTotal && chart.type === 'table' && data.length > 0 ? (() => {
-        const totalRow = data.find((row: any) => Object.values(row).includes('__TOTAL__'));
+        const totalRow = data.find((row) => Object.values(row).includes('__TOTAL__'));
         if (!totalRow) return null;
         const keys = Object.keys(totalRow);
         for (const key of keys) {
-            const val = totalRow[key];
+            const val = (totalRow as Record<string, unknown>)[key];
             if (typeof val === 'number') return val;
         }
         return null;

@@ -20,10 +20,35 @@ type Website = {
     createdAt: string;
 };
 
-// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)
+type JsonPrimitive = string | number | boolean | null;
+interface JsonObject {
+    [key: string]: JsonValue;
+}
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+type Row = Record<string, JsonValue | undefined>;
+
+type QueryStats = {
+    totalBytesProcessed?: number;
+    totalBytesProcessedGB?: string;
+    estimatedCostUSD?: string;
+    cacheHit?: boolean;
+};
+
+type QueryResult = {
+    data?: Row[];
+    queryStats?: QueryStats;
+};
+
+declare global {
+    interface Window {
+        __GCP_PROJECT_ID__?: string;
+    }
+}
+
+// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__)
 const getGcpProjectId = (): string => {
-    if (typeof window !== 'undefined' && (window as any).__GCP_PROJECT_ID__) {
-        return (window as any).__GCP_PROJECT_ID__;
+    if (typeof window !== 'undefined' && window.__GCP_PROJECT_ID__) {
+        return window.__GCP_PROJECT_ID__;
     }
     // Fallback for development/SSR contexts
     throw new Error('Missing runtime config: GCP_PROJECT_ID');
@@ -40,7 +65,7 @@ LIMIT
 const defaultQuery = getDefaultQuery();
 
 // Helper function to truncate JSON to prevent browser crashes
-const truncateJSON = (obj: any, maxChars: number = 50000): string => {
+const truncateJSON = (obj: unknown, maxChars: number = 50000): string => {
     const fullJSON = JSON.stringify(obj, null, 2);
 
     if (fullJSON.length <= maxChars) {
@@ -235,8 +260,8 @@ export default function SqlEditor() {
     const [query, setQuery] = useState('');
     const [validateError, setValidateError] = useState<string | null>(null);
     const [showValidation, setShowValidation] = useState(false);
-    const [result, setResult] = useState<any>(null);
-    const [estimate, setEstimate] = useState<any>(null);
+    const [result, setResult] = useState<QueryResult | null>(null);
+    const [estimate, setEstimate] = useState<QueryStats | null>(null);
     const [loading, setLoading] = useState(false);
     const [estimating, setEstimating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -292,16 +317,11 @@ export default function SqlEditor() {
         const urlParams = new URLSearchParams(window.location.search);
         const sqlParam = urlParams.get('sql');
 
-        console.log('URL search params:', window.location.search);
-        console.log('SQL param:', sqlParam);
-
         if (sqlParam) {
             try {
                 // URL params are already decoded by URLSearchParams
-                console.log('Setting query to:', sqlParam);
                 setQuery(sqlParam);
-            } catch (e) {
-                console.error('Failed to set SQL parameter:', e);
+            } catch {
                 setQuery(defaultQuery);
             }
         } else {
@@ -340,7 +360,7 @@ export default function SqlEditor() {
         if (dateRangeFromUrl) {
             setPeriod(dateRangeFromUrl);
         }
-    }, []);
+    }, [customEndFromUrl, customStartFromUrl, dateRangeFromUrl, urlPathFromUrl]);
 
     // Detect metabase placeholders and hardcoded website IDs
     useEffect(() => {
@@ -485,15 +505,16 @@ export default function SqlEditor() {
                 body: JSON.stringify({ query: processedSql, analysisType: 'Sqlverktøy' }),
             });
 
-            const data = await response.json();
+            const data: QueryStats & { error?: string } = await response.json();
 
             if (!response.ok) {
                 throw new Error(data.error || 'Estimation failed');
             }
 
             setEstimate(data);
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
         } finally {
             setEstimating(false);
         }
@@ -522,15 +543,16 @@ export default function SqlEditor() {
                 body: JSON.stringify({ query: processedSql, analysisType: 'Sqlverktøy' }),
             });
 
-            const data = await response.json();
+            const data: QueryResult & { error?: string } = await response.json();
 
             if (!response.ok) {
                 throw new Error(data.error || 'Query failed');
             }
 
             setResult(data);
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -594,8 +616,9 @@ export default function SqlEditor() {
             setValidateError('SQL er gyldig!');
             setShowValidation(true);
             return true;
-        } catch (e: any) {
-            setValidateError('Ugyldig SQL: ' + (e.message || 'Syntaksfeil'));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Syntaksfeil';
+            setValidateError('Ugyldig SQL: ' + message);
             setShowValidation(true);
             return false;
         }
@@ -634,47 +657,40 @@ export default function SqlEditor() {
 
     // Prepare chart data functions
     const prepareLineChartData = (includeAverage: boolean = false) => {
-        if (!result || !result.data || result.data.length === 0) return null;
+        if (!result?.data || result.data.length === 0) return null;
 
         const data = result.data;
-        const keys = Object.keys(data[0]);
-
-        // Need at least 2 columns (x-axis and y-axis)
+        const keys = Object.keys(data[0] ?? {});
         if (keys.length < 2) return null;
-
-        console.log('Preparing LineChart with keys:', keys);
-        console.log('Sample row:', data[0]);
 
         // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
         if (keys.length === 3) {
             const xKey = keys[0];
-            const seriesKey = keys[1]; // e.g., 'browser'
-            const yKey = keys[2]; // e.g., 'Unike_besokende'
+            const seriesKey = keys[1];
+            const yKey = keys[2];
 
-            // Group data by series
-            const seriesMap = new Map<string, any[]>();
+            const seriesMap = new Map<string, { x: number | Date; y: number; xAxisCalloutData: string; yAxisCalloutData: string }[]>();
 
-            data.forEach((row: any, rowIndex: number) => {
+            data.forEach((row, rowIndex: number) => {
                 const rawSeriesValue = row[seriesKey];
-                const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue);
+                const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue ?? '');
                 const seriesValue = String(translatedSeriesValue || 'Ukjent');
                 if (!seriesMap.has(seriesValue)) {
                     seriesMap.set(seriesValue, []);
                 }
 
                 const xValue = row[xKey];
-                const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
+                const rawY = row[yKey];
+                const yValue = typeof rawY === 'number' ? rawY : parseFloat(String(rawY)) || 0;
 
                 let x: number | Date;
                 if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
                     const parsedDate = new Date(xValue);
-                    // Check if the date is valid
                     x = !isNaN(parsedDate.getTime()) ? parsedDate : rowIndex;
                 } else if (typeof xValue === 'number') {
                     x = xValue;
                 } else {
-                    // Try to parse as date, fallback to index if invalid
-                    const parsedDate = new Date(xValue);
+                    const parsedDate = new Date(String(xValue));
                     x = !isNaN(parsedDate.getTime()) ? parsedDate : rowIndex;
                 }
 
@@ -712,72 +728,66 @@ export default function SqlEditor() {
                 // Collect all unique x values
                 const allXValues = new Set<number>();
                 lineChartData.forEach(series => {
-                    series.data.forEach((point: any) => {
+                    series.data.forEach(point => {
                         const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
                         allXValues.add(xVal);
                     });
                 });
 
                 // For each x value, calculate the average y value across all series
-                const averagePoints = Array.from(allXValues).sort((a, b) => a - b).map(xVal => {
-                    const yValues: number[] = [];
-                    lineChartData.forEach(series => {
-                        const point = series.data.find((p: any) => {
+                const averagePoints = Array.from(allXValues)
+                    .sort((a, b) => a - b)
+                    .map((xVal) => {
+                        const yValues: number[] = [];
+                        lineChartData.forEach(series => {
+                            const point = series.data.find((p) => {
+                                const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
+                                return pxVal === xVal;
+                            });
+                            if (point) yValues.push(point.y);
+                        });
+
+                        const avgY = yValues.length > 0
+                            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
+                            : 0;
+
+                        const originalPoint = lineChartData[0]?.data.find((p) => {
                             const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
                             return pxVal === xVal;
                         });
-                        if (point) {
-                            yValues.push(point.y);
-                        }
+
+                        return {
+                            x: new Date(xVal),
+                            y: avgY,
+                            xAxisCalloutData: originalPoint?.xAxisCalloutData || String(xVal),
+                            yAxisCalloutData: avgY.toFixed(2),
+                        };
                     });
 
-                    const avgY = yValues.length > 0
-                        ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
-                        : 0;
-
-                    // Find original xAxisCalloutData from any series
-                    const originalPoint = lineChartData[0].data.find((p: any) => {
-                        const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
-                        return pxVal === xVal;
-                    });
-
-                    return {
-                        x: new Date(xVal),
-                        y: avgY,
-                        xAxisCalloutData: originalPoint?.xAxisCalloutData || String(xVal),
-                        yAxisCalloutData: avgY.toFixed(2),
-                    };
-                });
-
-                // Add average line to the chart
                 lineChartData.push({
                     legend: 'Gjennomsnitt',
                     data: averagePoints,
-                    color: '#262626', // Dark gray for average line
+                    color: '#262626',
                     lineOptions: {
                         lineBorderWidth: '2',
-                        strokeDasharray: '5 5',
-                    } as any,
+                    },
                 });
             }
 
-            console.log('Multi-line chart data:', lineChartData.length, 'series' + (includeAverage ? ' (including average)' : ''));
-
             return {
-                data: {
-                    lineChartData,
-                },
+                data: { lineChartData },
                 enabledLegendsWrapLines: true,
             };
         }
 
-        // Single line: assume first column is x-axis and second is y-axis
+        // Single line
         const xKey = keys[0];
         const yKey = keys[1];
 
-        const chartPoints = data.map((row: any, index: number) => {
+        const chartPoints = data.map((row, index: number) => {
             const xValue = row[xKey];
-            const yValue = typeof row[yKey] === 'number' ? row[yKey] : parseFloat(row[yKey]) || 0;
+            const rawY = row[yKey];
+            const yValue = typeof rawY === 'number' ? rawY : parseFloat(String(rawY)) || 0;
 
             let x: number | Date;
             if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
@@ -796,10 +806,7 @@ export default function SqlEditor() {
             };
         });
 
-        console.log('Single-line chart points:', chartPoints.slice(0, 3));
-
-        // Build the line chart data array
-        const lineChartData: any[] = [{
+        const lineChartData = [{
             legend: yKey,
             data: chartPoints,
             color: '#0067C5',
@@ -808,13 +815,10 @@ export default function SqlEditor() {
             },
         }];
 
-        // Add average line (only if requested)
         if (includeAverage) {
-            // Calculate average y value for horizontal average line
-            const avgY = chartPoints.reduce((sum: number, point: any) => sum + point.y, 0) / chartPoints.length;
+            const avgY = chartPoints.reduce((sum: number, point) => sum + point.y, 0) / chartPoints.length;
 
-            // Create average line points (horizontal line across all x values)
-            const averageLinePoints = chartPoints.map((point: any) => ({
+            const averageLinePoints = chartPoints.map((point) => ({
                 x: point.x,
                 y: avgY,
                 xAxisCalloutData: point.xAxisCalloutData,
@@ -827,22 +831,18 @@ export default function SqlEditor() {
                 color: '#262626',
                 lineOptions: {
                     lineBorderWidth: '2',
-                    strokeDasharray: '5 5',
-                } as any,
+                },
             });
         }
 
         return {
-            data: {
-                lineChartData,
-            },
+            data: { lineChartData },
             enabledLegendsWrapLines: true,
         };
     };
 
     const prepareBarChartData = () => {
-        if (!result || !result.data || result.data.length === 0) return null;
-
+        if (!result?.data || result.data.length === 0) return null;
         const data = result.data;
 
         // Only show bar chart if 12 or fewer items
@@ -857,24 +857,21 @@ export default function SqlEditor() {
         const labelKey = keys[0];
         const valueKey = keys[1];
 
-        console.log('Preparing VerticalBarChart with keys:', { labelKey, valueKey });
-        console.log('Sample row:', data[0]);
-
         // Calculate total for percentages
-        const total = data.reduce((sum: number, row: any) => {
-            const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+        const total = data.reduce((sum: number, row) => {
+            const raw = row[valueKey];
+            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
             return sum + value;
         }, 0);
 
-        console.log('Total value for bar chart:', total);
-
-        const barChartData = data.map((row: any) => {
-            const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+        const barChartData = data.map((row) => {
+            const raw = row[valueKey];
+            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
 
             // Use label for x-axis, with translation
             const rawLabel = row[labelKey];
-            const translatedLabel = translateValue(labelKey, rawLabel);
+            const translatedLabel = translateValue(labelKey, rawLabel ?? '');
             const label = String(translatedLabel || 'Ukjent');
 
             return {
@@ -887,11 +884,9 @@ export default function SqlEditor() {
             };
         });
 
-        console.log('VerticalBarChart data points:', barChartData.slice(0, 3));
-
         return {
             data: barChartData,
-            barWidth: 'auto' as 'auto',
+            barWidth: 'auto' as const,
             yAxisTickCount: 5,
             enableReflow: true,
             legendProps: {
@@ -914,8 +909,7 @@ export default function SqlEditor() {
     };
 
     const preparePieChartData = () => {
-        if (!result || !result.data || result.data.length === 0) return null;
-
+        if (!result?.data || result.data.length === 0) return null;
         const data = result.data;
 
         // Only show pie chart if 12 or fewer items
@@ -930,21 +924,18 @@ export default function SqlEditor() {
         const labelKey = keys[0];
         const valueKey = keys[1];
 
-        console.log('Preparing PieChart with keys:', { labelKey, valueKey });
-        console.log('Sample row:', data[0]);
-
         // Calculate total for percentages
-        const total = data.reduce((sum: number, row: any) => {
-            const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+        const total = data.reduce((sum: number, row) => {
+            const raw = row[valueKey];
+            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
             return sum + value;
         }, 0);
 
-        console.log('Total value for pie chart:', total);
-
-        const pieChartData = data.map((row: any) => {
-            const value = typeof row[valueKey] === 'number' ? row[valueKey] : parseFloat(row[valueKey]) || 0;
+        const pieChartData = data.map((row) => {
+            const raw = row[valueKey];
+            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
             const rawLabel = row[labelKey];
-            const translatedLabel = translateValue(labelKey, rawLabel);
+            const translatedLabel = translateValue(labelKey, rawLabel ?? '');
             const label = String(translatedLabel || 'Ukjent');
 
             return {
@@ -952,8 +943,6 @@ export default function SqlEditor() {
                 x: label,
             };
         });
-
-        console.log('PieChart data points:', pieChartData.slice(0, 3));
 
         return {
             data: pieChartData,
@@ -1235,7 +1224,7 @@ export default function SqlEditor() {
                                         variant="primary"
                                         onClick={() => {
                                             // Replace old tables with new views
-                                            let newQuery = query
+                                            const newQuery = query
                                                 .replace(/umami\.public_website_event/gi, 'umami_views.event')
                                                 .replace(/umami\.public_session/gi, 'umami_views.session');
                                             setQuery(newQuery);
@@ -1352,8 +1341,8 @@ export default function SqlEditor() {
                             </button>
                             <div className="space-y-1 text-sm">
                                 {(() => {
-                                    const gb = parseFloat(estimate.totalBytesProcessedGB);
-                                    const cost = parseFloat(estimate.estimatedCostUSD) || (isFinite(gb) ? gb * 0.00625 : 0);
+                                    const gb = Number(estimate.totalBytesProcessedGB ?? 0);
+                                    const cost = Number(estimate.estimatedCostUSD ?? NaN) || (isFinite(gb) ? gb * 0.00625 : 0);
                                     return (
                                         <>
                                             <div>
@@ -1409,18 +1398,15 @@ export default function SqlEditor() {
                                 variant="secondary"
                                 onClick={() => {
                                     // Add [[AND {{created_at}}]] to the WHERE clause
-                                    let newQuery = query;
                                     if (/WHERE/i.test(query) && !/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i.test(query)) {
-                                        // Find the last condition in the WHERE clause and add after it
-                                        // Look for the end of the WHERE clause (before GROUP BY, ORDER BY, or end of query)
                                         const whereMatch = query.match(/WHERE\s+([\s\S]*?)(?=\s*(GROUP BY|ORDER BY|LIMIT|$|\)[\s\n]*,))/i);
                                         if (whereMatch) {
                                             const whereClause = whereMatch[0];
                                             const newWhereClause = whereClause.trimEnd() + '\n      [[AND {{created_at}}]]';
-                                            newQuery = query.replace(whereClause, newWhereClause);
+                                            const newQuery = query.replace(whereClause, newWhereClause);
+                                            setQuery(newQuery);
                                         }
                                     }
-                                    setQuery(newQuery);
                                     setError(null);
                                 }}
                             >

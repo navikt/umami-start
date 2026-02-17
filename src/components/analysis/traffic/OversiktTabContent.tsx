@@ -35,6 +35,8 @@ type ChartDataTableProps = {
     data: SeriesPoint[];
     previousData: SeriesPoint[];
     metricLabel: string;
+    submittedDateRange: { startDate: Date; endDate: Date } | null;
+    submittedPreviousDateRange: { startDate: Date; endDate: Date } | null;
 };
 
 type TrafficTableProps = {
@@ -53,6 +55,8 @@ type OversiktTabContentProps = {
     submittedComparePreviousPeriod: boolean;
     comparisonSummary: ComparisonSummary | null;
     comparisonRangeLabel: ComparisonRangeLabel | null;
+    submittedDateRange: { startDate: Date; endDate: Date } | null;
+    submittedPreviousDateRange: { startDate: Date; endDate: Date } | null;
     formatComparisonValue: (value: number) => string;
     formatComparisonDelta: (value: number) => string;
     seriesData: SeriesPoint[];
@@ -87,6 +91,8 @@ const OversiktTabContent = ({
     submittedComparePreviousPeriod,
     comparisonSummary,
     comparisonRangeLabel,
+    submittedDateRange,
+    submittedPreviousDateRange,
     formatComparisonValue,
     formatComparisonDelta,
     seriesData,
@@ -232,6 +238,8 @@ const OversiktTabContent = ({
                             data={processedSeriesData}
                             previousData={processedPreviousSeriesData}
                             metricLabel={getMetricLabelWithCount(submittedMetricType)}
+                            submittedDateRange={submittedDateRange}
+                            submittedPreviousDateRange={submittedPreviousDateRange}
                         />
                     </div>
 

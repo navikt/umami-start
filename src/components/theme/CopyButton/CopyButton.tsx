@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import './CopyButton.css'
+import { useEffect, useRef, useState } from "react";
+import "./CopyButton.css";
 import { Button } from "@navikt/ds-react";
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check } from "lucide-react";
 
 interface CopyButtonProps {
     textToCopy: string;
@@ -10,31 +10,48 @@ interface CopyButtonProps {
 
 function CopyButton({ textToCopy, visible }: CopyButtonProps) {
     const [isCopied, setIsCopied] = useState(false);
+    const resetTimerRef = useRef<number | null>(null);
 
-    const copyToClipboard = async () => {
-        try {
-            await navigator.clipboard.writeText(textToCopy);
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
+    const clearResetTimer = () => {
+        if (resetTimerRef.current !== null) {
+            window.clearTimeout(resetTimerRef.current);
+            resetTimerRef.current = null;
         }
     };
 
-    // Reset copied state when text changes
-    useEffect(() => {
+    const copyToClipboard = async () => {
+        clearResetTimer();
         setIsCopied(false);
-    }, [textToCopy]);
+
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            setIsCopied(true);
+
+            resetTimerRef.current = window.setTimeout(() => {
+                setIsCopied(false);
+                resetTimerRef.current = null;
+            }, 2000);
+        } catch (err) {
+            // Avoid console noise in prod/lint configs; optionally surface UI feedback here
+            setIsCopied(false);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            clearResetTimer();
+        };
+    }, []);
 
     if (!visible) return null;
 
     return (
-        <Button 
-            onClick={copyToClipboard} 
+        <Button
+            onClick={copyToClipboard}
             id="sql-copy-button"
             icon={isCopied ? <Check size="1.2rem" /> : <Copy size="1.2rem" />}
         >
-            {isCopied ? 'Kopiert!' : 'Kopier spørsmålet'}
+            {isCopied ? "Kopiert!" : "Kopier spørsmålet"}
         </Button>
     );
 }

@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
 import QueryPreview from '../../components/chartbuilder/results/QueryPreview';
 import EventFilter from '../../components/chartbuilder/EventFilter';
 import ChartLayout from '../../components/analysis/ChartLayoutOriginal';
 import MetricSelector from '../../components/chartbuilder/MetricSelector';
-// EventParameterSelector import removed as per user request
 import GroupingOptions from '../../components/chartbuilder/GroupingOptions';
 import AlertWithCloseButton from '../../components/chartbuilder/AlertWithCloseButton';
 import { FILTER_COLUMNS } from '../../lib/constants';
@@ -19,7 +18,6 @@ import {
   Filter,
   Website
 } from '../../types/chart';
-//import CopyButton from '../../components/theme/CopyButton/CopyButton';
 import { getGcpProjectId } from '../../lib/runtimeConfig';
 
 // Add date formats that aren't in constants.ts
@@ -292,7 +290,7 @@ const ChartsPage = () => {
     paramAggregation: 'unique',
     limit: 1000
   });
-  const [generatedSQL, setGeneratedSQL] = useState<string>('');
+  // Remove unused generatedSQL state; SQL is memoized later.
   const [filters, setFilters] = useState<Filter[]>([]);
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
@@ -331,12 +329,6 @@ const ChartsPage = () => {
   // Fix dependency in useEffect by adding config as a stable reference
   const debouncedConfig = useDebounce(config, 500);
 
-  useEffect(() => {
-    if (debouncedConfig.website) {
-      generateSQL();
-    }
-  }, [debouncedConfig, filters, parameters]);
-
   // Create a function to calculate the current step based on selections
   const calculateCurrentStep = useCallback(() => {
     if (!config.website) {
@@ -363,16 +355,25 @@ const ChartsPage = () => {
 
   // Add event listener for the custom event from Summarize
   useEffect(() => {
-    const handleSummarizeStepStatus = (event: any) => {
+    const handleSummarizeStepStatus = (
+      event: CustomEvent<{ hasUserSelectedMetrics?: boolean }>
+    ) => {
       if (event.detail && typeof event.detail.hasUserSelectedMetrics !== 'undefined') {
         setHasUserSelectedMetrics(event.detail.hasUserSelectedMetrics);
       }
     };
 
-    document.addEventListener('summarizeStepStatus', handleSummarizeStepStatus);
+    // CustomEvent typing isn't reflected in addEventListener
+    document.addEventListener(
+      'summarizeStepStatus',
+      handleSummarizeStepStatus as EventListener
+    );
 
     return () => {
-      document.removeEventListener('summarizeStepStatus', handleSummarizeStepStatus);
+      document.removeEventListener(
+        'summarizeStepStatus',
+        handleSummarizeStepStatus as EventListener
+      );
     };
   }, []);
 
@@ -939,13 +940,16 @@ const ChartsPage = () => {
     }
   }, [config.website?.id, getDateFilterConditions, filters]);
 
-  const getMetricSQL = useCallback((metric: Metric, index: number): string => {
-    if (metric.alias) {
-      return getMetricSQLByType(metric.function, metric.column, metric.alias, metric);
-    }
-    const defaultAlias = `metrikk_${index + 1}`;
-    return getMetricSQLByType(metric.function, metric.column, defaultAlias, metric);
-  }, [getMetricSQLByType, config.metrics]);
+  const getMetricSQL = useCallback(
+    (metric: Metric, index: number): string => {
+      if (metric.alias) {
+        return getMetricSQLByType(metric.function, metric.column, metric.alias, metric);
+      }
+      const defaultAlias = `metrikk_${index + 1}`;
+      return getMetricSQLByType(metric.function, metric.column, defaultAlias, metric);
+    },
+    [getMetricSQLByType]
+  );
 
   const generateSQLCore = useCallback((
     config: ChartConfig,
@@ -964,8 +968,8 @@ const ChartsPage = () => {
 
     const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
 
-    // For interactive mode, we'll use fully qualified table names instead of aliases
-    // For normal mode, we'll use aliases as usual
+    // For interactive mode, we'll use the full table names directly
+    // For normal mode, use aliases as usual
     let websiteAlias, sessionAlias, tablePrefix;
 
     if (hasInteractiveFilters) {
@@ -1468,7 +1472,6 @@ const ChartsPage = () => {
       const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
       const metricWithAlias = config.metrics.find(m => m.alias === config.orderBy?.column);
 
-      // @ts-ignore
       let finalColumn = config.orderBy.column;
 
       // Sanitize the orderBy column name for BigQuery
@@ -1536,15 +1539,14 @@ const ChartsPage = () => {
     }
 
     return sql;
-  }, [getMetricSQL]);
+  }, [getMetricSQL, getDateFilterConditions]);
 
-  const generateSQL = useCallback(() => {
-    if (!config.website || !config.website.id) {
-      setGeneratedSQL('-- Please select a website to generate SQL');
-      return;
+  const generatedSQL = useMemo(() => {
+    if (!debouncedConfig.website || !debouncedConfig.website.id) {
+      return '-- Please select a website to generate SQL';
     }
-    setGeneratedSQL(generateSQLCore(config, filters, parameters));
-  }, [config, filters, parameters, generateSQLCore]);
+    return generateSQLCore(debouncedConfig, filters, parameters);
+  }, [debouncedConfig, filters, parameters, generateSQLCore]);
 
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
     const metricWithAlias = config.metrics.find(m => m.alias === column);
