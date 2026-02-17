@@ -570,12 +570,15 @@ const DashboardWebsitePicker = ({
                     label="Nettside eller app"
                     size={size}
                     options={optionLabels}
+                    key={selectedWebsite?.id ?? "no-website"}
                     selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
                     onToggleSelected={(value, isSelected) => {
                         if (isSelected) {
                             const website = websites.find(w => w.name === value);
                             if (website) handleWebsiteChange(website);
-                        } else {
+                            return;
+                        }
+                        if (selectedWebsite?.name === value) {
                             handleWebsiteChange(null);
                         }
                     }}
