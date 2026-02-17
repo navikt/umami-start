@@ -9,9 +9,9 @@
  * and compute all aggregates client-side.
  */
 
-import { SavedChart } from '../data/dashboard';
-import { format, subDays } from 'date-fns';
-import { getGcpProjectId } from './runtimeConfig';
+import type {SavedChart} from '../data/dashboard';
+import {format, subDays} from 'date-fns';
+import {getGcpProjectId} from './runtimeConfig';
 
 type JsonPrimitive = string | number | boolean | null | undefined;
 interface JsonObject {
@@ -50,6 +50,46 @@ interface BatchedFetchResult {
 
 // Session fields that can be batched together
 const SESSION_FIELDS = ['country', 'language', 'device', 'os', 'browser', 'screen'];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === 'object';
+
+const isFetchResult = (value: unknown): value is FetchResult => {
+    if (!isRecord(value)) return false;
+    return Array.isArray(value.data);
+};
+
+const isSessionRow = (value: unknown): value is SessionRow => {
+    if (!isRecord(value)) return false;
+    if (typeof value.session_id !== 'string') return false;
+    return !(value.visit_id !== undefined && typeof value.visit_id !== 'string');
+
+};
+
+const getFetchResultData = <T extends JsonObject>(
+    value: unknown,
+    itemGuard: (item: unknown) => item is T
+): T[] => {
+    if (!isFetchResult(value)) return [];
+    return value.data.filter(itemGuard);
+};
+
+const getFetchResultBytes = (value: unknown): number => {
+    if (!isFetchResult(value) || !isRecord(value.queryStats)) return 0;
+    return value.queryStats.totalBytesProcessed;
+};
+
+const getTotalVisitors = (value: unknown): number | undefined => {
+    if (!isFetchResult(value)) return undefined;
+    const first = value.data[0];
+    if (!isRecord(first)) return undefined;
+    const total = first.total;
+    if (typeof total === 'number') return total;
+    if (typeof total === 'string' && total.trim() !== '' && !Number.isNaN(Number(total))) {
+        return Number(total);
+    }
+    return undefined;
+};
 
 /**
  * Detects which session field a chart is grouping by
@@ -326,10 +366,10 @@ export async function fetchDashboardDataBatched(
                 throw new Error('Failed to fetch batched session data');
             }
 
-            const result: FetchResult<SessionRow> = await response.json();
-            const rawData: SessionRow[] = result.data || [];
+            const result: unknown = await response.json();
+            const rawData: SessionRow[] = getFetchResultData(result, isSessionRow);
 
-            const batchBytes = result.queryStats?.totalBytesProcessed || 0;
+            const batchBytes = getFetchResultBytes(result);
             totalBytesProcessed += batchBytes;
 
             // Distribute bytes evenly among batched charts
@@ -374,9 +414,10 @@ export async function fetchDashboardDataBatched(
                         body: JSON.stringify({ query: totalVisitorsSql, analysisType: 'Dashboard' }),
                     });
                     if (totalResponse.ok) {
-                        const totalResult = await totalResponse.json();
-                        if (totalResult.data?.[0]?.total) {
-                            totalSiteVisitors = Number(totalResult.data[0].total);
+                        const totalResult: unknown = await totalResponse.json();
+                        const total = getTotalVisitors(totalResult);
+                        if (typeof total === 'number') {
+                            totalSiteVisitors = total;
                             console.log(`[QueryBatcher] Total site visitors for proportion: ${totalSiteVisitors}`);
                         }
                     }
@@ -389,7 +430,7 @@ export async function fetchDashboardDataBatched(
             for (const chart of sessionCharts) {
                 const field = getSessionField(chart);
                 if (field) {
-                    const aggregated = aggregateByField(rawData, field as (typeof SESSION_FIELDS)[number], filters.metricType, totalSiteVisitors);
+                    const aggregated = aggregateByField(rawData, field, filters.metricType, totalSiteVisitors);
                     chartResults.set(chart.id!, aggregated);
                     chartBytes.set(chart.id!, bytesPerChart);
                 }

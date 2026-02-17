@@ -1,5 +1,3 @@
-/* Extracted from original server.js */
-
 import { getMockUser, loadOasis, resolveUserFromToken } from './authUtils.js';
 
 async function authenticateUser(req, res, next) {

@@ -5,7 +5,7 @@ import { Download } from 'lucide-react';
 
 import ChartLayout from '../../components/analysis/ChartLayout';
 import WebsitePicker from '../../components/analysis/WebsitePicker';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import teamsData from '../../data/teamsData.json';
 import InfoCard from '../../components/InfoCard';
 

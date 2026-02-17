@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, TextField, Table, Heading, Pagination, VStack, Select, HelpText } from '@navikt/ds-react';
-import { ILineChartDataPoint } from '@fluentui/react-charting';
+import type { ILineChartDataPoint } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid, differenceInCalendarDays, subDays } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -14,7 +14,7 @@ import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import PeriodPicker from '../../components/analysis/PeriodPicker';
 import CookieMixNotice from '../../components/analysis/CookieMixNotice';
 import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils';
 
 // Helper functions for metric labels

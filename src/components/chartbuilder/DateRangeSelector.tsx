@@ -1,7 +1,7 @@
 import { Heading, DatePicker, Tabs, ExpansionCard, Button, Alert, Chips } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
-import { Filter } from '../../types/chart';
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import type { Filter } from '../../types/chart';
+import { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
 
 // Date range suggestions for quick date filtering
 const DATE_RANGE_SUGGESTIONS = [
@@ -202,7 +202,6 @@ const DateRangeSelector = forwardRef(({
   setInteractiveMode,
 }: DateRangePickerProps, ref) => {
   // Calculate available date range
-  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
   // Add state for date mode (fixed vs dynamic)
   const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed' | 'interactive'>('frequent');
@@ -214,13 +213,11 @@ const DateRangeSelector = forwardRef(({
   // Add state for filter applied alert
   const [showFilterApplied, setShowFilterApplied] = useState<boolean>(false);
 
-  // Convert max days available to a specific date
-  useEffect(() => {
-    if (maxDaysAvailable) {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - maxDaysAvailable);
-      setFromDate(startDate);
-    }
+  const fromDate = useMemo(() => {
+    if (!maxDaysAvailable) return undefined;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - maxDaysAvailable);
+    return startDate;
   }, [maxDaysAvailable]);
 
   // Generate SQL for date range
@@ -431,12 +428,16 @@ const DateRangeSelector = forwardRef(({
   };
 
   // Add useEffect to watch for filter changes
+  const hasDateFilter = useMemo(() => filters.some(f => f.column === 'created_at'), [filters]);
+
   useEffect(() => {
-    // If there are no date filters, reset the date picker state
-    if (!filters.some(f => f.column === 'created_at')) {
-      setSelectedRange(undefined);
+    if (!hasDateFilter && selectedRange) {
+      const timer = window.setTimeout(() => {
+        setSelectedRange(undefined);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
-  }, [filters]);
+  }, [hasDateFilter, selectedRange]);
 
   // Get message about available data range
   const getStartDateDisplay = (): string => {

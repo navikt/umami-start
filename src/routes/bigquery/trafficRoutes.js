@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAuditLogging, getAnalysisTypeOverride } from '../audit.js';
+import { addAuditLogging, getAnalysisTypeOverride } from '../../bigquery/audit.js';
 
 export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();

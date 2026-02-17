@@ -4,9 +4,9 @@ import { fileURLToPath } from 'url';
 import { createApp } from './src/app.js';
 import { registerFrontend } from './src/frontend/serveFrontend.js';
 import { createBigQueryClient } from './src/bigquery/client.js';
-import { createBigQueryRouter } from './src/bigquery/routes/index.js';
-import { createSiteimproveProxyRouter } from './src/routes/siteimproveProxy.js';
-import { createUserRouter } from './src/routes/user.js';
+import { createBigQueryRouter } from './src/routes/bigquery/index.js';
+import { createSiteimproveProxyRouter } from './src/routes/siteimprove/siteimproveRoutes.js';
+import { createUserRouter } from './src/routes/user/userRoutes.js';
 import { authenticateUser } from './src/middleware/authenticateUser.js';
 
 import {

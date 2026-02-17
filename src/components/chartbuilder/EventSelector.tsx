@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label, Skeleton } from '@navikt/ds-react';
-import { Filter, Parameter } from '../../types/chart';
+import type { Filter, Parameter } from '../../types/chart';
 import AlertWithCloseButton from './AlertWithCloseButton';
 
 type Option = { label: string; value: string };
@@ -779,11 +779,11 @@ const EventSelector = ({
                                     description={null}
                                     options={getOptionsForColumn(stagingFilter.column, customEventsList, availablePaths)}
                                     selectedOptions={stagingFilter.multipleValues?.map(v => v || '') ||
-                                      (stagingFilter.value ? [stagingFilter.value as string] : [])}
+                                      (stagingFilter.value ? [stagingFilter.value] : [])}
                                     onToggleSelected={(option: string, isSelected: boolean) => {
                                       if (option) {
                                         const currentValues = stagingFilter.multipleValues ||
-                                          (stagingFilter.value ? [stagingFilter.value as string] : []);
+                                          (stagingFilter.value ? [stagingFilter.value] : []);
                                         const newValues = isSelected
                                           ? [...new Set([...currentValues, option])]
                                           : currentValues.filter(val => val !== option);
@@ -937,11 +937,11 @@ const EventSelector = ({
                                 description={null}
                                 options={getOptionsForColumn(filter.column, customEventsList, availablePaths)} // Pass correct arrays
                                 selectedOptions={Array.isArray(filter.multipleValues) ? filter.multipleValues.map(v => v || '') :
-                                  (filter.value ? [filter.value as string] : [])}
+                                  (filter.value ? [filter.value] : [])}
                                 onToggleSelected={(option: string, isSelected: boolean) => {
                                   if (option) {
                                     const currentValues = Array.isArray(filter.multipleValues) ? filter.multipleValues :
-                                      (filter.value ? [filter.value as string] : []);
+                                      (filter.value ? [filter.value] : []);
                                     const newValues = isSelected
                                       ? [...new Set([...currentValues, option])]
                                       : currentValues.filter(val => val !== option);

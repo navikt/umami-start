@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateUser } from '../middleware/authenticateUser.js';
+import { authenticateUser } from '../../middleware/authenticateUser.js';
 
 export function createSiteimproveProxyRouter({ SITEIMPROVE_BASE_URL }) {
     const router = express.Router();

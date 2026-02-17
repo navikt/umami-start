@@ -31,8 +31,7 @@ function CopyButton({ textToCopy, visible }: CopyButtonProps) {
                 setIsCopied(false);
                 resetTimerRef.current = null;
             }, 2000);
-        } catch (err) {
-            // Avoid console noise in prod/lint configs; optionally surface UI feedback here
+        } catch {
             setIsCopied(false);
         }
     };

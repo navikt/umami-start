@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert, AlertProps } from "@navikt/ds-react";
+import type { AlertProps } from "@navikt/ds-react";
+import { Alert } from "@navikt/ds-react";
 
 interface AlertWithCloseButtonProps {
   children?: React.ReactNode;

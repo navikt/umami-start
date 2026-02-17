@@ -15,7 +15,7 @@ import {
   Search,
   List
 } from '@navikt/ds-react';
-import { Parameter } from '../../types/chart';
+import type { Parameter } from '../../types/chart';
 import { FILTER_COLUMNS } from '../../lib/constants';
 // import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
 

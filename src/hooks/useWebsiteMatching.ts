@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Website } from '../types/chart';
+import type { Website } from '../types/chart';
 
 export const useWebsiteMatching = () => {
     const [websites, setWebsites] = useState<Website[] | null>(null);

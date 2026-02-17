@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAuditLogging } from '../audit.js';
+import { addAuditLogging } from '../../bigquery/audit.js';
 
 export function createSqlRouter({ bigquery }) {
   const router = express.Router();

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0 --report-unused-disable-directives",
     "preview": "vite preview",
     "server": "node server.js",
     "start": "concurrently --names \"VITE,SERVER\" --prefix-colors \"cyan,green\" \"npm run dev\" \"npm run server\""

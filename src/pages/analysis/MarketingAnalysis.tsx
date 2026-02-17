@@ -9,7 +9,7 @@ import PeriodPicker from '../../components/analysis/PeriodPicker';
 import UrlPathFilter from '../../components/analysis/UrlPathFilter';
 import CookieMixNotice from '../../components/analysis/CookieMixNotice';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils';
-import { Website } from '../../types/chart';
+import type { Website } from '../../types/chart';
 import { useMarketingSupport, useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport';
 
 // Helper function for metric labels

@@ -1,6 +1,6 @@
 import { Button, TextField, Label, Accordion } from '@navikt/ds-react';
 import { CogIcon } from '@navikt/aksel-icons';
-import { ChangeEvent } from 'react';
+import type { ChangeEvent } from 'react';
 
 interface AdvancedOptionsProps {
   dateRangeInDays: number;

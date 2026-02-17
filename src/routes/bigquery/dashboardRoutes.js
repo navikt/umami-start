@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAuditLogging, substituteQueryParameters } from '../audit.js';
+import { addAuditLogging, substituteQueryParameters } from '../../bigquery/audit.js';
 
 export function createDashboardRouter({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();

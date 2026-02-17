@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
-import { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
+import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../AlertWithCloseButton';
 import ResultsPanel from './ResultsPanel';
@@ -459,7 +459,7 @@ const QueryPreview = ({
           body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
-      ])) as Response;
+      ]));
 
       const data: EstimateResponse = await response.json();
       if (!response.ok) throw new Error(data.error || 'Estimation failed');
@@ -489,7 +489,7 @@ const QueryPreview = ({
           body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
-      ])) as Response;
+      ]));
 
       const estimateData: EstimateResponse = await estimateResponse.json();
       if (!estimateResponse.ok) throw new Error(estimateData.error || 'Estimation failed');
@@ -530,7 +530,7 @@ const QueryPreview = ({
           body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS)
-      ])) as Response;
+      ]));
 
       const data: QueryResult = await response.json();
       if (!response.ok) throw new Error(data.error || 'Query failed');
@@ -545,7 +545,7 @@ const QueryPreview = ({
             body: JSON.stringify({ query: processedSql, analysisType: 'Grafbyggeren' }),
           }),
           timeoutPromise(API_TIMEOUT_MS)
-        ])) as Response;
+        ]));
 
         const estimateData: EstimateResponse = await estimateResponse.json();
         if (estimateResponse.ok) setQueryStats(estimateData);
@@ -573,7 +573,7 @@ const QueryPreview = ({
           body: JSON.stringify({ query: getProcessedSql(), analysisType: 'Grafbyggeren' }),
         }),
         timeoutPromise(API_TIMEOUT_MS),
-      ])) as Response;
+      ]));
 
       const data: EstimateResponse = await response.json();
       if (!response.ok) throw new Error(data.error || 'Estimation failed');

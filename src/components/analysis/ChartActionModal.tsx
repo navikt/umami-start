@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
-import { SavedChart } from '../../data/dashboard/types';
+import type { SavedChart } from '../../data/dashboard';
 import { processDashboardSql } from '../dashboard/dashboardQueryUtils';
 import { translateValue } from '../../lib/translations';
 

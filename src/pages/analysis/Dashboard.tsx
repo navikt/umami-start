@@ -1,7 +1,6 @@
 import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
-import type React from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import { getDashboard } from "../../data/dashboard";
 import { DashboardWidget } from "../../components/dashboard/DashboardWidget";
@@ -10,31 +9,18 @@ import { fetchDashboardDataBatched, isBatchableChart } from "../../lib/batchedDa
 import { format, parseISO } from "date-fns";
 import { normalizeUrlToPath } from "../../lib/utils";
 
-type Website = {
-    id: string;
-    name: string;
-    domain: string;
-    teamId: string;
-    createdAt: string;
-};
-
-type BatchedRow = Record<string, unknown>;
-
 const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const websiteId = searchParams.get("websiteId");
     // Support domain-based lookups for external apps
     const domainFromUrl = searchParams.get("domain");
-
     // Support multiple paths from URL (comma-separated or multiple params)
-    const initialPaths = useMemo(() => {
-        const paths = searchParams.getAll("path");
-        return paths.length > 0 ? paths : [];
-    }, [searchParams]);
-
+    const pathsFromUrl = searchParams.getAll("path");
+    const initialPaths = pathsFromUrl.length > 0 ? pathsFromUrl : [];
     const pathOperator = searchParams.get("pathOperator");
     // Support both old 'metricType' and new 'metrikk' params
     const metricTypeFromUrl = (searchParams.get("metrikk") || searchParams.get("metricType")) as 'visitors' | 'pageviews' | 'proportion' | 'visits' | null;
+    // Support 'periode' param for date range
     // Support 'periode' param for date range
     const rawDateRangeFromUrl = searchParams.get("periode");
     // Normalize legacy URL params to match PeriodPicker values (underscore instead of hyphen)
@@ -59,11 +45,7 @@ const Dashboard = () => {
     const [hasAutoAppliedFilters, setHasAutoAppliedFilters] = useState(false);
 
     // Website Picker State
-    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-
-    const handleWebsiteChange = (website: Website | null) => {
-        setSelectedWebsite(website);
-    };
+    const [selectedWebsite, setSelectedWebsite] = useState<any>(null);
 
     // Initialize custom filter values from URL params (translating slug to value)
     const getInitialCustomFilterValues = (): Record<string, string> => {
@@ -142,10 +124,10 @@ const Dashboard = () => {
     });
 
     // Active website state to ensure widget only updates on "Oppdater"
-    const [activeWebsite, setActiveWebsite] = useState<Website | null>(null);
+    const [activeWebsite, setActiveWebsite] = useState<any>(null);
 
     // Batched session data - stores pre-fetched data for session-metric charts
-    const [batchedData, setBatchedData] = useState<Map<string, BatchedRow[]>>(new Map());
+    const [batchedData, setBatchedData] = useState<Map<string, any[]>>(new Map());
     // Track if batching is complete
     const [batchingComplete, setBatchingComplete] = useState(false);
     // Track if low number nudge has been dismissed
@@ -177,7 +159,7 @@ const Dashboard = () => {
             try {
                 // Fetch websites list
                 const response = await fetch('/api/bigquery/websites');
-                const data: { data?: Website[] } = await response.json();
+                const data = await response.json();
                 const websitesData = data.data || [];
 
                 // Filter for prod websites - same team IDs as metadashboard.tsx
@@ -185,12 +167,12 @@ const Dashboard = () => {
                     'aa113c34-e213-4ed6-a4f0-0aea8a503e6b',
                     'bceb3300-a2fb-4f73-8cec-7e3673072b30'
                 ];
-                const prodWebsites = websitesData.filter((website) =>
-                    !!website.teamId && relevantTeams.includes(website.teamId)
+                const prodWebsites = websitesData.filter((website: any) =>
+                    relevantTeams.includes(website.teamId)
                 );
 
                 // Filter out exactly "nav.no" domain
-                const filteredWebsites = prodWebsites.filter((item) => item.domain !== "nav.no");
+                const filteredWebsites = prodWebsites.filter((item: any) => item.domain !== "nav.no");
 
                 // Normalize input domain for matching (handle nav.no -> www.nav.no)
                 let inputDomain = domainFromUrl;
@@ -200,7 +182,7 @@ const Dashboard = () => {
                 const normalizedInputDomain = normalizeDomain(inputDomain);
 
                 // Find matching website: prefer exact match, then longest suffix match (most specific subdomain)
-                const matchedWebsite = filteredWebsites.reduce<Website | null>((best, item) => {
+                const matchedWebsite = filteredWebsites.reduce((best: any | null, item: any) => {
                     const normalizedDomain = normalizeDomain(item.domain);
 
                     // Exact hostname match wins immediately
@@ -232,7 +214,8 @@ const Dashboard = () => {
                 } else {
                     setDomainResolutionError(`Fant ingen nettside for domenet "${domainFromUrl}"`);
                 }
-            } catch {
+            } catch (error) {
+                console.error('Error resolving domain to websiteId:', error);
                 setDomainResolutionError('Kunne ikke slå opp domenet');
             } finally {
                 setIsResolvingDomain(false);
@@ -315,13 +298,12 @@ const Dashboard = () => {
                         // Calculate total count for batched chart
                         let chartCount = 0;
                         if (chartData.length > 0) {
-                            const keys = Object.keys(chartData[0] as Record<string, unknown>);
+                            const keys = Object.keys(chartData[0]);
                             if (keys.length >= 2) {
                                 const metricKey = keys[1];
-                                chartCount = chartData.reduce((acc: number, row) => {
-                                    const value = (row as Record<string, unknown>)[metricKey];
-                                    const val = typeof value === 'number' ? value : parseFloat(String(value));
-                                    return Number.isFinite(val) ? acc + val : acc;
+                                chartCount = chartData.reduce((acc: number, row: any) => {
+                                    const val = parseFloat(String(row[metricKey]));
+                                    return isNaN(val) ? acc : acc + (val || 0);
                                 }, 0);
                             }
                         }
@@ -331,7 +313,8 @@ const Dashboard = () => {
                         }));
                     }
                 }
-            } catch {
+            } catch (error) {
+                console.error('[Dashboard] Batched fetch failed:', error);
                 setBatchedData(new Map());
             } finally {
                 setBatchingComplete(true);
@@ -469,7 +452,7 @@ const Dashboard = () => {
                         }
                     }
                     paths.push(url.pathname);
-                } catch {
+                } catch (e) {
                     invalid.push(line);
                 }
             } else {
@@ -487,7 +470,7 @@ const Dashboard = () => {
     };
 
     // Handle pasting multiple URLs directly into combobox
-    const handleUrlPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const handleUrlPaste = (e: React.ClipboardEvent) => {
         const pastedText = e.clipboardData.getData('text');
 
         if (hasMultipleValues(pastedText)) {
@@ -563,7 +546,7 @@ const Dashboard = () => {
                         }
                     }
                     newPaths.push(url.pathname);
-                } catch {
+                } catch (e) {
                     invalidUrls.push(line);
                 }
             } else {
@@ -624,7 +607,7 @@ const Dashboard = () => {
                 <div className="w-full sm:w-[200px]">
                     <DashboardWebsitePicker
                         selectedWebsite={selectedWebsite}
-                        onWebsiteChange={handleWebsiteChange}
+                        onWebsiteChange={setSelectedWebsite}
                         variant="minimal"
                         size="small"
                         disableUrlUpdate
@@ -656,7 +639,7 @@ const Dashboard = () => {
                             allowNewValues
                             options={tempUrlPaths.map(p => ({ label: p, value: p }))}
                             selectedOptions={tempUrlPaths}
-                            onToggleSelected={(option: string, isSelected: boolean) => {
+                            onToggleSelected={(option, isSelected) => {
                                 // Mark that we're in a selection process
                                 isSelectingRef.current = true;
 
@@ -688,7 +671,7 @@ const Dashboard = () => {
                                 }, 100);
                             }}
                             value={comboInputValue}
-                            onChange={(val: string) => setComboInputValue(val)}
+                            onChange={(val) => setComboInputValue(val)}
 
                         />
                     </div>
@@ -977,7 +960,7 @@ const Dashboard = () => {
                             websiteId={effectiveWebsiteId}
                             filters={activeFilters}
                             onDataLoaded={handleDataLoaded}
-                            selectedWebsite={activeWebsite ?? undefined}
+                            selectedWebsite={activeWebsite}
                             prefetchedData={chart.id ? batchedData.get(chart.id) : undefined}
                             shouldWaitForBatch={chart.id ? batchableChartIds.has(chart.id) && !batchingComplete : false}
                             siteimproveGroupId={getSiteimproveGroupId}

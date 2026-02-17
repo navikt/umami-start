@@ -1,5 +1,3 @@
-/* Extracted from original server.js */
-
 function addAuditLogging(queryConfig, navIdent, analysisType = null) {
     const isDryRun = queryConfig.dryRun === true;
 
@@ -37,7 +35,7 @@ function getAnalysisTypeOverride(req, fallback) {
             const url = new URL(referer);
             if (url.pathname === '/trafikkanalyse') return 'trafikkanalyse';
             if (url.pathname === '/markedsanalyse') return 'markedsanalyse';
-        } catch (_) {
+        } catch {
             // Ignore invalid referer
         }
     }

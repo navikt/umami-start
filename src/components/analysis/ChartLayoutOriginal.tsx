@@ -70,7 +70,7 @@ const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
 
             const queryString = preservedParams.toString();
             const targetUrl = queryString ? `${page.href}?${queryString}` : page.href;
-            navigate(targetUrl);
+            void navigate(targetUrl);
         }
     };
 
