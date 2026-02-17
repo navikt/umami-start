@@ -74,6 +74,7 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
 
     let box2Label = `Gjennomsnitt per ${timeUnitLabel}`;
     let box2Value = avg;
+    let box2Subtext = '';
 
     let box3Label = 'Topp-periode';
     if (granularity === 'day') box3Label = 'Toppdag';
@@ -93,6 +94,8 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
         box3Value = max; // Max proportion (0.x)
         box3Subtext = maxLabelText;
     } else {
+        box2Subtext = `Median per ${timeUnitLabel}: ${formatValue(median)}${valueSuffix ? ` ${valueSuffix}` : ''}`;
+
         // Show date/time in the tile heading for top period cards.
         box3Label = `${box3Label} ${maxLabelText}`;
         box3Subtext = '';
@@ -121,6 +124,11 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
                         </span>
                     )}
                 </div>
+                {box2Subtext && (
+                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
+                        {box2Subtext}
+                    </div>
+                )}
             </div>
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box3Label}</div>
