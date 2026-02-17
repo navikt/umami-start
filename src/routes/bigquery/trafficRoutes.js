@@ -624,17 +624,26 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
               // If "All pages", sources = referrers, exits = exit pages.
               condition = '1=1';
           }
-          let countExpression;
+          let sourceAndExitCountExpression;
           if (metricType === 'pageviews') {
-              countExpression = 'COUNT(*)';
+              sourceAndExitCountExpression = 'COUNT(*)';
           } else if (metricType === 'visits') {
-              countExpression = `APPROX_COUNT_DISTINCT(${col}visit_id)`; // økter / besøk
+              sourceAndExitCountExpression = 'APPROX_COUNT_DISTINCT(visit_id)'; // økter / besøk
+          } else if (metricType === 'proportion') {
+              // Return fraction (0-1) to stay consistent with other proportion endpoints.
+              sourceAndExitCountExpression = 'SAFE_DIVIDE(APPROX_COUNT_DISTINCT(user_id), (SELECT total_users FROM total_filtered_users))';
           } else {
-              countExpression = useDistinctId
-                  ? `APPROX_COUNT_DISTINCT(s.distinct_id)`
-                  : `APPROX_COUNT_DISTINCT(session_id)`; // visitors (unike besøkende)
+              sourceAndExitCountExpression = 'APPROX_COUNT_DISTINCT(user_id)'; // visitors (unike besøkende)
           }
-          console.log(`[Traffic Breakdown] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
+          console.log(`[Traffic Breakdown] Count Expression: ${sourceAndExitCountExpression}, useDistinctId: ${useDistinctId}`);
+
+          const totalFilteredUsersCTE = metricType === 'proportion'
+              ? `,
+              total_filtered_users AS (
+                  SELECT APPROX_COUNT_DISTINCT(user_id) as total_users
+                  FROM filtered_events
+              )`
+              : '';
 
           const query = `
               WITH session_events AS (
@@ -678,16 +687,16 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                       user_id
                   FROM events_with_context
                   WHERE ${condition}
-              ),
+              )${totalFilteredUsersCTE},
               sources_agg AS (
-                  SELECT source as name, ${metricType === 'pageviews' ? 'COUNT(*)' : (metricType === 'visits' ? 'APPROX_COUNT_DISTINCT(visit_id)' : 'APPROX_COUNT_DISTINCT(user_id)')} as visitors
+                  SELECT source as name, ${sourceAndExitCountExpression} as visitors
                   FROM filtered_events
                   GROUP BY 1
                   ORDER BY visitors DESC
                   LIMIT @limit
               ),
               exits_agg AS (
-                  SELECT next_page as name, ${metricType === 'pageviews' ? 'COUNT(*)' : (metricType === 'visits' ? 'APPROX_COUNT_DISTINCT(visit_id)' : 'APPROX_COUNT_DISTINCT(user_id)')} as visitors
+                  SELECT next_page as name, ${sourceAndExitCountExpression} as visitors
                   FROM filtered_events
                   GROUP BY 1
                   ORDER BY visitors DESC
@@ -922,4 +931,3 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
 
   return router;
 }
-

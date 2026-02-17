@@ -2,6 +2,8 @@ import type { ComponentType } from 'react';
 import { Label, Loader, Select, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import type { ILineChartProps } from '@fluentui/react-charting';
+import { format } from 'date-fns';
+import { nb } from 'date-fns/locale';
 import TrafficStats from './TrafficStats';
 import type { Website } from '../../../types/chart';
 
@@ -119,6 +121,22 @@ const OversiktTabContent = ({
     ChartDataTableComponent,
     TrafficTableComponent,
 }: OversiktTabContentProps) => {
+    const formatXAxisDateLabel = (date: Date) => {
+        if (submittedGranularity === 'hour') {
+            return format(date, 'HH:mm');
+        }
+
+        if (submittedGranularity === 'week') {
+            return `Uke ${format(date, 'w', { locale: nb })}`;
+        }
+
+        if (submittedGranularity === 'month') {
+            return format(date, 'MMM yyyy', { locale: nb });
+        }
+
+        return format(date, 'd. MMM', { locale: nb });
+    };
+
     if (hasAttemptedFetch && (isLoadingPageMetrics || !hasFetchedPageMetrics)) {
         return (
             <div className="flex justify-center items-center h-full py-16">
@@ -215,6 +233,7 @@ const OversiktTabContent = ({
                                     yMinValue={chartYMin}
                                     allowMultipleShapesForPoints={true}
                                     enablePerfOptimization={true}
+                                    customDateTimeFormatter={formatXAxisDateLabel}
                                     margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
                                     legendProps={{
                                         allowFocusOnLegends: true,
