@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAuditLogging } from '../audit.js';
+import { addAuditLogging } from '../../bigquery/audit.js';
 
 export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();

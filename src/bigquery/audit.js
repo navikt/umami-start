@@ -1,5 +1,3 @@
-/* Extracted from original server.js */
-
 function addAuditLogging(queryConfig, navIdent, analysisType = null) {
     const isDryRun = queryConfig.dryRun === true;
 
