@@ -4,10 +4,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const BIGQUERY_TIMEZONE = 'Europe/Oslo';
-export const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL;
-export const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL;
-export const UMAMI_BASE_URL = process.env.UMAMI_BASE_URL;
-export const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
+export const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || process.env.VITE_BACKEND_BASE_URL;
+export const SITEIMPROVE_BASE_URL = process.env.SITEIMPROVE_BASE_URL || process.env.VITE_SITEIMPROVE_BASE_URL;
+export const UMAMI_BASE_URL = process.env.UMAMI_BASE_URL || process.env.VITE_UMAMI_BASE_URL;
+export const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || process.env.VITE_GCP_PROJECT_ID;
 
 if (!BACKEND_BASE_URL) {
   throw new Error('Missing env var: BACKEND_BASE_URL');

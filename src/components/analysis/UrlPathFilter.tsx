@@ -261,7 +261,7 @@ export const UrlPathFilter = ({
         isSelectingRef.current = true;
 
         if (isSelected) {
-            let normalized = normalizeUrlToPath(rawOption);
+            const normalized = normalizeUrlToPath(rawOption);
             // If missing leading slash, ask user
             if (normalized && !normalized.startsWith('/')) {
                 setPendingMissingSlash(normalized);
@@ -315,7 +315,7 @@ export const UrlPathFilter = ({
                         }
                     }
                 }
-                let normalized = normalizeUrlToPath(trimmedValue);
+                const normalized = normalizeUrlToPath(trimmedValue);
                 if (normalized && !normalized.startsWith('/')) {
                     setPendingMissingSlash(normalized);
                     setIsMissingSlashModalOpen(true);

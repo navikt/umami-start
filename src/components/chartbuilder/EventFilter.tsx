@@ -298,7 +298,7 @@ const EventFilter = forwardRef(({
     setEventNameOperator(operator);
 
     // Find and remove any existing event_name filters
-    let baseFilters = filters.filter(f => f.column !== 'event_name');
+    const baseFilters = filters.filter(f => f.column !== 'event_name');
 
     // Logic to ensure custom events (type 2) are enabled
     // We execute this if we have specific events selected OR if we are forced to enable custom events (e.g. 'all' mode)

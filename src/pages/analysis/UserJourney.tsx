@@ -543,20 +543,6 @@ const UserJourney = () => {
                     </Button>
                   </div>
                 )}
-                {/*
-                            {!isFullscreen && (
-                                <div className="mb-2 flex justify-end">
-                                    <Button
-                                        size="small"
-                                        variant="tertiary"
-                                        onClick={() => setIsFullscreen(true)}
-                                        icon={<Maximize2 size={20} />}
-                                    >
-                                        Fullskjerm
-                                    </Button>
-                                </div>
-                            )}
-                                 */}
 
                 <div className="overflow-x-auto w-full" ref={sankeyContainerRef}>
                   <div
