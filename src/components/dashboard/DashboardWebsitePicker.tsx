@@ -209,21 +209,25 @@ const DashboardWebsitePicker = ({
         window.history.pushState({}, '', url.toString());
     }, []);
 
-    // Handle website selection and update URL
+    const selectedWebsiteRef = useRef<Website | null>(null);
+
+    useEffect(() => {
+        selectedWebsiteRef.current = selectedWebsite;
+    }, [selectedWebsite]);
+
     const handleWebsiteChange = useCallback((website: Website | null) => {
         onWebsiteChange(website);
+
         if (!disableUrlUpdate) {
             updateUrlWithWebsiteId(website);
         }
 
-        // Save/clear selected website in localStorage
         if (website) {
             saveToLocalStorage(SELECTED_WEBSITE_CACHE_KEY, website);
         } else {
             localStorage.removeItem(SELECTED_WEBSITE_CACHE_KEY);
         }
 
-        // Reset to cheap query when switching websites
         setIncludeParams(false);
     }, [onWebsiteChange, updateUrlWithWebsiteId, disableUrlUpdate]);
 
@@ -570,21 +574,26 @@ const DashboardWebsitePicker = ({
                     label="Nettside eller app"
                     size={size}
                     options={optionLabels}
-                    key={selectedWebsite?.id ?? "no-website"}
                     selectedOptions={selectedWebsite ? [selectedWebsite.name] : []}
                     onToggleSelected={(value, isSelected) => {
                         if (isSelected) {
-                            const website = websites.find(w => w.name === value);
-                            if (website) handleWebsiteChange(website);
+                            const website = sortedWebsites.find(w => w.name === value);
+                            if (website) {
+                                selectedWebsiteRef.current = website;
+                                handleWebsiteChange(website);
+                            }
                             return;
                         }
-                        if (selectedWebsite?.name === value) {
+
+                        if (selectedWebsiteRef.current?.name === value) {
+                            selectedWebsiteRef.current = null;
                             handleWebsiteChange(null);
                         }
                     }}
                     className="w-full"
                     isLoading={isWebsitesLoading}
                 />
+
                 {!isWebsitesLoading && sortedWebsites.length === 0 && (
                     <div className="mt-2 text-sm">Ingen nettsteder tilgjengelig</div>
                 )}
@@ -593,7 +602,10 @@ const DashboardWebsitePicker = ({
                     <div className="mt-4">
                         <Button
                             variant="secondary"
-                            onClick={() => handleWebsiteChange(null)}
+                            onClick={() => {
+                                selectedWebsiteRef.current = null;
+                                handleWebsiteChange(null);
+                            }}
                             size={size}
                         >
                             Fjern valg
