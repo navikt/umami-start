@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef} from 'react';
-import {getFromLocalStorage, saveToLocalStorage, SELECTED_WEBSITE_CACHE_KEY} from './storage.ts';
-import type {Website} from './types.ts';
+import {getFromLocalStorage, saveToLocalStorage, SELECTED_WEBSITE_CACHE_KEY} from '../storage/localStorage.ts';
+import type {Website} from '../model/types.ts';
 
 interface UseWebsiteSelectionProps {
     websites: Website[];

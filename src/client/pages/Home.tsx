@@ -1,5 +1,5 @@
 import { Heading, Page } from "@navikt/ds-react";
-import UrlSearchForm from "../components/dashboard/UrlSearchForm.tsx";
+import { UrlSearchForm } from "../features/dashboard";
 import { KontaktSeksjon } from "../components/theme/Kontakt/KontaktSeksjon.tsx";
 
 function Home() {

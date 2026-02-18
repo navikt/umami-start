@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Loader, Alert, Button } from '@navikt/ds-react';
 import { MoreVertical } from 'lucide-react';
-import type { SavedChart } from '../../../data/dashboard';
-import AnalysisActionModal from '../analysis/AnalysisActionModal.tsx';
-import ChartActionModal from '../analysis/ChartActionModal.tsx';
+import type { SavedChart } from '../../../../data/dashboard';
+import AnalysisActionModal from '../../../components/analysis/AnalysisActionModal.tsx';
+import ChartActionModal from '../../../components/analysis/ChartActionModal.tsx';
 import DashboardWidgetLineChart from './widget/DashboardWidgetLineChart.tsx';
 import DashboardWidgetTable from './widget/DashboardWidgetTable.tsx';
 import DashboardWidgetSiteimprove from './widget/DashboardWidgetSiteimprove.tsx';
-import { processDashboardSql } from './dashboardQueryUtils.ts';
+import { processDashboardSql } from '../utils/queryUtils.ts';
 import {
-    getErrorMessage,
     parseDashboardResponse,
     getSpanClass,
     type DashboardRow
-} from './widget/dashboardWidgetUtils.ts';
+} from '../utils/widgetUtils.ts';
+import {executeBigQuery} from '../api/bigquery.ts';
 
 type SelectedWebsite = {
     domain: string;
@@ -93,18 +93,7 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
             try {
                 const processedSql = processDashboardSql(chart.sql, websiteId, filters);
 
-                const response = await fetch('/api/bigquery', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: processedSql, analysisType: 'Dashboard' }),
-                });
-
-                if (!response.ok) {
-                    const errPayload = await response.json() as unknown;
-                    throw new Error(getErrorMessage(errPayload, 'Feil ved henting av data'));
-                }
-
-                const resultPayload = await response.json() as unknown;
+                const resultPayload = await executeBigQuery(processedSql, 'Dashboard');
                 const parsed = parseDashboardResponse(resultPayload);
                 const resultData = parsed.data;
                 setData(resultData);
@@ -272,3 +261,4 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         </>
     );
 };
+

@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Page } from '@navikt/ds-react';
-import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon.tsx';
-import { PageHeader } from '../theme/PageHeader/PageHeader.tsx';
+import { KontaktSeksjon } from '../../../components/theme/Kontakt/KontaktSeksjon.tsx';
+import { PageHeader } from '../../../components/theme/PageHeader/PageHeader.tsx';
 
 interface DashboardLayoutProps {
     title: string;
@@ -44,3 +43,4 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 };
 
 export default DashboardLayout;
+

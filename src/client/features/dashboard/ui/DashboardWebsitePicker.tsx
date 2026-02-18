@@ -1,11 +1,18 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
 import {UNSAFE_Combobox, Alert, Button} from '@navikt/ds-react';
-import type {EventProperty, Website} from './websitePicker/types.ts';
-import {useWebsites} from './websitePicker/useWebsites.ts';
-import {useWebsiteSelection} from './websitePicker/useWebsiteSelection.ts';
+import type {EventProperty, Website} from '../model/types.ts';
+import {useWebsites} from '../hooks/useWebsites.ts';
+import {useWebsiteSelection} from '../hooks/useWebsiteSelection.ts';
 import {
-    API_TIMEOUT_MS, buildEventParams, calculateMaxDaysAvailable, getDateRange, timeoutPromise,
-} from './websitePicker/utils.ts';
+    API_TIMEOUT_MS, buildEventParams, calculateMaxDaysAvailable, getDateRange,
+} from '../utils/websiteUtils.ts';
+import {fetchEventProperties} from '../api/bigquery.ts';
+
+interface EventPropertiesApiResponse {
+    properties: EventProperty[];
+    gbProcessed?: number;
+    estimatedGbProcessed?: number;
+}
 
 interface WebsitePickerProps {
     selectedWebsite: Website | null;
@@ -23,6 +30,14 @@ interface WebsitePickerProps {
     size?: 'medium' | 'small';
     disableUrlUpdate?: boolean;
 }
+
+const timeoutPromise = (ms: number) => {
+    return new Promise((_, reject) => {
+        setTimeout(() => {
+            reject(new Error(`Request timed out after ${ms}ms`));
+        }, ms);
+    });
+};
 
 const DashboardWebsitePicker = ({
                                     selectedWebsite,
@@ -76,7 +91,7 @@ const DashboardWebsitePicker = ({
         onLoadingChange?.(loading);
     }, [onLoadingChange]);
 
-    const fetchEventNames = useCallback(async (website: Website, _forceFresh = false, daysToFetch = dateRangeInDays, metadataOnly = false) => {
+    const fetchEventNames = useCallback(async (website: Website, daysToFetch = dateRangeInDays, metadataOnly = false) => {
         const websiteId = website.id;
         if (fetchInProgress.current[websiteId]) return;
 
@@ -93,15 +108,14 @@ const DashboardWebsitePicker = ({
         try {
             handleLoadingState(true);
 
-            const apiBase = '/api/bigquery';
             const {startAt, endAt, startDate, endDate} = getDateRange(daysToFetch);
 
             console.log(`Fetching data for ${daysToFetch} days from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
 
-            const propertiesResponse = await Promise.race([fetch(`${apiBase}/websites/${websiteId}/event-properties?startAt=${startAt}&endAt=${endAt}&includeParams=${includeParams}`), timeoutPromise(API_TIMEOUT_MS)]);
-
-            // @ts-ignore
-            const responseData = await propertiesResponse.json();
+            const responseData: EventPropertiesApiResponse = await Promise.race([
+                fetchEventProperties(websiteId, startAt, endAt, includeParams),
+                timeoutPromise(API_TIMEOUT_MS)
+            ]) as EventPropertiesApiResponse;
 
             console.log('API Response:', responseData);
 
@@ -142,16 +156,16 @@ const DashboardWebsitePicker = ({
 
         if (isNewWebsite) {
             if (disableAutoEvents && !requestLoadEvents) {
-                fetchEventNames(selectedWebsite, false, dateRangeInDays, true);
+                void fetchEventNames(selectedWebsite, dateRangeInDays, true);
                 setLoadedWebsiteId(selectedWebsite.id);
                 setFullEventsLoadedId(null);
             } else {
-                fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+                void fetchEventNames(selectedWebsite, dateRangeInDays, false);
                 setLoadedWebsiteId(selectedWebsite.id);
                 setFullEventsLoadedId(selectedWebsite.id);
             }
         } else if (needsFullLoad) {
-            fetchEventNames(selectedWebsite, false, dateRangeInDays, false);
+            void fetchEventNames(selectedWebsite, dateRangeInDays, false);
             setFullEventsLoadedId(selectedWebsite.id);
         }
     }, [selectedWebsite, loadedWebsiteId, onEventsLoad, fetchEventNames, dateRangeInDays, disableAutoEvents, requestLoadEvents, fullEventsLoadedId,]);
@@ -159,7 +173,7 @@ const DashboardWebsitePicker = ({
     useEffect(() => {
         if (selectedWebsite && loadedWebsiteId === selectedWebsite.id && includeParams !== prevIncludeParams.current && onEventsLoad) {
             prevIncludeParams.current = includeParams;
-            fetchEventNames(selectedWebsite, true, dateRangeInDays);
+            void fetchEventNames(selectedWebsite, dateRangeInDays);
         }
     }, [includeParams, selectedWebsite, loadedWebsiteId, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
@@ -179,7 +193,7 @@ const DashboardWebsitePicker = ({
                 setDateRangeInDays(externalDateRange || 14);
             }
 
-            fetchEventNames(selectedWebsite, true, externalDateRange || dateRangeInDays);
+            void fetchEventNames(selectedWebsite, externalDateRange || dateRangeInDays);
         }
     }, [externalDateRange, shouldReload, selectedWebsite, fetchEventNames, dateRangeInDays, onEventsLoad]);
 
@@ -253,3 +267,4 @@ const DashboardWebsitePicker = ({
 };
 
 export default DashboardWebsitePicker;
+
