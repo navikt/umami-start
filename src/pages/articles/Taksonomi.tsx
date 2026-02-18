@@ -245,7 +245,7 @@ const TaksonomiPage = () => {
                   Type-definisjoner for analytics-hendelser
                 </Heading>
                 <BodyLong spacing>
-                  En npm-pakke basert på Navs felles taksonomi som sikrer enhetlig sporing på tvers av team.
+                  En pakke basert på Navs felles taksonomi som sikrer enhetlig sporing på tvers av team.
                 </BodyLong>
 
                 <Box
@@ -272,12 +272,12 @@ const TaksonomiPage = () => {
                   </div>
                   <div className="pt-4">
                     <BodyLong className="mb-3">
-                      <strong>Installer pakken:</strong>
+                      <strong>Installer pakken med pnpm:</strong>
                     </BodyLong>
                   </div>
                   <Box className="bg-[var(--ax-bg-neutral-soft)] flex items-center justify-between py-3 px-4 border border-[var(--ax-border-subtle)] rounded-medium">
-                    <code className="text-sm">npm install @navikt/analytics-types</code>
-                    <CopyButton copyText="npm install @navikt/analytics-types" size="small" />
+                    <code className="text-sm">pnpm add @navikt/analytics-types</code>
+                    <CopyButton copyText="pnpm add @navikt/analytics-types" size="small" />
                   </Box>
                 </Box>
 
