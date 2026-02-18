@@ -444,14 +444,6 @@ const EventJourney = () => {
                                 onChange={(e) => setFilterText(e.target.value)}
                                 className="w-48"
                             />
-                            <Button
-                                size="small"
-                                variant="secondary"
-                                icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-                                onClick={copyShareLink}
-                            >
-                                {copySuccess ? 'Kopiert!' : 'Del'}
-                            </Button>
                         </div>
                     </div>
 
@@ -462,7 +454,7 @@ const EventJourney = () => {
                         </Tabs.List>
 
                         <Tabs.Panel value="visual" className="pt-4">
-                            <div className="bg-[var(--ax-bg-default)] border rounded-lg p-4">
+                            <div className="bg-[var(--ax-bg-default)]">
                                 {filteredData.length > 0 ? (
                                     <div className="space-y-4">
                                         {filteredData.map((journey, idx) => (
@@ -565,6 +557,16 @@ const EventJourney = () => {
                             Data prosessert: {queryStats.totalBytesProcessedGB} GB
                         </div>
                     )}
+                    <div className="flex justify-end mt-8">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            icon={copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+                            onClick={copyShareLink}
+                        >
+                            {copySuccess ? 'Kopiert!' : 'Del analyse'}
+                        </Button>
+                    </div>
                 </>
             )}
 
