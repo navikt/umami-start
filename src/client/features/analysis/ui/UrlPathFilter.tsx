@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { Label, UNSAFE_Combobox, Modal, Textarea, Button } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
-import { normalizeUrlToPath } from "../../lib/utils.ts";
-import { useWebsiteMatching } from "../../hooks/useWebsiteMatching.ts";
+import { normalizeUrlToPath } from "../../../shared/lib/utils.ts";
+import { useWebsiteMatching } from "../../../shared/hooks/useWebsiteMatching.ts";
 
 interface UrlPathFilterProps {
     /** Array of selected URLs */

@@ -18,18 +18,18 @@ import {
 import { Download, Minimize2, Share2, Check, ExternalLink } from "lucide-react";
 import { utils as XLSXUtils, write as XLSXWrite } from "xlsx";
 import { parseISO } from "date-fns";
-import ChartLayout from "../../components/analysis/ChartLayout.tsx";
-import WebsitePicker from "../../components/analysis/WebsitePicker.tsx";
-import PeriodPicker from "../../components/analysis/PeriodPicker.tsx";
-import UmamiJourneyView from "../../components/analysis/journey/UmamiJourneyView.tsx";
-import AnalysisActionModal from "../../components/analysis/AnalysisActionModal.tsx";
-import type { Website } from "../../types/chart.ts";
+import ChartLayout from "../../features/analysis/ui/ChartLayout.tsx";
+import WebsitePicker from "../../features/analysis/ui/WebsitePicker.tsx";
+import PeriodPicker from "../../features/analysis/ui/PeriodPicker.tsx";
+import UmamiJourneyView from "../../features/analysis/ui/journey/UmamiJourneyView.tsx";
+import AnalysisActionModal from "../../features/analysis/ui/AnalysisActionModal.tsx";
+import type { Website } from "../../shared/types/chart.ts";
 import {
   getDateRangeFromPeriod,
   normalizeUrlToPath,
   savePeriodPreference,
   getStoredPeriod,
-} from "../../lib/utils.ts";
+} from "../../shared/lib/utils.ts";
 
 type JourneyNode = {
   nodeId: string;

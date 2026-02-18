@@ -3,9 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { DashboardLayout, DashboardWidget, DashboardWebsitePicker } from "../../features/dashboard";
 import { getDashboard } from "../../../data/dashboard";
-import { fetchDashboardDataBatched, isBatchableChart } from "../../lib/batchedDashboardFetcher.ts";
+import { fetchDashboardDataBatched, isBatchableChart } from "../../shared/lib/batchedDashboardFetcher.ts";
 import { format, parseISO } from "date-fns";
-import { normalizeUrlToPath } from "../../lib/utils.ts";
+import { normalizeUrlToPath } from "../../shared/lib/utils.ts";
 
 const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();

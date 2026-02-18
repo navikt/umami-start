@@ -5,7 +5,7 @@ import type { ILineChartProps } from '@fluentui/react-charting';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import TrafficStats from './TrafficStats.tsx';
-import type { Website } from '../../../types/chart.ts';
+import type { Website } from '../../../../shared/types/chart.ts';
 
 type Granularity = 'day' | 'week' | 'month' | 'hour';
 

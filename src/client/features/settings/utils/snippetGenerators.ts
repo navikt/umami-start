@@ -1,4 +1,4 @@
-import { getUmamiBaseUrl } from '../../../lib/runtimeConfig';
+import { getUmamiBaseUrl } from '../../../shared/lib/runtimeConfig';
 
 const html = (strings: TemplateStringsArray, ...values: Array<string | number>) =>
   strings.reduce((acc, part, i) => acc + part + (values[i] ?? ''), '');

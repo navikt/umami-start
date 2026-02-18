@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import QueryPreview from '../../components/chartbuilder/results/QueryPreview.tsx';
-import EventFilter from '../../components/chartbuilder/EventFilter.tsx';
-import ChartLayout from '../../components/analysis/ChartLayoutOriginal.tsx';
-import MetricSelector from '../../components/chartbuilder/MetricSelector.tsx';
-import GroupingOptions from '../../components/chartbuilder/GroupingOptions.tsx';
-import AlertWithCloseButton from '../../components/chartbuilder/AlertWithCloseButton.tsx';
-import { FILTER_COLUMNS } from '../../lib/constants.ts';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import QueryPreview from '../../features/chartbuilder/ui/results/QueryPreview.tsx';
+import EventFilter from '../../features/chartbuilder/ui/EventFilter.tsx';
+import ChartLayout from '../../features/analysis/ui/ChartLayoutOriginal.tsx';
+import MetricSelector from '../../features/chartbuilder/ui/MetricSelector.tsx';
+import GroupingOptions from '../../features/chartbuilder/ui/GroupingOptions.tsx';
+import AlertWithCloseButton from '../../features/chartbuilder/ui/AlertWithCloseButton.tsx';
+import { FILTER_COLUMNS } from '../../shared/lib/constants.ts';
 import type {
   Parameter,
   Metric,
@@ -17,8 +17,8 @@ import type {
   ChartConfig,
   Filter,
   Website
-} from '../../types/chart.ts';
-import { getGcpProjectId } from '../../lib/runtimeConfig.ts';
+} from '../../shared/types/chart.ts';
+import { getGcpProjectId } from '../../shared/lib/runtimeConfig.ts';
 
 // Add date formats that aren't in constants.ts
 const DATE_FORMATS: DateFormat[] = [

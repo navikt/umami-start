@@ -4,13 +4,13 @@ import { Heading, Button, Alert, Loader, BodyShort, Table, Tabs, Skeleton, Switc
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, ArrowLeft, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import UrlPathFilter from '../../components/analysis/UrlPathFilter.tsx';
-import type { Website } from '../../types/chart.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import UrlPathFilter from '../../features/analysis/ui/UrlPathFilter.tsx';
+import type { Website } from '../../shared/types/chart.ts';
 import type { ILineChartProps } from '@fluentui/react-charting';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils.ts';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../shared/lib/utils.ts';
 
 
 const EventExplorer = () => {

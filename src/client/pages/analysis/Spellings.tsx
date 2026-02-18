@@ -3,9 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink } from '@navikt/ds-react';
 import { Download } from 'lucide-react';
 
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import type { Website } from '../../types/chart.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import type { Website } from '../../shared/types/chart.ts';
 import teamsData from '../../../data/teamsData.json';
 import InfoCard from '../../shared/ui/InfoCard.tsx';
 

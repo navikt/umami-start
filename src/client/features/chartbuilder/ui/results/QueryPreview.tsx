@@ -5,7 +5,7 @@ import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-ch
 import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
-import { translateValue } from '../../../lib/translations.ts';
+import { translateValue } from '../../../../shared/lib/translations.ts';
 
 type JsonPrimitive = string | number | boolean | null;
 interface JsonObject {

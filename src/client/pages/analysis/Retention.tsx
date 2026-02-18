@@ -5,14 +5,14 @@ import type { ILineChartDataPoint, ILineChartProps} from '@fluentui/react-charti
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
 import { parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import UrlPathFilter from '../../components/analysis/UrlPathFilter.tsx';
-import CookieMixNotice from '../../components/analysis/CookieMixNotice.tsx';
-import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport.ts';
-import type { Website } from '../../types/chart.ts';
-import { normalizeUrlToPath, getStoredPeriod, getDateRangeFromPeriod, getCookieBadge, getCookieCountByParams } from '../../lib/utils.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import UrlPathFilter from '../../features/analysis/ui/UrlPathFilter.tsx';
+import CookieMixNotice from '../../features/analysis/ui/CookieMixNotice.tsx';
+import { useCookieSupport, useCookieStartDate } from '../../shared/hooks/useSiteimproveSupport.ts';
+import type { Website } from '../../shared/types/chart.ts';
+import { normalizeUrlToPath, getStoredPeriod, getDateRangeFromPeriod, getCookieBadge, getCookieCountByParams } from '../../shared/lib/utils.ts';
 
 
 const Retention = () => {

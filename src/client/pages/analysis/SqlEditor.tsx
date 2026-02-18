@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { subDays, format } from 'date-fns';
-import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel.tsx';
-import ChartLayout from '../../components/analysis/ChartLayoutOriginal.tsx';
+import ResultsPanel from '../../features/chartbuilder/ui/results/ResultsPanel.tsx';
+import ChartLayout from '../../features/analysis/ui/ChartLayoutOriginal.tsx';
 import { Button, Alert, Heading, BodyLong, TextField, Link } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
 import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon, Copy, X } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
-import { translateValue } from '../../lib/translations.ts';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
+import { translateValue } from '../../shared/lib/translations.ts';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
 
 type Website = {
     id: string;

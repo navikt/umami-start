@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel.tsx';
+import ResultsPanel from '../../features/chartbuilder/ui/results/ResultsPanel.tsx';
 import { Alert, BodyLong, Loader, TextField, Button } from '@navikt/ds-react';
-import { translateValue } from '../../lib/translations.ts';
-import ChartLayout from '../../components/analysis/ChartLayoutOriginal.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
+import { translateValue } from '../../shared/lib/translations.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayoutOriginal.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
 import { subDays, format } from 'date-fns';
 
 // Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__) (server injects window.__GCP_PROJECT_ID__)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check, SpellCheck, Unlink } from 'lucide-react';
-import { useSiteimproveSupport, useMarketingSupport } from '../../hooks/useSiteimproveSupport.ts';
+import { useSiteimproveSupport, useMarketingSupport } from '../../../shared/hooks/useSiteimproveSupport.ts';
 
 interface AnalysisActionModalProps {
     open: boolean;

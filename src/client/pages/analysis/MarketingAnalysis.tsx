@@ -3,14 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Select, Table, Heading, Pagination, VStack, HelpText, TextField } from '@navikt/ds-react';
 import { Download, Share2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import UrlPathFilter from '../../components/analysis/UrlPathFilter.tsx';
-import CookieMixNotice from '../../components/analysis/CookieMixNotice.tsx';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils.ts';
-import type { Website } from '../../types/chart.ts';
-import { useMarketingSupport, useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import UrlPathFilter from '../../features/analysis/ui/UrlPathFilter.tsx';
+import CookieMixNotice from '../../features/analysis/ui/CookieMixNotice.tsx';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../shared/lib/utils.ts';
+import type { Website } from '../../shared/types/chart.ts';
+import { useMarketingSupport, useCookieSupport, useCookieStartDate } from '../../shared/hooks/useSiteimproveSupport.ts';
 
 // Helper function for metric labels
 const getMetricLabel = (type: string): string => {

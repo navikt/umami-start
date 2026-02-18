@@ -5,17 +5,17 @@ import type { ILineChartDataPoint } from '@fluentui/react-charting';
 import { Download, Share2, Check, ExternalLink } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, isValid, differenceInCalendarDays, subDays } from 'date-fns';
 import { nb } from 'date-fns/locale';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import OversiktTabContent from '../../components/analysis/traffic/OversiktTabContent.tsx';
-import InnOgUtgangerTabContent from '../../components/analysis/traffic/InnOgUtgangerTabContent.tsx';
-import AnalysisActionModal from '../../components/analysis/AnalysisActionModal.tsx';
-import UrlPathFilter from '../../components/analysis/UrlPathFilter.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import CookieMixNotice from '../../components/analysis/CookieMixNotice.tsx';
-import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport.ts';
-import type { Website } from '../../types/chart.ts';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../lib/utils.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import OversiktTabContent from '../../features/analysis/ui/traffic/OversiktTabContent.tsx';
+import InnOgUtgangerTabContent from '../../features/analysis/ui/traffic/InnOgUtgangerTabContent.tsx';
+import AnalysisActionModal from '../../features/analysis/ui/AnalysisActionModal.tsx';
+import UrlPathFilter from '../../features/analysis/ui/UrlPathFilter.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import CookieMixNotice from '../../features/analysis/ui/CookieMixNotice.tsx';
+import { useCookieSupport, useCookieStartDate } from '../../shared/hooks/useSiteimproveSupport.ts';
+import type { Website } from '../../shared/types/chart.ts';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getStoredMetricType, saveMetricTypePreference, getCookieCountByParams, getCookieBadge, getVisitorLabelWithBadge } from '../../shared/lib/utils.ts';
 
 // Helper functions for metric labels
 const getMetricLabelCapitalized = (type: string): string => {

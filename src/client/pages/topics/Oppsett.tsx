@@ -2,7 +2,7 @@ import { BodyShort, Heading, Link, Page, Tag } from "@navikt/ds-react";
 import { TeamWebsites } from "../../features/settings";
 import { KontaktSeksjon } from "../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx";
 import { PageHeader } from "../../shared/ui/theme/PageHeader/PageHeader.tsx";
-import { developerTools } from "../../components/analysis/DeveloperToolsNavigation.tsx";
+import { developerTools } from "../../features/analysis/ui/DeveloperToolsNavigation.tsx";
 
 // Helper to get environment info and switch URL
 const getEnvironmentInfo = () => {

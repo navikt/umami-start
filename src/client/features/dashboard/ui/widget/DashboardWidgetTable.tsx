@@ -2,7 +2,7 @@ import { Table, Pagination } from '@navikt/ds-react';
 import { ExternalLink } from 'lucide-react';
 import type { DashboardRow } from '../../utils/widgetUtils.ts';
 import { formatTableValue, isClickablePath } from '../../utils/widgetUtils.ts';
-import { translateValue } from '../../../../lib/translations.ts';
+import { translateValue } from '../../../../shared/lib/translations.ts';
 
 interface DashboardWidgetTableProps {
     data: DashboardRow[];

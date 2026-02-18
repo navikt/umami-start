@@ -1,5 +1,5 @@
 import type { DashboardConfig } from './types';
-import { getGcpProjectId } from '../../client/lib/runtimeConfig';
+import { getGcpProjectId } from '../../client/shared/lib/runtimeConfig';
 import navkontorData from '../navkontor.json';
 
 const projectId = getGcpProjectId();

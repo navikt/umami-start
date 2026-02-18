@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import { Button, Heading, Loader } from '@navikt/ds-react';
 import { ArrowRight } from 'lucide-react';
-import type { Website } from '../../../types/chart.ts';
+import type { Website } from '../../../../shared/types/chart.ts';
 
 type EntranceRow = {
     name: string;
