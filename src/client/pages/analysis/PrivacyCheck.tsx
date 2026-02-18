@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Table, Heading, Tabs, Switch, ReadMore, Pagination, VStack } from '@navikt/ds-react';
 import { parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayoutOriginal.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import type { Website } from '../../types/chart.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayoutOriginal.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import type { Website } from '../../shared/types/chart.ts';
 
 
 const PATTERNS: Record<string, RegExp> = {

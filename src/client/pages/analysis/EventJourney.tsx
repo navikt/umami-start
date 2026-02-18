@@ -3,11 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { TextField, Button, Alert, Loader, Tabs, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Share2, Check, ArrowRight } from 'lucide-react';
 import { parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import type { Website } from '../../types/chart.ts';
-import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../lib/utils.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import type { Website } from '../../shared/types/chart.ts';
+import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../shared/lib/utils.ts';
 
 type ParsedStepDetail = {
     key: string;

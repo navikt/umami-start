@@ -1,6 +1,6 @@
 import { Heading, DatePicker, Tabs, ExpansionCard, Button, Alert, Chips } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
-import type { Filter } from '../../types/chart.ts';
+import type { Filter } from '../../../shared/types/chart.ts';
 import { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
 
 // Date range suggestions for quick date filtering

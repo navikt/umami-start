@@ -3,17 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import { Heading, TextField, Button, Alert, Loader, Tabs, Radio, RadioGroup, Select, UNSAFE_Combobox as Combobox, Modal } from '@navikt/ds-react';
 import { Plus, Trash2, Download, Share2, Check, Code2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import FunnelChart from '../../components/analysis/funnel/FunnelChart.tsx';
-import HorizontalFunnelChart from '../../components/analysis/funnel/HorizontalFunnelChart.tsx';
-import FunnelStats from '../../components/analysis/funnel/FunnelStats.tsx';
-import SqlViewer from '../../components/chartbuilder/results/SqlViewer.tsx';
-import AnalysisActionModal from '../../components/analysis/AnalysisActionModal.tsx';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../lib/utils.ts';
-import { getGcpProjectId } from '../../lib/runtimeConfig.ts';
-import type { Website } from '../../types/chart.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import FunnelChart from '../../features/analysis/ui/funnel/FunnelChart.tsx';
+import HorizontalFunnelChart from '../../features/analysis/ui/funnel/HorizontalFunnelChart.tsx';
+import FunnelStats from '../../features/analysis/ui/funnel/FunnelStats.tsx';
+import SqlViewer from '../../features/chartbuilder/ui/results/SqlViewer.tsx';
+import AnalysisActionModal from '../../features/analysis/ui/AnalysisActionModal.tsx';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../shared/lib/utils.ts';
+import { getGcpProjectId } from '../../shared/lib/runtimeConfig.ts';
+import type { Website } from '../../shared/types/chart.ts';
 
 // Runtime config is resolved by getGcpProjectId.
 

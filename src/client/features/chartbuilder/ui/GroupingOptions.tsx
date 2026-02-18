@@ -8,7 +8,7 @@ import type {
   OrderBy,
   Metric,
   Filter
-} from '../../types/chart.ts';
+} from '../../../shared/types/chart.ts';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx'; // Import AlertWithCloseButton
 
 interface DisplayOptionsProps {

@@ -4,12 +4,12 @@ import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLi
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import type { ILineChartProps, IVerticalBarChartProps, IVerticalBarChartDataPoint} from '@fluentui/react-charting';
 import { LineChart, VerticalBarChart, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { translateValue } from '../../../lib/translations.ts';
+import { translateValue } from '../../../../shared/lib/translations.ts';
 import { format, startOfWeek, startOfMonth, isValid } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import SqlViewer from './SqlViewer.tsx';
 import ShareResultsModal from './ShareResultsModal.tsx';
-import AnalysisActionModal from '../../analysis/AnalysisActionModal.tsx';
+import AnalysisActionModal from '../../../analysis/ui/AnalysisActionModal.tsx';
 import { encode } from '@toon-format/toon';
 
 interface ResultsPanelProps {

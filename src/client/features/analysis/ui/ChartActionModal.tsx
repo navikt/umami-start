@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
-import type { SavedChart } from '../../../data/dashboard';
-import { processDashboardSql } from '../../features/dashboard';
-import { translateValue } from '../../lib/translations.ts';
+import type { SavedChart } from '../../../../data/dashboard';
+import { processDashboardSql } from '../../dashboard';
+import { translateValue } from '../../../shared/lib/translations.ts';
 
 interface ChartActionModalProps {
     open: boolean;

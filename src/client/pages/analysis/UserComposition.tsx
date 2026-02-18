@@ -3,14 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs } from '@navikt/ds-react';
 import { Share2, Check } from 'lucide-react';
 import { parseISO } from 'date-fns';
-import ChartLayout from '../../components/analysis/ChartLayout.tsx';
-import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
-import PeriodPicker from '../../components/analysis/PeriodPicker.tsx';
-import UrlPathFilter from '../../components/analysis/UrlPathFilter.tsx';
-import ResultsPanel from '../../components/chartbuilder/results/ResultsPanel.tsx';
-import type { Website } from '../../types/chart.ts';
-import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams } from '../../lib/utils.ts';
-import { useCookieSupport, useCookieStartDate } from '../../hooks/useSiteimproveSupport.ts';
+import ChartLayout from '../../features/analysis/ui/ChartLayout.tsx';
+import WebsitePicker from '../../features/analysis/ui/WebsitePicker.tsx';
+import PeriodPicker from '../../features/analysis/ui/PeriodPicker.tsx';
+import UrlPathFilter from '../../features/analysis/ui/UrlPathFilter.tsx';
+import ResultsPanel from '../../features/chartbuilder/ui/results/ResultsPanel.tsx';
+import type { Website } from '../../shared/types/chart.ts';
+import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams } from '../../shared/lib/utils.ts';
+import { useCookieSupport, useCookieStartDate } from '../../shared/hooks/useSiteimproveSupport.ts';
 import type { IVerticalBarChartProps } from '@fluentui/react-charting';
 
 

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import teamsData from '../../data/teamsData.json';
+import teamsData from '../../../data/teamsData.json';
 
 interface TeamData {
     teamName: string;
