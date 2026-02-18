@@ -1,39 +1,52 @@
 import { lazy } from 'react';
 import type { ReactElement } from 'react';
 
-const Home = lazy(() => import('./pages/Home.tsx'));
-const Komigang = lazy(() => import('./pages/articles/Komigang.tsx'));
-const Oppsett = lazy(() => import('./pages/topics/Oppsett.tsx'));
-const Sporingskoder = lazy(() => import('./pages/topics/Sporingskoder.tsx'));
-const Personvern = lazy(() => import("./pages/articles/Personvern.tsx"));
-const Tilgjengelighet = lazy(() => import("./pages/articles/Tilgjengelighet.tsx"));
+// Content Feature
+const Home = lazy(() => import('./features/content/ui/Home.tsx'));
+const Komigang = lazy(() => import('./features/content/ui/articles/Komigang.tsx'));
+const MetabaseGuide = lazy(() => import('./features/content/ui/articles/MetabaseGuide.tsx'));
+const Personvern = lazy(() => import('./features/content/ui/articles/Personvern.tsx'));
+const Tilgjengelighet = lazy(() => import('./features/content/ui/articles/Tilgjengelighet.tsx'));
+const Taksonomi = lazy(() => import('./features/content/ui/articles/Taksonomi.tsx'));
+const Oppsett = lazy(() => import('./features/content/ui/topics/Oppsett.tsx'));
+const Sporingskoder = lazy(() => import('./features/content/ui/topics/Sporingskoder.tsx'));
 
+// Dashboard Feature
+const Dashboard = lazy(() => import('./features/dashboard/ui/Dashboard.tsx'));
+const DashboardOverview = lazy(() => import('./features/dashboard/ui/DashboardOverview.tsx'));
 
-const Taksonomi = lazy(() => import("./pages/articles/Taksonomi.tsx"));
-const Charts = lazy(() => import("./pages/analysis/Chartbuilder.tsx"));
-const MetabaseGuide = lazy(() => import("./pages/articles/MetabaseGuide.tsx"));
+// Chartbuilder Feature
+const Charts = lazy(() => import('./features/chartbuilder/ui/Chartbuilder.tsx'));
+const Grafdeling = lazy(() => import('./features/chartbuilder/ui/Grafdeling.tsx'));
 
-const SqlEditor = lazy(() => import("./pages/analysis/SqlEditor.tsx"));
-const Grafdeling = lazy(() => import("./pages/analysis/Grafdeling.tsx"));
-const UserJourney = lazy(() => import("./pages/analysis/UserJourney.tsx"));
-const Funnel = lazy(() => import("./pages/analysis/Funnel.tsx"));
-const Retention = lazy(() => import("./pages/analysis/Retention.tsx"));
-const UserComposition = lazy(() => import("./pages/analysis/UserComposition.tsx"));
-const EventExplorer = lazy(() => import("./pages/analysis/EventExplorer.tsx"));
-const TrafficAnalysis = lazy(() => import("./pages/analysis/TrafficAnalysis.tsx"));
-const MarketingAnalysis = lazy(() => import("./pages/analysis/MarketingAnalysis.tsx"));
+// Analysis Feature
+const UserComposition = lazy(() => import('./features/analysis/ui/UserComposition.tsx'));
+const Spellings = lazy(() => import('./features/analysis/ui/Spellings.tsx'));
+const BrokenLinks = lazy(() => import('./features/analysis/ui/BrokenLinks.tsx'));
+const PrivacyCheck = lazy(() => import('./features/analysis/ui/PrivacyCheck.tsx'));
+const Diagnosis = lazy(() => import('./features/analysis/ui/Diagnosis.tsx'));
 
-const UserProfiles = lazy(() => import("./pages/analysis/UserProfiles.tsx"));
+// User Feature
+const UserJourney = lazy(() => import('./features/user/ui/UserJourney.tsx'));
+const UserProfile = lazy(() => import('./features/user/ui/UserProfile.tsx'));
+const UserProfiles = lazy(() => import('./features/user/ui/UserProfiles.tsx'));
 
-const PrivacyCheck = lazy(() => import("./pages/analysis/PrivacyCheck.tsx"));
-const Diagnosis = lazy(() => import("./pages/analysis/Diagnosis.tsx"));
+// Events Feature
+const EventExplorer = lazy(() => import('./features/events/ui/EventExplorer.tsx'));
+const EventJourney = lazy(() => import('./features/events/ui/EventJourney.tsx'));
 
-const EventJourney = lazy(() => import("./pages/analysis/EventJourney.tsx"));
-const UserProfile = lazy(() => import("./pages/analysis/UserProfile.tsx"));
-const Dashboard = lazy(() => import("./pages/analysis/Dashboard.tsx"));
-const DashboardOverview = lazy(() => import("./pages/topics/DashboardOverview.tsx"));
-const BrokenLinks = lazy(() => import("./pages/analysis/BrokenLinks.tsx"));
-const Spellings = lazy(() => import("./pages/analysis/Spellings.tsx"));
+// Traffic Feature
+const TrafficAnalysis = lazy(() => import('./features/traffic/ui/TrafficAnalysis.tsx'));
+const MarketingAnalysis = lazy(() => import('./features/traffic/ui/MarketingAnalysis.tsx'));
+
+// Funnel Feature
+const Funnel = lazy(() => import('./features/funnel/ui/Funnel.tsx'));
+
+// Retention Feature
+const Retention = lazy(() => import('./features/retention/ui/Retention.tsx'));
+
+// SQL Feature
+const SqlEditor = lazy(() => import('./features/sql/ui/SqlEditor.tsx'));
 
 export type AppRoute = {
     path: string;
