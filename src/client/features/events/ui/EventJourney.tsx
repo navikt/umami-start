@@ -24,6 +24,9 @@ type JourneyStats = {
     sessions_with_events?: number;
     sessions_no_events_navigated?: number;
     sessions_no_events_bounced?: number;
+};
+
+type QueryStats = {
     totalBytesProcessedGB?: number;
     estimatedCostUSD?: number;
 };
@@ -31,6 +34,7 @@ type JourneyStats = {
 type EventJourneyResponse = {
     journeys?: { path: string[]; count: number }[];
     journeyStats?: JourneyStats;
+    queryStats?: QueryStats;
 };
 
 const parseJourneyStep = (step: string): ParsedJourneyStep => {
@@ -92,7 +96,8 @@ const EventJourney = () => {
     const [data, setData] = useState<{ path: string[], count: number }[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [queryStats, setQueryStats] = useState<JourneyStats | null>(null);
+    const [journeyStats, setJourneyStats] = useState<JourneyStats | null>(null);
+    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
     const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
     const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
@@ -120,6 +125,8 @@ const EventJourney = () => {
         setLoading(true);
         setError(null);
         setData([]);
+        setJourneyStats(null);
+        setQueryStats(null);
         setHasAutoSubmitted(true);
 
         // Calculate date range
@@ -178,7 +185,8 @@ const EventJourney = () => {
 
             const result: EventJourneyResponse = await response.json() as EventJourneyResponse;
             setData(result.journeys || []);
-            setQueryStats(result.journeyStats || null);
+            setJourneyStats(result.journeyStats || null);
+            setQueryStats(result.queryStats || null);
 
             // Update URL
             const newParams = new URLSearchParams(window.location.search);
@@ -377,7 +385,7 @@ const EventJourney = () => {
                         <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Unike besøkende</div>
                             <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
-                                {formatNumber(queryStats?.total_sessions || 0)}
+                                {formatNumber(journeyStats?.total_sessions || 0)}
                             </div>
                             <div className="text-sm text-[var(--ax-text-subtle)] mt-1">Totalt i utvalget</div>
                         </div>
@@ -386,10 +394,10 @@ const EventJourney = () => {
                         <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Utførte handlinger</div>
                             <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
-                                {getPercentage(queryStats?.sessions_with_events || 0, queryStats?.total_sessions || 0)}
+                                {getPercentage(journeyStats?.sessions_with_events || 0, journeyStats?.total_sessions || 0)}
                             </div>
                             <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                                {formatNumber(queryStats?.sessions_with_events || 0)} sesjoner
+                                {formatNumber(journeyStats?.sessions_with_events || 0)} sesjoner
                             </div>
                         </div>
 
@@ -397,10 +405,10 @@ const EventJourney = () => {
                         <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Navigering uten handling</div>
                             <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
-                                {getPercentage(queryStats?.sessions_no_events_navigated || 0, queryStats?.total_sessions || 0)}
+                                {getPercentage(journeyStats?.sessions_no_events_navigated || 0, journeyStats?.total_sessions || 0)}
                             </div>
                             <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                                {formatNumber(queryStats?.sessions_no_events_navigated || 0)} sesjoner
+                                {formatNumber(journeyStats?.sessions_no_events_navigated || 0)} sesjoner
                             </div>
                         </div>
 
@@ -408,10 +416,10 @@ const EventJourney = () => {
                         <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Forlot nettstedet</div>
                             <div className="text-2xl font-bold text-[var(--ax-text-default)] mb-1">
-                                {getPercentage(queryStats?.sessions_no_events_bounced || 0, queryStats?.total_sessions || 0)}
+                                {getPercentage(journeyStats?.sessions_no_events_bounced || 0, journeyStats?.total_sessions || 0)}
                             </div>
                             <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                                {formatNumber(queryStats?.sessions_no_events_bounced || 0)} sesjoner
+                                {formatNumber(journeyStats?.sessions_no_events_bounced || 0)} sesjoner
                             </div>
                         </div>
                     </div>
@@ -552,11 +560,6 @@ const EventJourney = () => {
                         </Tabs.Panel>
                     </Tabs>
 
-                    {queryStats?.totalBytesProcessedGB && (
-                        <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
-                            Data prosessert: {queryStats.totalBytesProcessedGB} GB
-                        </div>
-                    )}
                     <div className="flex justify-end mt-8">
                         <Button
                             size="small"
@@ -568,6 +571,12 @@ const EventJourney = () => {
                         </Button>
                     </div>
                 </>
+            )}
+
+            {!loading && !error && queryStats?.totalBytesProcessedGB !== undefined && (
+                <div className="text-sm text-[var(--ax-text-subtle)] text-right mt-4">
+                    Data prosessert: {queryStats.totalBytesProcessedGB} GB
+                </div>
             )}
 
             {!loading && urlPath && data.length === 0 && !error && (
