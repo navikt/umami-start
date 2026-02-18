@@ -1,311 +1,55 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { TextField, Button, Alert, Loader, Tabs, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Share2, Check, ArrowRight } from 'lucide-react';
-import { parseISO } from 'date-fns';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
-import type { Website } from '../../../shared/types/chart.ts';
-import { normalizeUrlToPath, getStoredPeriod, savePeriodPreference } from '../../../shared/lib/utils.ts';
-
-type ParsedStepDetail = {
-    key: string;
-    value: string;
-};
-
-type ParsedJourneyStep = {
-    eventName: string;
-    details: ParsedStepDetail[];
-};
-
-type JourneyStats = {
-    total_sessions?: number;
-    sessions_with_events?: number;
-    sessions_no_events_navigated?: number;
-    sessions_no_events_bounced?: number;
-};
-
-type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
-
-type EventJourneyResponse = {
-    journeys?: { path: string[]; count: number }[];
-    journeyStats?: JourneyStats;
-    queryStats?: QueryStats;
-};
-
-const parseJourneyStep = (step: string): ParsedJourneyStep => {
-    const separatorIndex = step.indexOf(': ');
-    if (separatorIndex === -1) {
-        return {
-            eventName: step.trim(),
-            details: [],
-        };
-    }
-
-    const eventName = step.slice(0, separatorIndex).trim();
-    const rawDetails = step.slice(separatorIndex + 2);
-    const details = rawDetails
-        .split('||')
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .map((part) => {
-            const detailSeparatorIndex = part.indexOf(':');
-            if (detailSeparatorIndex === -1) {
-                return { key: part, value: '' };
-            }
-
-            return {
-                key: part.slice(0, detailSeparatorIndex).trim(),
-                value: part.slice(detailSeparatorIndex + 1).trim(),
-            };
-        });
-
-    return { eventName, details };
-};
+import { normalizeUrlToPath } from '../../../shared/lib/utils.ts';
+import { useEventJourney } from '../hooks/useEventJourney.ts';
+import { parseJourneyStep } from '../utils/parsers.ts';
+import { formatNumber, getPercentage } from '../utils/formatters.ts';
+import { getUniqueEventTypes, filterJourneys } from '../utils/journeyFilters.ts';
+import { copyToClipboard } from '../utils/clipboard.ts';
 
 const EventJourney = () => {
-    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [searchParams] = useSearchParams();
-
-    // Initialize state from URL params - check both urlPath and pagePath for compatibility
-    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || searchParams.get('pagePath') || '');
-    const [period, setPeriodState] = useState<string>(() => getStoredPeriod(searchParams.get('period')));
-
-    // Wrap setPeriod to also save to localStorage
-    const setPeriod = (newPeriod: string) => {
-        setPeriodState(newPeriod);
-        savePeriodPreference(newPeriod);
-    };
-
-    // Support custom dates from URL
-    const fromDateFromUrl = searchParams.get("from");
-    const toDateFromUrl = searchParams.get("to");
-    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
-    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
-
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
+    const {
+        selectedWebsite,
+        setSelectedWebsite,
+        urlPath,
+        setUrlPath,
+        period,
+        setPeriod,
+        customStartDate,
+        setCustomStartDate,
+        customEndDate,
+        setCustomEndDate,
+        data,
+        loading,
+        error,
+        journeyStats,
+        queryStats,
+        hasUnappliedFilterChanges,
+        fetchData
+    } = useEventJourney();
 
     // Client-side filter state
     const [filterText, setFilterText] = useState<string>('');
-
-    const [data, setData] = useState<{ path: string[], count: number }[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [journeyStats, setJourneyStats] = useState<JourneyStats | null>(null);
-    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
-    const [copySuccess, setCopySuccess] = useState<boolean>(false);
-    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
-    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
-
-    const buildFilterKey = useCallback(() =>
-        JSON.stringify({
-            websiteId: selectedWebsite?.id ?? null,
-            urlPath: normalizeUrlToPath(urlPath),
-            period,
-            customStartDate: customStartDate?.toISOString() ?? null,
-            customEndDate: customEndDate?.toISOString() ?? null,
-        }), [selectedWebsite?.id, urlPath, period, customStartDate, customEndDate]);
-    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
-
     const [excludedEventTypes, setExcludedEventTypes] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState<string>('visual');
     const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+    const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
-    const fetchData = useCallback(async () => {
-        if (!selectedWebsite) return;
-
-        if (!urlPath) return;
-        const appliedFilterKey = buildFilterKey();
-
-        setLoading(true);
-        setError(null);
-        setData([]);
-        setJourneyStats(null);
-        setQueryStats(null);
-        setHasAutoSubmitted(true);
-
-        // Calculate date range
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        }
-
-        try {
-            const response = await fetch('/api/bigquery/event-journeys', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    websiteId: selectedWebsite.id,
-                    urlPath,
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                    minEvents: 1 // Allow paths of length 1
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch event journeys');
-            }
-
-            const result: EventJourneyResponse = await response.json() as EventJourneyResponse;
-            setData(result.journeys || []);
-            setJourneyStats(result.journeyStats || null);
-            setQueryStats(result.queryStats || null);
-
-            // Update URL
-            const newParams = new URLSearchParams(window.location.search);
-            newParams.set('period', period);
-            newParams.set('urlPath', urlPath);
-            newParams.delete('minEvents');
-            window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-            setLastAppliedFilterKey(appliedFilterKey);
-
-        } catch (err) {
-            console.error(err);
-            setError('Kunne ikke laste hendelsesreiser. Prøv igjen senere.');
-        } finally {
-            setLoading(false);
-        }
-    }, [
-        selectedWebsite,
-        urlPath,
-        buildFilterKey,
-        period,
-        customStartDate,
-        customEndDate,
-    ]);
-
-    // Auto-submit when URL parameters are present (for shared links)
-    useEffect(() => {
-        const hasConfigParams = searchParams.has('period') || searchParams.has('urlPath');
-        if (selectedWebsite && hasConfigParams && !hasAutoSubmitted && !loading) {
-            setHasAutoSubmitted(true);
-            void fetchData();
-        }
-    }, [selectedWebsite, searchParams, hasAutoSubmitted, loading, fetchData]);
-
-    const filteredData = (() => {
-        const processed = data
-            .map(journey => ({
-                ...journey,
-                path: journey.path
-                    .filter(step => {
-                        const eventName = step.split(': ')[0];
-                        return !excludedEventTypes.includes(eventName);
-                    })
-                    .map(step => {
-                        const parts = step.split(': ');
-                        const eventName = parts[0];
-
-                        if (parts.length < 2) return step;
-
-                        const rawDetails = step.substring(eventName.length + 2);
-                        const details = rawDetails.split('||');
-
-                        const filteredDetails = details.filter(d => {
-                            const splitIndex = d.indexOf(':');
-                            if (splitIndex === -1) return true;
-
-                            const key = d.substring(0, splitIndex).trim();
-                            return key !== 'scrollPercent';
-                        });
-
-                        if (filteredDetails.length === 0) return eventName;
-
-                        return `${eventName}: ${filteredDetails.join('||')}`;
-                    })
-            }))
-            .filter(journey => journey.path.length > 0);
-
-        const aggregatedMap = new Map<string, { path: string[], count: number }>();
-        processed.forEach(journey => {
-            const pathKey = JSON.stringify(journey.path);
-            const existing = aggregatedMap.get(pathKey);
-            if (existing) {
-                existing.count += journey.count;
-            } else {
-                aggregatedMap.set(pathKey, { path: journey.path, count: journey.count });
-            }
-        });
-
-        return Array.from(aggregatedMap.values())
-            .filter(journey => {
-                if (filterText) {
-                    const lowerFilter = filterText.toLowerCase();
-                    if (!journey.path.some(step => step.toLowerCase().includes(lowerFilter))) {
-                        return false;
-                    }
-                }
-                return true;
-            })
-            .sort((a, b) => b.count - a.count);
-    })();
-
-    const formatNumber = (num: number) => num.toLocaleString('nb-NO');
-
-    const getUniqueEventTypes = (): string[] => {
-        const eventTypes = new Set<string>();
-        data.forEach(journey => {
-            journey.path.forEach(step => {
-                const eventName = step.split(': ')[0];
-                if (eventName) eventTypes.add(eventName);
-            });
-        });
-        return Array.from(eventTypes).sort();
-    };
-
-    const getPercentage = (count: number, total: number) => {
-        if (!total) return '0.0%';
-        return ((count / total) * 100).toFixed(1) + '%';
-    };
+    const filteredData = filterJourneys(data, excludedEventTypes, filterText);
     const totalJourneySessions = data.reduce((total, journey) => total + journey.count, 0);
 
-
     const copyShareLink = async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
+        const success = await copyToClipboard(window.location.href);
+        if (success) {
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy link:', err);
         }
     };
+
     const toggleDetailsExpansion = (stepKey: string) => {
         setExpandedDetails((current) => ({
             ...current,
@@ -317,7 +61,7 @@ const EventJourney = () => {
         <ChartLayout
             title="Hendelsesforløp"
             description="Se rekkefølgen av hendelser brukere gjør på en spesifikk side."
-            currentPage="hendelsesreiser" // Need to update type in AnalyticsNavigation probably
+            currentPage="hendelsesreiser"
             websiteDomain={selectedWebsite?.domain}
             websiteName={selectedWebsite?.name}
             sidebarContent={
@@ -427,11 +171,11 @@ const EventJourney = () => {
 
                     <div className="mb-4">
                         <div className="flex flex-wrap items-end gap-3">
-                            {getUniqueEventTypes().length > 0 && (
+                            {getUniqueEventTypes(data).length > 0 && (
                                 <UNSAFE_Combobox
                                     label="Skjul hendelser"
                                     size="small"
-                                    options={getUniqueEventTypes()}
+                                    options={getUniqueEventTypes(data)}
                                     selectedOptions={excludedEventTypes}
                                     isMultiSelect
                                     placeholder="Velg..."
@@ -503,7 +247,7 @@ const EventJourney = () => {
                                                                                         type="button"
                                                                                         size="xsmall"
                                                                                         variant="secondary"
-                                                                                        data-color="neutral" 
+                                                                                        data-color="neutral"
                                                                                         onClick={() => toggleDetailsExpansion(stepKey)}
                                                                                         className="mt-1 w-fit"
                                                                                     >
@@ -589,3 +333,4 @@ const EventJourney = () => {
 };
 
 export default EventJourney;
+
