@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
+import { saveChartToBackend } from '../../api/chartStorageApi.ts';
 
 type JsonPrimitive = string | number | boolean | null;
 interface JsonObject {
@@ -123,6 +124,16 @@ const QueryPreview = ({
     urlPath: '',
     eventName: ''
   });
+
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [savingChart, setSavingChart] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('Start Umami');
+  const [dashboardName, setDashboardName] = useState('Grafbygger');
+  const [graphName, setGraphName] = useState('Ny graf');
+  const [queryName, setQueryName] = useState('Grafsporring');
+  const [graphType, setGraphType] = useState('LINE');
 
   // Check if parameters have changed
   const hasChanges = () => {
@@ -609,6 +620,50 @@ const QueryPreview = ({
     setPendingQueryEstimate(null);
   };
 
+  const openSaveModal = () => {
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    if (!graphName || graphName === 'Ny graf') {
+      const timestamp = format(new Date(), 'yyyy-MM-dd HH:mm');
+      setGraphName(`Graf ${timestamp}`);
+      setQueryName(`Sporring ${timestamp}`);
+    }
+
+    setShowSaveModal(true);
+  };
+
+  const handleSaveChart = async () => {
+    if (!graphName.trim() || !queryName.trim() || !projectName.trim() || !dashboardName.trim()) {
+      setSaveError('Fyll ut prosjekt, dashboard, grafnavn og sporingsnavn.');
+      return;
+    }
+
+    setSavingChart(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const saved = await saveChartToBackend({
+        projectName: projectName.trim(),
+        dashboardName: dashboardName.trim(),
+        graphName: graphName.trim(),
+        queryName: queryName.trim(),
+        graphType: graphType.trim(),
+        sqlText: getProcessedSql({ preserveMetabasePlaceholders: true }),
+      });
+
+      setSaveSuccess(
+        `Lagret. Prosjekt #${saved.project.id}, dashboard #${saved.dashboard.id}, graf #${saved.graph.id}, sporring #${saved.query.id}.`,
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Klarte ikke lagre grafen';
+      setSaveError(message);
+    } finally {
+      setSavingChart(false);
+    }
+  };
+
   // Show loading message after 10 seconds
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -897,8 +952,20 @@ const QueryPreview = ({
               />
             </div>
 
-            {/* Metabase Section */}
+            {/* Save + Metabase Section */}
             <div className="space-y-3 mb-4">
+              <div>
+                <Button size="small" variant="primary" onClick={openSaveModal}>
+                  Lagre graf
+                </Button>
+              </div>
+
+              {saveSuccess && (
+                <Alert variant="success" size="small">
+                  {saveSuccess}
+                </Alert>
+              )}
+
               <Heading level="2" size="small" spacing>Legg til i Metabase</Heading>
 
               {/* Add incompatibility warning */}
@@ -1030,6 +1097,69 @@ const QueryPreview = ({
         </div>
         */}
       </div>
+
+      <Modal
+        open={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        header={{ heading: 'Lagre graf til backend' }}
+      >
+        <Modal.Body>
+          <div className="space-y-4">
+            <TextField
+              label="Prosjekt"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              size="small"
+            />
+            <TextField
+              label="Dashboard"
+              value={dashboardName}
+              onChange={(e) => setDashboardName(e.target.value)}
+              size="small"
+            />
+            <TextField
+              label="Grafnavn"
+              value={graphName}
+              onChange={(e) => setGraphName(e.target.value)}
+              size="small"
+            />
+            <TextField
+              label="Sporringsnavn"
+              value={queryName}
+              onChange={(e) => setQueryName(e.target.value)}
+              size="small"
+            />
+            <Select
+              label="Graftype"
+              value={graphType}
+              onChange={(e) => setGraphType(e.target.value)}
+              size="small"
+            >
+              <option value="LINE">LINE</option>
+              <option value="BAR">BAR</option>
+              <option value="PIE">PIE</option>
+              <option value="TABLE">TABLE</option>
+            </Select>
+
+            {saveError && (
+              <Alert variant="error" size="small">
+                {saveError}
+              </Alert>
+            )}
+            <p className="text-sm text-[var(--ax-text-subtle)]">
+              SQL lagres med Metabase-parametere der det er valgt interaktive filtre.
+            </p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleSaveChart} loading={savingChart}>
+            Lagre
+          </Button>
+          <Button variant="secondary" onClick={() => setShowSaveModal(false)} disabled={savingChart}>
+            Avbryt
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Confirmation Modal for Large Queries */}
       <Modal

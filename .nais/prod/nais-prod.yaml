@@ -31,6 +31,7 @@ spec:
       rules:
           - application: reops-proxy
             namespace: team-researchops
+          - application: start-umami-backend
   azure:
     application:
       enabled: true
