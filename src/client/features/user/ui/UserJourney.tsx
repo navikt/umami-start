@@ -30,28 +30,7 @@ import {
   savePeriodPreference,
   getStoredPeriod,
 } from "../../../shared/lib/utils.ts";
-
-type JourneyNode = {
-  nodeId: string;
-  name: string;
-};
-
-type JourneyLink = {
-  source: number;
-  target: number;
-  value: number;
-  color?: string;
-};
-
-type JourneyData = {
-  nodes: JourneyNode[];
-  links: JourneyLink[];
-};
-
-type QueryStats = {
-  totalBytesProcessedGB?: number;
-  estimatedCostUSD?: number;
-};
+import type { JourneyNode, JourneyLink, JourneyData, QueryStats } from "../model";
 
 const UserJourney = () => {
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
