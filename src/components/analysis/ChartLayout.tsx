@@ -166,28 +166,29 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
 
                     {/* Unified Top Bar */}
                     {(sidebarContent || (!hideSidebar && filters)) && (
-                        <div className="border-b border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-accent-soft)] flex flex-col md:flex-row min-h-[0px] md:min-h-[80px]">
-                            {/* Left Column Header (Sidebar Content) */}
-                            {!hideAnalysisSelector && (
-                                <div
-                                    className="w-full md:w-[250px] flex-shrink-0 border-b md:border-b-0 p-4 flex flex-col justify-end transition-all duration-300"
-                                >
-                                    {sidebarContent}
-                                </div>
-                            )}
-
-                            {/* Right Column Header (Filters) */}
-                            <div className="w-full md:flex-1 p-4 flex flex-wrap items-end gap-4 border-b md:border-b-0 border-[var(--ax-border-neutral-subtle)] md:border-none">
-                                {!hideSidebar && filters}
-                            </div>
+                    <div className="border-b border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-subtle)] flex flex-col md:flex-row md:min-h-[80px]">
+                        
+                        {/* Left Column Header (Sidebar Content) */}
+                        {!hideAnalysisSelector && (
+                        <div className="w-full md:w-[250px] flex-shrink-0 border-b md:border-b-0 p-4 flex flex-col justify-end transition-all duration-300">
+                            {sidebarContent}
                         </div>
+                        )}
+
+                        {/* Right Column Header (Filters) */}
+                        <div className="w-full md:flex-1 p-4 flex flex-wrap items-end gap-4 border-b md:border-b-0 border-[var(--ax-border-neutral-subtle)] md:border-none">
+                        {!hideSidebar && filters}
+                        </div>
+
+                    </div>
                     )}
 
                     <div className="flex flex-col md:flex-row min-h-[800px] relative transition-all duration-300">
 
                         {/* ================= COL 1: NAVIGATION ================= */}
                         {!hideAnalysisSelector && (
-                            <div className="md:w-[250px] bg-[var(--ax-bg-neutral-soft)] border-b md:border-b-0 md:border-r border-[var(--ax-border-neutral-subtle)] flex-shrink-0">
+                            <div className="md:w-[250px] bg-[var(--ax-bg-neutral-soft)] md:border-b-0 flex-shrink-0">
+
 
                                 {/* Mobile: Accordion View */}
                                 <div className="md:hidden">
