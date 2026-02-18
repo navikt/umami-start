@@ -1,57 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Loader, Alert, Table, Pagination, Button } from '@navikt/ds-react';
-import type { ILineChartDataPoint} from '@fluentui/react-charting';
-import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import { ExternalLink, MoreVertical } from 'lucide-react';
+import { Loader, Alert, Button } from '@navikt/ds-react';
+import { MoreVertical } from 'lucide-react';
 import type { SavedChart } from '../../data/dashboard';
-import { format } from 'date-fns';
-import { translateValue } from '../../lib/translations';
 import AnalysisActionModal from '../analysis/AnalysisActionModal';
-// @ts-expect-error Untyped JS module
-import SiteScores from '../siteimprove/SiteScores';
-// @ts-expect-error Untyped JS module
-import SiteGroupScores from '../siteimprove/SiteGroupScores';
-import teamsData from '../../data/teamsData.json';
-import { processDashboardSql } from './dashboardQueryUtils.ts';
 import ChartActionModal from '../analysis/ChartActionModal';
-
-type JsonPrimitive = string | number | boolean | null;
-interface JsonObject {
-    [key: string]: JsonValue;
-}
-type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
-
-type DashboardRow = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-    return typeof value === 'object' && value !== null;
-};
-
-const getErrorMessage = (value: unknown, fallback: string): string => {
-    if (isRecord(value) && typeof value.error === 'string') {
-        return value.error;
-    }
-    return fallback;
-};
-
-const parseDashboardResponse = (value: unknown): { data: DashboardRow[]; totalBytesProcessed?: number } => {
-    if (!isRecord(value)) return { data: [] };
-    const data = Array.isArray(value.data) ? value.data.filter(isRecord) : [];
-    const totalBytesProcessed = isRecord(value.queryStats) && typeof value.queryStats.totalBytesProcessed === 'number'
-        ? value.queryStats.totalBytesProcessed
-        : undefined;
-    return { data, totalBytesProcessed };
-};
+import DashboardWidgetLineChart from './widget/DashboardWidgetLineChart';
+import DashboardWidgetTable from './widget/DashboardWidgetTable';
+import DashboardWidgetSiteimprove from './widget/DashboardWidgetSiteimprove';
+import { processDashboardSql } from './dashboardQueryUtils.ts';
+import {
+    getErrorMessage,
+    parseDashboardResponse,
+    getSpanClass,
+    type DashboardRow
+} from './widget/dashboardWidgetUtils';
 
 type SelectedWebsite = {
     domain: string;
-    // allow extra fields without using `any`
-    [key: string]: unknown;
-};
-
-type TeamData = {
-    teamDomain?: string;
-    teamSiteimproveSite?: string | number | boolean;
     [key: string]: unknown;
 };
 
@@ -88,24 +53,6 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
     // State for ChartActionModal (for title click)
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-
-
-
-    // Helper to check if a value is a clickable URL path
-    const isClickablePath = (val: unknown): val is string => {
-        return typeof val === 'string' && val.startsWith('/') && val !== '/';
-    };
-
-    const formatTableValue = (val: unknown): string => {
-        if (val === null || val === undefined) return '';
-        if (typeof val === 'string') return val;
-        if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-        try {
-            return JSON.stringify(val);
-        } catch {
-            return '';
-        }
-    };
 
     // If prefetchedData is available, use it directly instead of fetching
     useEffect(() => {
@@ -210,119 +157,16 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
     ]);
 
     // Render logic based on chart.type
-    // Calculate span based on 20-column grid
-    let span = 10; // Default half (50%) => 10/20
-    const w = chart.width;
-
-    if (w === 'full') span = 20;
-    else if (w === 'half') span = 10;
-    else if (w) {
-        // Try parsing number
-        const val = parseInt(w);
-        if (!isNaN(val)) {
-            // value is percentage (e.g. 60), map to 20 columns
-            // 100% = 20 cols. 1% = 0.2 cols.
-            span = Math.round(val * 0.2);
-        }
-    }
-
-    // Ensure min 1 span
-    span = Math.max(1, span);
-
-    // Explicit map to ensure Tailwind JIT picks up the classes
-    const SPAN_CLASSES: Record<number, string> = {
-        1: 'md:col-span-1',
-        2: 'md:col-span-2',
-        3: 'md:col-span-3',
-        4: 'md:col-span-4',
-        5: 'md:col-span-5',
-        6: 'md:col-span-6',
-        7: 'md:col-span-7',
-        8: 'md:col-span-8',
-        9: 'md:col-span-9',
-        10: 'md:col-span-10',
-        11: 'md:col-span-11',
-        12: 'md:col-span-12',
-        13: 'md:col-span-13',
-        14: 'md:col-span-14',
-        15: 'md:col-span-15',
-        16: 'md:col-span-16',
-        17: 'md:col-span-17',
-        18: 'md:col-span-18',
-        19: 'md:col-span-19',
-        20: 'md:col-span-20',
-    };
-
-    const colClass = `col-span-full ${SPAN_CLASSES[span] || 'md:col-span-10'}`;
+    const colClass = getSpanClass(chart.width);
 
     if (chart.type === 'siteimprove') {
-        const baseUrl = '/api/siteimprove';
-
-        // If chart has siteimprove_id, use group-level scoring
-        if (chart.siteimprove_id) {
-            return (
-                <SiteGroupScores
-                    className={colClass}
-                    siteId={chart.siteimprove_id}
-                    portalSiteId={chart.siteimprove_portal_id}
-                    groupId={siteimproveGroupId}
-                    baseUrl={baseUrl}
-                />
-            );
-        }
-
-        // Otherwise, use page-level scoring (original behavior)
-        if (!selectedWebsite) return null;
-
-        let team: TeamData | null = null;
-        let siteDomain = selectedWebsite.domain;
-        if (!siteDomain.startsWith('http')) {
-            siteDomain = `https://${siteDomain}`;
-        }
-
-        try {
-            // Try to match by origin if valid URL
-            const urlObj = new URL(siteDomain);
-            const domain = urlObj.origin;
-            team = (teamsData as TeamData[]).find((t) => {
-                if (!t.teamDomain) return false;
-                // Normalize team domain to origin to ensure safely matching
-                try {
-                    const teamUrl = new URL(t.teamDomain);
-                    return domain === teamUrl.origin;
-                } catch {
-                    // Fallback if teamDomain in matching data is weird
-                    return domain.startsWith(t.teamDomain);
-                }
-            }) ?? null;
-        } catch {
-            // Fallback to direct string match or partial match
-            team =
-                (teamsData as TeamData[]).find(
-                    (t) =>
-                        !!t.teamDomain &&
-                        (t.teamDomain === selectedWebsite.domain ||
-                            selectedWebsite.domain.includes(t.teamDomain) ||
-                            t.teamDomain.includes(selectedWebsite.domain))
-                ) ?? null;
-        }
-
-        if (!team || !team.teamSiteimproveSite || !team.teamDomain) {
-            return null;
-        }
-
-        // Construct page URL from filters
-        const path = (filters.urlFilters && filters.urlFilters.length > 0) ? filters.urlFilters[0] : '/';
-        // Ensure path starts with slash if not empty
-        const safePath = path.startsWith('/') ? path : `/${path}`;
-        const fullUrl = `${team.teamDomain}${safePath}`;
-
         return (
-            <SiteScores
-                className={colClass}
-                pageUrl={fullUrl}
-                siteimproveSelectedDomain={team.teamSiteimproveSite}
-                baseUrl={baseUrl}
+            <DashboardWidgetSiteimprove
+                chart={chart}
+                colClass={colClass}
+                selectedWebsite={selectedWebsite}
+                urlPath={filters.urlFilters[0]}
+                siteimproveGroupId={siteimproveGroupId}
             />
         );
     }
@@ -342,137 +186,23 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         if (!data || data.length === 0) return <div className="text-[var(--ax-text-subtle)] p-8 text-center">Ingen data funnet</div>;
 
         if (chart.type === 'line') {
-            const points: ILineChartDataPoint[] = data.map((row) => {
-                const keys = Object.keys(row);
-                const rawX = (row as Record<string, unknown>)[keys[0]];
-                const xVal =
-                    rawX && typeof rawX === 'object' && 'value' in (rawX as JsonObject)
-                        ? (rawX as JsonObject).value
-                        : rawX;
-
-                const rawY = (row as Record<string, unknown>)[keys[1]];
-                const yVal = typeof rawY === 'number' ? rawY : parseFloat(String(rawY)) || 0;
-
-                return {
-                    x: new Date(String(xVal)),
-                    y: yVal,
-                    legend: format(new Date(String(xVal)), 'dd.MM'),
-                    xAxisCalloutData: format(new Date(String(xVal)), 'dd.MM'),
-                    yAxisCalloutData: String(yVal),
-                };
-            });
-
-            const lines = [{
-                legend: chart.title,
-                data: points,
-                color: '#0067c5',
-            }];
-
-            // Generate a unique key based on data to force re-render when data changes
-            // This ensures the x-axis labels are calculated with correct container dimensions
-            const firstX = points[0]?.x;
-            const lastX = points[points.length - 1]?.x;
-            const chartKey = `line-${points.length}-${firstX instanceof Date ? firstX.getTime() : firstX || 0}-${lastX instanceof Date ? lastX.getTime() : lastX || 0}`;
-
             return (
-                <div style={{ width: '100%', height: '350px' }}>
-                    <ResponsiveContainer>
-                        <LineChart
-                            key={chartKey}
-                            data={{ lineChartData: lines }}
-                            yAxisTickFormat={(d: number) => d.toLocaleString('nb-NO')}
-                            margins={{ left: 60, right: 20, top: 20, bottom: 40 }}
-                            styles={{
-                                xAxis: { text: { fill: 'var(--ax-text-subtle)' } },
-                                yAxis: { text: { fill: 'var(--ax-text-subtle)' } },
-                            }}
-                            legendProps={{
-                                styles: {
-                                    text: { color: 'var(--ax-text-subtle)' },
-                                },
-                            }}
-                        />
-                    </ResponsiveContainer>
-                </div>
+                <DashboardWidgetLineChart
+                    data={data}
+                    title={chart.title}
+                />
             );
         } else if (chart.type === 'table') {
-            // Extract __TOTAL__ row if showTotal is enabled
-            let tableData = data;
-
-            if (chart.showTotal) {
-                tableData = data.filter((row) => !Object.values(row).includes('__TOTAL__'));
-            }
-
-            const rowsPerPage = 10;
-            const totalRows = tableData.length;
-            const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-            // Simple client-side pagination
-            const start = (page - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            const currentData = tableData.slice(start, end);
-
             return (
-                <div className="flex flex-col gap-4">
-                    <div className="overflow-x-auto">
-                        <Table size="small">
-                            <Table.Header>
-                                <Table.Row>
-                                    {Object.keys(tableData[0] || data[0]).map(key => (
-                                        <Table.HeaderCell key={key}>{key}</Table.HeaderCell>
-                                    ))}
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {currentData.map((row, i) => {
-                                    const keys = Object.keys(row);
-                                    return (
-                                        <Table.Row key={i}>
-                                            {keys.map((key, j) => {
-                                                const val = (row as Record<string, unknown>)[key];
-                                                const rawString = formatTableValue(val);
-                                                const translatedVal = translateValue(key, rawString);
-                                                const displayVal = typeof val === 'number'
-                                                    ? val.toLocaleString('nb-NO')
-                                                    : translatedVal;
-                                                const clickable = isClickablePath(val);
-                                                return (
-                                                    <Table.DataCell
-                                                        key={j}
-                                                        className={`whitespace-nowrap ${clickable ? 'cursor-pointer' : ''}`}
-                                                        title={rawString}
-                                                        onClick={clickable ? () => setSelectedUrl(val) : undefined}
-                                                    >
-                                                        {clickable ? (
-                                                            <span className="text-blue-600 hover:underline flex items-center gap-1">
-                                                                {displayVal} <ExternalLink className="h-3 w-3" />
-                                                            </span>
-                                                        ) : (
-                                                            displayVal
-                                                        )}
-                                                    </Table.DataCell>
-                                                );
-                                            })}
-                                        </Table.Row>
-                                    );
-                                })}
-                            </Table.Body>
-                        </Table>
-                    </div>
-                    {totalRows > rowsPerPage && (
-                        <div className="flex justify-center">
-                            <Pagination
-                                page={page}
-                                onPageChange={setPage}
-                                count={totalPages}
-                                size="small"
-                            />
-                        </div>
-                    )}
-                </div>
+                <DashboardWidgetTable
+                    data={data}
+                    page={page}
+                    onPageChange={setPage}
+                    showTotal={chart.showTotal}
+                    onSelectUrl={setSelectedUrl}
+                />
             );
         }
-
 
         return <div>Ukjent diagramtype: {chart.type}</div>;
     };
