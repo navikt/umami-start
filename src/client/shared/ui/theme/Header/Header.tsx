@@ -1,4 +1,4 @@
-import { CogIcon, MenuHamburgerIcon } from "@navikt/aksel-icons";
+import { CogIcon, ExternalLinkIcon, MenuHamburgerIcon } from "@navikt/aksel-icons";
 import { ActionMenu, Button, Dropdown, Link, Page, Tooltip } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
 import "../../../../tailwind.css";
@@ -11,6 +11,7 @@ interface HeaderProps {
 type MenuLink = {
   href: string;
   label: string;
+  external?: boolean;
 };
 
 export default function Header({ theme }: HeaderProps) {
@@ -19,19 +20,20 @@ export default function Header({ theme }: HeaderProps) {
   const currentPath = `${pathname}${search}${hash}`;
 
   const guideLinks = [
-    { href: "/komigang", label: "Oppsett guide" },
     {
       href: "https://navno.sharepoint.com/sites/intranett-utvikling/SitePages/Rutine-for-bruk-av-Umami.aspx",
       label: "Retningslinjer",
+      external: true,
     },
+    { href: "/komigang", label: "Oppsett guide" },
     { href: "/taksonomi", label: "Taksonomi" },
   ];
 
   const developerLinks = [
-    { href: "/sporingskoder", label: "Sporingskoder" },
-    { href: "/sql", label: "SQL-editor" },
     { href: "/personvernssjekk", label: "Personvernsjekk" },
     { href: "/diagnose", label: "Diagnoseverktøy" },
+    { href: "/sql", label: "SQL-editor" },
+    { href: "/sporingskoder", label: "Sporingskoder" },
   ];
 
   const environmentLinks: MenuLink[] = (() => {
@@ -108,7 +110,10 @@ export default function Header({ theme }: HeaderProps) {
         <ActionMenu.Group label="Veiledninger">
           {guideLinks.map((item) => (
             <ActionMenu.Item key={item.href} as="a" href={item.href}>
-              {item.label}
+              <span className="inline-flex items-center gap-1">
+                {item.label}
+                {item.external && <ExternalLinkIcon aria-hidden fontSize="0.9rem" />}
+              </span>
             </ActionMenu.Item>
           ))}
         </ActionMenu.Group>

@@ -24,6 +24,7 @@ export function TeamWebsites() {
     const modalRef = useRef<HTMLDialogElement>(null);
     const { hostname, pathname, search, hash } = window.location;
     const currentPath = `${pathname}${search}${hash}`;
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
     const isDev = hostname.includes(".dev.nav.no");
     const isProd = hostname.includes(".nav.no") && !isDev;
 
@@ -76,7 +77,7 @@ export function TeamWebsites() {
     };
 
     return (
-        <div className="px-2 md:px-4 py-2 md:py-4">
+        <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6">
             <div className="search-controls" style={styles.container}>
                 <form role="search" style={{ width: '250px' }}>
                     <Search
@@ -89,7 +90,7 @@ export function TeamWebsites() {
                         size="small"
                     />
                 </form>
-                {!isProd && (
+                {isLocalhost && (
                     <Select
                         label="Filtrer miljø"
                         size="small"
