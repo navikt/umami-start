@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -8,13 +8,11 @@ import {
   Tabs,
   TextField,
 } from "@navikt/ds-react";
-import type {
-  IChartProps} from "@fluentui/react-charting";
 import {
   ResponsiveContainer,
   SankeyChart,
 } from "@fluentui/react-charting";
-import { Download, Minimize2, ExternalLink, Share2, Check } from "lucide-react";
+import { Download, Minimize2, ExternalLink } from "lucide-react";
 import ChartLayout from "../../analysis/ui/ChartLayout.tsx";
 import WebsitePicker from "../../analysis/ui/WebsitePicker.tsx";
 import PeriodPicker from "../../analysis/ui/PeriodPicker.tsx";
@@ -30,7 +28,6 @@ import {
   downloadJourneyExcel,
   copyShareLink,
 } from "../utils";
-import { JourneyControls, JourneyToolbar, QueryStatsDisplay } from "./components";
 
 const UserJourney = () => {
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -132,15 +129,6 @@ const UserJourney = () => {
 
   const handleDownloadExcel = () => {
     downloadJourneyExcel(rawData, selectedWebsite?.name || "data", journeyDirection);
-  };
-
-  const handleLimitBlur = () => {
-    const parsedLimit = parseInt(limitInput);
-    if (Number.isFinite(parsedLimit) && parsedLimit >= 5 && parsedLimit <= 500) {
-      setLimit(parsedLimit);
-    } else {
-      setLimitInput(limit.toString());
-    }
   };
 
 

@@ -1,4 +1,4 @@
-import type { UserProfile, ActivityItem } from '../model';
+import type { UserProfile } from '../model';
 
 export function downloadUsersCSV(users: UserProfile[]): void {
   if (!users || users.length === 0) return;

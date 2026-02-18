@@ -26,7 +26,7 @@ export default function UserDetailsModal({
   if (!selectedSession) return null;
 
   return (
-    <Modal open={isOpen} onClose={onClose} width="large" aria-labelledby="user-details-title">
+    <Modal open={isOpen} onClose={onClose} width="medium" aria-labelledby="user-details-title">
       <Modal.Header>
         <Heading size="medium" id="user-details-title">
           Brukerdetaljer

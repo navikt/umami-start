@@ -1,6 +1,4 @@
 import { useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { parseISO } from 'date-fns';
 import type { IChartProps } from '@fluentui/react-charting';
 import type { Website } from '../../../shared/types/chart';
 import type { JourneyData, JourneyNode, JourneyLink, QueryStats } from '../model';
