@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Table, Button, Tag, Search, Select } from "@navikt/ds-react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { BodyShort, Link, Table, Button, Tag, Search, Select } from "@navikt/ds-react";
 import { useWebsites, useWebsiteFilters, useWebsiteModal } from "../hooks";
 import { TrackingCodeModal } from "./TrackingCodeModal";
 import { formatDate } from "../utils";
-import type { SelectedWebsite } from "../model";
+import type { FilterType, SelectedWebsite } from "../model";
 
 const styles = {
     container: {
@@ -22,17 +22,36 @@ export function TeamWebsites() {
     const { pendingSporingskode, openModal, closeModal } = useWebsiteModal();
     const [selectedItem, setSelectedItem] = useState<SelectedWebsite>({ name: '', id: '' });
     const modalRef = useRef<HTMLDialogElement>(null);
+    const { hostname, pathname, search, hash } = window.location;
+    const currentPath = `${pathname}${search}${hash}`;
+    const isDev = hostname.includes(".dev.nav.no");
+    const isProd = hostname.includes(".nav.no") && !isDev;
 
-    // Open modal when we have both data and a pending sporingskode
-    useEffect(() => {
-        if (data && pendingSporingskode) {
-            const website = data.find(w => w.id === pendingSporingskode);
-            if (website) {
-                setSelectedItem({ name: website.name, id: website.id, domain: website.domain, createdAt: website.createdAt });
-                modalRef.current?.showModal();
-            }
-        }
+    const prodDevEnvironmentLink = (() => {
+        if (!isProd) return null;
+        const devHostname = hostname.replace(".nav.no", ".dev.nav.no");
+        return `https://${devHostname}${currentPath}`;
+    })();
+
+    const visibleData = isProd
+        ? filteredData
+            .filter((group) => !!group.prod)
+            .map((group) => ({ ...group, dev: undefined }))
+        : filteredData;
+
+    const pendingSelectedItem = useMemo(() => {
+        if (!data || !pendingSporingskode) return null;
+        const website = data.find((w) => w.id === pendingSporingskode);
+        if (!website) return null;
+        return { name: website.name, id: website.id, domain: website.domain, createdAt: website.createdAt };
     }, [data, pendingSporingskode]);
+
+    // Open modal when we can resolve the requested website from URL params
+    useEffect(() => {
+        if (pendingSelectedItem) {
+            modalRef.current?.showModal();
+        }
+    }, [pendingSelectedItem]);
 
     const handleButtonClick = (name: string, id: string, domain?: string, createdAt?: string) => {
         setSelectedItem({ name, id, domain, createdAt });
@@ -54,12 +73,12 @@ export function TeamWebsites() {
                         size="small"
                     />
                 </form>
-                {!window.location.hostname.includes('.dev.nav.no') && (
+                {!isProd && (
                     <Select
                         label="Filtrer miljø"
                         size="small"
                         value={filter}
-                        onChange={(e) => setFilter(e.target.value as any)}
+                        onChange={(e) => setFilter(e.target.value as FilterType)}
                         style={{ width: '180px' }}
                     >
                         <option value="all">Alle</option>
@@ -68,9 +87,15 @@ export function TeamWebsites() {
                     </Select>
                 )}
             </div>
+            {isProd && prodDevEnvironmentLink && (
+                <BodyShort className="mb-4">
+                    Leter du etter dev-sporingskode? Bruk{" "}
+                    <Link href={prodDevEnvironmentLink}>dev-miljøet</Link>.
+                </BodyShort>
+            )}
             <div style={{ overflowX: 'auto' }}>
                 <div className="my-2 text-md text-[var(--ax-text-default)]">
-                    {filteredData.length} nettsider/apper
+                    {visibleData.length} nettsider/apper
                 </div>
                 <Table>
                     <Table.Header>
@@ -83,7 +108,7 @@ export function TeamWebsites() {
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                        {filteredData.map((group) => {
+                        {visibleData.map((group) => {
                             const rowCount = (group.prod ? 1 : 0) + (group.dev ? 1 : 0);
                             const isLastRowProd = group.prod && !group.dev;
                             const groupSeparatorStyle = { borderBottom: '2px solid var(--a-border-divider)' };
@@ -146,10 +171,9 @@ export function TeamWebsites() {
             </div>
             <TrackingCodeModal
                 ref={modalRef}
-                selectedItem={selectedItem}
+                selectedItem={pendingSelectedItem ?? selectedItem}
                 onClose={closeModal}
             />
         </>
     );
 }
-
