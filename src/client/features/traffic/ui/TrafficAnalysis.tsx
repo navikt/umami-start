@@ -715,6 +715,18 @@ const TrafficAnalysis = () => {
             }
             return date.toLocaleDateString('nb-NO');
         };
+        const formatCalloutDateLabel = (date: Date) => {
+            if (submittedGranularity === 'hour') {
+                return format(date, "EEE d. MMM yyyy 'kl.' HH:mm", { locale: nb });
+            }
+            if (submittedGranularity === 'week') {
+                return `Uke ${format(date, 'w', { locale: nb })} (${format(date, 'd. MMM yyyy', { locale: nb })})`;
+            }
+            if (submittedGranularity === 'month') {
+                return format(date, 'MMMM yyyy', { locale: nb });
+            }
+            return format(date, 'EEE d. MMM yyyy', { locale: nb });
+        };
         const toChartValue = (rawValue: number) => (
             submittedMetricType === 'proportion'
                 ? Math.min(rawValue * 100, 100)
@@ -734,12 +746,13 @@ const TrafficAnalysis = () => {
 
             const pointDate = new Date(item.time);
             const xAxisLabel = formatXAxisLabel(pointDate);
+            const xAxisCalloutLabel = formatCalloutDateLabel(pointDate);
 
             return {
                 x: pointDate,
                 y: toChartValue(value),
                 legend: xAxisLabel,
-                xAxisCalloutData: xAxisLabel,
+                xAxisCalloutData: xAxisCalloutLabel,
                 yAxisCalloutData: submittedMetricType === 'proportion'
                     ? `${(value * 100).toFixed(1)}%`
                     : `${value.toLocaleString('nb-NO')} ${metricLabel}`
@@ -771,12 +784,13 @@ const TrafficAnalysis = () => {
 
                 const shiftedDate = new Date(new Date(item.time).getTime() + offsetMs);
                 const xAxisLabel = formatXAxisLabel(shiftedDate);
+                const xAxisCalloutLabel = formatCalloutDateLabel(shiftedDate);
 
                 return {
                     x: shiftedDate,
                     y: toChartValue(value),
                     legend: xAxisLabel,
-                    xAxisCalloutData: `${xAxisLabel} (forrige periode)`,
+                    xAxisCalloutData: `${xAxisCalloutLabel} (forrige periode)`,
                     yAxisCalloutData: submittedMetricType === 'proportion'
                         ? `${(value * 100).toFixed(1)}%`
                         : `${value.toLocaleString('nb-NO')} ${metricLabel}`
