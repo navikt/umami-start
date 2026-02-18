@@ -1,5 +1,5 @@
 import type { DashboardConfig } from './types';
-import { getGcpProjectId } from '../../lib/runtimeConfig';
+import { getGcpProjectId } from '../../client/lib/runtimeConfig';
 
 const projectId = getGcpProjectId();
 
