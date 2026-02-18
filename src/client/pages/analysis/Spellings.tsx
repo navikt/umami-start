@@ -7,7 +7,7 @@ import ChartLayout from '../../components/analysis/ChartLayout.tsx';
 import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
 import type { Website } from '../../types/chart.ts';
 import teamsData from '../../../data/teamsData.json';
-import InfoCard from '../../components/InfoCard.tsx';
+import InfoCard from '../../shared/ui/InfoCard.tsx';
 
 interface SpellingIssue {
     id: number;

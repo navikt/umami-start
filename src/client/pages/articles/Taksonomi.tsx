@@ -10,8 +10,8 @@ import {
   CopyButton,
   Page,
 } from '@navikt/ds-react';
-import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon.tsx";
-import { PageHeader } from "../../components/theme/PageHeader/PageHeader.tsx";
+import { KontaktSeksjon } from "../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx";
+import { PageHeader } from "../../shared/ui/theme/PageHeader/PageHeader.tsx";
 
 const TaksonomiPage = () => {
   return (

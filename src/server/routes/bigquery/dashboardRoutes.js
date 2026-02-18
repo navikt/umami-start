@@ -1259,7 +1259,7 @@ export function createDashboardRouter({ bigquery, GCP_PROJECT_ID }) {
               { table: 'public_session', column: 'browser' },
               { table: 'public_session', column: 'os' },
               { table: 'public_session', column: 'device' },
-              { table: 'public_session', column: 'city' },
+              // { table: 'public_session', column: 'city' }, // is always null
 
           ];
 

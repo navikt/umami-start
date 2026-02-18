@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
-import InfoCard from '../InfoCard.tsx';
+import InfoCard from '../../shared/ui/InfoCard.tsx';
 
 type CookieMixNoticeProps = {
     websiteName?: string | null;

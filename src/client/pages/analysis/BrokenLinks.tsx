@@ -7,7 +7,7 @@ import AnalysisActionModal from '../../components/analysis/AnalysisActionModal.t
 import WebsitePicker from '../../components/analysis/WebsitePicker.tsx';
 import type { Website } from '../../types/chart.ts';
 import teamsData from '../../../data/teamsData.json';
-import InfoCard from '../../components/InfoCard.tsx';
+import InfoCard from '../../shared/ui/InfoCard.tsx';
 
 interface BrokenLink {
     id: number;

@@ -3,7 +3,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { dashboards } from "../../../data/dashboard";
 import { BarChartIcon, Buildings3Icon, ExternalLinkIcon, WheelchairIcon } from "@navikt/aksel-icons";
 import { UrlSearchForm } from "../../features/dashboard";
-import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon.tsx";
+import { KontaktSeksjon } from "../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx";
 
 // Map dashboard IDs to metadata (icons and custom titles)
 const dashboardMeta: Record<string, { icon: React.ReactNode; title?: string }> = {
