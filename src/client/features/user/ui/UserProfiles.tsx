@@ -13,47 +13,13 @@ import { translateCountry } from '../../../shared/lib/translations.ts';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams, getCookieBadge } from '../../../shared/lib/utils.ts';
 import { TextField } from '@navikt/ds-react';
 import { useCookieSupport, useCookieStartDate } from '../../../shared/hooks/useSiteimproveSupport.ts';
+import type { UserProfile, ActivityItem, QueryStats, UsersApiResponse, ActivityApiResponse } from '../model';
 
 const ROWS_PER_PAGE = 50;
 const DEFAULT_MAX_USERS = 1000;
 const MIN_MAX_USERS = 50;
 const MAX_MAX_USERS = 100000;
 
-type UserProfile = {
-    userId?: string;
-    idType?: string;
-    sessionIds?: string[];
-    distinctId?: string;
-    country?: string;
-    browser?: string;
-    device?: string;
-    os?: string;
-    firstSeen: string;
-    lastSeen: string;
-    primarySessionId?: string;
-};
-
-type ActivityItem = {
-    type: string;
-    name?: string;
-    title?: string;
-    url?: string;
-    createdAt: string;
-};
-
-type QueryStats = {
-    totalBytesProcessedGB?: number;
-};
-
-type UsersApiResponse = {
-    users: UserProfile[];
-    total: number;
-    queryStats?: QueryStats | null;
-};
-
-type ActivityApiResponse = {
-    activity: ActivityItem[];
-};
 
 const UserProfiles = () => {
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);

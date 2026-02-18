@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Loader, BodyShort, Heading, VStack, HStack, Label } from '@navikt/ds-react';
 import { PersonIcon } from '@navikt/aksel-icons';
-
-interface UserInfo {
-    navIdent: string;
-    name: string;
-    email: string;
-    authenticated: boolean;
-    message: string;
-}
+import type { UserInfo } from '../model';
 
 export default function UserProfile() {
     const [user, setUser] = useState<UserInfo | null>(null);
