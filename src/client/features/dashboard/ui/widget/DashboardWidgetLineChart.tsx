@@ -1,8 +1,8 @@
 import type { ILineChartDataPoint } from '@fluentui/react-charting';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { format } from 'date-fns';
-import type { DashboardRow } from './dashboardWidgetUtils.ts';
-import { extractJsonValue } from './dashboardWidgetUtils.ts';
+import type { DashboardRow } from '../../utils/widgetUtils.ts';
+import { extractJsonValue } from '../../utils/widgetUtils.ts';
 
 interface DashboardWidgetLineChartProps {
     data: DashboardRow[];

@@ -1,9 +1,9 @@
 // @ts-expect-error Untyped JS module
-import SiteScores from '../../siteimprove/SiteScores';
+import SiteScores from '../../../../components/siteimprove/SiteScores';
 // @ts-expect-error Untyped JS module
-import SiteGroupScores from '../../siteimprove/SiteGroupScores';
-import teamsData from '../../../../data/teamsData.json';
-import type { SavedChart } from '../../../../data/dashboard';
+import SiteGroupScores from '../../../../components/siteimprove/SiteGroupScores';
+import teamsData from '../../../../../data/teamsData.json';
+import type { SavedChart } from '../../../../../data/dashboard';
 
 type SelectedWebsite = {
     domain: string;
@@ -89,3 +89,4 @@ const DashboardWidgetSiteimprove = ({ chart, colClass, selectedWebsite, urlPath,
 };
 
 export default DashboardWidgetSiteimprove;
+

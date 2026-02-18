@@ -1,15 +1,8 @@
 import { Search, Alert, BodyShort, Link, ReadMore, List, Skeleton } from "@navikt/ds-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-interface Website {
-    id: string;
-    name: string;
-    domain: string;
-    shareId: string;
-    teamId: string;
-    createdAt: string;
-}
+import type { Website } from '../model/types.ts';
+import { fetchWebsites } from '../api/bigquery.ts';
 
 interface UrlSearchFormProps {
     children?: React.ReactNode;
@@ -40,19 +33,16 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
         );
     };
 
-    const fetchWebsites = async (): Promise<Website[]> => {
+    const loadWebsitesData = async (): Promise<Website[]> => {
         // If we already have data, return it
         if (hasLoadedData && filteredData) {
             return filteredData;
         }
 
         setIsLoading(true);
-        const baseUrl = ''; // Use relative path for local API
 
         try {
-            const response = await fetch(`${baseUrl}/api/bigquery/websites`);
-            const json = await response.json();
-            const websitesData = json.data || [];
+            const websitesData = await fetchWebsites();
 
             // Filter for prod websites (Team ResearchOps and maybe others if needed)
             // Umami.jsx looks for:
@@ -96,13 +86,9 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
         }
     };
 
-    const loadWebsitesData = () => {
-        fetchWebsites().catch(() => { });
-    };
-
     const handleReadMoreToggle = (open: boolean) => {
         if (open && !hasLoadedData) {
-            loadWebsitesData();
+            loadWebsitesData().catch(() => { });
         }
     };
 
@@ -136,7 +122,7 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                 urlObj = new URL(inputUrl);
             }
 
-            const websites = await fetchWebsites();
+            const websites = await loadWebsitesData();
 
             const inputDomain = urlObj.hostname;
             const normalizedInputDomain = normalizeDomain(inputDomain);
@@ -228,3 +214,4 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
 }
 
 export default UrlSearchForm;
+

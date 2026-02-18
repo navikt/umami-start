@@ -1,10 +1,8 @@
 import { Alert, Select, Button, ReadMore, Label, UNSAFE_Combobox, Modal, DatePicker, Textarea } from "@navikt/ds-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
-import DashboardLayout from "../../components/dashboard/DashboardLayout.tsx";
+import { DashboardLayout, DashboardWidget, DashboardWebsitePicker } from "../../features/dashboard";
 import { getDashboard } from "../../../data/dashboard";
-import { DashboardWidget } from "../../components/dashboard/DashboardWidget.tsx";
-import DashboardWebsitePicker from "../../components/dashboard/DashboardWebsitePicker.tsx";
 import { fetchDashboardDataBatched, isBatchableChart } from "../../lib/batchedDashboardFetcher.ts";
 import { format, parseISO } from "date-fns";
 import { normalizeUrlToPath } from "../../lib/utils.ts";

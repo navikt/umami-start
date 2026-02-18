@@ -1,4 +1,4 @@
-import type {EventParam, EventProperty, Website} from './types.ts';
+import type { EventParam, EventProperty, Website } from '../model/types.ts';
 
 export const API_TIMEOUT_MS = 120000; // timeout
 
@@ -59,3 +59,4 @@ export const buildEventParams = (properties: EventProperty[]) => {
 
     return {eventNames, paramsByEvent};
 };
+

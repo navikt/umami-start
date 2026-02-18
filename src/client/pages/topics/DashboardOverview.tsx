@@ -2,7 +2,7 @@ import { Heading, LinkPanel, Page } from "@navikt/ds-react";
 import { Link as RouterLink } from "react-router-dom";
 import { dashboards } from "../../../data/dashboard";
 import { BarChartIcon, Buildings3Icon, ExternalLinkIcon, WheelchairIcon } from "@navikt/aksel-icons";
-import UrlSearchForm from "../../components/dashboard/UrlSearchForm.tsx";
+import { UrlSearchForm } from "../../features/dashboard";
 import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon.tsx";
 
 // Map dashboard IDs to metadata (icons and custom titles)

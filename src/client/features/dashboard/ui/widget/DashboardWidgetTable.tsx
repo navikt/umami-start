@@ -1,8 +1,8 @@
 import { Table, Pagination } from '@navikt/ds-react';
 import { ExternalLink } from 'lucide-react';
-import type { DashboardRow } from './dashboardWidgetUtils.ts';
-import { formatTableValue, isClickablePath } from './dashboardWidgetUtils.ts';
-import { translateValue } from '../../../lib/translations.ts';
+import type { DashboardRow } from '../../utils/widgetUtils.ts';
+import { formatTableValue, isClickablePath } from '../../utils/widgetUtils.ts';
+import { translateValue } from '../../../../lib/translations.ts';
 
 interface DashboardWidgetTableProps {
     data: DashboardRow[];
@@ -89,3 +89,4 @@ const DashboardWidgetTable = ({ data, page, onPageChange, showTotal, onSelectUrl
 };
 
 export default DashboardWidgetTable;
+

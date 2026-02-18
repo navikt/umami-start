@@ -1,10 +1,8 @@
 import {useEffect, useState} from 'react';
-import {getFromLocalStorage, saveToLocalStorage, WEBSITES_CACHE_KEY} from './storage.ts';
-import type {Website} from './types.ts';
+import {getFromLocalStorage, saveToLocalStorage, WEBSITES_CACHE_KEY} from '../storage/localStorage.ts';
+import type {Website} from '../model/types.ts';
+import {fetchWebsites} from '../api/bigquery.ts';
 
-interface WebsiteApiResponse {
-    data: Website[];
-}
 
 export const useWebsites = () => {
     const [websites, setWebsites] = useState<Website[]>([]);
@@ -26,10 +24,8 @@ export const useWebsites = () => {
             return;
         }
 
-        fetch('/api/bigquery/websites')
-            .then(response => response.json() as Promise<WebsiteApiResponse>)
-            .then((response) => {
-                const websitesData = response.data || [];
+        fetchWebsites()
+            .then((websitesData) => {
                 const uniqueWebsites = websitesData.filter((website, index, self) => index === self.findIndex((w) => w.name === website.name));
 
                 setWebsites(uniqueWebsites);

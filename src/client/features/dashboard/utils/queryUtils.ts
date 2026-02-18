@@ -122,3 +122,4 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
 
     return processedSql;
 };
+
