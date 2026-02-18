@@ -41,6 +41,8 @@ type SaveChartResult = {
   query: QueryDto;
 };
 
+const COLUMN_TOO_LONG_RE = /too long for the column/i;
+
 const toErrorMessage = (status: number, payload: unknown): string => {
   if (payload && typeof payload === 'object') {
     const error = (payload as { error?: unknown }).error;
@@ -74,6 +76,8 @@ const findByName = <T extends { name: string }>(items: T[], name: string): T | u
   const needle = name.trim().toLowerCase();
   return items.find(item => item.name.trim().toLowerCase() === needle);
 };
+
+const compactSqlForStorage = (sql: string): string => sql.replace(/\s+/g, ' ').trim();
 
 export async function saveChartToBackend(params: SaveChartParams): Promise<SaveChartResult> {
   const projects = await requestJson<ProjectDto[]>('/api/backend/projects');
@@ -109,14 +113,40 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
     }),
   });
 
-  const query = await requestJson<QueryDto>(`/api/backend/projects/${project.id}/dashboards/${dashboard.id}/graphs/${graph.id}/queries`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      name: params.queryName.trim(),
-      sqlText: params.sqlText,
-    }),
-  });
+  const sqlCandidates = Array.from(new Set([
+    params.sqlText,
+    compactSqlForStorage(params.sqlText),
+  ])).filter(Boolean);
+
+  let query: QueryDto | null = null;
+
+  for (const sqlText of sqlCandidates) {
+    try {
+      query = await requestJson<QueryDto>(`/api/backend/projects/${project.id}/dashboards/${dashboard.id}/graphs/${graph.id}/queries`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          name: params.queryName.trim(),
+          sqlText,
+        }),
+      });
+      break;
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Failed to create query');
+      if (!COLUMN_TOO_LONG_RE.test(error.message)) {
+        throw error;
+      }
+    }
+  }
+
+  if (!query) {
+    const originalLen = params.sqlText.length;
+    const compactLen = compactSqlForStorage(params.sqlText).length;
+    throw new Error(
+      `Backend rejected query length (${originalLen} chars; compact ${compactLen}). ` +
+      `Please shorten the query or increase backend column size for stored SQL.`,
+    );
+  }
 
   return {project, dashboard, graph, query};
 }
