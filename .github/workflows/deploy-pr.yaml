@@ -18,7 +18,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v6"
         with:
           ref: "refs/pull/${{ github.event.inputs.pr_number }}/head"
 
@@ -43,7 +43,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v6"
       - name: "Deploy to Dev"
         uses: "nais/deploy/actions/deploy@v2"
         env:
