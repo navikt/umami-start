@@ -6,7 +6,7 @@ function Home() {
     return (
         <div style={{
             width: "100%",
-            minHeight: "100vh",
+            minHeight: "90vh",
             display: "flex",
             flexDirection: "column",
             backgroundColor: "var(--ax-bg-default)",
