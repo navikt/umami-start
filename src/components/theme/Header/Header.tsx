@@ -1,5 +1,5 @@
-import { MenuHamburgerIcon } from "@navikt/aksel-icons";
-import { Button, Dropdown, Link, Page } from "@navikt/ds-react";
+import { CogIcon, MenuHamburgerIcon } from "@navikt/aksel-icons";
+import { ActionMenu, Button, Dropdown, Link, Page, Tooltip } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
 import "../../../tailwind.css";
 import { ThemeButton } from "../ThemeButton/ThemeButton";
@@ -8,8 +8,73 @@ interface HeaderProps {
   theme: "light" | "dark";
 }
 
+type MenuLink = {
+  href: string;
+  label: string;
+};
+
 export default function Header({ theme }: HeaderProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const { hostname, pathname, search, hash } = window.location;
+  const currentPath = `${pathname}${search}${hash}`;
+
+  const guideLinks = [
+    { href: "/komigang", label: "Oppsett guide" },
+    {
+      href: "https://navno.sharepoint.com/sites/intranett-utvikling/SitePages/Rutine-for-bruk-av-Umami.aspx",
+      label: "Retningslinjer",
+    },
+    { href: "/taksonomi", label: "Taksonomi" },
+  ];
+
+  const developerLinks = [
+    { href: "/sporingskoder", label: "Sporingskoder" },
+    { href: "/sql", label: "SQL-editor" },
+    { href: "/personvernssjekk", label: "Personvernsjekk" },
+    { href: "/diagnose", label: "Diagnoseverktøy" },
+  ];
+
+  const environmentLinks: MenuLink[] = (() => {
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+    const isDev = hostname.includes(".dev.nav.no");
+    const isProd = hostname.includes(".nav.no") && !isDev;
+
+    if (isLocalhost) {
+      return [
+        {
+          href: `https://startumami.ansatt.dev.nav.no${currentPath}`,
+          label: "Gå til dev-miljø",
+        },
+        {
+          href: `https://startumami.ansatt.nav.no${currentPath}`,
+          label: "Gå til prod-miljø",
+        },
+      ];
+    }
+
+    if (isDev) {
+      const prodHostname = hostname.replace(".dev.nav.no", ".nav.no");
+      return [
+        {
+          href: `https://${prodHostname}${currentPath}`,
+          label: "Gå til prod-miljø",
+        },
+      ];
+    }
+
+    if (isProd) {
+      const devHostname = hostname.replace(".nav.no", ".dev.nav.no");
+      return [
+        {
+          href: `https://${devHostname}${currentPath}`,
+          label: "Gå til dev-miljø",
+        },
+      ];
+    }
+
+    return [];
+  })();
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -26,6 +91,51 @@ export default function Header({ theme }: HeaderProps) {
     (theme === "dark"
       ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]"
       : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
+
+  const setupMenu = (
+    <ActionMenu>
+      <Tooltip content="Teknisk meny" describesChild>
+        <ActionMenu.Trigger>
+          <Button
+            variant="tertiary-neutral"
+            icon={<CogIcon aria-hidden />}
+            aria-label="Teknisk meny"
+            className="!text-white hover:!bg-blue-100 hover:!text-black active:!bg-blue-100 active:!text-black focus:!bg-blue-100 focus:!text-black"
+          />
+        </ActionMenu.Trigger>
+      </Tooltip>
+      <ActionMenu.Content align="end">
+        <ActionMenu.Group label="Veiledninger">
+          {guideLinks.map((item) => (
+            <ActionMenu.Item key={item.href} as="a" href={item.href}>
+              {item.label}
+            </ActionMenu.Item>
+          ))}
+        </ActionMenu.Group>
+        <ActionMenu.Divider />
+        <ActionMenu.Group label="Utviklerverktøy">
+          {developerLinks.map((item) => (
+            <ActionMenu.Item key={item.href} as="a" href={item.href}>
+              {item.label}
+            </ActionMenu.Item>
+          ))}
+        </ActionMenu.Group>
+        {environmentLinks.length > 0 && (
+          <>
+            <ActionMenu.Divider />
+            <ActionMenu.Group label="Miljø">
+              {environmentLinks.map((item) => (
+                <ActionMenu.Item key={item.href} as="a" href={item.href}>
+                  {item.label}
+                </ActionMenu.Item>
+              ))}
+            </ActionMenu.Group>
+          </>
+        )}
+      </ActionMenu.Content>
+    </ActionMenu>
+  );
+
   return (
     <div
       style={{
@@ -92,17 +202,9 @@ export default function Header({ theme }: HeaderProps) {
                       <span className="whitespace-nowrap">Grafbygger</span>
                     </Dropdown.Menu.List.Item>
                   </Dropdown.Menu.List>
-                  <Dropdown.Menu.List>
-                    <Dropdown.Menu.List.Item
-                      as={Link}
-                      href="/oppsett"
-                      className="no-underline"
-                    >
-                      <span className="whitespace-nowrap">Teknisk oppsett</span>
-                    </Dropdown.Menu.List.Item>
-                  </Dropdown.Menu.List>
                 </Dropdown.Menu>
               </Dropdown>
+              {setupMenu}
             </div>
           ) : (
             <div className="flex items-center justify-between w-full">
@@ -118,16 +220,7 @@ export default function Header({ theme }: HeaderProps) {
                     <span className="whitespace-nowrap">Grafbygger</span>
                   </div>
                 </Button>
-                <Button
-                  as={Link}
-                  variant="tertiary"
-                  href="/oppsett"
-                  className={linkButton}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="whitespace-nowrap">Teknisk oppsett</span>
-                  </div>
-                </Button>
+                {setupMenu}
                 <ThemeButton />
               </div>
             </div>

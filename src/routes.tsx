@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 const Home = lazy(() => import('./pages/Home.tsx'));
 const Komigang = lazy(() => import('./pages/articles/Komigang.tsx'));
 const Oppsett = lazy(() => import('./pages/topics/Oppsett.tsx'));
+const Sporingskoder = lazy(() => import('./pages/topics/Sporingskoder.tsx'));
 const Personvern = lazy(() => import("./pages/articles/Personvern.tsx"));
 const Tilgjengelighet = lazy(() => import("./pages/articles/Tilgjengelighet.tsx"));
 
@@ -64,6 +65,7 @@ export const routes: AppRoute[] = [
     { path: "/", component: <Home />, fullWidth: true },
     { path: "/komigang", component: <Komigang />, fullWidth: true },
     { path: "/oppsett", component: <Oppsett />, fullWidth: true },
+    { path: "/sporingskoder", component: <Sporingskoder />, fullWidth: true },
     { path: "/personvern", component: <Personvern />, fullWidth: true },
     { path: "/tilgjengelighet", component: <Tilgjengelighet />, fullWidth: true },
 
