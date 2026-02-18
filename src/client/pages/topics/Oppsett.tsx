@@ -1,7 +1,7 @@
 import { BodyShort, Heading, Link, Page, Tag } from "@navikt/ds-react";
-import TeamWebsites from "../../components/settings/TeamWebsites.tsx";
-import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon.tsx";
-import { PageHeader } from "../../components/theme/PageHeader/PageHeader.tsx";
+import { TeamWebsites } from "../../features/settings";
+import { KontaktSeksjon } from "../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx";
+import { PageHeader } from "../../shared/ui/theme/PageHeader/PageHeader.tsx";
 import { developerTools } from "../../components/analysis/DeveloperToolsNavigation.tsx";
 
 // Helper to get environment info and switch URL

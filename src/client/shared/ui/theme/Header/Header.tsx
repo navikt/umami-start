@@ -1,7 +1,7 @@
 import { CogIcon, MenuHamburgerIcon } from "@navikt/aksel-icons";
 import { ActionMenu, Button, Dropdown, Link, Page, Tooltip } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
-import "../../../tailwind.css";
+import "../../../../tailwind.css";
 import { ThemeButton } from "../ThemeButton/ThemeButton.tsx";
 
 interface HeaderProps {

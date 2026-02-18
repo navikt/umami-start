@@ -3,8 +3,8 @@ import { Select, Page } from "@navikt/ds-react";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation.tsx';
-import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon.tsx';
-import { PageHeader } from '../theme/PageHeader/PageHeader.tsx';
+import { KontaktSeksjon } from '../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx';
+import { PageHeader } from '../../shared/ui/theme/PageHeader/PageHeader.tsx';
 
 interface ChartLayoutProps {
     title: string;

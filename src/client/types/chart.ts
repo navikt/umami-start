@@ -61,12 +61,6 @@ export interface Website {
   teamId: string;
   createdAt: string;
 }
-
-export interface WebsitePickerProps {
-  selectedWebsite: Website | null;
-  onWebsiteChange: (website: Website | null) => void;
-}
-
 export interface ChartConfig {
   website: Website | null;
   filters: Filter[];

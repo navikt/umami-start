@@ -1,7 +1,7 @@
 import { BodyShort, Link, Page } from "@navikt/ds-react";
-import TeamWebsites from "../../components/settings/TeamWebsites.tsx";
-import { KontaktSeksjon } from "../../components/theme/Kontakt/KontaktSeksjon.tsx";
-import { PageHeader } from "../../components/theme/PageHeader/PageHeader.tsx";
+import { TeamWebsites } from "../../features/settings";
+import { KontaktSeksjon } from "../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx";
+import { PageHeader } from "../../shared/ui/theme/PageHeader/PageHeader.tsx";
 
 function Sporingskoder() {
   return (

@@ -1,7 +1,7 @@
 // @ts-expect-error Untyped JS module
-import SiteScores from '../../../../components/siteimprove/SiteScores';
+import SiteScores from './SiteScores';
 // @ts-expect-error Untyped JS module
-import SiteGroupScores from '../../../../components/siteimprove/SiteGroupScores';
+import SiteGroupScores from './SiteGroupScores';
 import teamsData from '../../../../../data/teamsData.json';
 import type { SavedChart } from '../../../../../data/dashboard';
 

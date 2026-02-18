@@ -7,9 +7,9 @@ import {
   useLocation,
 } from "react-router-dom";
 import routes, { isFullWidthPath } from "./routes.tsx";
-import Footer from "./components/theme/Footer/Footer.tsx";
-import ScrollToTop from "./components/theme/ScrollToTop/ScrollToTop.tsx";
-import Header from "./components/theme/Header/Header.tsx";
+import Footer from "./shared/ui/theme/Footer/Footer.tsx";
+import ScrollToTop from "./shared/ui/theme/ScrollToTop/ScrollToTop.tsx";
+import Header from "./shared/ui/theme/Header/Header.tsx";
 import { useHead } from "@unhead/react";
 
 import "./App.css";

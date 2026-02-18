@@ -3,8 +3,8 @@ import { Page, Accordion } from "@navikt/ds-react";
 import { BarChart2, Users, FileSearch, Activity } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation.tsx';
-import { KontaktSeksjon } from '../theme/Kontakt/KontaktSeksjon.tsx';
-import { PageHeader } from '../theme/PageHeader/PageHeader.tsx';
+import { KontaktSeksjon } from '../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx';
+import { PageHeader } from '../../shared/ui/theme/PageHeader/PageHeader.tsx';
 import { hasSiteimproveSupport } from '../../hooks/useSiteimproveSupport.ts';
 
 interface ChartLayoutProps {
