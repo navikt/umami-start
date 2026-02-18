@@ -27,10 +27,26 @@ export function TeamWebsites() {
     const isDev = hostname.includes(".dev.nav.no");
     const isProd = hostname.includes(".nav.no") && !isDev;
 
-    const prodDevEnvironmentLink = (() => {
-        if (!isProd) return null;
-        const devHostname = hostname.replace(".nav.no", ".dev.nav.no");
-        return `https://${devHostname}${currentPath}`;
+    const environmentLink = (() => {
+        if (isProd) {
+            const devHostname = hostname.replace(".nav.no", ".dev.nav.no");
+            return {
+                href: `https://${devHostname}${currentPath}`,
+                text: "Leter du etter dev-sporingskode? Bruk ",
+                label: "dev-miljøet",
+            };
+        }
+
+        if (isDev) {
+            const prodHostname = hostname.replace(".dev.nav.no", ".nav.no");
+            return {
+                href: `https://${prodHostname}${currentPath}`,
+                text: "Leter du etter prod-sporingskode? Bruk ",
+                label: "prod-miljøet",
+            };
+        }
+
+        return null;
     })();
 
     const visibleData = isProd
@@ -60,7 +76,7 @@ export function TeamWebsites() {
     };
 
     return (
-        <>
+        <div className="px-2 md:px-4 py-2 md:py-4">
             <div className="search-controls" style={styles.container}>
                 <form role="search" style={{ width: '250px' }}>
                     <Search
@@ -87,10 +103,10 @@ export function TeamWebsites() {
                     </Select>
                 )}
             </div>
-            {isProd && prodDevEnvironmentLink && (
-                <BodyShort className="mb-4">
-                    Leter du etter dev-sporingskode? Bruk{" "}
-                    <Link href={prodDevEnvironmentLink}>dev-miljøet</Link>.
+            {environmentLink && (
+                <BodyShort className="mb-6">
+                    {environmentLink.text}
+                    <Link href={environmentLink.href}>{environmentLink.label}</Link>.
                 </BodyShort>
             )}
             <div style={{ overflowX: 'auto' }}>
@@ -174,6 +190,6 @@ export function TeamWebsites() {
                 selectedItem={pendingSelectedItem ?? selectedItem}
                 onClose={closeModal}
             />
-        </>
+        </div>
     );
 }
