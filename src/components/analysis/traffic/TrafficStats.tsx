@@ -74,7 +74,7 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
 
     let box2Label = `Gjennomsnitt per ${timeUnitLabel}`;
     let box2Value = avg;
-    let box2BadgeText = '';
+    let box2Suffix = valueSuffix;
 
     let box3Label = 'Topp-periode';
     if (granularity === 'day') box3Label = 'Toppdag';
@@ -94,7 +94,7 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
         box3Value = max; // Max proportion (0.x)
         box3Subtext = maxLabelText;
     } else {
-        box2BadgeText = `Median ${formatValue(median)}`;
+        box2Suffix = `${valueSuffix} (median: ${formatValue(median)})`;
 
         // Show date/time in the tile heading for top period cards.
         box3Label = `${box3Label} ${maxLabelText}`;
@@ -116,18 +116,11 @@ const TrafficStats: React.FC<TrafficStatsProps> = ({ data, metricType, totalOver
             </div>
             <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                 <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">{box2Label}</div>
-                <div className="flex items-end justify-between gap-2">
-                    <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline gap-2">
-                        {formatValue(box2Value)}
-                        {valueSuffix && (
-                            <span className="text-sm font-normal text-[var(--ax-text-neutral-subtle)]">
-                                {valueSuffix}
-                            </span>
-                        )}
-                    </div>
-                    {box2BadgeText && (
-                        <span className="inline-flex items-center rounded-full border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] px-2 py-0.5 text-xs font-medium text-[var(--ax-text-subtle)] whitespace-nowrap">
-                            {box2BadgeText}
+                <div className="text-2xl font-bold text-[var(--ax-text-default)] flex items-baseline flex-wrap gap-2">
+                    {formatValue(box2Value)}
+                    {box2Suffix && (
+                        <span className="text-sm font-normal text-[var(--ax-text-neutral-subtle)]">
+                            {box2Suffix}
                         </span>
                     )}
                 </div>
