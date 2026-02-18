@@ -76,13 +76,24 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           if (interval === 'hour') timeTrunc = 'HOUR';
           if (interval === 'week') timeTrunc = 'WEEK';
           if (interval === 'month') timeTrunc = 'MONTH';
+          const intervalStep = timeTrunc;
           let query;
 
           if (metricType === 'proportion') {
               // Proportion query (Andel)
               // Calculates: (Visitors to URL) / (Total Visitors) per time period
               query = `
-                  WITH base_query AS (
+                  WITH buckets AS (
+                      SELECT bucket_time AS time
+                      FROM UNNEST(
+                          GENERATE_TIMESTAMP_ARRAY(
+                              TIMESTAMP_TRUNC(TIMESTAMP(@startDate), ${timeTrunc}, '${BIGQUERY_TIMEZONE}'),
+                              TIMESTAMP_TRUNC(TIMESTAMP(@endDate), ${timeTrunc}, '${BIGQUERY_TIMEZONE}'),
+                              INTERVAL 1 ${intervalStep}
+                          )
+                      ) AS bucket_time
+                  ),
+                  base_query AS (
                       SELECT
                           TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
                           ${userIdExpression} as user_id,
@@ -109,13 +120,20 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                       FROM base_query
                       WHERE has_visited = TRUE
                       GROUP BY time
+                  ),
+                  proportions AS (
+                      SELECT
+                          totals.time,
+                          SAFE_DIVIDE(specifics.specific_visitors, totals.total_visitors) as count
+                      FROM totals
+                      LEFT JOIN specifics ON totals.time = specifics.time
                   )
                   SELECT
-                      totals.time,
-                      SAFE_DIVIDE(specifics.specific_visitors, totals.total_visitors) as count
-                  FROM totals
-                  LEFT JOIN specifics ON totals.time = specifics.time
-                  ORDER BY totals.time
+                      buckets.time,
+                      COALESCE(proportions.count, 0) as count
+                  FROM buckets
+                  LEFT JOIN proportions ON buckets.time = proportions.time
+                  ORDER BY buckets.time
               `;
           } else {
               // Standard query (Visitors, Visits, or Pageviews)
@@ -134,16 +152,33 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
               console.log(`[Traffic Series] Count Expression: ${countExpression}, useDistinctId: ${useDistinctId}`);
 
               query = `
+                  WITH buckets AS (
+                      SELECT bucket_time AS time
+                      FROM UNNEST(
+                          GENERATE_TIMESTAMP_ARRAY(
+                              TIMESTAMP_TRUNC(TIMESTAMP(@startDate), ${timeTrunc}, '${BIGQUERY_TIMEZONE}'),
+                              TIMESTAMP_TRUNC(TIMESTAMP(@endDate), ${timeTrunc}, '${BIGQUERY_TIMEZONE}'),
+                              INTERVAL 1 ${intervalStep}
+                          )
+                      ) AS bucket_time
+                  ),
+                  counts AS (
+                      SELECT
+                          TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
+                          ${countExpression} as count
+                      FROM ${fromClause}
+                      WHERE ${col}website_id = @websiteId
+                      AND ${col}created_at BETWEEN @startDate AND @endDate
+                      AND ${col}event_type = 1 -- Pageview
+                      ${urlFilter}
+                      GROUP BY 1
+                  )
                   SELECT
-                      TIMESTAMP_TRUNC(${col}created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
-                      ${countExpression} as count
-                  FROM ${fromClause}
-                  WHERE ${col}website_id = @websiteId
-                  AND ${col}created_at BETWEEN @startDate AND @endDate
-                  AND ${col}event_type = 1 -- Pageview
-                  ${urlFilter}
-                  GROUP BY 1
-                  ORDER BY 1
+                      buckets.time,
+                      COALESCE(counts.count, 0) as count
+                  FROM buckets
+                  LEFT JOIN counts ON buckets.time = counts.time
+                  ORDER BY buckets.time
               `;
           }
 

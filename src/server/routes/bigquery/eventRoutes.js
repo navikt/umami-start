@@ -327,19 +327,37 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           if (interval === 'hour') timeTrunc = 'HOUR';
           if (interval === 'week') timeTrunc = 'WEEK';
           if (interval === 'month') timeTrunc = 'MONTH';
+          const intervalStep = timeTrunc;
 
           const query = `
+              WITH buckets AS (
+                  SELECT bucket_time AS time
+                  FROM UNNEST(
+                      GENERATE_TIMESTAMP_ARRAY(
+                          TIMESTAMP_TRUNC(TIMESTAMP(@startDate), ${timeTrunc}, '${BIGQUERY_TIMEZONE}'),
+                          TIMESTAMP_TRUNC(TIMESTAMP(@endDate), ${timeTrunc}, '${BIGQUERY_TIMEZONE}'),
+                          INTERVAL 1 ${intervalStep}
+                      )
+                  ) AS bucket_time
+              ),
+              counts AS (
+                  SELECT
+                      TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
+                      COUNT(*) as count
+                  FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
+                  WHERE website_id = @websiteId
+                  AND created_at BETWEEN @startDate AND @endDate
+                  AND event_name IS NOT NULL
+                  ${urlFilter}
+                  ${eventFilter}
+                  GROUP BY 1
+              )
               SELECT
-                  TIMESTAMP_TRUNC(created_at, ${timeTrunc}, '${BIGQUERY_TIMEZONE}') as time,
-                  COUNT(*) as count
-              FROM \`${GCP_PROJECT_ID}.umami.public_website_event\`
-              WHERE website_id = @websiteId
-              AND created_at BETWEEN @startDate AND @endDate
-              AND event_name IS NOT NULL
-              ${urlFilter}
-              ${eventFilter}
-              GROUP BY 1
-              ORDER BY 1
+                  buckets.time,
+                  COALESCE(counts.count, 0) as count
+              FROM buckets
+              LEFT JOIN counts ON buckets.time = counts.time
+              ORDER BY buckets.time
           `;
 
 
@@ -678,7 +696,7 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
   // Get event journeys (sequences of events)
   router.post('/api/bigquery/event-journeys', async (req, res) => {
       try {
-          const { websiteId, startDate, endDate, urlPath, minEvents = 1, eventFilter } = req.body;
+          const { websiteId, startDate, endDate, urlPath, minEvents = 1, eventFilter, maxEventsPerSession = 200 } = req.body;
 
           if (!bigquery) {
               return res.status(500).json({
@@ -693,7 +711,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               websiteId,
               startDate,
               endDate,
-              minEvents: parseInt(minEvents)
+              minEvents: parseInt(minEvents),
+              maxEventsPerSession: Math.max(1, Math.min(parseInt(maxEventsPerSession) || 200, 1000))
           };
 
           let urlFilter = '';
@@ -713,7 +732,6 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               }
           }
 
-          let eventNameFilter = '';
           if (eventFilter && Array.isArray(eventFilter) && eventFilter.length > 0) {
               // We want sessions that include THESE events.
               // Filter at the session aggregation level or pre-filter?
@@ -736,9 +754,13 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                       STRING_AGG(
                           CASE 
                               WHEN LOWER(p.data_key) IN ('scrollpos', 'screen', 'screenwidth', 'screenheight', 'viewport', 'timestamp', 'time', 'scrolldepth') THEN NULL
-                              ELSE CONCAT(p.data_key, ': ', REPLACE(COALESCE(p.string_value, CAST(p.number_value AS STRING), CAST(p.date_value AS STRING)), '||', ' '))
+                              ELSE CONCAT(
+                                  p.data_key,
+                                  ': ',
+                                  REPLACE(SUBSTR(COALESCE(p.string_value, CAST(p.number_value AS STRING), CAST(p.date_value AS STRING)), 1, 200), '||', ' ')
+                              )
                           END, 
-                          '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key
+                          '||' ORDER BY CASE WHEN p.data_key IN ('lenketekst', 'tittel') THEN 0 ELSE 1 END, p.data_key LIMIT 25
                       ) as props_str
                   FROM \`${GCP_PROJECT_ID}.umami.public_website_event\` e
                   LEFT JOIN \`${GCP_PROJECT_ID}.umami_views.event_data\` d
@@ -771,6 +793,15 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                       -- Or if properties are different (handling NULLs safely)
                       OR IFNULL(props_str, '') != IFNULL(prev_props_str, '')
               ),
+              RankedEvents AS (
+                  SELECT
+                      *,
+                      ROW_NUMBER() OVER (
+                          PARTITION BY session_id
+                          ORDER BY created_at, CASE WHEN props_str LIKE '%destinasjon:%' THEN 1 ELSE 0 END, event_name, props_str
+                      ) as event_order
+                  FROM CleanedEvents
+              ),
               SessionPaths AS (
                   SELECT
                       session_id,
@@ -781,7 +812,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
                       ) as path,
                       -- Also aggregate raw event names for filtering
                       ARRAY_AGG(event_name) as event_names
-                  FROM CleanedEvents
+                  FROM RankedEvents
+                  WHERE event_order <= @maxEventsPerSession
                   GROUP BY session_id
                   HAVING ARRAY_LENGTH(path) >= @minEvents
                   ${eventFilter && Array.isArray(eventFilter) && eventFilter.length > 0 ?
@@ -909,4 +941,3 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
 
   return router;
 }
-

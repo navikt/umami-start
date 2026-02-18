@@ -1,8 +1,8 @@
-import type { ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { Label, Loader, Select, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
 import type { ILineChartProps } from '@fluentui/react-charting';
-import { format } from 'date-fns';
+import { differenceInCalendarDays, format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import TrafficStats from './TrafficStats.tsx';
 import type { Website } from '../../../../shared/types/chart.ts';
@@ -121,8 +121,93 @@ const OversiktTabContent = ({
     ChartDataTableComponent,
     TrafficTableComponent,
 }: OversiktTabContentProps) => {
+    const chartWrapperRef = useRef<HTMLDivElement | null>(null);
+    const [dayDividerXs, setDayDividerXs] = useState<number[]>([]);
+    const isMultiDayHourly = submittedGranularity === 'hour' && !!submittedDateRange
+        && differenceInCalendarDays(submittedDateRange.endDate, submittedDateRange.startDate) >= 1;
+
+    useEffect(() => {
+        if (!isMultiDayHourly) {
+            setDayDividerXs([]);
+            return;
+        }
+
+        let rafId: number | null = null;
+        let observer: MutationObserver | null = null;
+
+        const readDayDividerPositions = () => {
+            const wrapper = chartWrapperRef.current;
+            if (!wrapper) return;
+
+            const ticks = Array.from(wrapper.querySelectorAll<SVGGElement>('[class*="xAxis"] .tick'));
+            if (!ticks.length) return;
+
+            const positions = ticks
+                .map((tick) => {
+                    const transform = tick.getAttribute('transform') || '';
+                    const match = transform.match(/translate\(([-\d.]+),?\s*([-\d.]*)\)/);
+                    if (!match) return NaN;
+                    const x = Number(match[1]);
+                    return Number.isFinite(x) ? x : NaN;
+                })
+                .filter((value) => !Number.isNaN(value))
+                .sort((a, b) => a - b);
+
+            setDayDividerXs((prev) => {
+                if (prev.length === positions.length && prev.every((value, index) => Math.abs(value - positions[index]) < 0.5)) {
+                    return prev;
+                }
+                return positions;
+            });
+        };
+
+        const scheduleRead = () => {
+            if (rafId !== null) return;
+            rafId = window.requestAnimationFrame(() => {
+                rafId = null;
+                readDayDividerPositions();
+            });
+        };
+
+        const wrapper = chartWrapperRef.current;
+        if (wrapper && typeof MutationObserver !== 'undefined') {
+            observer = new MutationObserver(() => {
+                scheduleRead();
+            });
+            observer.observe(wrapper, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+            });
+        }
+
+        const immediate = window.setTimeout(scheduleRead, 0);
+        const delayed = window.setTimeout(scheduleRead, 150);
+        window.addEventListener('resize', scheduleRead);
+
+        return () => {
+            if (rafId !== null) {
+                window.cancelAnimationFrame(rafId);
+            }
+            if (observer) {
+                observer.disconnect();
+            }
+            window.clearTimeout(immediate);
+            window.clearTimeout(delayed);
+            window.removeEventListener('resize', scheduleRead);
+        };
+    }, [isMultiDayHourly, chartData, chartKey, processedSeriesData.length]);
+
     const formatXAxisDateLabel = (date: Date) => {
         if (submittedGranularity === 'hour') {
+            if (isMultiDayHourly) {
+                const hourMinute = format(date, 'HH:mm');
+                if (hourMinute === '00:00') {
+                    return format(date, 'd. MMM', { locale: nb });
+                }
+                return format(date, 'd. MMM HH:mm', { locale: nb });
+            }
+
             return format(date, 'HH:mm');
         }
 
@@ -184,7 +269,7 @@ const OversiktTabContent = ({
                     </div>
                 </div>
             )}
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -220,29 +305,50 @@ const OversiktTabContent = ({
                             </Select>
                         </div>
                     </div>
-                    <div style={{ width: '100%', height: '400px' }}>
+                    <div style={{ width: '100%', height: '340px' }}>
                         {chartData ? (
-                            <ResponsiveContainer>
-                                <LineChart
-                                    key={chartKey}
-                                    data={chartData}
-                                    legendsOverflowText={'Overflow Items'}
-                                    yAxisTickFormat={(d: number | string) => submittedMetricType === 'proportion' ? `${Number(d).toFixed(1)}%` : Number(d).toLocaleString('nb-NO')}
-                                    yAxisTickCount={6}
-                                    yMaxValue={chartYMax}
-                                    yMinValue={chartYMin}
-                                    allowMultipleShapesForPoints={true}
-                                    enablePerfOptimization={true}
-                                    customDateTimeFormatter={formatXAxisDateLabel}
-                                    margins={{ left: 85, right: 40, top: 20, bottom: 35 }}
-                                    legendProps={{
-                                        allowFocusOnLegends: true,
-                                        styles: {
-                                            text: { color: 'var(--ax-text-default)' },
-                                        }
-                                    }}
-                                />
-                            </ResponsiveContainer>
+                            <div
+                                ref={chartWrapperRef}
+                                className={isMultiDayHourly ? 'traffic-hourly-day-dividers relative' : undefined}
+                            >
+                                {isMultiDayHourly && dayDividerXs.length > 0 && (
+                                    <div className="pointer-events-none absolute inset-0 z-[1]">
+                                        {dayDividerXs.map((x, index) => (
+                                            <span
+                                                key={`day-divider-${index}-${x}`}
+                                                className="absolute top-[20px] bottom-[56px] w-px bg-[var(--ax-border-neutral-subtle)] opacity-70"
+                                                style={{ left: `${x}px` }}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                                <ResponsiveContainer>
+                                    <LineChart
+                                        key={chartKey}
+                                        data={chartData}
+                                        legendsOverflowText={'Overflow Items'}
+                                        yAxisTickFormat={(d: number | string) => submittedMetricType === 'proportion' ? `${Number(d).toFixed(1)}%` : Number(d).toLocaleString('nb-NO')}
+                                        yAxisTickCount={6}
+                                        yMaxValue={chartYMax}
+                                        yMinValue={chartYMin}
+                                        allowMultipleShapesForPoints={true}
+                                        enablePerfOptimization={true}
+                                        customDateTimeFormatter={formatXAxisDateLabel}
+                                        margins={{ left: 85, right: 40, top: 20, bottom: 26 }}
+                                        legendProps={{
+                                            allowFocusOnLegends: true,
+                                            styles: {
+                                                text: { color: 'var(--ax-text-default)' },
+                                            }
+                                        }}
+                                        styles={{
+                                            calloutContentX: {
+                                                color: 'var(--ax-text-default)',
+                                            },
+                                        }}
+                                    />
+                                </ResponsiveContainer>
+                            </div>
                         ) : (
                             <div className="flex items-center justify-center h-full text-gray-500">
                                 Ingen data tilgjengelig for diagram
@@ -251,7 +357,7 @@ const OversiktTabContent = ({
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-8 mt-8">
+                <div className="flex flex-col md:flex-row gap-8 mt-0">
                     <div className="w-full md:flex-1 md:basis-0 min-w-0">
                         <ChartDataTableComponent
                             data={processedSeriesData}
