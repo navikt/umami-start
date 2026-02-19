@@ -1,29 +1,4 @@
-type ProjectDto = {
-  id: number;
-  name: string;
-  description?: string;
-};
-
-type DashboardDto = {
-  id: number;
-  projectId: number;
-  name: string;
-  description?: string;
-};
-
-type GraphDto = {
-  id: number;
-  dashboardId: number;
-  name: string;
-  graphType?: string;
-};
-
-type QueryDto = {
-  id: number;
-  graphId: number;
-  name: string;
-  sqlText: string;
-};
+import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../model/types.ts';
 
 const toErrorMessage = (status: number, payload: unknown): string => {
   if (payload && typeof payload === 'object') {
@@ -70,5 +45,3 @@ export async function fetchGraphs(projectId: number, dashboardId: number): Promi
 export async function fetchQueries(projectId: number, dashboardId: number, graphId: number): Promise<QueryDto[]> {
   return requestJson<QueryDto[]>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries`);
 }
-
-export type { ProjectDto, DashboardDto, GraphDto, QueryDto };

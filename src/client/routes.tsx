@@ -20,8 +20,8 @@ const Grafbygger = lazy(() => import('./features/chartbuilder').then(m => ({ def
 const Grafdeling = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafdeling })));
 
 // Backend Test Feature
-const Oversikt = lazy(() => import('./features/oversikt/ui/Oversikt.tsx'));
-const BackendCrudTest = lazy(() => import('./features/crud/ui/BackendCrudTest.tsx'));
+const Oversikt = lazy(() => import('./features/oversikt/index.ts').then(m => ({ default: m.Oversikt })));
+const ProjectManager = lazy(() => import('./features/projectmanager/index.ts').then(m => ({ default: m.ProjectManager })));
 
 // Analysis Feature
 const UserComposition = lazy(() => import('./features/analysis').then(m => ({ default: m.UserComposition })));
@@ -94,7 +94,7 @@ export const routes: AppRoute[] = [
 
     { path: "/sql", component: <SqlEditor />, fullWidth: true },
     { path: "/grafdeling", component: <Grafdeling />, fullWidth: true },
-    { path: "/crud", component: <BackendCrudTest />, fullWidth: true },
+    { path: "/prosjekter", component: <ProjectManager />, fullWidth: true },
     { path: "/brukerreiser", component: <UserJourney />, fullWidth: true },
     { path: "/hendelsesreiser", component: <EventJourney />, fullWidth: true },
     { path: "/trakt", component: <Funnel />, fullWidth: true },
