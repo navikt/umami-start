@@ -46,7 +46,7 @@ const Funnel = lazy(() => import('./features/funnel').then(m => ({ default: m.Fu
 const Retention = lazy(() => import('./features/retention/ui/Retention.tsx'));
 
 // SQL Feature
-const SqlEditor = lazy(() => import('./features/sql/ui/SqlEditor.tsx'));
+const SqlEditor = lazy(() => import('./features/sql').then(m => ({ default: m.SqlEditor })));
 
 export type AppRoute = {
     path: string;
