@@ -14,6 +14,7 @@ const Sporingskoder = lazy(() => import('./features/content/ui/topics/Sporingsko
 // Dashboard Feature
 const Dashboard = lazy(() => import('./features/dashboard/ui/Dashboard.tsx'));
 const DashboardOverview = lazy(() => import('./features/dashboard/ui/DashboardOverview.tsx'));
+const Oversikt = lazy(() => import('./features/oversikt/ui/Oversikt.tsx'));
 
 // Chartbuilder Feature
 const Charts = lazy(() => import('./features/chartbuilder/ui/Chartbuilder.tsx'));
@@ -105,6 +106,7 @@ export const routes: AppRoute[] = [
     { path: "/profil", component: <UserProfile />, fullWidth: true },
     { path: "/dashboards", component: <DashboardOverview />, fullWidth: true },
     { path: "/dashboard", component: <Dashboard />, fullWidth: true },
+    { path: "/oversikt", component: <Oversikt />, fullWidth: true },
     { path: "/kvalitet/odelagte-lenker", component: <BrokenLinks />, fullWidth: true },
     { path: "/kvalitet/stavekontroll", component: <Spellings />, fullWidth: true }
 ];

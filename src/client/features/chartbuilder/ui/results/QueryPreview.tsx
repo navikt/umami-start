@@ -130,6 +130,7 @@ const QueryPreview = ({
   const [savingChart, setSavingChart] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [savedLocation, setSavedLocation] = useState<{ projectId: number; dashboardId: number } | null>(null);
   const [projectName, setProjectName] = useState('Start Umami');
   const [dashboardName, setDashboardName] = useState('Grafbygger');
   const [graphName, setGraphName] = useState('Ny graf');
@@ -627,6 +628,7 @@ const QueryPreview = ({
   const openSaveModal = () => {
     setSaveError(null);
     setSaveSuccess(null);
+    setSavedLocation(null);
 
     if (!graphName || graphName === 'Ny graf') {
       const timestamp = format(new Date(), 'yyyy-MM-dd HH:mm');
@@ -726,6 +728,10 @@ const QueryPreview = ({
       setSaveSuccess(
         `Lagret. Prosjekt #${saved.project.id}, dashboard #${saved.dashboard.id}, graf #${saved.graph.id}, sporring #${saved.query.id}.`,
       );
+      setSavedLocation({
+        projectId: saved.project.id,
+        dashboardId: saved.dashboard.id,
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Klarte ikke lagre grafen';
       setSaveError(message);
@@ -1045,7 +1051,14 @@ const QueryPreview = ({
 
               {saveSuccess && (
                 <Alert variant="success" size="small">
-                  {saveSuccess}
+                  <div className="space-y-1">
+                    <p>{saveSuccess}</p>
+                    {savedLocation && (
+                      <Link href={`/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`}>
+                        Åpne i Oversikt
+                      </Link>
+                    )}
+                  </div>
                 </Alert>
               )}
 
