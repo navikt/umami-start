@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - Dependabot
 - Dependabot
 
+### 📚 Documentation
+
+- Update CHANGELOG.md
+
 ### 📦 Miscellaneous
 
 - Bytte tenant til nav.no
@@ -33,6 +37,7 @@ All notable changes to this project will be documented in this file.
 - Funnel feature structure
 - Delete deploy-pr
 - Traffic feature structure (#115)
+- Retention feature structure (#116)
 
 ### 🚀 Features
 
