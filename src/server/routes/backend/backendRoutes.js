@@ -25,14 +25,15 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const tokenAudience = process.env.BACKEND_TOKEN_AUDIENCE || (isLocalBackend ? 'start-umami' : null);
   const oboScope =
     process.env.BACKEND_OBO_SCOPE
-    || derivedNaisOboScope
-    || (backendClientId ? `api://${backendClientId}/.default` : null);
+    || (backendClientId ? `api://${backendClientId}/.default` : null)
+    || derivedNaisOboScope;
 
   console.info('[BackendProxy] init', {
     backendBaseUrl: apiBaseUrl.origin,
     isLocalBackend,
     hasBackendClientId: Boolean(backendClientId),
     hasOboScope: Boolean(oboScope),
+    oboScope,
     hasServiceTokenConfig: Boolean(tokenUrl && tokenClientId && tokenClientSecret && tokenAudience),
   });
 
