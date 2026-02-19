@@ -62,7 +62,7 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
     const total = displayData.reduce((sum, item) => sum + item.y, 0);
 
     return (
-        <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] md:items-center md:gap-3">
+        <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(190px,220px)_minmax(0,1fr)] md:items-center md:gap-1">
             <style>{`
                 .dashboard-pie-chart text[class*="pieLabel"],
                 .dashboard-pie-chart g[class*="arc"] text {
@@ -70,7 +70,7 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
                     pointer-events: none !important;
                 }
             `}</style>
-            <div className="dashboard-pie-chart md:order-2" style={{ width: '100%', height: '330px' }}>
+            <div className="dashboard-pie-chart md:order-2" style={{ width: '100%', height: '350px' }}>
                 <ResponsiveContainer>
                     <PieChart data={displayData} chartTitle="" />
                 </ResponsiveContainer>
