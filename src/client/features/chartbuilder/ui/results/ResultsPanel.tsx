@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton, Select, Label } from '@navikt/ds-react';
 import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
-import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx-js-style';
 import type { ILineChartProps, IVerticalBarChartProps, IVerticalBarChartDataPoint} from '@fluentui/react-charting';
 import { LineChart, VerticalBarChart, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../../../shared/lib/translations.ts';
@@ -409,7 +408,7 @@ const ResultsPanel = ({
   };
 
   // Function to convert results to a real XLSX file
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
     if (!result || !result.data || result.data.length === 0) return;
 
     const headers = Object.keys(result.data[0]);
@@ -424,10 +423,25 @@ const ResultsPanel = ({
       ),
     ];
 
+    let xlsx: any;
+    try {
+      const preferred = 'xlsx-js-style';
+      xlsx = await import(/* @vite-ignore */ preferred);
+    } catch {
+      try {
+        const fallback = 'xlsx';
+        xlsx = await import(/* @vite-ignore */ fallback);
+      } catch {
+        console.error('Mangler XLSX-bibliotek (xlsx-js-style/xlsx). Kjør npm install.');
+        return;
+      }
+    }
+
+    const XLSXUtils = xlsx.utils;
+    const XLSXWrite = xlsx.write;
     const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
     const workbook = XLSXUtils.book_new();
     XLSXUtils.book_append_sheet(workbook, worksheet, 'Query Results');
-
     const wbout = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

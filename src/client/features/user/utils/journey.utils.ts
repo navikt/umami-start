@@ -1,5 +1,4 @@
 import type { JourneyData, JourneyLink } from '../model';
-import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx-js-style';
 
 export function buildAppliedFilterKey(
   websiteId: string | undefined,
@@ -80,11 +79,11 @@ export function downloadJourneyCSV(
   URL.revokeObjectURL(url);
 }
 
-export function downloadJourneyExcel(
+export async function downloadJourneyExcel(
   rawData: JourneyData | null,
   websiteName: string,
   journeyDirection: string
-): void {
+): Promise<void> {
   if (!rawData || !rawData.links || rawData.links.length === 0) return;
 
   const worksheetData = [
@@ -107,10 +106,25 @@ export function downloadJourneyExcel(
     }),
   ];
 
+  let xlsx: any;
+  try {
+    const preferred = 'xlsx-js-style';
+    xlsx = await import(/* @vite-ignore */ preferred);
+  } catch {
+    try {
+      const fallback = 'xlsx';
+      xlsx = await import(/* @vite-ignore */ fallback);
+    } catch {
+      console.error('Mangler XLSX-bibliotek (xlsx-js-style/xlsx). Kjør npm install.');
+      return;
+    }
+  }
+
+  const XLSXUtils = xlsx.utils;
+  const XLSXWrite = xlsx.write;
   const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
   const workbook = XLSXUtils.book_new();
   XLSXUtils.book_append_sheet(workbook, worksheet, 'Brukerreiser');
-
   const wbout = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([wbout], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -139,4 +153,3 @@ export async function copyShareLink(): Promise<boolean> {
     return false;
   }
 }
-

@@ -44,11 +44,33 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
         displayData = [...top, { x: 'Andre', y: restSum }];
     }
 
+    const total = displayData.reduce((sum, item) => sum + item.y, 0);
+
     return (
-        <div style={{ width: '100%', height: '350px' }}>
-            <ResponsiveContainer>
-                <PieChart data={displayData} chartTitle="" />
-            </ResponsiveContainer>
+        <div className="w-full">
+            <style>{`
+                .dashboard-pie-chart text[class*="pieLabel"],
+                .dashboard-pie-chart g[class*="arc"] text {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+            `}</style>
+            <div className="dashboard-pie-chart" style={{ width: '100%', height: '350px' }}>
+                <ResponsiveContainer>
+                    <PieChart data={displayData} chartTitle="" />
+                </ResponsiveContainer>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-1 md:grid-cols-2">
+                {displayData.map((item) => {
+                    const pct = total > 0 ? ((item.y / total) * 100).toFixed(1) : '0.0';
+                    return (
+                        <div key={item.x} className="flex items-center justify-between rounded px-2 py-1 text-sm text-[var(--ax-text-default)]">
+                            <span className="mr-3 break-words">{item.x}</span>
+                            <span className="whitespace-nowrap text-[var(--ax-text-subtle)]">{pct}%</span>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };
