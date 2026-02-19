@@ -1,4 +1,4 @@
-import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../model/types.ts';
+import type { ProjectDto, DashboardDto, GraphDto, QueryDto, GraphType } from '../model/types.ts';
 
 const toErrorMessage = (status: number, payload: unknown): string => {
   if (payload && typeof payload === 'object') {
