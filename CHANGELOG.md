@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
+- Update CHANGELOG.md
 
 ### 📦 Miscellaneous
 
@@ -70,5 +71,6 @@ All notable changes to this project will be documented in this file.
 - Split settings and shared into feature
 - Outbound start-umami-backend
 - Lagre og vise grafer (#119)
+- Validate and max bill bigquery
 
 
