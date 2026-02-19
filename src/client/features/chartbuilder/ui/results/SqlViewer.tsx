@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button, CopyButton, ReadMore, Tooltip, Heading, Link } from '@navikt/ds-react';
 import { Copy, ExternalLink } from 'lucide-react';
 import Editor from '@monaco-editor/react';
@@ -12,6 +12,24 @@ interface SqlViewerProps {
 const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: SqlViewerProps) => {
   const [copiedDashboard, setCopiedDashboard] = useState(false);
   const [copiedMetabase, setCopiedMetabase] = useState(false);
+  const editorRef = useRef<{ dispose: () => void } | null>(null);
+
+  const handleEditorMount = (editorInstance: { dispose: () => void }) => {
+    editorRef.current = editorInstance;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (editorRef.current) {
+        try {
+          editorRef.current.dispose();
+        } catch {
+          // Suppress Monaco "Canceled" errors during disposal
+        }
+        editorRef.current = null;
+      }
+    };
+  }, []);
   const isDevEnvironment =
     typeof window !== 'undefined' &&
     window.location.hostname.includes('.dev.nav.no');
@@ -28,13 +46,13 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
     // Escape backticks for TS template literal
     dashboardSql = dashboardSql.replace(/`/g, '\\`');
 
-    navigator.clipboard.writeText(dashboardSql);
+    void navigator.clipboard.writeText(dashboardSql);
     setCopiedDashboard(true);
     setTimeout(() => setCopiedDashboard(false), 3000);
   };
 
   const handleCopyToMetabase = () => {
-    navigator.clipboard.writeText(sql);
+    void navigator.clipboard.writeText(sql);
     setCopiedMetabase(true);
     setTimeout(() => setCopiedMetabase(false), 3000);
   };
@@ -85,6 +103,7 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
           defaultLanguage="sql"
           value={sql}
           theme="vs-dark"
+          onMount={handleEditorMount}
           options={{
             readOnly: true,
             minimap: { enabled: false },

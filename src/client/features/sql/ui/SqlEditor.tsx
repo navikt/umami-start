@@ -256,6 +256,24 @@ export default function SqlEditor() {
     };
     // State for editor height (for resizable editor)
     const [editorHeight, setEditorHeight] = useState(400);
+    const editorRef = useRef<{ dispose: () => void } | null>(null);
+
+    const handleEditorMount = (editorInstance: { dispose: () => void }) => {
+        editorRef.current = editorInstance;
+    };
+
+    useEffect(() => {
+        return () => {
+            if (editorRef.current) {
+                try {
+                    editorRef.current.dispose();
+                } catch {
+                    // Suppress Monaco "Canceled" errors during disposal
+                }
+                editorRef.current = null;
+            }
+        };
+    }, []);
     // Initialize state with empty string to avoid showing default until we check URL
     const [query, setQuery] = useState('');
     const [validateError, setValidateError] = useState<string | null>(null);
@@ -1273,6 +1291,7 @@ export default function SqlEditor() {
                                 value={query}
                                 onChange={(value) => handleQueryChange(value || '')}
                                 theme="vs-dark"
+                                onMount={handleEditorMount}
                                 options={{
                                     minimap: { enabled: false },
                                     fontSize: 14,
