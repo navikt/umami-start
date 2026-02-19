@@ -6,7 +6,7 @@ import type {
     ProjectDto, DashboardDto, GraphWithQueries, FilterState, MetricType,
     OversiktChart, OversiktSelectOption,
 } from '../model/types.ts';
-import { fetchProjects, fetchDashboards, fetchGraphs, fetchQueries } from '../api/oversiktApi.ts';
+import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchGraphs, fetchQueries } from '../api/oversiktApi.ts';
 import { parseId, arraysEqual, mapGraphTypeToChart, normalizeGraphType } from '../utils/oversikt.ts';
 
 export const useOversikt = () => {
@@ -112,31 +112,76 @@ export const useOversikt = () => {
     }, [tempPathOperator, tempUrlPaths, tempDateRange, tempMetricType, selectedWebsite]);
 
     const handleProjectSelected = useCallback(
-        (option: string, isSelected: boolean) => {
+        async (option: string, isSelected: boolean) => {
             if (!isSelected) {
                 setSelectedProjectId(null);
                 setSelectedDashboardId(null);
                 return;
             }
-            const selected = projects.find((p) => String(p.id) === option);
-            if (!selected) return;
-            setSelectedProjectId(selected.id);
-            setSelectedDashboardId(null);
+
+            try {
+                setError(null);
+                const selectedById = projects.find((p) => String(p.id) === option);
+                const selectedByName = projects.find((p) => p.name.trim().toLowerCase() === option.trim().toLowerCase());
+                const selected = selectedById ?? selectedByName;
+
+                let projectToUse = selected;
+                if (!projectToUse) {
+                    const trimmedName = option.trim();
+                    if (!trimmedName) return;
+                    setLoadingProjects(true);
+                    const createdProject = await createProject(trimmedName, 'Opprettet fra Oversikt');
+                    projectToUse = createdProject;
+                    setProjects((prev) => [...prev, createdProject]);
+                }
+
+                setSelectedProjectId(projectToUse.id);
+                setSelectedDashboardId(null);
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Klarte ikke velge eller opprette prosjekt');
+            } finally {
+                setLoadingProjects(false);
+            }
         },
         [projects],
     );
 
     const handleDashboardSelected = useCallback(
-        (option: string, isSelected: boolean) => {
+        async (option: string, isSelected: boolean) => {
             if (!isSelected) {
                 setSelectedDashboardId(null);
                 return;
             }
-            const selected = dashboards.find((d) => String(d.id) === option);
-            if (!selected) return;
-            setSelectedDashboardId(selected.id);
+
+            if (!selectedProjectId) {
+                setError('Velg eller opprett prosjekt først');
+                return;
+            }
+
+            try {
+                setError(null);
+                const selectedById = dashboards.find((d) => String(d.id) === option);
+                const selectedByName = dashboards.find((d) => d.name.trim().toLowerCase() === option.trim().toLowerCase());
+                const selected = selectedById ?? selectedByName;
+
+                let dashboardToUse = selected;
+                if (!dashboardToUse) {
+                    const trimmedName = option.trim();
+                    if (!trimmedName) return;
+                    setLoadingDashboards(true);
+                    const createdDashboard = await createDashboard(selectedProjectId, trimmedName, 'Opprettet fra Oversikt');
+                    dashboardToUse = createdDashboard;
+                    setDashboards((prev) => [...prev, createdDashboard]);
+                }
+
+                setSelectedDashboardId(dashboardToUse.id);
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Klarte ikke velge eller opprette dashboard');
+            } finally {
+                setLoadingDashboards(false);
+            }
         },
-        [dashboards],
+        [dashboards, selectedProjectId],
     );
 
     const handleUrlToggleSelected = useCallback(

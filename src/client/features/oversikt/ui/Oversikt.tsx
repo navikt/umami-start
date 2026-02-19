@@ -95,8 +95,11 @@ const Oversikt = () => {
                     label="Prosjekt"
                     options={projectOptions}
                     selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
-                    onToggleSelected={handleProjectSelected}
+                    onToggleSelected={(option, isSelected) => {
+                        void handleProjectSelected(option, isSelected);
+                    }}
                     isMultiSelect={false}
+                    allowNewValues
                     size="small"
                     clearButton
                     disabled={loadingProjects}
@@ -108,8 +111,11 @@ const Oversikt = () => {
                     label="Dashboard"
                     options={dashboardOptions}
                     selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
-                    onToggleSelected={handleDashboardSelected}
+                    onToggleSelected={(option, isSelected) => {
+                        void handleDashboardSelected(option, isSelected);
+                    }}
                     isMultiSelect={false}
+                    allowNewValues
                     size="small"
                     clearButton
                     disabled={!selectedProject || loadingDashboards}

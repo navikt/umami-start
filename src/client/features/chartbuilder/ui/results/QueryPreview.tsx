@@ -6,7 +6,7 @@ import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
-import { fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
+import { createDashboard, createProject, fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
 import type { DashboardDto, ProjectDto } from '../../api/chartStorageApi.ts';
 
 type JsonPrimitive = string | number | boolean | null;
@@ -144,6 +144,8 @@ const QueryPreview = ({
   const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
   const [selectedProjectOption, setSelectedProjectOption] = useState<string | null>(null);
   const [selectedDashboardOption, setSelectedDashboardOption] = useState<string | null>(null);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
 
   // Check if parameters have changed
   const hasChanges = () => {
@@ -679,35 +681,76 @@ const QueryPreview = ({
       return;
     }
 
-    const selectedProject = projects.find((project) => String(project.id) === option);
-    if (!selectedProject) return;
-
-    setSelectedProjectOption(option);
-    setProjectName(selectedProject.name);
-    setDashboardName('');
-    setSelectedDashboardOption(null);
-
     try {
-      const dashboardItems = await fetchDashboards(selectedProject.id);
+      setSaveError(null);
+      setDashboardName('');
+      setSelectedDashboardOption(null);
+
+      const selectedProjectById = projects.find((project) => String(project.id) === option);
+      const selectedProjectByName = projects.find((project) => project.name.trim().toLowerCase() === option.trim().toLowerCase());
+      const selectedProject = selectedProjectById ?? selectedProjectByName;
+
+      let projectToUse = selectedProject;
+      if (!projectToUse) {
+        const trimmedName = option.trim();
+        if (!trimmedName) return;
+
+        setIsCreatingProject(true);
+        const createdProject = await createProject(trimmedName, 'Opprettet fra Grafbyggeren');
+        projectToUse = createdProject;
+        setProjects((prev) => [...prev, createdProject]);
+      }
+
+      setSelectedProjectOption(String(projectToUse.id));
+      setProjectName(projectToUse.name);
+
+      const dashboardItems = await fetchDashboards(projectToUse.id);
       setDashboards(dashboardItems);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Klarte ikke laste dashboards';
+      const message = err instanceof Error ? err.message : 'Klarte ikke velge eller opprette prosjekt';
       setSaveError(message);
+    } finally {
+      setIsCreatingProject(false);
     }
   };
 
-  const handleDashboardSelection = (option: string, isSelected: boolean) => {
+  const handleDashboardSelection = async (option: string, isSelected: boolean) => {
     if (!isSelected) {
       setSelectedDashboardOption(null);
       setDashboardName('');
       return;
     }
 
-    const selectedDashboard = dashboards.find((dashboard) => String(dashboard.id) === option);
-    if (!selectedDashboard) return;
+    if (!selectedProjectOption) {
+      setSaveError('Velg eller opprett prosjekt først');
+      return;
+    }
 
-    setSelectedDashboardOption(option);
-    setDashboardName(selectedDashboard.name);
+    try {
+      setSaveError(null);
+      const selectedDashboardById = dashboards.find((dashboard) => String(dashboard.id) === option);
+      const selectedDashboardByName = dashboards.find((dashboard) => dashboard.name.trim().toLowerCase() === option.trim().toLowerCase());
+      const selectedDashboard = selectedDashboardById ?? selectedDashboardByName;
+
+      let dashboardToUse = selectedDashboard;
+      if (!dashboardToUse) {
+        const trimmedName = option.trim();
+        if (!trimmedName) return;
+
+        setIsCreatingDashboard(true);
+        const createdDashboard = await createDashboard(Number(selectedProjectOption), trimmedName, 'Opprettet fra Grafbyggeren');
+        dashboardToUse = createdDashboard;
+        setDashboards((prev) => [...prev, createdDashboard]);
+      }
+
+      setSelectedDashboardOption(String(dashboardToUse.id));
+      setDashboardName(dashboardToUse.name);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Klarte ikke velge eller opprette dashboard';
+      setSaveError(message);
+    } finally {
+      setIsCreatingDashboard(false);
+    }
   };
 
   const handleSaveChart = async () => {
@@ -1210,20 +1253,23 @@ const QueryPreview = ({
                 void handleProjectSelection(option, isSelected);
               }}
               isMultiSelect={false}
+              allowNewValues
               size="small"
               clearButton
+              disabled={isCreatingProject || savingChart}
             />
             <UNSAFE_Combobox
               label="Dashboard"
               options={dashboardOptions}
               selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
-                handleDashboardSelection(option, isSelected);
+                void handleDashboardSelection(option, isSelected);
               }}
               isMultiSelect={false}
+              allowNewValues
               size="small"
               clearButton
-              disabled={!selectedProjectOption}
+              disabled={!selectedProjectOption || isCreatingProject || isCreatingDashboard || savingChart}
             />
             <TextField
               label="Grafnavn"

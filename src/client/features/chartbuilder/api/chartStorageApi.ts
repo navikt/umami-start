@@ -87,6 +87,28 @@ export async function fetchDashboards(projectId: number): Promise<DashboardDto[]
   return requestJson<DashboardDto[]>(`/api/backend/projects/${projectId}/dashboards`);
 }
 
+export async function createProject(name: string, description?: string): Promise<ProjectDto> {
+  return requestJson<ProjectDto>('/api/backend/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name.trim(),
+      description: description?.trim() || undefined,
+    }),
+  });
+}
+
+export async function createDashboard(projectId: number, name: string, description?: string): Promise<DashboardDto> {
+  return requestJson<DashboardDto>(`/api/backend/projects/${projectId}/dashboards`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name.trim(),
+      description: description?.trim() || undefined,
+    }),
+  });
+}
+
 export async function saveChartToBackend(params: SaveChartParams): Promise<SaveChartResult> {
   const projects = await fetchProjects();
   const existingProject = findByName(projects, params.projectName);
