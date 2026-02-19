@@ -79,7 +79,7 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
                 {displayData.map((item, index) => {
                     const pct = total > 0 ? ((item.y / total) * 100).toFixed(1) : '0.0';
                     return (
-                        <div key={`${item.x}-${index}`} role="listitem" className="grid grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-x-2 rounded px-1 py-1 text-sm text-[var(--ax-text-default)]">
+                        <div key={`${item.x}-${index}`} role="listitem" className="flex items-start gap-2 rounded px-1 py-1 text-sm text-[var(--ax-text-default)]">
                             <span
                                 aria-hidden="true"
                                 className={`h-3 w-3 shrink-0 border border-[var(--ax-border-neutral-subtle)] ${LEGEND_SHAPES[index % LEGEND_SHAPES.length]}`}
@@ -88,8 +88,8 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
                             <span className="min-w-0 break-words leading-tight">
                                 <span className="mr-1 text-xs text-[var(--ax-text-subtle)]">{index + 1}.</span>
                                 {item.x}
+                                <span className="ml-2 whitespace-nowrap tabular-nums text-[var(--ax-text-subtle)]">{pct}%</span>
                             </span>
-                            <span className="whitespace-nowrap tabular-nums text-[var(--ax-text-subtle)]">{pct}%</span>
                         </div>
                     );
                 })}
