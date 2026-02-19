@@ -1,0 +1,202 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Button, Table, Heading, Pagination, VStack, TextField } from '@navikt/ds-react';
+import { Download } from 'lucide-react';
+import type { SeriesPoint, QueryStats, Granularity, DateRange } from '../model/types';
+import { formatMetricValue, formatMetricDelta as formatMetricDeltaUtil, downloadCsvFile } from '../utils/trafficUtils';
+
+type ChartDataTableProps = {
+    data: SeriesPoint[];
+    previousData: SeriesPoint[];
+    metricLabel: string;
+    submittedDateRange: DateRange | null;
+    submittedPreviousDateRange: DateRange | null;
+    submittedMetricType: string;
+    submittedGranularity: Granularity;
+    submittedComparePreviousPeriod: boolean;
+    seriesQueryStats: QueryStats | null;
+};
+
+const ChartDataTable = ({
+    data,
+    previousData,
+    metricLabel,
+    submittedDateRange,
+    submittedPreviousDateRange,
+    submittedMetricType,
+    submittedGranularity,
+    submittedComparePreviousPeriod,
+    seriesQueryStats
+}: ChartDataTableProps) => {
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const rowsPerPage = 10;
+
+    const formatTime = (time: string) => {
+        if (submittedGranularity === 'hour') {
+            return `${new Date(time).toLocaleDateString('nb-NO')} ${new Date(time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        return new Date(time).toLocaleDateString('nb-NO');
+    };
+
+    const shouldShowCompareColumns = Boolean(
+        submittedComparePreviousPeriod &&
+        previousData.length &&
+        submittedDateRange &&
+        submittedPreviousDateRange
+    );
+
+    const previousByShiftedTime = useMemo(() => {
+        const map = new Map<string, number>();
+
+        if (!shouldShowCompareColumns || !submittedDateRange || !submittedPreviousDateRange) {
+            return map;
+        }
+
+        const offsetMs = submittedDateRange.startDate.getTime() - submittedPreviousDateRange.startDate.getTime();
+        previousData.forEach((item: SeriesPoint) => {
+            const shiftedIso = new Date(new Date(item.time).getTime() + offsetMs).toISOString();
+            map.set(shiftedIso, Number(item.count) || 0);
+        });
+
+        return map;
+    }, [shouldShowCompareColumns, previousData, submittedDateRange, submittedPreviousDateRange]);
+
+    const filteredData = data.filter(item =>
+        formatTime(item.time).includes(search)
+    );
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+    const handleDownloadCSV = () => {
+        if (!data.length) return;
+
+        const dateHeader = submittedGranularity === 'hour' ? 'Tidspunkt' : 'Dato';
+        const headers = shouldShowCompareColumns
+            ? [dateHeader, metricLabel, 'Forrige', 'Endring']
+            : [dateHeader, metricLabel];
+        const csvRows = [
+            headers.join(','),
+            ...data.map((item) => {
+                const timeStr = formatTime(item.time);
+                const currentValue = Number(item.count) || 0;
+                const baseRow = [timeStr, formatMetricValue(currentValue, submittedMetricType)];
+                if (shouldShowCompareColumns) {
+                    const previousValue = previousByShiftedTime.get(new Date(item.time).toISOString());
+                    const hasPreviousValue = typeof previousValue === 'number';
+                    baseRow.push(hasPreviousValue ? formatMetricValue(previousValue, submittedMetricType) : '-');
+                    baseRow.push(hasPreviousValue ? formatMetricDeltaUtil(currentValue - previousValue, submittedMetricType) : '-');
+                }
+                return baseRow.join(',');
+            })
+        ];
+
+        const csvContent = csvRows.join('\n');
+        downloadCsvFile(csvContent, `oversikt_${new Date().toISOString().slice(0, 10)}.csv`);
+    };
+
+    return (
+        <VStack gap="space-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
+                <Heading level="3" size="small">Oversikt</Heading>
+                <div className="w-full sm:w-64 min-w-0">
+                    <TextField
+                        label={submittedGranularity === 'hour' ? "Søk etter tidspunkt" : "Søk etter dato"}
+                        hideLabel
+                        placeholder={submittedGranularity === 'hour' ? "Søk etter tid..." : "Søk etter dato..."}
+                        size="small"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+            </div>
+            <div className="border rounded-lg overflow-x-auto">
+                <Table size="small" className="table-fixed w-full">
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.HeaderCell>{submittedGranularity === 'hour' ? 'Tidspunkt' : 'Dato'}</Table.HeaderCell>
+                            <Table.HeaderCell align="right">{metricLabel}</Table.HeaderCell>
+                            {shouldShowCompareColumns && (
+                                <Table.HeaderCell align="right">Forrige</Table.HeaderCell>
+                            )}
+                            {shouldShowCompareColumns && (
+                                <Table.HeaderCell align="right">Endring</Table.HeaderCell>
+                            )}
+                        </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                        {paginatedData.map((item, index) => {
+                            const currentValue = Number(item.count) || 0;
+                            const previousValue = previousByShiftedTime.get(new Date(item.time).toISOString());
+                            const hasPreviousValue = typeof previousValue === 'number';
+                            const deltaValue = hasPreviousValue ? currentValue - previousValue : null;
+
+                            return (
+                                <Table.Row key={index}>
+                                    <Table.DataCell>
+                                        {formatTime(item.time)}
+                                    </Table.DataCell>
+                                    <Table.DataCell align="right" className="tabular-nums">
+                                        {formatMetricValue(currentValue, submittedMetricType)}
+                                    </Table.DataCell>
+                                    {shouldShowCompareColumns && (
+                                        <Table.DataCell align="right" className="tabular-nums">
+                                            {hasPreviousValue ? formatMetricValue(previousValue, submittedMetricType) : '-'}
+                                        </Table.DataCell>
+                                    )}
+                                    {shouldShowCompareColumns && (
+                                        <Table.DataCell
+                                            align="right"
+                                            className={`tabular-nums font-medium ${deltaValue && deltaValue > 0 ? 'text-green-700' : deltaValue && deltaValue < 0 ? 'text-red-700' : ''}`}
+                                        >
+                                            {deltaValue === null ? '-' : formatMetricDeltaUtil(deltaValue, submittedMetricType)}
+                                        </Table.DataCell>
+                                    )}
+                                </Table.Row>
+                            );
+                        })}
+                        {filteredData.length === 0 && (
+                            <Table.Row>
+                                <Table.DataCell colSpan={shouldShowCompareColumns ? 4 : 2} align="center">
+                                    {data.length > 0 ? 'Ingen treff (Data: ' + data.length + ')' : 'Ingen data'}
+                                </Table.DataCell>
+                            </Table.Row>
+                        )}
+                    </Table.Body>
+                </Table>
+                <div className="flex gap-2 p-3 bg-[var(--ax-bg-neutral-soft)] border-t justify-between items-center">
+                    <div className="flex gap-2">
+                        <Button
+                            size="small"
+                            variant="secondary"
+                            onClick={handleDownloadCSV}
+                            icon={<Download size={16} />}
+                        >
+                            Last ned CSV
+                        </Button>
+                    </div>
+                    {seriesQueryStats && (
+                        <span className="text-sm text-[var(--ax-text-subtle)]">
+                            Data prosessert: {seriesQueryStats.totalBytesProcessedGB} GB
+                        </span>
+                    )}
+                </div>
+            </div>
+            {totalPages > 1 && (
+                <Pagination
+                    page={page}
+                    onPageChange={setPage}
+                    count={totalPages}
+                    size="small"
+                />
+            )}
+        </VStack>
+    );
+};
+
+export default ChartDataTable;
+

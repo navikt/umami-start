@@ -1,0 +1,29 @@
+name: "Build PR"
+run-name: "Build PR #${{ github.event.pull_request.number }}"
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    name: "build"
+    runs-on: "ubuntu-latest"
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: "actions/checkout@v6"
+
+      - name: "Build and push"
+        uses: nais/docker-build-push@v0
+        id: docker-build-push
+        with:
+          team: team-researchops
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          build_secrets: |
+            "NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+
+    outputs:
+      image: ${{ steps.docker-build-push.outputs.image }}
