@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateUser } from '../../middleware/authenticateUser.js';
+import { loadOasis } from '../../middleware/authUtils.js';
 
 export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const router = express.Router();
@@ -11,6 +12,7 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const tokenClientId = process.env.BACKEND_TOKEN_CLIENT_ID || (isLocalBackend ? 'start-umami' : null);
   const tokenClientSecret = process.env.BACKEND_TOKEN_CLIENT_SECRET || (isLocalBackend ? 'unused' : null);
   const tokenAudience = process.env.BACKEND_TOKEN_AUDIENCE || (isLocalBackend ? 'start-umami' : null);
+  const oboScope = process.env.BACKEND_OBO_SCOPE || null;
 
   let cachedToken = null;
   let cachedTokenExpiresAt = 0;
@@ -49,15 +51,38 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
     return cachedToken;
   };
 
+  const getOboToken = async (req) => {
+    if (!oboScope) return null;
+
+    const { oasis } = await loadOasis();
+    if (!oasis || typeof oasis.requestOboToken !== 'function' || typeof oasis.getToken !== 'function') {
+      return null;
+    }
+
+    const userToken = oasis.getToken(req);
+    if (!userToken) return null;
+
+    const result = await oasis.requestOboToken(userToken, oboScope);
+    if (!result.ok || !result.token) {
+      throw new Error('Failed to exchange OBO token for backend');
+    }
+
+    return result.token;
+  };
+
   router.use('/', authenticateUser, async (req, res) => {
     try {
       const targetPath = req.url.startsWith('/') ? req.url.slice(1) : req.url;
       const targetUrl = new URL(targetPath, apiBaseUrl);
-      const serviceToken = !req.headers.authorization ? await getServiceToken() : null;
+      const oboToken = await getOboToken(req);
+      const serviceToken = !req.headers.authorization && !oboToken ? await getServiceToken() : null;
+      const resolvedAuthorization = oboToken
+        ? `Bearer ${oboToken}`
+        : req.headers.authorization || (serviceToken ? `Bearer ${serviceToken}` : undefined);
 
       const forwardHeaders = {
         accept: req.headers.accept,
-        authorization: req.headers.authorization || (serviceToken ? `Bearer ${serviceToken}` : undefined),
+        authorization: resolvedAuthorization,
         'content-type': req.headers['content-type'],
       };
 

@@ -18,7 +18,7 @@ const DashboardOverview = lazy(() => import('./features/dashboard/ui/DashboardOv
 // Chartbuilder Feature
 const Charts = lazy(() => import('./features/chartbuilder/ui/Chartbuilder.tsx'));
 const Grafdeling = lazy(() => import('./features/chartbuilder/ui/Grafdeling.tsx'));
-const BackendCrudTest = lazy(() => import('./features/chartbuilder/ui/BackendCrudTest.tsx'));
+const BackendCrudTest = lazy(() => import('./features/crud/ui/BackendCrudTest.tsx'));
 
 // Analysis Feature
 const UserComposition = lazy(() => import('./features/analysis/ui/UserComposition.tsx'));
@@ -89,7 +89,7 @@ export const routes: AppRoute[] = [
 
     { path: "/sql", component: <SqlEditor />, fullWidth: true },
     { path: "/grafdeling", component: <Grafdeling />, fullWidth: true },
-    { path: "/backend-crud-test", component: <BackendCrudTest />, fullWidth: true },
+    { path: "/crud", component: <BackendCrudTest />, fullWidth: true },
     { path: "/brukerreiser", component: <UserJourney />, fullWidth: true },
     { path: "/hendelsesreiser", component: <EventJourney />, fullWidth: true },
     { path: "/trakt", component: <Funnel />, fullWidth: true },
