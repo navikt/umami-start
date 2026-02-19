@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import ResultsPanel from '../../chartbuilder/ui/results/ResultsPanel.tsx';
+import ResultsPanel from './results/ResultsPanel.tsx';
 import { Alert, BodyLong, Loader, TextField, Button } from '@navikt/ds-react';
 import { translateValue } from '../../../shared/lib/translations.ts';
 import ChartLayout from '../../analysis/ui/ChartLayoutOriginal.tsx';

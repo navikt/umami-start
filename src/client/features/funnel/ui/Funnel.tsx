@@ -9,7 +9,7 @@ import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
 import FunnelChart from '../../analysis/ui/funnel/FunnelChart.tsx';
 import HorizontalFunnelChart from '../../analysis/ui/funnel/HorizontalFunnelChart.tsx';
 import FunnelStats from '../../analysis/ui/funnel/FunnelStats.tsx';
-import SqlViewer from '../../chartbuilder/ui/results/SqlViewer.tsx';
+import { SqlViewer } from '../../chartbuilder';
 import AnalysisActionModal from '../../analysis/ui/AnalysisActionModal.tsx';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference } from '../../../shared/lib/utils.ts';
 import { getGcpProjectId } from '../../../shared/lib/runtimeConfig.ts';
