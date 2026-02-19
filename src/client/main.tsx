@@ -6,8 +6,7 @@ import App from './App.tsx'
 
 // Suppress Monaco editor's "Canceled" promise rejections during disposal/unmount
 window.addEventListener('unhandledrejection', (event) => {
-  const reason = event.reason as { name?: string; message?: string } | undefined;
-  if (reason?.name === 'Canceled' || reason?.message === 'Canceled') {
+  if (event.reason instanceof Error && event.reason.name === 'Canceled') {
     event.preventDefault();
   }
 });
