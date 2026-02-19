@@ -17,10 +17,6 @@ const PIE_COLORS = [
     '#6B7280',
     '#B13F6B',
 ];
-const markerFromIndex = (index: number): string => {
-    // A, B, C... is easier to map than mixed shapes + numbers.
-    return String.fromCharCode(65 + index);
-};
 
 const toNumber = (value: unknown): number => {
     if (typeof value === 'number') return value;
@@ -41,11 +37,8 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
         const rawLabel = extractJsonValue((row as Record<string, unknown>)[labelKey]);
         const rawValue = extractJsonValue((row as Record<string, unknown>)[valueKey]);
         const label = String(rawLabel ?? 'Ukjent');
-        const marker = markerFromIndex(index);
         return {
-            x: marker,
-            marker,
-            label,
+            x: label,
             y: toNumber(rawValue),
             color: PIE_COLORS[index % PIE_COLORS.length],
             legend: label,
@@ -62,55 +55,27 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
         const top = slices.slice(0, MAX_CATEGORIES - 1);
         const rest = slices.slice(MAX_CATEGORIES - 1);
         const restSum = rest.reduce((sum, slice) => sum + slice.y, 0);
-        displayData = [...top, { x: markerFromIndex(MAX_CATEGORIES - 1), marker: markerFromIndex(MAX_CATEGORIES - 1), label: 'Andre', y: restSum, color: '#6B7280', legend: 'Andre', xAxisCalloutData: 'Andre' }];
+        displayData = [...top, { x: 'Andre', y: restSum, color: '#6B7280', legend: 'Andre', xAxisCalloutData: 'Andre' }];
     }
 
     const total = displayData.reduce((sum, item) => sum + item.y, 0);
-    const chartLabels = (() => {
-        let currentAngle = -Math.PI / 2;
-        return displayData.map((item) => {
-            const sweep = total > 0 ? (item.y / total) * Math.PI * 2 : 0;
-            const mid = currentAngle + sweep / 2;
-            currentAngle += sweep;
-            return {
-                marker: item.marker,
-                x: 50 + Math.cos(mid) * 40,
-                y: 50 + Math.sin(mid) * 40,
-            };
-        });
-    })();
 
     return (
         <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(170px,200px)_minmax(0,1fr)] md:items-center md:gap-0">
             <style>{`
-                .dashboard-pie-chart g.arc text {
+                .dashboard-pie-chart text[class*="pieLabel"],
+                .dashboard-pie-chart g[class*="arc"] text {
                     opacity: 0 !important;
                     pointer-events: none !important;
                 }
+                .dashboard-pie-chart path {
+                    cursor: pointer !important;
+                }
             `}</style>
-            <div className="dashboard-pie-chart relative md:order-2" style={{ width: '100%', height: '350px' }}>
+            <div className="dashboard-pie-chart md:order-2" style={{ width: '100%', height: '350px' }}>
                 <ResponsiveContainer>
                     <PieChart data={displayData} chartTitle="" />
                 </ResponsiveContainer>
-                <svg
-                    className="pointer-events-none absolute inset-0"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="xMidYMid meet"
-                    aria-hidden="true"
-                >
-                    {chartLabels.map((item) => (
-                        <text
-                            key={item.marker}
-                            x={item.x}
-                            y={item.y}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            className="fill-[var(--ax-text-default)] text-[5px] font-semibold"
-                        >
-                            {item.marker}
-                        </text>
-                    ))}
-                </svg>
             </div>
             <div className="mt-2 space-y-1 md:order-1 md:mt-0 md:max-h-[350px] md:overflow-auto" role="list" aria-label="Sektordiagram forklaring">
                 {displayData.map((item, index) => {
@@ -118,8 +83,7 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
                     return (
                         <div key={`${item.x}-${index}`} role="listitem" className="flex items-start gap-2 rounded px-1 py-1 text-sm text-[var(--ax-text-default)]">
                             <span className="min-w-0 break-words leading-tight">
-                                <span className="mr-1 text-[var(--ax-text-subtle)]">{item.marker}.</span>
-                                {item.label}
+                                {item.x}
                                 <span className="ml-2 whitespace-nowrap tabular-nums text-[var(--ax-text-subtle)]">{pct}%</span>
                             </span>
                         </div>
