@@ -1,61 +1,6 @@
-import type { ComponentType } from 'react';
 import { Button, Heading, Loader } from '@navikt/ds-react';
 import { ArrowRight } from 'lucide-react';
-import type { Website } from '../../../../shared/types/chart.ts';
-
-type EntranceRow = {
-    name: string;
-    count: number;
-    type: 'external' | 'internal';
-    isDomainInternal?: boolean;
-};
-
-type SummaryRow = {
-    name: string;
-    count: number;
-};
-
-type CombinedEntrancesTableProps = {
-    title: string;
-    data: EntranceRow[];
-    onRowClick?: (name: string) => void;
-    selectedWebsite: Website | null;
-    metricLabel: string;
-};
-
-type ExternalTrafficTableProps = {
-    title: string;
-    data: SummaryRow[];
-    metricLabel: string;
-    websiteDomain?: string;
-};
-
-type TrafficTableProps = {
-    title: string;
-    data: { name: string; count: number; previousCount?: number; deltaCount?: number }[];
-    onRowClick?: (name: string) => void;
-    selectedWebsite: Website | null;
-    metricLabel: string;
-    showCompare?: boolean;
-};
-
-type InnOgUtgangerTabContentProps = {
-    hasAttemptedFetch: boolean;
-    isLoadingExternalReferrers: boolean;
-    hasFetchedExternalReferrers: boolean;
-    isLoadingBreakdown: boolean;
-    hasFetchedBreakdown: boolean;
-    combinedEntrances: EntranceRow[];
-    entranceSummaryWithUnknown: SummaryRow[];
-    exits: { name: string; count: number }[];
-    selectedWebsite: Website | null;
-    metricLabel: string;
-    onSelectInternalUrl: (name: string) => void;
-    onNavigateToJourney: () => void;
-    CombinedEntrancesTableComponent: ComponentType<CombinedEntrancesTableProps>;
-    ExternalTrafficTableComponent: ComponentType<ExternalTrafficTableProps>;
-    TrafficTableComponent: ComponentType<TrafficTableProps>;
-};
+import type { InnOgUtgangerTabContentProps } from '../../model/types.ts';
 
 const InnOgUtgangerTabContent = ({
     hasAttemptedFetch,

@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { UNSAFE_Combobox, Alert, Button } from '@navikt/ds-react';
+import type { Website } from '../../../shared/types/chart.ts';
+import type { EventProperty, ApiCache, WebsiteApiResponse } from '../model/types.ts';
+import { saveToLocalStorage, getFromLocalStorage, WEBSITES_CACHE_KEY, SELECTED_WEBSITE_CACHE_KEY } from '../storage/websiteCache.ts';
 
-export interface Website {
-  id: string;
-  name: string;
-  domain: string;
-  teamId: string;
-  createdAt: string;
-}
+export type { Website };
 
 interface WebsitePickerProps {
   selectedWebsite: Website | null;
@@ -26,65 +23,7 @@ interface WebsitePickerProps {
   customLabel?: string; // Custom label for the combobox
 }
 
-interface EventProperty {
-  eventName: string;
-  propertyName: string;
-  total: number;
-  type?: 'string' | 'number';
-}
-
-// Cache for API responses
-interface ApiCache {
-  [websiteId: string]: {
-    properties?: EventProperty[];
-  }
-}
-
-interface WebsiteApiResponse {
-  data: Website[];
-}
-
 const API_TIMEOUT_MS = 120000; // timeout
-const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// Make cache keys environment-aware to prevent dev/prod conflicts
-const getHostPrefix = () => window.location.hostname.replace(/\./g, '_');
-const WEBSITES_CACHE_KEY = `umami_websites_cache_${getHostPrefix()}`;
-const SELECTED_WEBSITE_CACHE_KEY = `umami_selected_website_${getHostPrefix()}`;
-
-// LocalStorage helper functions
-const saveToLocalStorage = (key: string, data: any) => {
-  try {
-    const item = {
-      data,
-      timestamp: Date.now()
-    };
-    localStorage.setItem(key, JSON.stringify(item));
-  } catch (error) {
-    console.error('Error saving to localStorage:', error);
-  }
-};
-
-const getFromLocalStorage = <T,>(key: string, maxAgeMs: number = CACHE_EXPIRY_MS): T | null => {
-  try {
-    const itemStr = localStorage.getItem(key);
-    if (!itemStr) return null;
-
-    const item = JSON.parse(itemStr);
-    const now = Date.now();
-
-    // Check if cache has expired
-    if (now - item.timestamp > maxAgeMs) {
-      localStorage.removeItem(key);
-      return null;
-    }
-
-    return item.data as T;
-  } catch (error) {
-    console.error('Error reading from localStorage:', error);
-    return null;
-  }
-};
 
 const timeoutPromise = (ms: number) => {
   return new Promise((_, reject) => {

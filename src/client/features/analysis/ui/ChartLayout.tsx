@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React from 'react';
 import { Page, Accordion } from "@navikt/ds-react";
-import { BarChart2, Users, FileSearch, Activity } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation.tsx';
+import { type AnalyticsPage, analyticsPages } from '../model/analyticsNavigation.ts';
+import { type ChartGroup } from '../model/chartGroups.tsx';
 import { KontaktSeksjon } from '../../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx';
 import { PageHeader } from '../../../shared/ui/theme/PageHeader/PageHeader.tsx';
-import { hasSiteimproveSupport } from '../../../shared/hooks/useSiteimproveSupport.ts';
+import { useChartNavigation } from '../hooks/useChartNavigation.ts';
 
 interface ChartLayoutProps {
     title: string;
@@ -21,33 +20,8 @@ interface ChartLayoutProps {
     websiteName?: string;   // Website name for dev environment detection
 }
 
-const chartGroups = [
-    {
-        title: "Trafikk",
-        icon: <BarChart2 size={18} />,
-        ids: ['trafikkanalyse', 'brukerreiser', 'trakt']
-    },
-    {
-        title: "Hendelser",
-        icon: <Activity size={18} />,
-        ids: ['event-explorer', 'hendelsesreiser']
-    },
-    {
-        title: "Brukere",
-        icon: <Users size={18} />,
-        ids: ['brukersammensetning', 'enkeltbrukere', 'brukerlojalitet']
-    },
-    {
-        title: "Innholdskvalitet",
-        icon: <FileSearch size={18} />,
-        ids: ['odelagte-lenker', 'stavekontroll']
-    }
-];
-
-const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate', 'from', 'to', 'websiteId', 'domain', 'pathOperator'];
-
 interface SidebarNavigationContentProps {
-    filteredChartGroups: typeof chartGroups;
+    filteredChartGroups: ChartGroup[];
     currentPage?: AnalyticsPage;
     onNavigate: (e: React.MouseEvent, href: string) => void;
 }
@@ -102,56 +76,7 @@ const ChartLayout: React.FC<ChartLayoutProps> = ({
     sidebarContent,
     websiteDomain
 }) => {
-    // State for Sidebars
-    const isNavOpen = !hideAnalysisSelector;
-
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-
-    // Get domain from prop or URL params and check feature support
-    const domain = websiteDomain || searchParams.get('domain');
-    const showSiteimproveSection = useMemo(() => hasSiteimproveSupport(domain), [domain]);
-
-    // Filter chart groups based on feature support
-    const filteredChartGroups = useMemo(() => {
-        let groups = chartGroups;
-
-        // Filter out Innholdskvalitet if Siteimprove not supported
-        if (!showSiteimproveSection) {
-            groups = groups.filter(group => group.title !== "Innholdskvalitet");
-        }
-
-        return groups;
-    }, [showSiteimproveSection]);
-
-    const getTargetUrl = useCallback((href: string) => {
-        const currentParams = new URLSearchParams(window.location.search);
-        const preservedParams = new URLSearchParams();
-
-        SHARED_PARAMS.forEach(param => {
-            const value = currentParams.get(param);
-            if (value) {
-                preservedParams.set(param, value);
-            }
-        });
-
-        const queryString = preservedParams.toString();
-        return queryString ? `${href}?${queryString}` : href;
-    }, []);
-
-    const handleNavigation = useCallback((e: React.MouseEvent, href: string) => {
-        e.preventDefault();
-        const targetUrl = getTargetUrl(href);
-        void navigate(targetUrl);
-    }, [getTargetUrl, navigate]);
-
-    // Trigger resize for charts when sidebar widths change
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-        }, 100);
-        return () => clearTimeout(timer);
-    }, [isNavOpen]);
+    const { filteredChartGroups, handleNavigation } = useChartNavigation(websiteDomain, hideAnalysisSelector);
 
     return (
         <>

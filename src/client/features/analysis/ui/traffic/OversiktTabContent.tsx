@@ -1,90 +1,8 @@
-import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { Label, Loader, Select, Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import type { ILineChartProps } from '@fluentui/react-charting';
-import { differenceInCalendarDays, format } from 'date-fns';
-import { nb } from 'date-fns/locale';
 import TrafficStats from './TrafficStats.tsx';
-import type { Website } from '../../../../shared/types/chart.ts';
-
-type Granularity = 'day' | 'week' | 'month' | 'hour';
-
-type ComparisonSummary = {
-    currentValue: number;
-    previousValue: number;
-    deltaValue: number;
-    deltaPercent: number | null;
-};
-
-type ComparisonRangeLabel = {
-    current: string;
-    previous: string;
-};
-
-type SeriesPoint = {
-    time: string;
-    count: number;
-};
-
-type IncludedPageRow = {
-    name: string;
-    count: number;
-    previousCount?: number;
-    deltaCount?: number;
-};
-
-type ChartDataTableProps = {
-    data: SeriesPoint[];
-    previousData: SeriesPoint[];
-    metricLabel: string;
-    submittedDateRange: { startDate: Date; endDate: Date } | null;
-    submittedPreviousDateRange: { startDate: Date; endDate: Date } | null;
-};
-
-type TrafficTableProps = {
-    title: string;
-    data: IncludedPageRow[];
-    onRowClick?: (name: string) => void;
-    selectedWebsite: Website | null;
-    metricLabel: string;
-    showCompare?: boolean;
-};
-
-type OversiktTabContentProps = {
-    hasAttemptedFetch: boolean;
-    isLoadingPageMetrics: boolean;
-    hasFetchedPageMetrics: boolean;
-    submittedComparePreviousPeriod: boolean;
-    comparisonSummary: ComparisonSummary | null;
-    comparisonRangeLabel: ComparisonRangeLabel | null;
-    submittedDateRange: { startDate: Date; endDate: Date } | null;
-    submittedPreviousDateRange: { startDate: Date; endDate: Date } | null;
-    formatComparisonValue: (value: number) => string;
-    formatComparisonDelta: (value: number) => string;
-    seriesData: SeriesPoint[];
-    submittedMetricType: string;
-    totalOverride?: number;
-    submittedGranularity: Granularity;
-    showAverage: boolean;
-    onShowAverageChange: (checked: boolean) => void;
-    comparePreviousPeriod: boolean;
-    onComparePreviousPeriodChange: (checked: boolean) => void;
-    granularity: Granularity;
-    onGranularityChange: (value: Granularity) => void;
-    chartData: ILineChartProps['data'] | null;
-    chartYMax: number;
-    chartYMin: number;
-    chartKey: string;
-    processedSeriesData: SeriesPoint[];
-    processedPreviousSeriesData: SeriesPoint[];
-    getMetricLabelWithCount: (type: string) => string;
-    includedPagesWithCompare: IncludedPageRow[];
-    onSelectInternalUrl: (name: string) => void;
-    selectedWebsite: Website | null;
-    getMetricLabelCapitalized: (type: string) => string;
-    ChartDataTableComponent: ComponentType<ChartDataTableProps>;
-    TrafficTableComponent: ComponentType<TrafficTableProps>;
-};
+import type { Granularity, OversiktTabContentProps } from '../../model/types.ts';
+import { useOversiktDayDividers } from '../../hooks/useOversiktDayDividers.ts';
 
 const OversiktTabContent = ({
     hasAttemptedFetch,
@@ -121,106 +39,18 @@ const OversiktTabContent = ({
     ChartDataTableComponent,
     TrafficTableComponent,
 }: OversiktTabContentProps) => {
-    const chartWrapperRef = useRef<HTMLDivElement | null>(null);
-    const [dayDividerXs, setDayDividerXs] = useState<number[]>([]);
-    const isMultiDayHourly = submittedGranularity === 'hour' && !!submittedDateRange
-        && differenceInCalendarDays(submittedDateRange.endDate, submittedDateRange.startDate) >= 1;
-
-    useEffect(() => {
-        if (!isMultiDayHourly) {
-            setDayDividerXs([]);
-            return;
-        }
-
-        let rafId: number | null = null;
-        let observer: MutationObserver | null = null;
-
-        const readDayDividerPositions = () => {
-            const wrapper = chartWrapperRef.current;
-            if (!wrapper) return;
-
-            const ticks = Array.from(wrapper.querySelectorAll<SVGGElement>('[class*="xAxis"] .tick'));
-            if (!ticks.length) return;
-
-            const positions = ticks
-                .map((tick) => {
-                    const transform = tick.getAttribute('transform') || '';
-                    const match = transform.match(/translate\(([-\d.]+),?\s*([-\d.]*)\)/);
-                    if (!match) return NaN;
-                    const x = Number(match[1]);
-                    return Number.isFinite(x) ? x : NaN;
-                })
-                .filter((value) => !Number.isNaN(value))
-                .sort((a, b) => a - b);
-
-            setDayDividerXs((prev) => {
-                if (prev.length === positions.length && prev.every((value, index) => Math.abs(value - positions[index]) < 0.5)) {
-                    return prev;
-                }
-                return positions;
-            });
-        };
-
-        const scheduleRead = () => {
-            if (rafId !== null) return;
-            rafId = window.requestAnimationFrame(() => {
-                rafId = null;
-                readDayDividerPositions();
-            });
-        };
-
-        const wrapper = chartWrapperRef.current;
-        if (wrapper && typeof MutationObserver !== 'undefined') {
-            observer = new MutationObserver(() => {
-                scheduleRead();
-            });
-            observer.observe(wrapper, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-            });
-        }
-
-        const immediate = window.setTimeout(scheduleRead, 0);
-        const delayed = window.setTimeout(scheduleRead, 150);
-        window.addEventListener('resize', scheduleRead);
-
-        return () => {
-            if (rafId !== null) {
-                window.cancelAnimationFrame(rafId);
-            }
-            if (observer) {
-                observer.disconnect();
-            }
-            window.clearTimeout(immediate);
-            window.clearTimeout(delayed);
-            window.removeEventListener('resize', scheduleRead);
-        };
-    }, [isMultiDayHourly, chartData, chartKey, processedSeriesData.length]);
-
-    const formatXAxisDateLabel = (date: Date) => {
-        if (submittedGranularity === 'hour') {
-            if (isMultiDayHourly) {
-                const hourMinute = format(date, 'HH:mm');
-                if (hourMinute === '00:00') {
-                    return format(date, 'd. MMM', { locale: nb });
-                }
-                return format(date, 'd. MMM HH:mm', { locale: nb });
-            }
-
-            return format(date, 'HH:mm');
-        }
-
-        if (submittedGranularity === 'week') {
-            return `Uke ${format(date, 'w', { locale: nb })}`;
-        }
-
-        if (submittedGranularity === 'month') {
-            return format(date, 'MMM yyyy', { locale: nb });
-        }
-
-        return format(date, 'd. MMM', { locale: nb });
-    };
+    const {
+        chartWrapperRef,
+        dayDividerXs,
+        isMultiDayHourly,
+        formatXAxisDateLabel,
+    } = useOversiktDayDividers(
+        submittedGranularity,
+        submittedDateRange,
+        chartData,
+        chartKey,
+        processedSeriesData.length,
+    );
 
     if (hasAttemptedFetch && (isLoadingPageMetrics || !hasFetchedPageMetrics)) {
         return (
