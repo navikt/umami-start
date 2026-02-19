@@ -3,7 +3,7 @@ import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Comb
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
-import AlertWithCloseButton from '../AlertWithCloseButton.tsx';
+import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
 

@@ -16,8 +16,8 @@ const Dashboard = lazy(() => import('./features/dashboard/ui/Dashboard.tsx'));
 const DashboardOverview = lazy(() => import('./features/dashboard/ui/DashboardOverview.tsx'));
 
 // Chartbuilder Feature
-const Charts = lazy(() => import('./features/chartbuilder/ui/Chartbuilder.tsx'));
-const Grafdeling = lazy(() => import('./features/chartbuilder/ui/Grafdeling.tsx'));
+const Grafbygger = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafbygger })));
+const Grafdeling = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafdeling })));
 
 // Analysis Feature
 const UserComposition = lazy(() => import('./features/analysis/ui/UserComposition.tsx'));
@@ -83,7 +83,7 @@ export const routes: AppRoute[] = [
     { path: "/tilgjengelighet", component: <Tilgjengelighet />, fullWidth: true },
 
     { path: "/taksonomi", component: <Taksonomi />, fullWidth: true },
-    { path: "/grafbygger", component: <Charts />, fullWidth: true },
+    { path: "/grafbygger", component: <Grafbygger />, fullWidth: true },
     { path: "/metabase", component: <MetabaseGuide />, fullWidth: true },
 
     { path: "/sql", component: <SqlEditor />, fullWidth: true },

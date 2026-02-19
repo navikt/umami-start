@@ -7,7 +7,7 @@ import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
 import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
-import ResultsPanel from '../../chartbuilder/ui/results/ResultsPanel.tsx';
+import { ResultsPanel } from '../../chartbuilder';
 import type { Website } from '../../../shared/types/chart.ts';
 import { normalizeUrlToPath, getDateRangeFromPeriod, getStoredPeriod, savePeriodPreference, getCookieCountByParams } from '../../../shared/lib/utils.ts';
 import { useCookieSupport, useCookieStartDate } from '../../../shared/hooks/useSiteimproveSupport.ts';

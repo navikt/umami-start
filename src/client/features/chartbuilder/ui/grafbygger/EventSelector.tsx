@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label, Skeleton } from '@navikt/ds-react';
-import type { Filter, Parameter } from '../../../shared/types/chart.ts';
+import type { Filter, Parameter } from '../../../../shared/types/chart.ts';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx';
 
 type Option = { label: string; value: string };
