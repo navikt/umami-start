@@ -10,6 +10,13 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
     process.env.BACKEND_CLIENT_ID
     || process.env.START_UMAMI_BACKEND_CLIENT_ID
     || null;
+  const naisCluster = process.env.NAIS_CLUSTER_NAME || null;
+  const naisNamespace = process.env.NAIS_NAMESPACE || null;
+  const backendServiceName = apiBaseUrl.hostname.split('.')[0] || null;
+  const derivedNaisOboScope =
+    naisCluster && naisNamespace && backendServiceName
+      ? `api://${naisCluster}.${naisNamespace}.${backendServiceName}/.default`
+      : null;
 
   const tokenUrl = process.env.BACKEND_TOKEN_URL
     || (isLocalBackend ? new URL('/issueissue/token', BACKEND_BASE_URL).toString() : null);
@@ -18,7 +25,16 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const tokenAudience = process.env.BACKEND_TOKEN_AUDIENCE || (isLocalBackend ? 'start-umami' : null);
   const oboScope =
     process.env.BACKEND_OBO_SCOPE
+    || derivedNaisOboScope
     || (backendClientId ? `api://${backendClientId}/.default` : null);
+
+  console.info('[BackendProxy] init', {
+    backendBaseUrl: apiBaseUrl.origin,
+    isLocalBackend,
+    hasBackendClientId: Boolean(backendClientId),
+    hasOboScope: Boolean(oboScope),
+    hasServiceTokenConfig: Boolean(tokenUrl && tokenClientId && tokenClientSecret && tokenAudience),
+  });
 
   let cachedToken = null;
   let cachedTokenExpiresAt = 0;
@@ -30,6 +46,7 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
     }
 
     if (!tokenUrl || !tokenClientId || !tokenClientSecret || !tokenAudience) {
+      console.warn('[BackendProxy] service token config missing');
       return null;
     }
 
@@ -48,6 +65,10 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
 
     const payload = await response.json();
     if (!response.ok || !payload?.access_token) {
+      console.error('[BackendProxy] service token request failed', {
+        status: response.status,
+        hasAccessToken: Boolean(payload?.access_token),
+      });
       throw new Error(`Failed to fetch backend token (${response.status})`);
     }
 
@@ -61,15 +82,33 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
     if (!oboScope) return null;
 
     const { oasis } = await loadOasis();
-    if (!oasis || typeof oasis.requestOboToken !== 'function' || typeof oasis.getToken !== 'function') {
+    if (
+      !oasis
+      || typeof oasis.requestOboToken !== 'function'
+      || typeof oasis.getToken !== 'function'
+      || typeof oasis.validateToken !== 'function'
+    ) {
+      console.warn('[BackendProxy] oasis missing for OBO');
       return null;
     }
 
     const userToken = oasis.getToken(req);
-    if (!userToken) return null;
+    if (!userToken) {
+      console.warn('[BackendProxy] no user token available for OBO exchange');
+      return null;
+    }
+
+    const validation = await oasis.validateToken(userToken);
+    if (!validation.ok) {
+      console.error('[BackendProxy] user token validation failed before OBO');
+      return null;
+    }
 
     const result = await oasis.requestOboToken(userToken, oboScope);
     if (!result.ok || !result.token) {
+      console.error('[BackendProxy] OBO token exchange failed', {
+        hasScope: Boolean(oboScope),
+      });
       throw new Error('Failed to exchange OBO token for backend');
     }
 
@@ -96,6 +135,12 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       if (authMode !== 'obo') {
         console.warn(`[BackendProxy] auth mode=${authMode}; consider setting BACKEND_OBO_SCOPE or BACKEND_CLIENT_ID`);
       }
+      console.info('[BackendProxy] forwarding request', {
+        method: req.method,
+        path: targetUrl.pathname,
+        authMode,
+        hasAuthHeader: Boolean(resolvedAuthorization),
+      });
 
       const forwardHeaders = {
         accept: req.headers.accept,
@@ -111,6 +156,15 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       });
 
       const data = await response.text();
+
+      if (response.status === 401) {
+        console.error('[BackendProxy] backend returned 401', {
+          method: req.method,
+          path: targetUrl.pathname,
+          authMode,
+          wwwAuthenticate: response.headers.get('www-authenticate'),
+        });
+      }
 
       res.status(response.status);
       response.headers.forEach((value, key) => {
