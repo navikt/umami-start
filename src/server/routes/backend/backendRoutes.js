@@ -6,13 +6,19 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const router = express.Router();
   const apiBaseUrl = new URL('/api/', BACKEND_BASE_URL);
   const isLocalBackend = ['localhost', '127.0.0.1', '::1'].includes(apiBaseUrl.hostname);
+  const backendClientId =
+    process.env.BACKEND_CLIENT_ID
+    || process.env.START_UMAMI_BACKEND_CLIENT_ID
+    || null;
 
   const tokenUrl = process.env.BACKEND_TOKEN_URL
     || (isLocalBackend ? new URL('/issueissue/token', BACKEND_BASE_URL).toString() : null);
   const tokenClientId = process.env.BACKEND_TOKEN_CLIENT_ID || (isLocalBackend ? 'start-umami' : null);
   const tokenClientSecret = process.env.BACKEND_TOKEN_CLIENT_SECRET || (isLocalBackend ? 'unused' : null);
   const tokenAudience = process.env.BACKEND_TOKEN_AUDIENCE || (isLocalBackend ? 'start-umami' : null);
-  const oboScope = process.env.BACKEND_OBO_SCOPE || null;
+  const oboScope =
+    process.env.BACKEND_OBO_SCOPE
+    || (backendClientId ? `api://${backendClientId}/.default` : null);
 
   let cachedToken = null;
   let cachedTokenExpiresAt = 0;
@@ -76,9 +82,20 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       const targetUrl = new URL(targetPath, apiBaseUrl);
       const oboToken = await getOboToken(req);
       const serviceToken = !req.headers.authorization && !oboToken ? await getServiceToken() : null;
+      const authMode = oboToken
+        ? 'obo'
+        : serviceToken
+          ? 'service-token'
+          : req.headers.authorization
+            ? 'forwarded-user-token'
+            : 'none';
       const resolvedAuthorization = oboToken
         ? `Bearer ${oboToken}`
         : req.headers.authorization || (serviceToken ? `Bearer ${serviceToken}` : undefined);
+
+      if (authMode !== 'obo') {
+        console.warn(`[BackendProxy] auth mode=${authMode}; consider setting BACKEND_OBO_SCOPE or BACKEND_CLIENT_ID`);
+      }
 
       const forwardHeaders = {
         accept: req.headers.accept,
