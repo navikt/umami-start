@@ -1,396 +1,49 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Button, Alert, Loader, Tabs, Heading, BodyShort } from '@navikt/ds-react';
-import type { ILineChartDataPoint, ILineChartProps} from '@fluentui/react-charting';
-import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
+import { ResponsiveContainer, LineChart } from '@fluentui/react-charting';
 import { Download, Share2, Check } from 'lucide-react';
-import { parseISO } from 'date-fns';
 import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
 import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
 import CookieMixNotice from '../../analysis/ui/CookieMixNotice.tsx';
-import { useCookieSupport, useCookieStartDate } from '../../../shared/hooks/useSiteimproveSupport.ts';
-import type { Website } from '../../../shared/types/chart.ts';
-import { normalizeUrlToPath, getStoredPeriod, getDateRangeFromPeriod, getCookieBadge, getCookieCountByParams } from '../../../shared/lib/utils.ts';
-
+import RetentionStatsCards from './RetentionStatsCards.tsx';
+import { useRetention } from '../hooks/useRetention';
 
 const Retention = () => {
-    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const usesCookies = useCookieSupport(selectedWebsite?.domain);
-    const cookieStartDate = useCookieStartDate(selectedWebsite?.domain);
-    const [searchParams] = useSearchParams();
-
-    // Initialize state from URL params
-    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
-    const [pathOperator, setPathOperator] = useState<string>(() => searchParams.get('pathOperator') || 'equals');
-    const [period, setPeriodState] = useState<string>(() => {
-        const initial = getStoredPeriod(searchParams.get('retentionPeriod') || searchParams.get('period'));
-        const validPeriods = ['current_month', 'last_month', 'custom'];
-        return validPeriods.includes(initial) ? initial : 'last_month';
-    });
-
-    // Track if we overrode the global/stored period because it wasn't supported
-    const [overriddenGlobalPeriod, setOverriddenGlobalPeriod] = useState<string | null>(() => {
-        const retentionParam = searchParams.get('retentionPeriod');
-        if (retentionParam) return null; // If explicitly using retentionPeriod, assume valid/intentional
-
-        const requested = getStoredPeriod(searchParams.get('period'));
-        const validPeriods = ['current_month', 'last_month', 'custom'];
-
-        return !validPeriods.includes(requested) ? requested : null;
-    });
-
-    // Do not save period preference to localStorage for Retention, as it restricts available options.
-    // We don't want visiting this page to restrict the global period preference for other pages.
-    const setPeriod = (newPeriod: string) => {
-        setPeriodState(newPeriod);
-        setOverriddenGlobalPeriod(null); // Clear alert if user manually changes it
-    };
-
-    useEffect(() => {
-        if (!usesCookies) return;
-        const requested = getStoredPeriod(searchParams.get('retentionPeriod') || searchParams.get('period'));
-        if (requested !== period) {
-            setPeriodState(requested);
-        }
-    }, [usesCookies, searchParams, period]);
-
-    // Support custom dates from URL
-    const fromDateFromUrl = searchParams.get("from");
-    const toDateFromUrl = searchParams.get("to");
-    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
-    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
-
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-
-    type RetentionRow = {
-        day: number;
-        percentage: number;
-        returning_users: number;
-    };
-
-    type QueryStats = {
-        totalBytesProcessedGB?: number;
-        estimatedCostUSD?: number;
-    };
-
-    const [retentionData, setRetentionData] = useState<RetentionRow[]>([]);
-    const [chartData, setChartData] = useState<ILineChartProps | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<string>('chart');
-    const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
-    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
-    const [copySuccess, setCopySuccess] = useState<boolean>(false);
-    const [hasAutoSubmitted, setHasAutoSubmitted] = useState<boolean>(false);
-    const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null);
-
-    const buildFilterKey = useCallback(() =>
-        JSON.stringify({
-            websiteId: selectedWebsite?.id ?? null,
-            urlPath: normalizeUrlToPath(urlPath),
-            pathOperator,
-            period,
-            customStartDate: customStartDate?.toISOString() ?? null,
-            customEndDate: customEndDate?.toISOString() ?? null,
-        }), [selectedWebsite?.id, urlPath, pathOperator, period, customStartDate, customEndDate]);
-    const hasUnappliedFilterChanges = buildFilterKey() !== lastAppliedFilterKey;
-
-    const getRetentionDateRange = useCallback(() => {
-        if (usesCookies) {
-            return getDateRangeFromPeriod(period, customStartDate, customEndDate);
-        }
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            // First day of current month to now
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            // First day to last day of previous month
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                return null;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            // Default fallback for periods not strictly supported in retention (like 'today', 'week', etc.)
-            // We fall back to "Last Month" to ensure we have meaningful data
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        }
-
-        return { startDate, endDate };
-    }, [usesCookies, period, customStartDate, customEndDate]);
-
-    const cookieBadge = useMemo(() => {
-        const range = getRetentionDateRange();
-        if (!range) return '';
-        return getCookieBadge(
-            usesCookies,
-            cookieStartDate,
-            range.startDate,
-            range.endDate
-        );
-    }, [usesCookies, cookieStartDate, getRetentionDateRange]);
-    const isPreCookieRange = useMemo(() => {
-        const range = getRetentionDateRange();
-        if (!range || !cookieStartDate) return false;
-        return range.endDate.getTime() < cookieStartDate.getTime();
-    }, [cookieStartDate, getRetentionDateRange]);
-
-    const copyShareLink = async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy link:', err);
-        }
-    };
-
-    // Helper function to normalize URL input - extracts path from full URLs
-
-
-
-    const fetchData = useCallback(async () => {
-        if (!selectedWebsite) return;
-        const appliedFilterKey = buildFilterKey();
-
-        setLoading(true);
-        setError(null);
-        setRetentionData([]);
-        setChartData(null);
-        setHasAttemptedFetch(true);
-
-        const normalizedUrl = normalizeUrlToPath(urlPath);
-
-        const dateRange = getRetentionDateRange();
-        if (!dateRange) {
-            setError('Vennligst velg en gyldig periode.');
-            setLoading(false);
-            return;
-        }
-        const { startDate, endDate } = dateRange;
-
-        const { countBy, countBySwitchAt } = getCookieCountByParams(
-            usesCookies,
-            cookieStartDate,
-            startDate,
-            endDate
-        );
-
-        try {
-            const response = await fetch('/api/bigquery/retention', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    websiteId: selectedWebsite.id,
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                    urlPath: normalizedUrl,
-                    pathOperator,
-                    countBy,
-                    countBySwitchAt,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Kunne ikke hente retensjonsdata');
-            }
-
-            const result = await response.json();
-            console.log('Retention data received:', result);
-
-            if (result.error) {
-                setError(result.error);
-            } else {
-                setRetentionData(result.data);
-
-                // Prepare data for FluentUI LineChart
-                const points: ILineChartDataPoint[] = result.data.map((item: RetentionRow) => ({
-                    x: item.day,
-                    y: item.percentage,
-                    legend: `Dag ${item.day} `,
-                    xAxisCalloutData: `Dag ${item.day}: ${item.percentage}% (${item.returning_users.toLocaleString('nb-NO')} brukere)`,
-                    yAxisCalloutData: `${item.percentage}% `
-                }));
-
-                const chartData: ILineChartProps = {
-                    data: {
-                        lineChartData: [
-                            {
-                                legend: 'All Users',
-                                data: points,
-                                color: '#0078d4',
-                            }
-                        ]
-                    },
-                };
-                setChartData(chartData);
-
-                // Store query stats if available
-                if (result.queryStats) {
-                    setQueryStats(result.queryStats);
-                }
-
-                // Update URL with configuration for sharing
-                const newParams = new URLSearchParams(window.location.search);
-                newParams.set('retentionPeriod', period);
-                newParams.delete('period'); // Remove generic period param to avoid polluting other pages
-                if (normalizedUrl) {
-                    newParams.set('urlPath', normalizedUrl);
-                    newParams.set('pathOperator', pathOperator);
-                } else {
-                    newParams.delete('urlPath');
-                    newParams.delete('pathOperator');
-                }
-
-                // Update URL without navigation
-                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-                setLastAppliedFilterKey(appliedFilterKey);
-            }
-        } catch (err) {
-            console.error('Error fetching retention data:', err);
-            setError('Det oppstod en feil ved henting av data.');
-        } finally {
-            setLoading(false);
-        }
-    }, [selectedWebsite, buildFilterKey, urlPath, getRetentionDateRange, usesCookies, cookieStartDate, pathOperator, period]);
-
-    // Auto-submit when website is selected (from localStorage, URL, or Home page picker)
-    useEffect(() => {
-        if (selectedWebsite && !hasAutoSubmitted && !loading) {
-            setHasAutoSubmitted(true);
-            fetchData();
-        }
-    }, [selectedWebsite, hasAutoSubmitted, loading, fetchData]);
-
-    const downloadCSV = () => {
-        if (!retentionData || retentionData.length === 0) return;
-
-        const headers = ['Dag', 'Antall brukere', 'Prosent'];
-        const csvRows = [
-            headers.join(','),
-            ...retentionData.map((item) => {
-                return [
-                    `Dag ${item.day} `,
-                    item.returning_users,
-                    `${item.percentage}% `
-                ].join(',');
-            })
-        ];
-
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `retention_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    // Calculate retention stats
-    const retentionStats = useMemo(() => {
-        if (!retentionData || retentionData.length === 0) return null;
-
-        const returningData = retentionData.filter((item: RetentionRow) => item.day > 0);
-        if (returningData.length === 0) return null;
-
-        const day0Data = retentionData.find((item: RetentionRow) => item.day === 0);
-        const baseline = day0Data?.returning_users || Math.max(...retentionData.map((item: RetentionRow) => item.returning_users));
-
-        // Find Day 1 and Day 7 data for specific loyalty checkpoints
-        const day1 = retentionData.find((item: RetentionRow) => item.day === 1);
-        const day7 = retentionData.find((item: RetentionRow) => item.day === 7);
-        // Fallback to last day if Day 7 isn't available but we have data (e.g. short ranges)
-        const lastDay = returningData[returningData.length - 1];
-
-        return {
-            baseline,
-            day1,
-            day7,
-            lastDay
-        };
-    }, [retentionData]);
-
-    const isCurrentMonthData = useMemo(() => {
-        if (period === 'current_month') return true;
-        if (period === 'custom' && customEndDate) {
-            const now = new Date();
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-            return isToday;
-        }
-        return false;
-    }, [period, customEndDate]);
-
-    const RetentionStats = () => {
-        if (!retentionStats) return null;
-
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Totalt antall brukere</div>
-                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                        {retentionStats.baseline.toLocaleString('nb-NO')}
-                    </div>
-                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                        Unike brukere (Dag 0)
-                    </div>
-                </div>
-                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Kom tilbake etter 1 dag</div>
-                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                        {retentionStats.day1 ? ((retentionStats.day1.returning_users / retentionStats.baseline) * 100).toFixed(1) : 0}%
-                    </div>
-                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                        {retentionStats.day1 ? retentionStats.day1.returning_users.toLocaleString('nb-NO') : 0} unike brukere
-                    </div>
-                </div>
-                <div className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
-                    <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">
-                        {retentionStats.day7 ? 'Kom tilbake etter 1 uke' : `Kom tilbake etter ${retentionStats.lastDay?.day || 0} dager`}
-                    </div>
-                    <div className="text-2xl font-bold text-[var(--ax-text-default)]">
-                        {retentionStats.day7
-                            ? ((retentionStats.day7.returning_users / retentionStats.baseline) * 100).toFixed(1)
-                            : (retentionStats.lastDay ? ((retentionStats.lastDay.returning_users / retentionStats.baseline) * 100).toFixed(1) : 0)}%
-                    </div>
-                    <div className="text-sm text-[var(--ax-text-subtle)] mt-1">
-                        {retentionStats.day7
-                            ? retentionStats.day7.returning_users.toLocaleString('nb-NO')
-                            : (retentionStats.lastDay ? retentionStats.lastDay.returning_users.toLocaleString('nb-NO') : 0)} unike brukere
-                    </div>
-                </div>
-            </div>
-        );
-    };
+    const {
+        selectedWebsite,
+        setSelectedWebsite,
+        usesCookies,
+        urlPath,
+        setUrlPath,
+        pathOperator,
+        setPathOperator,
+        period,
+        setPeriod,
+        customStartDate,
+        setCustomStartDate,
+        customEndDate,
+        setCustomEndDate,
+        retentionData,
+        chartData,
+        retentionStats,
+        queryStats,
+        loading,
+        error,
+        hasAttemptedFetch,
+        activeTab,
+        setActiveTab,
+        copySuccess,
+        hasUnappliedFilterChanges,
+        cookieBadge,
+        isPreCookieRange,
+        cookieStartDate,
+        overriddenGlobalPeriod,
+        isCurrentMonthData,
+        fetchData,
+        downloadCSV,
+        copyShareLink,
+    } = useRetention();
 
     return (
         <ChartLayout
@@ -453,7 +106,6 @@ const Retention = () => {
                 </div>
             )}
 
-
             {!loading && retentionData.length > 0 && (
                 <>
                     {(cookieBadge === 'mix' || isPreCookieRange) && (
@@ -464,7 +116,6 @@ const Retention = () => {
                         />
                     )}
 
-                    {/* Fallback View Alert */}
                     {overriddenGlobalPeriod && !usesCookies && (
                         <Alert variant="info" className="mb-4">
                             <Heading spacing size="small" level="3">
@@ -499,9 +150,7 @@ const Retention = () => {
                         </Alert>
                     )}
 
-
-
-                    <RetentionStats />
+                    {retentionStats && <RetentionStatsCards stats={retentionStats} />}
 
                     <Tabs value={activeTab} onChange={setActiveTab}>
                         <Tabs.List>

@@ -43,7 +43,7 @@ const MarketingAnalysis = lazy(() => import('./features/traffic/ui/MarketingAnal
 const Funnel = lazy(() => import('./features/funnel').then(m => ({ default: m.Funnel })));
 
 // Retention Feature
-const Retention = lazy(() => import('./features/retention/ui/Retention.tsx'));
+const Retention = lazy(() => import('./features/retention').then(m => ({ default: m.Retention })));
 
 // SQL Feature
 const SqlEditor = lazy(() => import('./features/sql').then(m => ({ default: m.SqlEditor })));
