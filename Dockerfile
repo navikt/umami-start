@@ -51,7 +51,8 @@ RUN apk del npm
 # Copy built assets and runtime files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./
-COPY --from=builder /app/src ./src
+COPY --from=builder /app/src/server ./src/server
+COPY --from=builder /app/src/data ./src/data
 COPY --from=builder /app/.nais ./.nais
 
 EXPOSE 8080

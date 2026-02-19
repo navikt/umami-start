@@ -1,7 +1,14 @@
 import express from 'express';
+import helmet from 'helmet';
 
 export function createApp({buildPath}) {
     const app = express();
+
+    // Security headers
+    app.use(helmet({
+        contentSecurityPolicy: false, // Disabled — managed by NAIS ingress / requires tuning for inline scripts
+    }));
+
     app.use(express.json());
 
     process.on('uncaughtException', (err) => {

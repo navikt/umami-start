@@ -1,5 +1,5 @@
 import type { JourneyData, JourneyLink } from '../model';
-import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
+import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx-js-style';
 
 export function buildAppliedFilterKey(
   websiteId: string | undefined,
