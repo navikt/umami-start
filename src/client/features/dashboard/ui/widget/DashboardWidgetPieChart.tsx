@@ -7,6 +7,7 @@ interface DashboardWidgetPieChartProps {
 }
 
 const MAX_CATEGORIES = 12;
+const PERCENT_LABEL_THRESHOLD = 8;
 const PIE_COLORS = [
     '#4F6DDC',
     '#D8008F',
@@ -37,10 +38,16 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
     const slices = data.map((row, index) => {
         const rawLabel = extractJsonValue((row as Record<string, unknown>)[labelKey]);
         const rawValue = extractJsonValue((row as Record<string, unknown>)[valueKey]);
+        const label = String(rawLabel ?? 'Ukjent');
+        const marker = String(index + 1);
         return {
-            x: String(rawLabel ?? 'Ukjent'),
+            x: marker,
+            marker,
             y: toNumber(rawValue),
             color: PIE_COLORS[index % PIE_COLORS.length],
+            label,
+            legend: label,
+            xAxisCalloutData: label,
         };
     });
 
@@ -53,38 +60,47 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
         const top = slices.slice(0, MAX_CATEGORIES - 1);
         const rest = slices.slice(MAX_CATEGORIES - 1);
         const restSum = rest.reduce((sum, slice) => sum + slice.y, 0);
-        displayData = [...top, { x: 'Andre', y: restSum, color: '#6B7280' }];
+        displayData = [...top, { x: String(MAX_CATEGORIES), marker: String(MAX_CATEGORIES), y: restSum, color: '#6B7280', label: 'Andre', legend: 'Andre', xAxisCalloutData: 'Andre' }];
     }
 
     const total = displayData.reduce((sum, item) => sum + item.y, 0);
+    const chartData = displayData.map((item) => {
+        const pct = total > 0 ? (item.y / total) * 100 : 0;
+        const showPct = pct >= PERCENT_LABEL_THRESHOLD;
+        return {
+            ...item,
+            x: showPct ? `${item.marker} ${pct.toFixed(0)}%` : item.marker,
+        };
+    });
 
     return (
         <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(0,1fr)_240px] md:gap-4">
             <style>{`
                 .dashboard-pie-chart text[class*="pieLabel"],
                 .dashboard-pie-chart g[class*="arc"] text {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
+                    fill: var(--ax-text-default) !important;
+                    font-size: 13px !important;
+                    font-weight: 700 !important;
                 }
             `}</style>
-            <div className="dashboard-pie-chart" style={{ width: '100%', height: '300px' }}>
+            <div className="dashboard-pie-chart md:order-2" style={{ width: '100%', height: '300px' }}>
                 <ResponsiveContainer>
-                    <PieChart data={displayData} chartTitle="" />
+                    <PieChart data={chartData} chartTitle="" />
                 </ResponsiveContainer>
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-1 md:mt-0 md:max-h-[350px] md:overflow-auto" role="list" aria-label="Sektordiagram forklaring">
+            <div className="mt-3 grid grid-cols-1 auto-rows-min content-start gap-1 md:order-1 md:mt-0 md:max-h-[350px] md:overflow-auto" role="list" aria-label="Sektordiagram forklaring">
                 {displayData.map((item, index) => {
                     const pct = total > 0 ? ((item.y / total) * 100).toFixed(1) : '0.0';
                     return (
-                        <div key={item.x} role="listitem" className="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm text-[var(--ax-text-default)]">
+                        <div key={`${item.x}-${item.label}`} role="listitem" className="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm text-[var(--ax-text-default)]">
                             <span className="flex min-w-0 items-center gap-2">
                                 <span
                                     aria-hidden="true"
                                     className={`h-3 w-3 shrink-0 border border-[var(--ax-border-neutral-subtle)] ${LEGEND_SHAPES[index % LEGEND_SHAPES.length]}`}
                                     style={{ backgroundColor: item.color }}
                                 />
-                                <span className="text-xs text-[var(--ax-text-subtle)]">{index + 1}.</span>
-                                <span className="break-words">{item.x}</span>
+                                <span className="text-xs text-[var(--ax-text-subtle)]">{item.marker}.</span>
+                                <span className="break-words">{item.label}</span>
                             </span>
                             <span className="whitespace-nowrap text-[var(--ax-text-subtle)]">{pct}%</span>
                         </div>
