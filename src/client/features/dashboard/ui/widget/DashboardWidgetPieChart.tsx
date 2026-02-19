@@ -39,7 +39,9 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
         const rawValue = extractJsonValue((row as Record<string, unknown>)[valueKey]);
         const label = String(rawLabel ?? 'Ukjent');
         return {
-            x: label,
+            x: String(index + 1),
+            marker: String(index + 1),
+            label,
             y: toNumber(rawValue),
             color: PIE_COLORS[index % PIE_COLORS.length],
             legend: label,
@@ -56,18 +58,19 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
         const top = slices.slice(0, MAX_CATEGORIES - 1);
         const rest = slices.slice(MAX_CATEGORIES - 1);
         const restSum = rest.reduce((sum, slice) => sum + slice.y, 0);
-        displayData = [...top, { x: 'Andre', y: restSum, color: '#6B7280', legend: 'Andre', xAxisCalloutData: 'Andre' }];
+        displayData = [...top, { x: String(MAX_CATEGORIES), marker: String(MAX_CATEGORIES), label: 'Andre', y: restSum, color: '#6B7280', legend: 'Andre', xAxisCalloutData: 'Andre' }];
     }
 
     const total = displayData.reduce((sum, item) => sum + item.y, 0);
 
     return (
-        <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(190px,220px)_minmax(0,1fr)] md:items-center md:gap-1">
+        <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(170px,200px)_minmax(0,1fr)] md:items-center md:gap-0">
             <style>{`
                 .dashboard-pie-chart text[class*="pieLabel"],
                 .dashboard-pie-chart g[class*="arc"] text {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
+                    fill: var(--ax-text-default) !important;
+                    font-size: 12px !important;
+                    font-weight: 700 !important;
                 }
             `}</style>
             <div className="dashboard-pie-chart md:order-2" style={{ width: '100%', height: '350px' }}>
@@ -86,8 +89,8 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
                                 style={{ backgroundColor: item.color }}
                             />
                             <span className="min-w-0 break-words leading-tight">
-                                <span className="mr-1 text-xs text-[var(--ax-text-subtle)]">{index + 1}.</span>
-                                {item.x}
+                                <span className="mr-1 text-xs text-[var(--ax-text-subtle)]">{item.marker}.</span>
+                                {item.label}
                                 <span className="ml-2 whitespace-nowrap tabular-nums text-[var(--ax-text-subtle)]">{pct}%</span>
                             </span>
                         </div>
