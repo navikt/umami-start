@@ -1,20 +1,5 @@
 import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../model/types.ts';
-
-export const requestJson = async <T,>(url: string, init?: RequestInit): Promise<T> => {
-    const response = await fetch(url, init);
-    const text = await response.text();
-    const payload = text ? (JSON.parse(text) as unknown) : null;
-
-    if (!response.ok) {
-        const errorMessage =
-            payload && typeof payload === 'object' && 'error' in payload
-                ? String((payload as { error?: string }).error)
-                : `Foresporsel feilet (${response.status})`;
-        throw new Error(errorMessage);
-    }
-
-    return payload as T;
-};
+import { requestJson } from '../../../shared/lib/apiClient.ts';
 
 // ── Projects ──
 

@@ -1,10 +1,6 @@
-export type Website = {
-    id: string;
-    name: string;
-    domain: string;
-    teamId: string;
-    createdAt: string;
-};
+import type { QueryStats } from '../../../shared/types/queryStats';
+
+export type { Website } from '../../../shared/types/website';
 
 export type JsonPrimitive = string | number | boolean | null;
 
@@ -16,12 +12,7 @@ export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 
 export type Row = Record<string, JsonValue | undefined>;
 
-export type QueryStats = {
-    totalBytesProcessed?: number;
-    totalBytesProcessedGB?: string;
-    estimatedCostUSD?: string;
-    cacheHit?: boolean;
-};
+export type { QueryStats };
 
 export type QueryResult = {
     data?: Row[];

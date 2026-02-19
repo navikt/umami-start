@@ -1,3 +1,5 @@
+import type { QueryStats } from '../../../shared/types/queryStats';
+
 export type JourneyNode = {
   nodeId: string;
   name: string;
@@ -15,10 +17,7 @@ export type JourneyData = {
   links: JourneyLink[];
 };
 
-export type QueryStats = {
-  totalBytesProcessedGB?: number;
-  estimatedCostUSD?: number;
-};
+export type { QueryStats };
 
 export type JourneyApiRequest = {
   websiteId: string;

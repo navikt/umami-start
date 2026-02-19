@@ -1,3 +1,5 @@
+import type { Website } from './website';
+
 export interface Filter {
   column: string;
   operator?: string;
@@ -54,13 +56,8 @@ export interface ColumnOption {
   value: string;
 }
 
-export interface Website {
-  id: string;
-  domain: string;
-  name: string;
-  teamId: string;
-  createdAt: string;
-}
+export type { Website };
+
 export interface ChartConfig {
   website: Website | null;
   filters: Filter[];

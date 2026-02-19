@@ -2,6 +2,7 @@ import type { FunnelStep, FunnelResultRow, TimingResultRow } from '../model/type
 import type { Website } from '../../../shared/types/chart';
 import { normalizeUrlToPath } from '../../../shared/lib/utils';
 import { getGcpProjectId } from '../../../shared/lib/runtimeConfig';
+export { copyToClipboard } from '../../../shared/lib/clipboard';
 
 /**
  * Format a duration in seconds to a human-readable string.
@@ -66,18 +67,6 @@ export function downloadCSV(funnelData: FunnelResultRow[], websiteName?: string)
     URL.revokeObjectURL(url);
 }
 
-/**
- * Copy a string to the clipboard.
- */
-export async function copyToClipboard(text: string): Promise<boolean> {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch (err) {
-        console.error('Failed to copy:', err);
-        return false;
-    }
-}
 
 /**
  * Generate Metabase-compatible SQL for funnel visualization.

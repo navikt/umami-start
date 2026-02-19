@@ -10,11 +10,9 @@ import type {
     ParameterValuesResponse,
     LatestEventsResponse
 } from '../model/types';
+import { isRecord } from '../../../shared/lib/typeGuards';
 
 // Type guards
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-    return typeof value === 'object' && value !== null;
-};
 
 export const isSeriesPoint = (value: unknown): value is SeriesPoint => {
     return isRecord(value)

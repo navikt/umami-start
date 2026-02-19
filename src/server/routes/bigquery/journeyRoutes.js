@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent, getDryRunStats, MAX_BYTES_BILLED } from './helpers.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createJourneyRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -22,18 +22,10 @@ export function createJourneyRoutes({ bigquery, GCP_PROJECT_ID }) {
           WITH session_events AS (
               SELECT
                   session_id,
-                  CASE 
-                      WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                      THEN '/'
-                      ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-                  END as url_path,
+                  ${normalizeUrlSql('url_path')} as url_path,
                   created_at,
                   MIN(CASE 
-                      WHEN (CASE 
-                          WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                          THEN '/'
-                          ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-                      END) = @startUrl 
+                      WHEN (${normalizeUrlSql('url_path')}) = @startUrl 
                       THEN created_at 
                   END) 
                       OVER (PARTITION BY session_id) AS start_time

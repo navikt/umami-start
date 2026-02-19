@@ -1,10 +1,4 @@
-export interface Website {
-    id: string;
-    name: string;
-    domain: string;
-    teamId: string;
-    createdAt: string;
-}
+export type { Website } from '../../../shared/types/website';
 
 export interface EventProperty {
     eventName: string;

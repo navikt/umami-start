@@ -1,31 +1,7 @@
-import type { SavedChart } from '../../../../data/dashboard/types.ts';
+import type { SavedChart } from '../../../../data/dashboard';
+import type { GraphDto, QueryDto } from '../../../shared/types/backend';
 
-export type ProjectDto = {
-    id: number;
-    name: string;
-    description?: string;
-};
-
-export type DashboardDto = {
-    id: number;
-    projectId: number;
-    name: string;
-    description?: string;
-};
-
-export type GraphDto = {
-    id: number;
-    dashboardId: number;
-    name: string;
-    graphType?: string;
-};
-
-export type QueryDto = {
-    id: number;
-    graphId: number;
-    name: string;
-    sqlText: string;
-};
+export type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../../../shared/types/backend';
 
 export type GraphWithQueries = {
     graph: GraphDto;

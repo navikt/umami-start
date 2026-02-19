@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging, getAnalysisTypeOverride } from '../../bigquery/audit.js';
-import { MAX_BYTES_BILLED } from './helpers.js';
+import { MAX_BYTES_BILLED, normalizeUrlSql } from './helpers.js';
 
 export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();
@@ -348,11 +348,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                       SELECT
                           session_id,
                           referrer_domain,
-                          CASE 
-                              WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                              THEN '/'
-                              ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-                          END as url_path,
+                          ${normalizeUrlSql('url_path')} as url_path,
                           created_at
                       FROM \`${GCP_PROJECT_ID}.umami_views.event\`
                       WHERE website_id = @websiteId
@@ -395,11 +391,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                       SELECT
                           session_id,
                           referrer_domain,
-                          CASE 
-                              WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                              THEN '/'
-                              ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(url_path, r'[?#].*', ''), r'//+', '/'), '/')
-                          END as url_path,
+                          ${normalizeUrlSql('url_path')} as url_path,
                           created_at,
                           ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) as rn
                       FROM \`${GCP_PROJECT_ID}.umami_views.event\`
@@ -554,11 +546,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
               ),
               page_stats AS (
                   SELECT
-                      CASE 
-                          WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                          THEN '/'
-                          ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/')
-                      END as url_path,
+                      ${normalizeUrlSql(`${col}url_path`)} as url_path,
                       APPROX_COUNT_DISTINCT(${userIdExpression}) as visitors,
                       COUNT(*) as pageviews
                   FROM ${fromClause}
@@ -692,11 +680,7 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
                       ${col}session_id,
                       ${col}visit_id,
                       ${col}referrer_domain,
-                      CASE
-                          WHEN RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/') = ''
-                          THEN '/'
-                          ELSE RTRIM(REGEXP_REPLACE(REGEXP_REPLACE(${col}url_path, r'[?#].*', ''), r'//+', '/'), '/')
-                      END as url_path,
+                      ${normalizeUrlSql(`${col}url_path`)} as url_path,
                       ${col}created_at
                   FROM ${fromClause}
                   WHERE ${col}website_id = @websiteId

@@ -1,3 +1,5 @@
+import type { QueryStats } from '../../../shared/types/queryStats';
+
 export type UserInfo = {
   navIdent: string;
   name: string;
@@ -28,10 +30,7 @@ export type ActivityItem = {
   createdAt: string;
 };
 
-export type QueryStats = {
-  totalBytesProcessedGB?: number;
-  estimatedCostUSD?: number;
-};
+export type { QueryStats };
 
 export type UsersApiResponse = {
   users: UserProfile[];

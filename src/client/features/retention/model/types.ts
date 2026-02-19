@@ -4,10 +4,7 @@ export type RetentionRow = {
     returning_users: number;
 };
 
-export type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
+export type { QueryStats } from '../../../shared/types/queryStats';
 
 export type RetentionStats = {
     baseline: number;

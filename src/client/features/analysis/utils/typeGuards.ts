@@ -9,9 +9,8 @@ import type {
     HistoryData,
     AnalysisActionModalWebsitesResponse,
 } from '../model/types.ts';
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-    !!value && typeof value === 'object';
+import { isRecord } from '../../../shared/lib/typeGuards';
+export { isRecord };
 
 // ===== BrokenLinks type guards =====
 

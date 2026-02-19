@@ -1,8 +1,6 @@
 import type { Filter, Metric, Website } from '../../../shared/types/chart.ts';
-
-export const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null;
-};
+import { isRecord } from '../../../shared/lib/typeGuards';
+export { isRecord };
 
 export const safeParseJson = (value: string): unknown => {
   try {

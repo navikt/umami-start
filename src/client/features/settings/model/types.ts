@@ -1,10 +1,7 @@
-export interface Website {
-    id: string;
-    name: string;
-    domain: string;
-    shareId: string;
-    teamId: string;
-    createdAt: string;
+import type { Website as BaseWebsite } from '../../../shared/types/website';
+
+export interface Website extends BaseWebsite {
+    shareId?: string;
 }
 
 export interface GroupedWebsite {

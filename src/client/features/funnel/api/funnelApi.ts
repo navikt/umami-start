@@ -1,4 +1,4 @@
-import type { FunnelStep, FunnelApiResponse, FunnelResultRow, TimingResultRow, TimingApiResponse, EventsApiResponse } from '../model/types';
+import type { FunnelStep, QueryStats, FunnelApiResponse, FunnelResultRow, TimingResultRow, TimingApiResponse, EventsApiResponse } from '../model/types';
 import { normalizeUrlToPath, getDateRangeFromPeriod } from '../../../shared/lib/utils';
 
 export interface FetchFunnelParams {
@@ -13,7 +13,7 @@ export interface FetchFunnelParams {
 export interface FetchFunnelResult {
     data: FunnelResultRow[];
     sql: string | null;
-    queryStats: { totalBytesProcessedGB?: string; totalBytesProcessed?: number } | null;
+    queryStats: QueryStats | null;
     shareParams: URLSearchParams | null;
     error: string | null;
 }
@@ -106,7 +106,7 @@ export interface FetchTimingParams {
 export interface FetchTimingResult {
     data: TimingResultRow[];
     sql: string | null;
-    queryStats: { totalBytesProcessedGB?: string; totalBytesProcessed?: number } | null;
+    queryStats: QueryStats | null;
     error: string | null;
 }
 

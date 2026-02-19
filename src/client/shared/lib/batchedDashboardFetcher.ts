@@ -12,6 +12,7 @@
 import type {SavedChart} from '../../../data/dashboard';
 import {format, subDays} from 'date-fns';
 import {getGcpProjectId} from './runtimeConfig.ts';
+import {isRecord} from './typeGuards';
 
 type JsonPrimitive = string | number | boolean | null | undefined;
 interface JsonObject {
@@ -51,8 +52,6 @@ interface BatchedFetchResult {
 // Session fields that can be batched together
 const SESSION_FIELDS = ['country', 'language', 'device', 'os', 'browser', 'screen'];
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    !!value && typeof value === 'object';
 
 const isFetchResult = (value: unknown): value is FetchResult => {
     if (!isRecord(value)) return false;

@@ -1,8 +1,6 @@
 // Event Explorer Types
-export type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
+import type { QueryStats } from '../../../shared/types/queryStats';
+export type { QueryStats };
 
 export type SeriesPoint = {
     time: string;
