@@ -6,13 +6,14 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const router = express.Router();
   const apiBaseUrl = new URL('/api/', BACKEND_BASE_URL);
   const isLocalBackend = ['localhost', '127.0.0.1', '::1'].includes(apiBaseUrl.hostname);
+  const backendAppName = process.env.BACKEND_APP_NAME || null;
   const backendClientId =
     process.env.BACKEND_CLIENT_ID
     || process.env.START_UMAMI_BACKEND_CLIENT_ID
     || null;
   const naisCluster = process.env.NAIS_CLUSTER_NAME || null;
   const naisNamespace = process.env.NAIS_NAMESPACE || null;
-  const backendServiceName = apiBaseUrl.hostname.split('.')[0] || null;
+  const backendServiceName = backendAppName || apiBaseUrl.hostname.split('.')[0] || null;
   const derivedNaisOboScope =
     naisCluster && naisNamespace && backendServiceName
       ? `api://${naisCluster}.${naisNamespace}.${backendServiceName}/.default`
@@ -31,6 +32,7 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   console.info('[BackendProxy] init', {
     backendBaseUrl: apiBaseUrl.origin,
     isLocalBackend,
+    backendAppName,
     hasBackendClientId: Boolean(backendClientId),
     hasOboScope: Boolean(oboScope),
     oboScope,

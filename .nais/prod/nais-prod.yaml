@@ -50,5 +50,7 @@ spec:
       value: "team-researchops-prod-01d6"
     - name: BACKEND_BASE_URL
       value: "http://start-umami-backend"
-    - name: BACKEND_OBO_SCOPE
-      value: "api://prod-gcp.team-researchops.start-umami-backend/.default"
+    - name: BACKEND_APP_NAME
+      value: "start-umami-backend"
+    - name: NAIS_CLUSTER_NAME
+      value: "prod-gcp"
