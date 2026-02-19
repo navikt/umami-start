@@ -307,7 +307,7 @@ const Oversikt = () => {
     <>
       <div className="w-full md:w-[20rem]">
         <UNSAFE_Combobox
-          label="Team / prosjekt"
+          label="Prosjekt"
           options={projectOptions}
           selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
           onToggleSelected={handleProjectSelected}
