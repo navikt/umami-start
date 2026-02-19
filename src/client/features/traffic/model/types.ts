@@ -1,3 +1,5 @@
+import type { QueryStats } from '../../../shared/types/queryStats';
+
 export type SeriesPoint = {
     time: string;
     count: number;
@@ -25,10 +27,7 @@ export type ExternalReferrerRow = {
     count: number;
 };
 
-export type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
+export type { QueryStats };
 
 export type SeriesResponse = {
     data?: SeriesPoint[];

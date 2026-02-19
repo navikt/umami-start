@@ -1,10 +1,6 @@
-import type { QueryStats, QueryResult, Website } from '../model/types';
+import type { QueryStats, QueryResult } from '../model/types';
 
-export const fetchWebsites = async (): Promise<Website[]> => {
-    const response = await fetch('/api/bigquery/websites');
-    const data = (await response.json()) as { data: Website[] };
-    return data.data || [];
-};
+export { fetchWebsites } from '../../../shared/api/websiteApi';
 
 export const estimateQueryCost = async (processedSql: string): Promise<QueryStats> => {
     const response = await fetch('/api/bigquery/estimate', {

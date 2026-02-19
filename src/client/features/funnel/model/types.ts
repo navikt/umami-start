@@ -1,3 +1,5 @@
+import type { QueryStats } from '../../../shared/types/queryStats';
+
 export type StepParam = { key: string; value: string; operator: 'equals' | 'contains' };
 
 export type FunnelStep = {
@@ -7,10 +9,7 @@ export type FunnelStep = {
     params?: StepParam[];
 };
 
-export type QueryStats = {
-    totalBytesProcessedGB?: string;
-    totalBytesProcessed?: number;
-};
+export type { QueryStats };
 
 export type FunnelResultRow = {
     step: number;

@@ -31,6 +31,8 @@ All notable changes to this project will be documented in this file.
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
 
 ### 📦 Miscellaneous
 
@@ -62,6 +64,7 @@ All notable changes to this project will be documented in this file.
 - Change to k8s urls
 - Feature structure oversikt and prosjectmanager
 - Split dashboardRoutes into smaller routes
+- Shared components
 
 ### 🔧 Refactor
 

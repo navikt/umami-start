@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { ILineChartProps } from '@fluentui/react-charting';
+import type { QueryStats } from '../../../shared/types/queryStats';
 
 // ===== BrokenLinks types =====
 
@@ -61,10 +62,7 @@ export interface HistoryData {
     custom_events: number;
 }
 
-export type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
+export type { QueryStats };
 
 export type DiagnosisResponse = {
     error?: string;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Website } from '../types/chart.ts';
+import type { Website } from '../types/website';
+import { fetchWebsites as fetchWebsitesApi } from '../api/websiteApi';
 
 export const useWebsiteMatching = () => {
     const [websites, setWebsites] = useState<Website[] | null>(null);
@@ -65,13 +66,8 @@ export const useWebsiteMatching = () => {
             console.warn('[useWebsiteMatching] Error reading from localStorage', e);
         }
 
-        // Use relative path for local API, same as UrlSearchForm
-        const baseUrl = '';
-
         try {
-            const response = await fetch(`${baseUrl}/api/bigquery/websites`);
-            const json = await response.json();
-            const websitesData = json.data || [];
+            const websitesData = await fetchWebsitesApi();
 
             const processedWebsites = processWebsitesData(websitesData);
             setWebsites(processedWebsites);

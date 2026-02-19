@@ -1,29 +1,5 @@
-type ProjectDto = {
-  id: number;
-  name: string;
-  description?: string;
-};
-
-type DashboardDto = {
-  id: number;
-  projectId: number;
-  name: string;
-  description?: string;
-};
-
-type GraphDto = {
-  id: number;
-  dashboardId: number;
-  name: string;
-  graphType: string;
-};
-
-type QueryDto = {
-  id: number;
-  graphId: number;
-  name: string;
-  sqlText: string;
-};
+import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../../../shared/types/backend.ts';
+import { requestJson } from '../../../shared/lib/apiClient.ts';
 
 type SaveChartParams = {
   projectName: string;
@@ -43,34 +19,6 @@ type SaveChartResult = {
 
 const COLUMN_TOO_LONG_RE = /too long for the column/i;
 
-const toErrorMessage = (status: number, payload: unknown): string => {
-  if (payload && typeof payload === 'object') {
-    const error = (payload as { error?: unknown }).error;
-    const details = (payload as { details?: unknown }).details;
-    if (typeof details === 'string' && details.trim()) return details;
-    if (typeof error === 'string' && error.trim()) return error;
-  }
-  return `Request failed (${status})`;
-};
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
-  const text = await response.text();
-  let payload: unknown = null;
-  if (text) {
-    try {
-      payload = JSON.parse(text) as unknown;
-    } catch {
-      payload = { error: text };
-    }
-  }
-
-  if (!response.ok) {
-    throw new Error(toErrorMessage(response.status, payload));
-  }
-
-  return payload as T;
-}
 
 const findByName = <T extends { name: string }>(items: T[], name: string): T | undefined => {
   const needle = name.trim().toLowerCase();

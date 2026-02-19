@@ -1,8 +1,6 @@
-import type { Website, EventProperty } from '../model/types.ts';
+import type { EventProperty } from '../model/types.ts';
 
-interface WebsiteApiResponse {
-    data: Website[];
-}
+export { fetchWebsites } from '../../../shared/api/websiteApi';
 
 interface EventPropertiesApiResponse {
     properties: EventProperty[];
@@ -10,11 +8,6 @@ interface EventPropertiesApiResponse {
     estimatedGbProcessed?: number;
 }
 
-export const fetchWebsites = async (): Promise<Website[]> => {
-    const response = await fetch('/api/bigquery/websites');
-    const json = (await response.json()) as WebsiteApiResponse;
-    return json.data || [];
-};
 
 export const fetchEventProperties = async (
     websiteId: string,

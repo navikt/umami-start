@@ -1,3 +1,5 @@
+import type { QueryStats } from '../../../shared/types/queryStats';
+
 export type ParsedStepDetail = {
     key: string;
     value: string;
@@ -15,10 +17,7 @@ export type JourneyStats = {
     sessions_no_events_bounced?: number;
 };
 
-export type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
+export type { QueryStats };
 
 export type EventJourneyResponse = {
     journeys?: { path: string[]; count: number }[];
