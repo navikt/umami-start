@@ -206,6 +206,13 @@ export default function Header({ theme }: HeaderProps) {
                     >
                       <span className="whitespace-nowrap">Grafbygger</span>
                     </Dropdown.Menu.List.Item>
+                    <Dropdown.Menu.List.Item
+                      as={Link}
+                      href="/oversikt"
+                      className="no-underline"
+                    >
+                      <span className="whitespace-nowrap">Dashboard</span>
+                    </Dropdown.Menu.List.Item>
                   </Dropdown.Menu.List>
                 </Dropdown.Menu>
               </Dropdown>
@@ -223,6 +230,16 @@ export default function Header({ theme }: HeaderProps) {
                 >
                   <div className="flex items-center gap-2">
                     <span className="whitespace-nowrap">Grafbygger</span>
+                  </div>
+                </Button>
+                <Button
+                  as={Link}
+                  variant="tertiary"
+                  href="/oversikt"
+                  className={linkButton}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="whitespace-nowrap">Dashboard</span>
                   </div>
                 </Button>
                 {setupMenu}

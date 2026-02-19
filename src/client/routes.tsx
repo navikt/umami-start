@@ -19,6 +19,10 @@ const DashboardOverview = lazy(() => import('./features/dashboard').then(m => ({
 const Grafbygger = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafbygger })));
 const Grafdeling = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafdeling })));
 
+// Backend Test Feature
+const Oversikt = lazy(() => import('./features/oversikt/ui/Oversikt.tsx'));
+const BackendCrudTest = lazy(() => import('./features/crud/ui/BackendCrudTest.tsx'));
+
 // Analysis Feature
 const UserComposition = lazy(() => import('./features/analysis').then(m => ({ default: m.UserComposition })));
 const Spellings = lazy(() => import('./features/analysis').then(m => ({ default: m.Spellings })));
@@ -90,6 +94,7 @@ export const routes: AppRoute[] = [
 
     { path: "/sql", component: <SqlEditor />, fullWidth: true },
     { path: "/grafdeling", component: <Grafdeling />, fullWidth: true },
+    { path: "/crud", component: <BackendCrudTest />, fullWidth: true },
     { path: "/brukerreiser", component: <UserJourney />, fullWidth: true },
     { path: "/hendelsesreiser", component: <EventJourney />, fullWidth: true },
     { path: "/trakt", component: <Funnel />, fullWidth: true },
@@ -105,6 +110,7 @@ export const routes: AppRoute[] = [
     { path: "/profil", component: <UserProfile />, fullWidth: true },
     { path: "/dashboards", component: <DashboardOverview />, fullWidth: true },
     { path: "/dashboard", component: <Dashboard />, fullWidth: true },
+    { path: "/oversikt", component: <Oversikt />, fullWidth: true },
     { path: "/kvalitet/odelagte-lenker", component: <BrokenLinks />, fullWidth: true },
     { path: "/kvalitet/stavekontroll", component: <Spellings />, fullWidth: true }
 ];

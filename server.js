@@ -5,6 +5,7 @@ import {createApp} from './src/server/app.js';
 import {registerFrontend} from './src/server/frontend/serveFrontend.js';
 import {createBigQueryClient} from './src/server/bigquery/client.js';
 import {createBigQueryRouter} from './src/server/routes/bigquery/index.js';
+import {createBackendProxyRouter} from './src/server/routes/backend/backendRoutes.js';
 import {createSiteimproveProxyRouter} from './src/server/routes/siteimprove/siteimproveRoutes.js';
 import {createUserRouter} from './src/server/routes/user/userRoutes.js';
 import {authenticateUser} from './src/server/middleware/authenticateUser.js';
@@ -31,6 +32,9 @@ app.use('/api/siteimprove', createSiteimproveProxyRouter({SITEIMPROVE_BASE_URL})
 
 // User routes
 app.use('/api/user', createUserRouter({BACKEND_BASE_URL}));
+
+// Backend proxy (Project/Dashboard/Graph/Query APIs)
+app.use('/api/backend', createBackendProxyRouter({BACKEND_BASE_URL}));
 
 // BigQuery routes (router paths already include /api/bigquery)
 app.use(createBigQueryRouter({bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE}));

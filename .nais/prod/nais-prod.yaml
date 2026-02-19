@@ -48,4 +48,8 @@ spec:
     - name: GCP_PROJECT_ID
       value: "team-researchops-prod-01d6"
     - name: BACKEND_BASE_URL
-      value: "start-umami-backend.team-researchops.svc.cluster.local"
+      value: "http://start-umami-backend"
+    - name: BACKEND_APP_NAME
+      value: "start-umami-backend"
+    - name: NAIS_CLUSTER_NAME
+      value: "prod-gcp"

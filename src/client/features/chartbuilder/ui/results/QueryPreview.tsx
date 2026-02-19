@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
 import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
+import { fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
+import type { DashboardDto, ProjectDto } from '../../api/chartStorageApi.ts';
 
 type JsonPrimitive = string | number | boolean | null;
 interface JsonObject {
@@ -123,6 +125,25 @@ const QueryPreview = ({
     urlPath: '',
     eventName: ''
   });
+
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [savingChart, setSavingChart] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [savedLocation, setSavedLocation] = useState<{
+    projectId: number;
+    dashboardId: number;
+    projectName: string;
+    dashboardName: string;
+  } | null>(null);
+  const [projectName, setProjectName] = useState('Start Umami');
+  const [dashboardName, setDashboardName] = useState('Grafbygger');
+  const [graphName, setGraphName] = useState('Ny graf');
+  const [graphType, setGraphType] = useState('LINE');
+  const [projects, setProjects] = useState<ProjectDto[]>([]);
+  const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
+  const [selectedProjectOption, setSelectedProjectOption] = useState<string | null>(null);
+  const [selectedDashboardOption, setSelectedDashboardOption] = useState<string | null>(null);
 
   // Check if parameters have changed
   const hasChanges = () => {
@@ -609,6 +630,135 @@ const QueryPreview = ({
     setPendingQueryEstimate(null);
   };
 
+  const openSaveModal = () => {
+    setSaveError(null);
+    setSaveSuccess(null);
+    setSavedLocation(null);
+
+    if (!graphName || graphName === 'Ny graf') {
+      const timestamp = format(new Date(), 'yyyy-MM-dd HH:mm');
+      setGraphName(`Graf ${timestamp}`);
+    }
+
+    const loadSaveData = async () => {
+      try {
+        const projectItems = await fetchProjects();
+        setProjects(projectItems);
+
+        const selectedProject = projectItems.find((project) => project.name === projectName) ?? null;
+        if (selectedProject) {
+          const projectOptionValue = String(selectedProject.id);
+          setSelectedProjectOption(projectOptionValue);
+          const dashboardItems = await fetchDashboards(selectedProject.id);
+          setDashboards(dashboardItems);
+
+          const selectedDashboard = dashboardItems.find((dashboard) => dashboard.name === dashboardName) ?? null;
+          setSelectedDashboardOption(selectedDashboard ? String(selectedDashboard.id) : null);
+        } else {
+          setSelectedProjectOption(null);
+          setDashboards([]);
+          setSelectedDashboardOption(null);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Klarte ikke laste team og dashboards';
+        setSaveError(message);
+      }
+    };
+
+    setShowSaveModal(true);
+    void loadSaveData();
+  };
+
+  const handleProjectSelection = async (option: string, isSelected: boolean) => {
+    if (!isSelected) {
+      setSelectedProjectOption(null);
+      setProjectName('');
+      setDashboards([]);
+      setDashboardName('');
+      setSelectedDashboardOption(null);
+      return;
+    }
+
+    const selectedProject = projects.find((project) => String(project.id) === option);
+    if (!selectedProject) return;
+
+    setSelectedProjectOption(option);
+    setProjectName(selectedProject.name);
+    setDashboardName('');
+    setSelectedDashboardOption(null);
+
+    try {
+      const dashboardItems = await fetchDashboards(selectedProject.id);
+      setDashboards(dashboardItems);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Klarte ikke laste dashboards';
+      setSaveError(message);
+    }
+  };
+
+  const handleDashboardSelection = (option: string, isSelected: boolean) => {
+    if (!isSelected) {
+      setSelectedDashboardOption(null);
+      setDashboardName('');
+      return;
+    }
+
+    const selectedDashboard = dashboards.find((dashboard) => String(dashboard.id) === option);
+    if (!selectedDashboard) return;
+
+    setSelectedDashboardOption(option);
+    setDashboardName(selectedDashboard.name);
+  };
+
+  const handleSaveChart = async () => {
+    if (!graphName.trim() || !projectName.trim() || !dashboardName.trim()) {
+      setSaveError('Velg team/prosjekt, dashboard og fyll ut grafnavn.');
+      return;
+    }
+
+    setSavingChart(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const saved = await saveChartToBackend({
+        projectName: projectName.trim(),
+        dashboardName: dashboardName.trim(),
+        graphName: graphName.trim(),
+        queryName: `${graphName.trim()} - query`,
+        graphType: graphType.trim(),
+        sqlText: getProcessedSql({ preserveMetabasePlaceholders: true }),
+      });
+
+      setSaveSuccess('Lagret');
+      setSavedLocation({
+        projectId: saved.project.id,
+        dashboardId: saved.dashboard.id,
+        projectName: saved.project.name,
+        dashboardName: saved.dashboard.name,
+      });
+      setShowSaveModal(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Klarte ikke lagre grafen';
+      setSaveError(message);
+    } finally {
+      setSavingChart(false);
+    }
+  };
+
+  const projectOptions = projects.map((project) => ({
+    label: project.name,
+    value: String(project.id),
+  }));
+
+  const dashboardOptions = dashboards.map((dashboard) => ({
+    label: dashboard.name,
+    value: String(dashboard.id),
+  }));
+
+  const selectedProjectLabel = projectOptions.find((option) => option.value === selectedProjectOption)?.label;
+  const selectedDashboardLabel = dashboardOptions.find((option) => option.value === selectedDashboardOption)?.label;
+
   // Show loading message after 10 seconds
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -897,8 +1047,22 @@ const QueryPreview = ({
               />
             </div>
 
-            {/* Metabase Section */}
+            {/* Save + Metabase Section */}
             <div className="space-y-3 mb-4">
+              <div>
+                <Button size="small" variant="primary" onClick={openSaveModal}>
+                  Lagre graf
+                </Button>
+              </div>
+
+              {saveSuccess && savedLocation && (
+                <Alert variant="success" size="small">
+                  <Link href={`/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`}>
+                    Graf lagret i dashboard "{savedLocation.dashboardName}" i prosjekt "{savedLocation.projectName}". Åpne i Oversikt
+                  </Link>
+                </Alert>
+              )}
+
               <Heading level="2" size="small" spacing>Legg til i Metabase</Heading>
 
               {/* Add incompatibility warning */}
@@ -1030,6 +1194,71 @@ const QueryPreview = ({
         </div>
         */}
       </div>
+
+      <Modal
+        open={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        header={{ heading: 'Lagre graf' }}
+      >
+        <Modal.Body>
+          <div className="space-y-4">
+            <UNSAFE_Combobox
+              label="Prosjekt"
+              options={projectOptions}
+              selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
+              onToggleSelected={(option: string, isSelected: boolean) => {
+                void handleProjectSelection(option, isSelected);
+              }}
+              isMultiSelect={false}
+              size="small"
+              clearButton
+            />
+            <UNSAFE_Combobox
+              label="Dashboard"
+              options={dashboardOptions}
+              selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
+              onToggleSelected={(option: string, isSelected: boolean) => {
+                handleDashboardSelection(option, isSelected);
+              }}
+              isMultiSelect={false}
+              size="small"
+              clearButton
+              disabled={!selectedProjectOption}
+            />
+            <TextField
+              label="Grafnavn"
+              value={graphName}
+              onChange={(e) => setGraphName(e.target.value)}
+              size="small"
+            />
+            <Select
+              label="Graftype"
+              value={graphType}
+              onChange={(e) => setGraphType(e.target.value)}
+              size="small"
+            >
+              <option value="LINE">Linjediagram</option>
+              <option value="BAR">Stolpediagram</option>
+              <option value="PIE">Kakediagram</option>
+              <option value="TABLE">Tabell</option>
+            </Select>
+
+            {saveError && (
+              <Alert variant="error" size="small">
+                {saveError}
+              </Alert>
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleSaveChart} loading={savingChart}>
+            Lagre
+          </Button>
+          <Button variant="secondary" onClick={() => setShowSaveModal(false)} disabled={savingChart}>
+            Avbryt
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Confirmation Modal for Large Queries */}
       <Modal
