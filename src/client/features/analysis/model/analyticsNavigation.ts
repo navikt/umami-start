@@ -91,3 +91,4 @@ export const analyticsPages = [
         description: 'Se stavefeil fra Siteimprove'
     }
 ];
+

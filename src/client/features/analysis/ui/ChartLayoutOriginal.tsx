@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Select, Page } from "@navikt/ds-react";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { type AnalyticsPage, analyticsPages } from './AnalyticsNavigation.tsx';
+import { type AnalyticsPage, analyticsPages } from '../model/analyticsNavigation.ts';
+import { chartGroupsOriginal } from '../model/chartGroups.tsx';
 import { KontaktSeksjon } from '../../../shared/ui/theme/Kontakt/KontaktSeksjon.tsx';
 import { PageHeader } from '../../../shared/ui/theme/PageHeader/PageHeader.tsx';
+import { useChartLayoutOriginal } from '../hooks/useChartLayoutOriginal.ts';
 
 interface ChartLayoutProps {
     title: string;
@@ -17,28 +18,6 @@ interface ChartLayoutProps {
     hideAnalysisSelector?: boolean;
 }
 
-const chartGroups = [
-    {
-        title: "Trafikk & hendelser",
-        ids: ['trafikkanalyse', 'markedsanalyse', 'event-explorer']
-    },
-    {
-        title: "Brukerreiser",
-        ids: ['brukerreiser', 'hendelsesreiser', 'trakt']
-    },
-    {
-        title: "Brukere & lojalitet",
-        ids: ['brukerprofiler', 'brukerlojalitet', 'brukersammensetning']
-    },
-    {
-        title: "Innholdskvalitet",
-        ids: ['odelagte-lenker', 'stavekontroll']
-    }
-];
-
-// These URL params are shared across analysis pages and should be preserved when navigating
-const SHARED_PARAMS = ['urlPath', 'pagePath', 'period', 'startDate', 'endDate', 'from', 'to', 'websiteId', 'domain', 'pathOperator'];
-
 const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
     title,
     description,
@@ -49,39 +28,7 @@ const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
     hideSidebar = false,
     hideAnalysisSelector = true
 }) => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(!hideSidebar);
-    const navigate = useNavigate();
-
-    const handleChartChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedId = event.target.value;
-        const page = analyticsPages.find(p => p.id === selectedId);
-        if (page) {
-            // Read current URL params directly from window.location
-            // (pages use window.history.replaceState which doesn't sync with React Router's useSearchParams)
-            const currentParams = new URLSearchParams(window.location.search);
-            const preservedParams = new URLSearchParams();
-
-            SHARED_PARAMS.forEach(param => {
-                const value = currentParams.get(param);
-                if (value) {
-                    preservedParams.set(param, value);
-                }
-            });
-
-            const queryString = preservedParams.toString();
-            const targetUrl = queryString ? `${page.href}?${queryString}` : page.href;
-            void navigate(targetUrl);
-        }
-    };
-
-    // Trigger window resize event when sidebar toggles to help charts resize
-    useEffect(() => {
-        // Small delay to ensure DOM has updated
-        const timer = setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-        }, 100);
-        return () => clearTimeout(timer);
-    }, [isSidebarOpen]);
+    const { isSidebarOpen, setIsSidebarOpen, handleChartChange } = useChartLayoutOriginal(hideSidebar);
 
     // Define width classes based on wideSidebar prop
     const sidebarWidth = wideSidebar ? 'md:w-1/2' : 'md:w-1/3';
@@ -113,7 +60,7 @@ const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
                                                     onChange={handleChartChange}
                                                 >
                                                     <option value="" disabled>Velg...</option>
-                                                    {chartGroups.map((group) => (
+                                                    {chartGroupsOriginal.map((group) => (
                                                         <optgroup label={group.title} key={group.title}>
                                                             {group.ids.map(id => {
                                                                 const page = analyticsPages.find(p => p.id === id);
@@ -128,7 +75,7 @@ const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
                                                     ))}
                                                     <optgroup label="Tilpasset & datasjekk">
                                                         {analyticsPages
-                                                            .filter(page => !chartGroups.some(g => g.ids.includes(page.id)))
+                                                            .filter(page => !chartGroupsOriginal.some(g => g.ids.includes(page.id)))
                                                             .map(page => (
                                                                 <option key={page.id} value={page.id}>
                                                                     {page.label}
@@ -170,7 +117,6 @@ const ChartLayoutOriginal: React.FC<ChartLayoutProps> = ({
                     </div>
                 </div>
 
-                {/* {currentPage && <AnalyticsNavigation currentPage={currentPage} />} */}
 
             </Page.Block>
             <KontaktSeksjon showMarginBottom={true} />

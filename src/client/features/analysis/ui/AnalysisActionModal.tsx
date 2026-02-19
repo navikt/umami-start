@@ -2,37 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { BarChart2, ExternalLink, Activity, Search, Users, Map, Repeat, TrendingUp, UserSearch, Copy, Check, SpellCheck, Unlink } from 'lucide-react';
 import { useSiteimproveSupport, useMarketingSupport } from '../../../shared/hooks/useSiteimproveSupport.ts';
-
-interface AnalysisActionModalProps {
-    open: boolean;
-    onClose: () => void;
-    urlPath: string | null;
-    websiteId?: string;
-    period?: string;
-    domain?: string;
-    websiteName?: string;  // Website name for dev environment detection
-}
-
-type Website = {
-    id: string;
-    domain?: string;
-    name?: string;
-};
-
-type WebsitesResponse = {
-    data: Website[];
-};
-
-const isWebsitesResponse = (value: unknown): value is WebsitesResponse => {
-    if (!value || typeof value !== 'object') return false;
-    const record = value as Record<string, unknown>;
-    if (!Array.isArray(record.data)) return false;
-    return record.data.every((item) => {
-        if (!item || typeof item !== 'object') return false;
-        const website = item as Record<string, unknown>;
-        return typeof website.id === 'string';
-    });
-};
+import type { AnalysisActionModalProps, AnalysisActionModalWebsite } from '../model/types.ts';
+import { isWebsitesResponse } from '../utils/typeGuards.ts';
 
 const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
     open,
@@ -58,7 +29,7 @@ const AnalysisActionModal: React.FC<AnalysisActionModalProps> = ({
 
         let isActive = true;
 
-        const applyWebsite = (website: Website | undefined) => {
+        const applyWebsite = (website: AnalysisActionModalWebsite | undefined) => {
             if (!isActive || !website) return;
             if (shouldResolveDomain && website.domain) {
                 setResolvedDomain(website.domain);

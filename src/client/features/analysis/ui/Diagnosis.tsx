@@ -1,354 +1,30 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Alert, Loader, Radio, RadioGroup, Table, Heading, Tooltip, Tabs } from '@navikt/ds-react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
-import ChartLayout from '../../analysis/ui/ChartLayoutOriginal.tsx';
-import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
-import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
-import type { Website } from '../../../shared/types/chart.ts';
-import { format, parseISO } from 'date-fns';
-import { nb } from 'date-fns/locale';
-import type { ILineChartDataPoint, ILineChartProps } from '@fluentui/react-charting';
 import { LineChart } from '@fluentui/react-charting';
-
-interface DiagnosisData {
-    website_id: string;
-    website_name: string;
-    domain: string | null;
-    pageviews: number;
-    custom_events: number;
-    last_event_at: string | null;
-}
-
-interface HistoryData {
-    month: string;
-    pageviews: number;
-    custom_events: number;
-}
-
-type QueryStats = {
-    totalBytesProcessedGB?: number;
-    estimatedCostUSD?: number;
-};
-
-type DiagnosisResponse = {
-    error?: string;
-    data?: DiagnosisData[];
-    queryStats?: QueryStats;
-};
-
-type DiagnosisHistoryResponse = {
-    history?: HistoryData[];
-    lastEventAt?: string | null;
-    queryStats?: QueryStats;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-    return typeof value === 'object' && value !== null;
-};
-
-const isDiagnosisData = (value: unknown): value is DiagnosisData => {
-    return isRecord(value)
-        && typeof value.website_id === 'string'
-        && typeof value.website_name === 'string'
-        && (value.domain === null || typeof value.domain === 'string')
-        && typeof value.pageviews === 'number'
-        && typeof value.custom_events === 'number'
-        && (value.last_event_at === null || typeof value.last_event_at === 'string');
-};
-
-const isHistoryData = (value: unknown): value is HistoryData => {
-    return isRecord(value)
-        && typeof value.month === 'string'
-        && typeof value.pageviews === 'number'
-        && typeof value.custom_events === 'number';
-};
-
-const parseQueryStats = (value: unknown): QueryStats | null => {
-    if (!isRecord(value)) return null;
-    const totalBytesProcessedGB = typeof value.totalBytesProcessedGB === 'number'
-        ? value.totalBytesProcessedGB
-        : undefined;
-    const estimatedCostUSD = typeof value.estimatedCostUSD === 'number'
-        ? value.estimatedCostUSD
-        : undefined;
-    return totalBytesProcessedGB !== undefined || estimatedCostUSD !== undefined
-        ? { totalBytesProcessedGB, estimatedCostUSD }
-        : null;
-};
-
-const parseDiagnosisResponse = (value: unknown): DiagnosisResponse => {
-    if (!isRecord(value)) return {};
-    const error = typeof value.error === 'string' ? value.error : undefined;
-    const data = Array.isArray(value.data) ? value.data.filter(isDiagnosisData) : undefined;
-    const queryStats = parseQueryStats(value.queryStats);
-    return { error, data, queryStats: queryStats ?? undefined };
-};
-
-const parseDiagnosisHistoryResponse = (value: unknown): DiagnosisHistoryResponse => {
-    if (!isRecord(value)) return {};
-    const history = Array.isArray(value.history) ? value.history.filter(isHistoryData) : undefined;
-    const lastEventAt = value.lastEventAt === null || typeof value.lastEventAt === 'string'
-        ? value.lastEventAt
-        : undefined;
-    const queryStats = parseQueryStats(value.queryStats);
-    return { history, lastEventAt, queryStats: queryStats ?? undefined };
-};
+import { format } from 'date-fns';
+import { nb } from 'date-fns/locale';
+import ChartLayout from './ChartLayoutOriginal.tsx';
+import WebsitePicker from './WebsitePicker.tsx';
+import PeriodPicker from './PeriodPicker.tsx';
+import { useDiagnosis } from '../hooks/useDiagnosis.ts';
+import { getEnvironmentTitle } from '../utils/diagnosis.ts';
 
 const Diagnosis = () => {
-    const [searchParams] = useSearchParams();
-
-    // Initialize state from URL params
-    const [period, setPeriod] = useState<string>(() => searchParams.get('period') || 'current_month');
-
-    // Support custom dates from URL
-    const fromDateFromUrl = searchParams.get("from");
-    const toDateFromUrl = searchParams.get("to");
-    const initialCustomStartDate = fromDateFromUrl ? parseISO(fromDateFromUrl) : undefined;
-    const initialCustomEndDate = toDateFromUrl ? parseISO(toDateFromUrl) : undefined;
-
-    const [customStartDate, setCustomStartDate] = useState<Date | undefined>(initialCustomStartDate);
-    const [customEndDate, setCustomEndDate] = useState<Date | undefined>(initialCustomEndDate);
-    const [data, setData] = useState<DiagnosisData[] | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [queryStats, setQueryStats] = useState<QueryStats | null>(null);
-    const [environment, setEnvironment] = useState<string>('all');
-    const [activeTab, setActiveTab] = useState<string>('all');
-    const [selectedWebsiteFilter, setSelectedWebsiteFilter] = useState<Website | null>(null);
-
-    // Deep Diagnosis State
-    const [selectedWebsite, setSelectedWebsite] = useState<DiagnosisData | null>(null);
-    const [historyData, setHistoryData] = useState<HistoryData[] | null>(null);
-    const [historyLoading, setHistoryLoading] = useState<boolean>(false);
-    const [absoluteLastEvent, setAbsoluteLastEvent] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [historyQueryStats, setHistoryQueryStats] = useState<QueryStats | null>(null);
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        setData(null);
-        setQueryStats(null);
-
-        // Calculate date range based on period
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date;
-
-        if (period === 'current_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        } else if (period === 'last_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === 'custom') {
-            if (!customStartDate || !customEndDate) {
-                setError('Vennligst velg en gyldig periode.');
-                setLoading(false);
-                return;
-            }
-            startDate = new Date(customStartDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            const isToday = customEndDate.getDate() === now.getDate() &&
-                customEndDate.getMonth() === now.getMonth() &&
-                customEndDate.getFullYear() === now.getFullYear();
-
-            if (isToday) {
-                endDate = now;
-            } else {
-                endDate = new Date(customEndDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-        } else {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = now;
-        }
-
-        try {
-            const response = await fetch('/api/bigquery/diagnosis', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Kunne ikke hente data');
-            }
-
-            const resultPayload = await response.json() as unknown;
-            const parsed = parseDiagnosisResponse(resultPayload);
-
-            if (parsed.error) {
-                setError(parsed.error);
-            } else {
-                setData(parsed.data ?? []);
-                setQueryStats(parsed.queryStats ?? null);
-            }
-        } catch (err) {
-            console.error('Error fetching diagnosis data:', err);
-            setError('Det oppstod en feil ved henting av data.');
-        } finally {
-            setLoading(false);
-        }
-    }, [period, customStartDate, customEndDate]);
-
-    // Fetch data when period changes
-    useEffect(() => {
-        void fetchData();
-    }, [period, fetchData]);
-
-    const [sort, setSort] = useState<{ orderBy: string; direction: 'ascending' | 'descending' }>({
-        orderBy: 'total',
-        direction: 'descending'
-    });
-
-    const handleSort = (sortKey: string) => {
-        setSort(prev => ({
-            orderBy: sortKey,
-            direction: prev.orderBy === sortKey && prev.direction === 'descending' ? 'ascending' : 'descending'
-        }));
-    };
-
-    const isDevDomain = (domain: string | null) => {
-        if (!domain) return false;
-        const d = domain.toLowerCase();
-        return d.includes('dev') || d.includes('test') || d.includes('localhost');
-    };
-
-    // Filter data by environment first (used for stats and table)
-    const environmentData = data ? data.filter(row => {
-        if (environment === 'prod') {
-            if (isDevDomain(row.domain)) return false;
-        } else if (environment === 'dev') {
-            if (!isDevDomain(row.domain)) return false;
-        }
-        return true;
-    }) : [];
-
-    // Filter by tab (used for table only)
-    const filteredData = environmentData.filter(row => {
-        if (activeTab === 'attention') {
-            if (row.last_event_at) return false;
-        }
-        return true;
-    });
-
-    const sortedData = [...filteredData].sort((a, b) => {
-        const { orderBy, direction } = sort;
-        let aValue: number;
-        let bValue: number;
-
-        if (orderBy === 'pageviews') {
-            aValue = a.pageviews;
-            bValue = b.pageviews;
-        } else if (orderBy === 'custom_events') {
-            aValue = a.custom_events;
-            bValue = b.custom_events;
-        } else if (orderBy === 'total') {
-            aValue = a.pageviews + a.custom_events;
-            bValue = b.pageviews + b.custom_events;
-        } else if (orderBy === 'last_event_at') {
-            aValue = a.last_event_at ? new Date(a.last_event_at).getTime() : 0;
-            bValue = b.last_event_at ? new Date(b.last_event_at).getTime() : 0;
-        } else {
-            return 0;
-        }
-
-        if (aValue < bValue) return direction === 'ascending' ? -1 : 1;
-        if (aValue > bValue) return direction === 'ascending' ? 1 : -1;
-        return 0;
-    });
-
-    const totalWebsites = environmentData.length;
-    const activeWebsites = environmentData.filter(d => d.last_event_at).length;
-    const inactiveWebsites = environmentData.filter(d => !d.last_event_at).length;
-
-    // Find selected website in data for highlighting
-    const highlightedWebsite = selectedWebsiteFilter && environmentData
-        ? environmentData.find(row => row.website_id === selectedWebsiteFilter.id)
-        : null;
-
-    const getEnvironmentTitle = () => {
-        switch (environment) {
-            case 'prod': return 'Prod-miljø';
-            case 'dev': return 'Dev-miljø';
-            default: return 'Alle miljø';
-        }
-    };
-
-    const handleExplore = async (website: DiagnosisData) => {
-        setSelectedWebsite(website);
-        setIsModalOpen(true);
-        setHistoryLoading(true);
-        setHistoryData(null);
-        setAbsoluteLastEvent(null);
-        setHistoryQueryStats(null);
-
-        try {
-            const response = await fetch('/api/bigquery/diagnosis-history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ websiteId: website.website_id })
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch history');
-
-            const resultPayload = await response.json() as unknown;
-            const parsed = parseDiagnosisHistoryResponse(resultPayload);
-            setHistoryData(parsed.history ?? []);
-            setAbsoluteLastEvent(parsed.lastEventAt ?? null);
-            setHistoryQueryStats(parsed.queryStats ?? null);
-        } catch (error) {
-            console.error('Error fetching history:', error);
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
-
-    // Prepare Chart Data for Fluent UI
-    const chartData: ILineChartProps | null = useMemo(() => {
-        if (!historyData || historyData.length === 0) return null;
-
-        const pageviewPoints: ILineChartDataPoint[] = historyData.map(item => ({
-            x: new Date(item.month + '-01'), // Approximate to 1st of month
-            y: item.pageviews,
-            legend: item.month,
-            xAxisCalloutData: item.month,
-            yAxisCalloutData: `${item.pageviews} sidevisninger`
-        }));
-
-        const customEventPoints: ILineChartDataPoint[] = historyData.map(item => ({
-            x: new Date(item.month + '-01'),
-            y: item.custom_events,
-            legend: item.month,
-            xAxisCalloutData: item.month,
-            yAxisCalloutData: `${item.custom_events} egendefinerte`
-        }));
-
-        return {
-            data: {
-                lineChartData: [
-                    {
-                        legend: 'Sidevisninger',
-                        data: pageviewPoints,
-                        color: '#0067c5',
-                    },
-                    {
-                        legend: 'Egendefinerte',
-                        data: customEventPoints,
-                        color: '#c30000',
-                    }
-                ]
-            }
-        };
-    }, [historyData]);
+    const {
+        period, setPeriod,
+        customStartDate, setCustomStartDate,
+        customEndDate, setCustomEndDate,
+        environment, setEnvironment,
+        activeTab, setActiveTab,
+        sort, handleSort,
+        selectedWebsiteFilter, setSelectedWebsiteFilter,
+        data, loading, error, queryStats,
+        sortedData, totalWebsites, activeWebsites, inactiveWebsites,
+        highlightedWebsite,
+        selectedWebsite, historyLoading, absoluteLastEvent,
+        isModalOpen, setIsModalOpen,
+        historyQueryStats, chartData, handleExplore,
+    } = useDiagnosis();
 
     return (
         <ChartLayout
@@ -459,7 +135,7 @@ const Diagnosis = () => {
                     )}
 
                     <div className="flex flex-col gap-2">
-                        <Heading level="2" size="medium">Resultater for {getEnvironmentTitle()}</Heading>
+                        <Heading level="2" size="medium">Resultater for {getEnvironmentTitle(environment)}</Heading>
                     </div>
 
                     {/* Quick Stats */}

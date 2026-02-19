@@ -1,233 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Table, Alert, Loader, Tabs, TextField, HelpText, Button, Link as DsLink } from '@navikt/ds-react';
 import { Download } from 'lucide-react';
 
-import ChartLayout from '../../analysis/ui/ChartLayout.tsx';
-import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
-import type { Website } from '../../../shared/types/chart.ts';
-import teamsData from '../../../../data/teamsData.json';
+import ChartLayout from './ChartLayout.tsx';
+import WebsitePicker from './WebsitePicker.tsx';
 import InfoCard from '../../../shared/ui/InfoCard.tsx';
-
-interface SpellingIssue {
-    id: number;
-    word: string;
-    suggestions?: string[];
-    context?: string;
-}
-
-interface QualityAssuranceCheck {
-    id: number;
-    check_date: string;
-    misspellings: number;
-    potential_misspellings: number;
-    // other fields omitted as we don't need them yet
-}
-
-interface QualityAssuranceHistoryResponse {
-    items: QualityAssuranceCheck[];
-    total_items: number;
-}
-
-interface CrawlData {
-    last_crawl?: string;
-    next_crawl?: string;
-    is_crawl_running?: boolean;
-}
-
-interface SiteimprovePageItem {
-    id: number;
-    url: string;
-}
-
-interface SiteimprovePageResponse {
-    items?: SiteimprovePageItem[];
-}
-
-interface SiteimproveSpellingResponse {
-    items?: SpellingIssue[];
-}
-
-type TeamDataEntry = {
-    teamDomain?: string;
-    teamSiteimproveSite?: string | number;
-};
+import type { SpellingIssue } from '../model/types.ts';
+import { downloadCsv } from '../utils/siteimprove.ts';
+import { useSpellings } from '../hooks/useSpellings.ts';
 
 const Spellings = () => {
-    const siteimproveBaseUrl = '/api/siteimprove';
-    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-    const [siteimproveId, setSiteimproveId] = useState<string | null>(null);
-    const [overviewData, setOverviewData] = useState<QualityAssuranceCheck | null>(null);
-    const [activeTab, setActiveTab] = useState<string>('potential');
-
-    // Page specific state
-    const [pageId, setPageId] = useState<number | null>(null);
-    const [misspellings, setMisspellings] = useState<SpellingIssue[]>([]);
-    const [potentialMisspellings, setPotentialMisspellings] = useState<SpellingIssue[]>([]);
-    const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
-    const [crawlInfo, setCrawlInfo] = useState<CrawlData | null>(null);
-
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [searchParams] = useSearchParams();
-    const [urlPath, setUrlPath] = useState<string>(() => searchParams.get('urlPath') || '');
-
-    const getSiteimproveId = useCallback((domain: string) => {
-        let team: TeamDataEntry | undefined;
-        let siteDomain = domain;
-        if (!siteDomain.startsWith('http')) {
-            siteDomain = `https://${siteDomain}`;
-        }
-
-        try {
-            const urlObj = new URL(siteDomain);
-            const domainOrigin = urlObj.origin;
-            team = (teamsData as TeamDataEntry[]).find((t) => {
-                if (!t.teamDomain) return false;
-                try {
-                    const teamUrl = new URL(t.teamDomain);
-                    return domainOrigin === teamUrl.origin;
-                } catch {
-                    return domainOrigin.startsWith(t.teamDomain);
-                }
-            });
-        } catch {
-            team = (teamsData as TeamDataEntry[]).find((t) => t.teamDomain === domain || (t.teamDomain ? domain.includes(t.teamDomain) : false));
-        }
-
-        return team?.teamSiteimproveSite;
-    }, []);
-
-    const fetchPageId = useCallback(async (siteId: string, path: string) => {
-        const baseUrl = siteimproveBaseUrl;
-        const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
-
-        const encodedUrl = encodeURIComponent(path);
-        const url = `${baseUrl}/siteimprove/sites/${siteId}/content/pages?url=${encodedUrl}&page_size=1`;
-
-        const response = await fetch(url, { credentials });
-        if (!response.ok) return null;
-
-        const data: SiteimprovePageResponse = await response.json();
-        if (data && data.items && data.items.length > 0) {
-            const match = data.items.find((p) => p.url.includes(path));
-            return match ? match.id : data.items[0].id;
-        }
-        return null;
-    }, []);
-
-    const fetchSpellingData = useCallback(async () => {
-        if (!siteimproveId) return;
-
-        setLoading(true);
-        setError(null);
-        setOverviewData(null);
-        setPageId(null);
-        setMisspellings([]);
-        setPotentialMisspellings([]);
-        setHasAttemptedFetch(true);
-        setCrawlInfo(null);
-
-        try {
-            const baseUrl = siteimproveBaseUrl;
-            const credentials = window.location.hostname === 'localhost' ? 'omit' : 'include';
-
-            if (!urlPath) {
-                // Fetch Overview (Check History) and Crawl Info
-                const [historyResponse, crawlResponse] = await Promise.all([
-                    fetch(`${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/overview/check_history?page_size=1`, { credentials }),
-                    fetch(`${baseUrl}/siteimprove/sites/${siteimproveId}/content/crawl`, { credentials })
-                ]);
-                if (historyResponse.ok) {
-                    const data: QualityAssuranceHistoryResponse = await historyResponse.json();
-                    if (data.items && data.items.length > 0) {
-                        setOverviewData(data.items[0]);
-                    }
-                }
-                if (crawlResponse.ok) {
-                    const crawlData: CrawlData = await crawlResponse.json();
-                    setCrawlInfo(crawlData);
-                }
-            } else {
-                // Fetch Page specific data
-                const foundPageId = await fetchPageId(siteimproveId, urlPath);
-
-                if (!foundPageId) {
-                    setError(`Fant ingen side hos Siteimprove med URL som inneholder "${urlPath}". Sjekk at URL-en er korrekt.`);
-                    setLoading(false);
-                    return;
-                }
-
-                setPageId(foundPageId);
-
-                // Fetch overview + crawl + both tabs data in parallel
-                const [overviewResponse, crawlResponse, misResponse, potResponse] = await Promise.all([
-                    fetch(`${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/overview/check_history?page_size=1`, { credentials }),
-                    fetch(`${baseUrl}/siteimprove/sites/${siteimproveId}/content/crawl`, { credentials }),
-                    fetch(`${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/spelling/pages/${foundPageId}/misspellings`, { credentials }),
-                    fetch(`${baseUrl}/siteimprove/sites/${siteimproveId}/quality_assurance/spelling/pages/${foundPageId}/potential_misspellings`, { credentials })
-                ]);
-
-                if (overviewResponse.ok) {
-                    const data: QualityAssuranceHistoryResponse = await overviewResponse.json();
-                    if (data.items && data.items.length > 0) {
-                        setOverviewData(data.items[0]);
-                    }
-                }
-                if (crawlResponse.ok) {
-                    const crawlData: CrawlData = await crawlResponse.json();
-                    setCrawlInfo(crawlData);
-                }
-                if (misResponse.ok) {
-                    const data: SiteimproveSpellingResponse = await misResponse.json();
-                    setMisspellings(data.items || []);
-                }
-                if (potResponse.ok) {
-                    const data: SiteimproveSpellingResponse = await potResponse.json();
-                    setPotentialMisspellings(data.items || []);
-                }
-
-                // Update URL with configuration for sharing
-                const newParams = new URLSearchParams(window.location.search);
-                if (urlPath) {
-                    newParams.set('urlPath', urlPath);
-                } else {
-                    newParams.delete('urlPath');
-                }
-                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
-            }
-
-        } catch (err) {
-            console.error('Error fetching spelling data:', err);
-            const message = err instanceof Error ? err.message : 'Det oppstod en feil ved henting av data.';
-            setError(message);
-        } finally {
-            setLoading(false);
-        }
-    }, [siteimproveId, urlPath, fetchPageId]);
-
-    useEffect(() => {
-        if (!selectedWebsite) return;
-
-        const sid = getSiteimproveId(selectedWebsite.domain);
-        if (!sid) {
-            setError('Denne nettsiden er ikke koblet til Siteimprove eller mangler konfigurasjon.');
-            setSiteimproveId(null);
-            return;
-        }
-        setSiteimproveId(String(sid));
-    }, [selectedWebsite, getSiteimproveId]);
-
-    // Auto-submit when URL parameters are present (for shared links)
-    useEffect(() => {
-        const hasConfigParams = searchParams.has('urlPath');
-        if (siteimproveId && hasConfigParams && !hasAttemptedFetch) {
-            fetchSpellingData();
-        } else if (siteimproveId && !urlPath && !hasAttemptedFetch) {
-            // Auto-fetch overview when website is selected
-            fetchSpellingData();
-        }
-    }, [siteimproveId, hasAttemptedFetch, searchParams, urlPath, fetchSpellingData]);
+    const {
+        selectedWebsite, setSelectedWebsite,
+        siteimproveId,
+        overviewData, activeTab, setActiveTab,
+        pageId, misspellings, potentialMisspellings,
+        hasAttemptedFetch, crawlInfo,
+        loading, error,
+        urlPath, setUrlPath,
+        fetchSpellingData,
+    } = useSpellings();
 
     const renderTable = (items: SpellingIssue[], emptyMsg: string, filename: string) => {
         if (items.length === 0) {
@@ -257,22 +48,11 @@ const Spellings = () => {
                             size="small"
                             variant="secondary"
                             onClick={() => {
-                                const headers = ['Ord'];
-                                const csvRows = [
-                                    headers.join(','),
-                                    ...items.map((item) => `"${item.word}"`)
-                                ];
-                                const csvContent = csvRows.join('\n');
-                                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                                const link = document.createElement('a');
-                                const url = URL.createObjectURL(blob);
-                                link.setAttribute('href', url);
-                                link.setAttribute('download', `${filename}_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`);
-                                link.style.visibility = 'hidden';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
+                                downloadCsv(
+                                    `${filename}_${selectedWebsite?.name || 'data'}_${new Date().toISOString().slice(0, 10)}.csv`,
+                                    ['Ord'],
+                                    items.map((item) => [`"${item.word}"`]),
+                                );
                             }}
                             icon={<Download size={16} />}
                         >
