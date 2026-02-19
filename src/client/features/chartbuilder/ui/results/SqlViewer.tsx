@@ -28,13 +28,13 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
     // Escape backticks for TS template literal
     dashboardSql = dashboardSql.replace(/`/g, '\\`');
 
-    navigator.clipboard.writeText(dashboardSql);
+    void navigator.clipboard.writeText(dashboardSql);
     setCopiedDashboard(true);
     setTimeout(() => setCopiedDashboard(false), 3000);
   };
 
   const handleCopyToMetabase = () => {
-    navigator.clipboard.writeText(sql);
+    void navigator.clipboard.writeText(sql);
     setCopiedMetabase(true);
     setTimeout(() => setCopiedMetabase(false), 3000);
   };

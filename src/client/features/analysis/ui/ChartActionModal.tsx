@@ -1,27 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
-import type { SavedChart } from '../../../../data/dashboard';
-import { processDashboardSql } from '../../dashboard';
-import { translateValue } from '../../../shared/lib/translations.ts';
-
-interface ChartActionModalProps {
-    open: boolean;
-    onClose: () => void;
-    chart: SavedChart;
-    websiteId: string;
-    filters: {
-        urlFilters: string[];
-        dateRange: string;
-        pathOperator: string;
-        metricType: 'visitors' | 'pageviews' | 'proportion' | 'visits';
-        customStartDate?: Date;
-        customEndDate?: Date;
-    };
-    domain?: string;
-    data?: any[];
-    dashboardTitle?: string;
-}
+import type { ChartActionModalProps } from '../model/types.ts';
+import { generateShareUrl, buildEditorUrl, downloadChartCsv } from '../utils/chartActions.ts';
 
 const ChartActionModal: React.FC<ChartActionModalProps> = ({
     open,
@@ -37,47 +18,14 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
 
     if (!chart.sql) return null;
 
-    const generateShareUrl = () => {
-        const processedSql = processDashboardSql(chart.sql!, websiteId, filters);
-
-        const params = new URLSearchParams();
-        params.set('sql', processedSql);
-        params.set('desc', chart.title);
-        if (dashboardTitle) params.set('dashboard', dashboardTitle);
-
-        // Map chart type
-        let tabParam = 'table';
-        if (chart.type === 'line') tabParam = 'linechart';
-        if (chart.type === 'bar') tabParam = 'barchart';
-        if (chart.type === 'pie') tabParam = 'piechart';
-        params.set('tab', tabParam);
-
-        // Add context filters
-        if (websiteId) params.set('websiteId', websiteId);
-        if (domain) params.set('domain', domain);
-
-        if (filters.urlFilters?.length) {
-            params.set('urlPath', filters.urlFilters.join(','));
-            if (filters.pathOperator) params.set('pathOperator', filters.pathOperator);
-        }
-
-        if (filters.dateRange) params.set('dateRange', filters.dateRange);
-        if (filters.customStartDate) params.set('customStartDate', filters.customStartDate.toISOString());
-        if (filters.customEndDate) params.set('customEndDate', filters.customEndDate.toISOString());
-
-        return `${window.location.origin}/grafdeling?${params.toString()}`;
-    };
-
-    // 1. Explore: Open /grafdeling fully processed
     const handleOpenInNewTab = () => {
-        window.open(generateShareUrl(), '_blank');
+        window.open(generateShareUrl(chart, websiteId, filters, domain, dashboardTitle), '_blank');
         onClose();
     };
 
-    // 1b. Share: Copy link
     const handleCopyLink = async () => {
         try {
-            await navigator.clipboard.writeText(generateShareUrl());
+            await navigator.clipboard.writeText(generateShareUrl(chart, websiteId, filters, domain, dashboardTitle));
             setCopyFeedback(true);
             setTimeout(() => setCopyFeedback(false), 2000);
         } catch (err) {
@@ -85,61 +33,14 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
         }
     };
 
-    // 2. Open in Editor: Open /sql with raw SQL + params (so it remains editable/dynamic)
     const handleOpenInEditor = () => {
-        const params = new URLSearchParams();
-        params.set('sql', chart.sql!);
-
-        if (websiteId) params.set('websiteId', websiteId);
-        if (domain) params.set('domain', domain);
-
-        if (filters.urlFilters?.length) {
-            params.set('urlPath', filters.urlFilters.join(','));
-            params.set('pathOperator', filters.pathOperator || 'equals');
-        }
-
-        if (filters.dateRange) params.set('dateRange', filters.dateRange);
-        if (filters.customStartDate) params.set('customStartDate', filters.customStartDate.toISOString());
-        if (filters.customEndDate) params.set('customEndDate', filters.customEndDate.toISOString());
-
-        // Use window.open for "Open in..." actions usually
-        window.open(`/sql?${params.toString()}`, '_blank');
+        window.open(buildEditorUrl(chart, websiteId, filters, domain), '_blank');
         onClose();
     };
 
-    // 4. Download CSV: Convert data to CSV and download
     const handleDownloadCsv = () => {
         if (!data || data.length === 0) return;
-
-        const headers = Object.keys(data[0]);
-        const csvRows = [
-            headers.join(','),
-            ...data.map((row: any) =>
-                headers
-                    .map((header) => {
-                        const value = row[header];
-                        const translatedValue = translateValue(header, value);
-                        const stringValue = translatedValue !== null && translatedValue !== undefined ? String(translatedValue) : '';
-                        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-                            return `"${stringValue.replace(/"/g, '""')}"`;
-                        }
-                        return stringValue;
-                    })
-                    .join(',')
-                ,
-            ),
-        ];
-        const csvContent = csvRows.join('\n');
-
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `${chart.title || 'chart_data'}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadChartCsv(data, chart.title);
         onClose();
     };
 

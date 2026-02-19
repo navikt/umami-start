@@ -2,53 +2,57 @@ import { lazy } from 'react';
 import type { ReactElement } from 'react';
 
 // Content Feature
-const Home = lazy(() => import('./features/content/ui/Home.tsx'));
-const Komigang = lazy(() => import('./features/content/ui/articles/Komigang.tsx'));
-const MetabaseGuide = lazy(() => import('./features/content/ui/articles/MetabaseGuide.tsx'));
-const Personvern = lazy(() => import('./features/content/ui/articles/Personvern.tsx'));
-const Tilgjengelighet = lazy(() => import('./features/content/ui/articles/Tilgjengelighet.tsx'));
-const Taksonomi = lazy(() => import('./features/content/ui/articles/Taksonomi.tsx'));
-const Oppsett = lazy(() => import('./features/content/ui/topics/Oppsett.tsx'));
-const Sporingskoder = lazy(() => import('./features/content/ui/topics/Sporingskoder.tsx'));
+const Home = lazy(() => import('./features/content').then(m => ({ default: m.Home })));
+const Komigang = lazy(() => import('./features/content').then(m => ({ default: m.Komigang })));
+const MetabaseGuide = lazy(() => import('./features/content').then(m => ({ default: m.MetabaseGuide })));
+const Personvern = lazy(() => import('./features/content').then(m => ({ default: m.Personvern })));
+const Tilgjengelighet = lazy(() => import('./features/content').then(m => ({ default: m.Tilgjengelighet })));
+const Taksonomi = lazy(() => import('./features/content').then(m => ({ default: m.Taksonomi })));
+const Oppsett = lazy(() => import('./features/content').then(m => ({ default: m.Oppsett })));
+const Sporingskoder = lazy(() => import('./features/content').then(m => ({ default: m.Sporingskoder })));
 
 // Dashboard Feature
-const Dashboard = lazy(() => import('./features/dashboard/ui/Dashboard.tsx'));
-const DashboardOverview = lazy(() => import('./features/dashboard/ui/DashboardOverview.tsx'));
-const Oversikt = lazy(() => import('./features/oversikt/ui/Oversikt.tsx'));
+const Dashboard = lazy(() => import('./features/dashboard').then(m => ({ default: m.Dashboard })));
+const DashboardOverview = lazy(() => import('./features/dashboard').then(m => ({ default: m.DashboardOverview })));
 
 // Chartbuilder Feature
-const Charts = lazy(() => import('./features/chartbuilder/ui/Chartbuilder.tsx'));
-const Grafdeling = lazy(() => import('./features/chartbuilder/ui/Grafdeling.tsx'));
+const Grafbygger = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafbygger })));
+const Grafdeling = lazy(() => import('./features/chartbuilder').then(m => ({ default: m.Grafdeling })));
+
+// Backend Test Feature
+const Oversikt = lazy(() => import('./features/oversikt/ui/Oversikt.tsx'));
 const BackendCrudTest = lazy(() => import('./features/crud/ui/BackendCrudTest.tsx'));
 
 // Analysis Feature
-const UserComposition = lazy(() => import('./features/analysis/ui/UserComposition.tsx'));
-const Spellings = lazy(() => import('./features/analysis/ui/Spellings.tsx'));
-const BrokenLinks = lazy(() => import('./features/analysis/ui/BrokenLinks.tsx'));
-const PrivacyCheck = lazy(() => import('./features/analysis/ui/PrivacyCheck.tsx'));
-const Diagnosis = lazy(() => import('./features/analysis/ui/Diagnosis.tsx'));
+const UserComposition = lazy(() => import('./features/analysis').then(m => ({ default: m.UserComposition })));
+const Spellings = lazy(() => import('./features/analysis').then(m => ({ default: m.Spellings })));
+const BrokenLinks = lazy(() => import('./features/analysis').then(m => ({ default: m.BrokenLinks })));
+const PrivacyCheck = lazy(() => import('./features/analysis').then(m => ({ default: m.PrivacyCheck })));
+const Diagnosis = lazy(() => import('./features/analysis').then(m => ({ default: m.Diagnosis })));
 
 // User Feature
-const UserJourney = lazy(() => import('./features/user/ui/UserJourney.tsx'));
-const UserProfile = lazy(() => import('./features/user/ui/UserProfile.tsx'));
-const UserProfiles = lazy(() => import('./features/user/ui/UserProfiles.tsx'));
+const UserJourney = lazy(() => import('./features/user').then(m => ({ default: m.UserJourney })));
+const UserProfile = lazy(() => import('./features/user').then(m => ({ default: m.UserProfile })));
+const UserProfiles = lazy(() => import('./features/user').then(m => ({ default: m.UserProfiles })));
 
 // Events Feature
-const EventExplorer = lazy(() => import('./features/events/ui/EventExplorer.tsx'));
-const EventJourney = lazy(() => import('./features/events/ui/EventJourney.tsx'));
+const EventExplorer = lazy(() => import('./features/eventexplorer').then(m => ({ default: m.EventExplorer })));
+
+// Event Journey Feature
+const EventJourney = lazy(() => import('./features/eventjourney').then(m => ({ default: m.EventJourney })));
 
 // Traffic Feature
-const TrafficAnalysis = lazy(() => import('./features/traffic/ui/TrafficAnalysis.tsx'));
-const MarketingAnalysis = lazy(() => import('./features/traffic/ui/MarketingAnalysis.tsx'));
+const TrafficAnalysis = lazy(() => import('./features/traffic').then(m => ({ default: m.TrafficAnalysis })));
+const MarketingAnalysis = lazy(() => import('./features/traffic').then(m => ({ default: m.MarketingAnalysis })));
 
 // Funnel Feature
-const Funnel = lazy(() => import('./features/funnel/ui/Funnel.tsx'));
+const Funnel = lazy(() => import('./features/funnel').then(m => ({ default: m.Funnel })));
 
 // Retention Feature
-const Retention = lazy(() => import('./features/retention/ui/Retention.tsx'));
+const Retention = lazy(() => import('./features/retention').then(m => ({ default: m.Retention })));
 
 // SQL Feature
-const SqlEditor = lazy(() => import('./features/sql/ui/SqlEditor.tsx'));
+const SqlEditor = lazy(() => import('./features/sql').then(m => ({ default: m.SqlEditor })));
 
 export type AppRoute = {
     path: string;
@@ -85,7 +89,7 @@ export const routes: AppRoute[] = [
     { path: "/tilgjengelighet", component: <Tilgjengelighet />, fullWidth: true },
 
     { path: "/taksonomi", component: <Taksonomi />, fullWidth: true },
-    { path: "/grafbygger", component: <Charts />, fullWidth: true },
+    { path: "/grafbygger", component: <Grafbygger />, fullWidth: true },
     { path: "/metabase", component: <MetabaseGuide />, fullWidth: true },
 
     { path: "/sql", component: <SqlEditor />, fullWidth: true },

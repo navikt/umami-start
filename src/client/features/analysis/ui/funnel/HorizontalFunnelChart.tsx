@@ -1,25 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import AnalysisActionModal from '../AnalysisActionModal.tsx';
+import type { HorizontalFunnelChartProps } from '../../model/types.ts';
+import { computeFunnelStepMetrics, getStepLabel, getStepDestination } from '../../utils/horizontalFunnel.ts';
+import { useHorizontalFunnel } from '../../hooks/useHorizontalFunnel.ts';
 
-interface FunnelStep {
-    step: number;
-    count: number;
-    url?: string;
-    dropoff?: number;
-    conversionRate?: number;
-    params?: { key: string; value: string; operator: 'equals' | 'contains' }[];
-}
-
-interface FunnelChartProps {
-    data: FunnelStep[];
-    loading?: boolean;
-    websiteId?: string;
-    period?: string;
-}
-
-const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, period }) => {
-    const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+const HorizontalFunnelChart: React.FC<HorizontalFunnelChartProps> = ({ data, loading, websiteId, period }) => {
+    const { selectedUrl, handleUrlClick, closeModal } = useHorizontalFunnel(websiteId);
 
     if (loading) {
         return <div className="animate-pulse h-64 bg-[var(--ax-bg-neutral-soft)] rounded-lg"></div>;
@@ -29,12 +16,6 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
         return <div className="text-center p-8 text-gray-500">Ingen data tilgjengelig for trakten.</div>;
     }
 
-    const handleUrlClick = (e: React.MouseEvent, urlPath: string) => {
-        if (!websiteId) return;
-        e.stopPropagation();
-        setSelectedUrl(urlPath);
-    };
-
     const maxCount = Math.max(...data.map(d => d.count));
 
     return (
@@ -42,15 +23,8 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
             <div className="w-full overflow-x-auto py-8 px-4 text-center">
                 <div className="inline-flex flex-row items-start justify-center min-w-max mx-auto space-x-0">
                     {data.map((item, index) => {
-                        const prevItem = index > 0 ? data[index - 1] : null;
-                        const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
-
-                        const dropoffCount = prevItem ? prevItem.count - item.count : 0;
-                        const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
-
-                        // Calculate total conversion (% of users from first step)
-                        const firstStepCount = data[0]?.count || 1;
-                        const totalConversionPercent = Math.round((item.count / firstStepCount) * 100);
+                        const { percentageOfPrev, dropoffCount, dropoffPercentage, totalConversionPercent } =
+                            computeFunnelStepMetrics(data, index);
 
                         return (
                             <div key={item.step} className="flex flex-row items-start">
@@ -65,7 +39,7 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                                             ></div>
                                         </div>
 
-                                        {/* Conversion Stats (Gikk videre) */}
+                                        {/* Conversion Stats */}
                                         <div className="bg-[var(--ax-bg-success-soft)] border border-[var(--ax-border-success-subtle)] rounded-lg px-2 py-1.5 z-10 mb-2 flex flex-col items-center shadow-sm min-w-[90px]">
                                             <span className="text-base font-bold text-[var(--ax-text-success)]">{percentageOfPrev}%</span>
                                             <span className="text-[11px] font-medium text-[var(--ax-text-success)]">gikk videre</span>
@@ -74,10 +48,7 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                                         {/* Drop-off Branch */}
                                         {dropoffCount > 0 && (
                                             <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-4 duration-500">
-                                                {/* Vertical line down */}
                                                 <div className="h-6 w-0.5 bg-[var(--ax-border-danger-subtle)] mb-1"></div>
-
-                                                {/* Drop-off Stats - Percentage first, consistent with vertical */}
                                                 <div className="bg-[var(--ax-bg-danger-soft)] border border-[var(--ax-border-danger-subtle)] rounded-md px-2 py-1.5 flex flex-col items-center shadow-sm min-w-[90px]">
                                                     <span className="text-base font-bold text-[var(--ax-text-danger)]">{dropoffPercentage}%</span>
                                                     <span className="text-[11px] font-medium text-[var(--ax-text-danger)]">falt fra (-{dropoffCount.toLocaleString('nb-NO')})</span>
@@ -97,8 +68,8 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
                                     }}
                                 >
                                     {(() => {
-                                        const labelCandidate = item.params?.find(p => ['lenketekst', 'tekst', 'label', 'tittel'].includes(p.key.toLowerCase()))?.value;
-                                        const destCandidate = item.params?.find(p => p.key === 'destinasjon' || p.key === 'url')?.value;
+                                        const labelCandidate = getStepLabel(item.params);
+                                        const destCandidate = getStepDestination(item.params);
                                         const isClickable = websiteId && item.url && item.url.startsWith('/');
 
                                         return (
@@ -142,7 +113,7 @@ const HorizontalFunnelChart: React.FC<FunnelChartProps> = ({ data, loading, webs
 
             <AnalysisActionModal
                 open={!!selectedUrl}
-                onClose={() => setSelectedUrl(null)}
+                onClose={closeModal}
                 urlPath={selectedUrl}
                 websiteId={websiteId}
                 period={period}

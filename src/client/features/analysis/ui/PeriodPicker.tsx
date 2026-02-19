@@ -1,18 +1,9 @@
-import { useState, useRef } from 'react';
-import { Select, Modal, DatePicker, Button } from '@navikt/ds-react'; // Added Button import
+import { useRef } from 'react';
+import { Select, Modal, DatePicker, Button } from '@navikt/ds-react';
 import { format } from 'date-fns';
-
-interface PeriodPickerProps {
-    period: string;
-    onPeriodChange: (period: string) => void;
-    startDate: Date | undefined;
-    onStartDateChange: (date: Date | undefined) => void;
-    endDate: Date | undefined;
-    onEndDateChange: (date: Date | undefined) => void;
-    lastMonthLabel?: string;
-    currentMonthLabel?: string;
-    showShortPeriods?: boolean;
-}
+import type { PeriodPickerProps } from '../model/types.ts';
+import { formatDateRange } from '../utils/periodPicker.ts';
+import { usePeriodPicker } from '../hooks/usePeriodPicker.ts';
 
 export const PeriodPicker = ({
     period,
@@ -25,24 +16,8 @@ export const PeriodPicker = ({
     currentMonthLabel = 'Denne måneden',
     showShortPeriods = true
 }: PeriodPickerProps) => {
-    const [isDateModalOpen, setIsDateModalOpen] = useState(false);
     const dateModalRef = useRef<HTMLDialogElement>(null);
-
-    // Helper to format date range for display
-    const formatDateRange = (start?: Date, end?: Date) => {
-        if (!start || !end) return '';
-        return `${format(start, 'dd.MM.yy')} - ${format(end, 'dd.MM.yy')}`;
-    };
-
-    const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
-        if (value === 'custom' || value === 'custom-edit') {
-            onPeriodChange('custom'); // Ensure parent state is 'custom'
-            setIsDateModalOpen(true);
-        } else {
-            onPeriodChange(value);
-        }
-    };
+    const { isDateModalOpen, handlePeriodChange, closeDateModal } = usePeriodPicker(onPeriodChange);
 
     return (
         <>
@@ -82,7 +57,7 @@ export const PeriodPicker = ({
             <Modal
                 ref={dateModalRef}
                 open={isDateModalOpen}
-                onClose={() => setIsDateModalOpen(false)}
+                onClose={closeDateModal}
                 header={{ heading: "Velg datoperiode", closeButton: true }}
             >
                 <Modal.Body>
@@ -120,7 +95,7 @@ export const PeriodPicker = ({
                         onClick={() => {
                             if (startDate && endDate) {
                                 onPeriodChange('custom');
-                                setIsDateModalOpen(false);
+                                closeDateModal();
                             }
                         }}
                         disabled={!startDate || !endDate}
@@ -130,7 +105,7 @@ export const PeriodPicker = ({
                     <Button
                         type="button"
                         variant="secondary"
-                        onClick={() => setIsDateModalOpen(false)}
+                        onClick={closeDateModal}
                     >
                         Avbryt
                     </Button>

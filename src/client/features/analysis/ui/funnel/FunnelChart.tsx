@@ -1,25 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import AnalysisActionModal from '../AnalysisActionModal.tsx';
-
-interface FunnelStep {
-    step: number;
-    count: number;
-    url?: string;
-    dropoff?: number;
-    conversionRate?: number;
-    params?: { key: string; value: string; operator: 'equals' | 'contains' }[];
-}
-
-interface FunnelChartProps {
-    data: FunnelStep[];
-    loading?: boolean;
-    websiteId?: string;
-    period?: string;
-}
+import type { FunnelChartProps } from '../../model/types.ts';
+import { computeFunnelStepMetrics, getStepLabel, getStepDestination } from '../../utils/horizontalFunnel.ts';
+import { useHorizontalFunnel } from '../../hooks/useHorizontalFunnel.ts';
 
 const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, period }) => {
-    const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+    const { selectedUrl, handleUrlClick, closeModal } = useHorizontalFunnel(websiteId);
 
     if (loading) {
         return <div className="animate-pulse h-64 bg-[var(--ax-bg-neutral-soft)] rounded-lg"></div>;
@@ -31,31 +18,14 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
 
     const maxCount = Math.max(...data.map(d => d.count));
 
-    const handleUrlClick = (e: React.MouseEvent, urlPath: string) => {
-        if (!websiteId) return;
-        e.stopPropagation();
-        setSelectedUrl(urlPath);
-    };
-
-
     return (
         <>
             <div className="flex flex-col items-center w-full max-w-5xl mx-auto py-6 px-4">
                 {data.map((item, index) => {
-                    const prevItem = index > 0 ? data[index - 1] : null;
-                    const percentageOfPrev = prevItem && prevItem.count > 0 ? Math.round((item.count / prevItem.count) * 100) : 100;
+                    const { percentageOfPrev, dropoffCount, dropoffPercentage, totalConversionPercent } =
+                        computeFunnelStepMetrics(data, index);
 
-                    // Calculate width relative to the center column
                     const widthPercentage = maxCount > 0 ? Math.max((item.count / maxCount) * 100, 20) : 20;
-
-                    // Calculate dropoff from previous step
-                    const dropoffCount = prevItem ? prevItem.count - item.count : 0;
-                    const dropoffPercentage = prevItem ? 100 - percentageOfPrev : 0;
-
-                    // Calculate total conversion (% of users from first step)
-                    const firstStepCount = data[0]?.count || 1;
-                    const totalConversionPercent = Math.round((item.count / firstStepCount) * 100);
-
                     const isClickable = websiteId && item.url && item.url.startsWith('/');
 
                     return (
@@ -127,8 +97,8 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
 
                                     {/* URL / Step Value Display */}
                                     {(() => {
-                                        const labelCandidate = item.params?.find(p => ['lenketekst', 'tekst', 'label', 'tittel'].includes(p.key.toLowerCase()))?.value;
-                                        const destCandidate = item.params?.find(p => p.key === 'destinasjon' || p.key === 'url')?.value;
+                                        const labelCandidate = getStepLabel(item.params);
+                                        const destCandidate = getStepDestination(item.params);
 
                                         return (
                                             <div className="flex flex-col items-center gap-1 w-full mt-1">
@@ -172,7 +142,7 @@ const FunnelChart: React.FC<FunnelChartProps> = ({ data, loading, websiteId, per
 
             <AnalysisActionModal
                 open={!!selectedUrl}
-                onClose={() => setSelectedUrl(null)}
+                onClose={closeModal}
                 urlPath={selectedUrl}
                 websiteId={websiteId}
                 period={period}
