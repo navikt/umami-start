@@ -38,6 +38,7 @@ spec:
             namespace: team-researchops
           - application: start-umami-backend
             namespace: team-researchops
+            namespace: team-researchops
   azure:
     application:
       enabled: true
@@ -54,4 +55,4 @@ spec:
     - name: GCP_PROJECT_ID
       value: "team-researchops-dev-4396"
     - name: BACKEND_BASE_URL
-      value: "start-umami-backend.team-researchops.svc.cluster.local"
+      value: "http://start-umami-backend"
