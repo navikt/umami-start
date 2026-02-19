@@ -90,7 +90,7 @@ const Oversikt = () => {
   const projectOptions = useMemo(
     () =>
       projects.map((project) => ({
-        label: `${project.name} (#${project.id})`,
+        label: project.name,
         value: String(project.id),
       })),
     [projects],
@@ -99,7 +99,7 @@ const Oversikt = () => {
   const dashboardOptions = useMemo(
     () =>
       dashboards.map((dashboard) => ({
-        label: `${dashboard.name} (#${dashboard.id})`,
+        label: dashboard.name,
         value: String(dashboard.id),
       })),
     [dashboards],
@@ -118,7 +118,6 @@ const Oversikt = () => {
         type: mapGraphTypeToChart(item.graph.graphType),
         sql: item.queries[0].sqlText,
         width: 'half',
-        description: item.graph.graphType ? `Type: ${item.graph.graphType}` : undefined,
       }));
   }, [graphs]);
 
@@ -435,7 +434,6 @@ const Oversikt = () => {
   return (
     <DashboardLayout
       title="Dashboard"
-      description={selectedDashboard ? `${selectedDashboard.name} (#${selectedDashboard.id})` : undefined}
       filters={filters}
     >
       {error && <Alert variant="error">{error}</Alert>}
