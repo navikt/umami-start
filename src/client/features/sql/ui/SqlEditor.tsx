@@ -1,954 +1,72 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { subDays, format } from 'date-fns';
 import { ResultsPanel } from '../../chartbuilder';
 import ChartLayout from '../../analysis/ui/ChartLayoutOriginal.tsx';
 import { Button, Alert, Heading, BodyLong, TextField, Link } from '@navikt/ds-react';
 import Editor from '@monaco-editor/react';
-import * as sqlFormatter from 'sql-formatter';
 import { PlayIcon, Copy, X } from 'lucide-react';
 import { ReadMore } from '@navikt/ds-react';
-import { translateValue } from '../../../shared/lib/translations.ts';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
-
-type Website = {
-    id: string;
-    name: string;
-    domain: string;
-    teamId: string;
-    createdAt: string;
-};
-
-type JsonPrimitive = string | number | boolean | null;
-interface JsonObject {
-    [key: string]: JsonValue;
-}
-type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
-type Row = Record<string, JsonValue | undefined>;
-
-type QueryStats = {
-    totalBytesProcessed?: number;
-    totalBytesProcessedGB?: string;
-    estimatedCostUSD?: string;
-    cacheHit?: boolean;
-};
-
-type QueryResult = {
-    data?: Row[];
-    queryStats?: QueryStats;
-};
-
-declare global {
-    interface Window {
-        __GCP_PROJECT_ID__?: string;
-    }
-}
-
-// Get GCP_PROJECT_ID from runtime-injected global variable (server injects window.__GCP_PROJECT_ID__)
-const getGcpProjectId = (): string => {
-    if (typeof window !== 'undefined' && window.__GCP_PROJECT_ID__) {
-        return window.__GCP_PROJECT_ID__;
-    }
-    // Fallback for development/SSR contexts
-    throw new Error('Missing runtime config: GCP_PROJECT_ID');
-};
-
-const getDefaultQuery = () => `SELECT 
-  website_id,
-  name
-FROM 
-  \`${getGcpProjectId()}.umami.public_website\`
-LIMIT 
-  100;`;
-
-const defaultQuery = getDefaultQuery();
-
-// Helper function to truncate JSON to prevent browser crashes
-const truncateJSON = (obj: unknown, maxChars: number = 50000): string => {
-    const fullJSON = JSON.stringify(obj, null, 2);
-
-    if (fullJSON.length <= maxChars) {
-        return fullJSON;
-    }
-
-    // Truncate and add notice
-    const truncated = fullJSON.substring(0, maxChars - 500);
-    const omittedChars = fullJSON.length - truncated.length;
-    const omittedKB = (omittedChars / 1024).toFixed(1);
-
-    return truncated + `\n\n... (${omittedKB} KB omitted - total size: ${(fullJSON.length / 1024).toFixed(1)} KB)\n\nJSON-utdata er begrenset til ${(maxChars / 1000).toFixed(0)}k tegn for å unngå at nettleseren krasjer.\nBruk tabellvisningen for å se alle resultater.`;
-};
+import { getGcpProjectId, truncateJSON } from '../utils/formatters';
+import { useSqlEditor } from '../hooks/useSqlEditor';
 
 export default function SqlEditor() {
-    const [searchParams] = useSearchParams();
-
-    // Get GCP Project ID from runtime
     const projectId = getGcpProjectId();
-
-    const urlPathFromUrl = searchParams.get('urlPath');
-    const pathOperatorFromUrl = searchParams.get('pathOperator');
-    const dateRangeFromUrl = searchParams.get('dateRange');
-    const customStartFromUrl = searchParams.get('customStartDate');
-    const customEndFromUrl = searchParams.get('customEndDate');
-
-    const [hasMetabaseDateFilter, setHasMetabaseDateFilter] = useState(false);
-    const [hasUrlPathFilter, setHasUrlPathFilter] = useState(false);
-    const [hasWebsiteIdPlaceholder, setHasWebsiteIdPlaceholder] = useState(false);
-    const [hasNettsidePlaceholder, setHasNettsidePlaceholder] = useState(false);
-    const [hasHardcodedWebsiteId, setHasHardcodedWebsiteId] = useState(false);
-    const [customVariables, setCustomVariables] = useState<string[]>([]);
-    const [customVariableValues, setCustomVariableValues] = useState<Record<string, string>>({});
-    const [oldTableWarning, setOldTableWarning] = useState<boolean>(false);
-    const [showUpgradeSuccess, setShowUpgradeSuccess] = useState<boolean>(false);
-    const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
-    const [availableWebsites, setAvailableWebsites] = useState<Website[]>([]);
-    const autoSelectedWebsiteIdRef = useRef<string | null>(null);
-    const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
-        const now = new Date();
-        return {
-            from: new Date(now.getFullYear(), now.getMonth(), 1),
-            to: now,
-        };
-    });
-    const [period, setPeriod] = useState<string>('current_month');
-    const [urlPath, setUrlPath] = useState('/');
-    const [websiteIdState, setWebsiteIdState] = useState<string>('');
-    const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
-
-    // Ensure we land at top when navigating in
-    useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'auto' });
-    }, []);
-
-    const applyUrlFiltersToSql = (sql: string): string => {
-        let processedSql = sql;
-        let fromSql: string | null = null;
-        let toSql: string | null = null;
-
-        // Website ID substitution {{website_id}}
-        const hasWebsitePlaceholderInline = /\{\{\s*website_id\s*\}\}/i.test(processedSql);
-        if (hasWebsitePlaceholderInline && websiteIdState) {
-            const sanitizedWebsiteId = websiteIdState.replace(/'/g, "''");
-            // Replace placeholder even if it is wrapped in quotes to avoid double quoting
-            processedSql = processedSql.replace(/(['"])?\s*\{\{\s*website_id\s*\}\}\s*\1?/gi, `'${sanitizedWebsiteId}'`);
-        }
-
-        // Nettside substitution {{nettside}} -> website domain
-        const hasNettsidePlaceholder = /\{\{\s*nettside\s*\}\}/i.test(processedSql);
-        if (hasNettsidePlaceholder && selectedWebsite?.domain) {
-            const sanitizedDomain = selectedWebsite.domain.replace(/'/g, "''");
-            // Replace placeholder even if it is wrapped in quotes to avoid double quoting
-            processedSql = processedSql.replace(/(['"])?\s*\{\{\s*nettside\s*\}\}\s*\1?/gi, `'${sanitizedDomain}'`);
-        }
-
-        // URL path substitution (Metabase style [[ {{url_sti}} --]] '/' or [[ {{url_path}} --]] '/')
-        const pathSource = urlPathFromUrl || urlPath;
-        if (pathSource) {
-            const paths = pathSource.split(',').filter(Boolean);
-            const operator = pathOperatorFromUrl === 'starts-with' ? 'starts-with' : 'equals';
-
-            if (paths.length > 0) {
-                if (operator === 'starts-with') {
-                    if (paths.length === 1) {
-                        // Match both url_sti and url_path
-                        const assignmentRegex = /=\s*\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]\s*('[^']*')/gi;
-                        processedSql = processedSql.replace(assignmentRegex, `LIKE '${paths[0]}%'`);
-                    } else {
-                        const multiLikeRegex = /(\S+)\s*=\s*\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]\s*('[^']*')/gi;
-                        processedSql = processedSql.replace(multiLikeRegex, (_m, column) => {
-                            const likeConditions = paths.map(p => `${column} LIKE '${p}%'`).join(' OR ');
-                            return `(${likeConditions})`;
-                        });
-                    }
-                } else {
-                    const assignmentRegex = /=\s*\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]\s*('[^']*')/gi;
-                    processedSql = paths.length === 1
-                        ? processedSql.replace(assignmentRegex, `= '${paths[0]}'`)
-                        : processedSql.replace(assignmentRegex, `IN (${paths.map(p => `'${p}'`).join(', ')})`);
-                }
-            }
-        } else {
-            // No external path provided; keep default '/' - match both url_sti and url_path
-            processedSql = processedSql.replace(/\[\[\s*\{\{url_(?:sti|path)\}\}\s*--\s*\]\]/gi, '');
-        }
-
-        // Optional URL path substitution [[AND {{url_sti}} ]] or [[AND {{url_path}} ]]
-        const andUrlStiPattern = /\[\[\s*AND\s*\{\{url_(?:sti|path)\}\}\s*\]\]/gi;
-        if (andUrlStiPattern.test(processedSql)) {
-            if (pathSource) {
-                // Only support single path for now in this format, or could expand to IN/OR logic
-                const path = pathSource.split(',')[0];
-                const operator = pathOperatorFromUrl === 'starts-with' ? 'starts-with' : 'equals';
-
-                if (operator === 'starts-with') {
-                    processedSql = processedSql.replace(andUrlStiPattern, `AND url_path LIKE '${path}%'`);
-                } else {
-                    processedSql = processedSql.replace(andUrlStiPattern, `AND url_path = '${path}'`);
-                }
-            } else {
-                processedSql = processedSql.replace(andUrlStiPattern, '');
-            }
-        }
-
-        // Date substitution [[AND {{created_at}} ]] -- always replace if marker exists (default last 30 days)
-        const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/gi;
-        if (datePattern.test(processedSql)) {
-            const now = new Date();
-            const from = dateRange.from || subDays(now, 30);
-            const to = dateRange.to || now;
-            fromSql = `TIMESTAMP('${format(from, 'yyyy-MM-dd')}')`;
-            toSql = `TIMESTAMP('${format(to, 'yyyy-MM-dd')}T23:59:59')`;
-
-            const projectId = getGcpProjectId();
-            // Detect likely table to apply date filter to
-            let tablePrefix = `\`${projectId}.umami_views.event\``;
-            if (processedSql.includes('umami_views.event')) {
-                tablePrefix = `\`${projectId}.umami_views.event\``;
-            } else if (processedSql.includes('umami_views.session')) {
-                tablePrefix = `\`${projectId}.umami_views.session\``;
-            } else if (processedSql.includes('public_session') && !processedSql.includes('public_website_event')) {
-                tablePrefix = `\`${projectId}.umami.public_session\``;
-            }
-
-            const dateReplacement = `AND ${tablePrefix}.created_at BETWEEN ${fromSql} AND ${toSql}`;
-            processedSql = processedSql.replace(datePattern, dateReplacement);
-        }
-
-        // If query joins partitioned public_session, mirror the date filter to enable partition pruning
-        if (fromSql && toSql && /public_session/gi.test(processedSql) && !/public_session[^\n]*created_at/gi.test(processedSql)) {
-            const projectId = getGcpProjectId();
-            const eventFilter = `\`${projectId}.umami_views.event\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
-            const sessionPredicate = `\`${projectId}.umami_views.session\`.created_at BETWEEN ${fromSql} AND ${toSql}`;
-
-
-            if (processedSql.includes(eventFilter)) {
-                processedSql = processedSql.replace(eventFilter, `${eventFilter} AND ${sessionPredicate}`);
-            } else if (/WHERE/i.test(processedSql)) {
-                processedSql = processedSql.replace(/WHERE/i, (match) => `${match} ${sessionPredicate} AND`);
-            }
-        }
-
-        // Custom variable substitution {{variable_name}}
-        for (const varName of customVariables) {
-            const value = customVariableValues[varName];
-            if (value !== undefined && value !== '') {
-                const varRegex = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'gi');
-                // If the value looks like a number, don't add quotes
-                const isNumeric = /^-?\d+\.?\d*$/.test(value);
-                const replacement = isNumeric ? value : `'${value.replace(/'/g, "''")}'`;
-                processedSql = processedSql.replace(varRegex, replacement);
-            }
-        }
-
-        return processedSql;
-    };
-
-    // Only substitute website_id placeholder for copy actions (keep other filters untouched)
-    const applyWebsiteIdOnly = (sql: string): string => {
-        let processedSql = sql;
-        const hasWebsitePlaceholderInline = /\{\{\s*website_id\s*\}\}/i.test(processedSql);
-        if (hasWebsitePlaceholderInline && websiteIdState) {
-            const sanitizedWebsiteId = websiteIdState.replace(/'/g, "''");
-            processedSql = processedSql.replace(/(['"])?\s*\{\{\s*website_id\s*\}\}\s*\1?/gi, `'${sanitizedWebsiteId}'`);
-        }
-        return processedSql;
-    };
-    // State for editor height (for resizable editor)
-    const [editorHeight, setEditorHeight] = useState(400);
-    // Initialize state with empty string to avoid showing default until we check URL
-    const [query, setQuery] = useState('');
-    const [validateError, setValidateError] = useState<string | null>(null);
-    const [showValidation, setShowValidation] = useState(false);
-    const [result, setResult] = useState<QueryResult | null>(null);
-    const [estimate, setEstimate] = useState<QueryStats | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [estimating, setEstimating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [showEstimate, setShowEstimate] = useState(true);
-    const [shareSuccess, setShareSuccess] = useState(false);
-    const [formatSuccess, setFormatSuccess] = useState(false);
-    const [lastProcessedSql, setLastProcessedSql] = useState<string>('');
-    const [copiedMetabase, setCopiedMetabase] = useState(false);
-
-    const ensureWebsitePlaceholder = (currentQuery: string): string => {
-        // If any website-related placeholder or filter already exists, leave untouched
-        // Check for {{website_id}}, {{nettside}}, website_id =, or website_domain =
-        if (
-            /\{\{\s*website_id\s*\}\}/i.test(currentQuery) ||
-            /\{\{\s*nettside\s*\}\}/i.test(currentQuery) ||
-            /website_id\s*=\s*['"]/i.test(currentQuery) ||
-            /website_domain\s*=\s*/i.test(currentQuery)
-        ) {
-            return currentQuery;
-        }
-
-        const table = `\`${getGcpProjectId()}.umami_views.event\``;
-
-        if (/WHERE/i.test(currentQuery)) {
-            return currentQuery.replace(/WHERE/i, (match) => `${match} ${table}.website_id = '{{website_id}}' AND`);
-        }
-
-        const trimmed = currentQuery.trimEnd();
-        const suffix = trimmed.endsWith(';') ? ';' : '';
-        const base = trimmed.replace(/;$/, '');
-        return `${base} WHERE ${table}.website_id = '{{website_id}}'${suffix}`;
-    };
-
-    // Extract websiteId from SQL query for AnalysisActionModal
-    const extractWebsiteId = (sql: string): string | undefined => {
-        // Match patterns like: website_id = 'uuid' or website_id='uuid'
-        const match = sql.match(/website_id\s*=\s*['"]([0-9a-f-]{36})['"]/i);
-        return match?.[1];
-    };
-
-    // Replace hardcoded website_id with a new one
-    const replaceHardcodedWebsiteId = (sql: string, newWebsiteId: string): string => {
-        // Replace all occurrences of website_id = 'old-uuid' with website_id = 'new-uuid'
-        return sql.replace(
-            /(website_id\s*=\s*)(['"])([0-9a-f-]{36})\2/gi,
-            `$1$2${newWebsiteId}$2`
-        );
-    };
-
-    const websiteId = extractWebsiteId(query);
-    // Check for SQL in URL params on mount and init filters
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const sqlParam = urlParams.get('sql');
-
-        if (sqlParam) {
-            try {
-                // URL params are already decoded by URLSearchParams
-                setQuery(sqlParam);
-            } catch {
-                setQuery(defaultQuery);
-            }
-        } else {
-            // No SQL param, use default
-            setQuery(defaultQuery);
-        }
-
-        // Init urlPath state from URL
-        if (urlPathFromUrl) {
-            setUrlPath(urlPathFromUrl.split(',')[0]);
-        }
-
-        // Init websiteId from URL
-        const websiteIdParam = urlParams.get('websiteId');
-        if (websiteIdParam) {
-            setWebsiteIdState(websiteIdParam);
-        }
-
-        // Init date range state from URL
-        const now = new Date();
-        let from: Date | undefined = subDays(now, 30);
-        let to: Date | undefined = now;
-        if (dateRangeFromUrl === 'custom' && customStartFromUrl && customEndFromUrl) {
-            from = new Date(customStartFromUrl);
-            to = new Date(customEndFromUrl);
-        } else if (dateRangeFromUrl === 'current_month') {
-            from = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-            to = now;
-        } else if (dateRangeFromUrl === 'last_month') {
-            from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            to = new Date(now.getFullYear(), now.getMonth(), 0);
-        }
-        setDateRange({ from, to });
-
-        // Also update period state if present in URL
-        if (dateRangeFromUrl) {
-            setPeriod(dateRangeFromUrl);
-        }
-    }, [customEndFromUrl, customStartFromUrl, dateRangeFromUrl, urlPathFromUrl]);
-
-    // Detect metabase placeholders and hardcoded website IDs
-    useEffect(() => {
-        if (!query) {
-            setHasMetabaseDateFilter(false);
-            setHasUrlPathFilter(false);
-            setHasWebsiteIdPlaceholder(false);
-            setHasNettsidePlaceholder(false);
-            setHasHardcodedWebsiteId(false);
-            return;
-        }
-        const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
-        setHasMetabaseDateFilter(datePattern.test(query));
-
-        const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
-        const andUrlPathPattern = /\[\[\s*AND\s*\{\{url_sti\}\}\s*\]\]/i;
-        // Also detect url_path as a synonym for url_sti
-        const urlPathPattern2 = /\[\[\s*\{\{url_path\}\}\s*--\s*\]\]\s*'\/'/i;
-        const andUrlPathPattern2 = /\[\[\s*AND\s*\{\{url_path\}\}\s*\]\]/i;
-        setHasUrlPathFilter(
-            urlPathPattern.test(query) ||
-            andUrlPathPattern.test(query) ||
-            urlPathPattern2.test(query) ||
-            andUrlPathPattern2.test(query)
-        );
-
-        const websiteIdPattern = /\{\{\s*website_id\s*\}\}/i;
-        setHasWebsiteIdPlaceholder(websiteIdPattern.test(query));
-
-        const nettsidePattern = /\{\{\s*nettside\s*\}\}/i;
-        setHasNettsidePlaceholder(nettsidePattern.test(query));
-
-        // Detect hardcoded website_id = 'uuid' pattern
-        const hardcodedWebsiteIdPattern = /website_id\s*=\s*['"][0-9a-f-]{36}['"]/i;
-        setHasHardcodedWebsiteId(hardcodedWebsiteIdPattern.test(query));
-
-        // Detect custom {{variable}} placeholders (excluding known ones)
-        // Only exclude url_sti/url_path if they're used in the special [[...]] patterns
-        const urlPathInSpecialPattern =
-            urlPathPattern.test(query) ||
-            andUrlPathPattern.test(query) ||
-            urlPathPattern2.test(query) ||
-            andUrlPathPattern2.test(query);
-
-        // Base known variables that should always have special handling
-        const alwaysKnownVariables = ['website_id', 'nettside', 'created_at'];
-        // Only treat url_sti/url_path as known if they're in special patterns
-        const knownVariables = urlPathInSpecialPattern
-            ? [...alwaysKnownVariables, 'url_sti', 'url_path']
-            : alwaysKnownVariables;
-
-        const allVariablesRegex = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/gi;
-        const matches = [...query.matchAll(allVariablesRegex)];
-        const detectedVars = matches
-            .map(m => m[1])
-            .filter(v => !knownVariables.includes(v.toLowerCase()))
-            .filter((v, i, arr) => arr.indexOf(v) === i); // unique
-        setCustomVariables(detectedVars);
-    }, [query]);
-
-    // Detect usage of old tables which cause partition errors and suggest new views
-    useEffect(() => {
-        const hasOldEventTable = /umami\.public_website_event/.test(query);
-        const hasOldSessionTable = /umami\.public_session/.test(query);
-
-        if (hasOldEventTable || hasOldSessionTable) {
-            setOldTableWarning(true);
-        } else {
-            setOldTableWarning(false);
-        }
-    }, [query]);
-
-    // Fetch available websites for auto-selection
-    useEffect(() => {
-        if (availableWebsites.length > 0) return;
-
-        fetch('/api/bigquery/websites')
-            .then(response => response.json())
-            .then((response: { data: Website[] }) => {
-                const websitesData = response.data || [];
-                setAvailableWebsites(websitesData);
-            })
-            .catch(error => {
-                console.error('Error fetching websites for auto-selection:', error);
-            });
-    }, [availableWebsites.length]);
-
-    // Auto-select website when a hardcoded website_id is detected in the query
-    useEffect(() => {
-        if (!hasHardcodedWebsiteId || availableWebsites.length === 0) return;
-
-        const detectedWebsiteId = extractWebsiteId(query);
-        if (!detectedWebsiteId) return;
-
-        // Don't auto-select if we've already auto-selected this ID or if user has selected something
-        if (autoSelectedWebsiteIdRef.current === detectedWebsiteId) return;
-        if (selectedWebsite?.id === detectedWebsiteId) {
-            autoSelectedWebsiteIdRef.current = detectedWebsiteId;
-            return;
-        }
-
-        // Find the website in the available list
-        const matchingWebsite = availableWebsites.find(w => w.id === detectedWebsiteId);
-        if (matchingWebsite) {
-            console.log('Auto-selecting website from SQL:', matchingWebsite.name);
-            setSelectedWebsite(matchingWebsite);
-            setWebsiteIdState(matchingWebsite.id);
-            autoSelectedWebsiteIdRef.current = detectedWebsiteId;
-        }
-    }, [hasHardcodedWebsiteId, query, availableWebsites, selectedWebsite?.id]);
-
-    // Helper to update URL params without losing others
-    const updateUrlParams = (updates: Record<string, string | null>) => {
-        const params = new URLSearchParams(window.location.search);
-        Object.entries(updates).forEach(([key, value]) => {
-            if (value === null) {
-                params.delete(key);
-            } else {
-                params.set(key, value);
-            }
-        });
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        window.history.replaceState({}, '', newUrl);
-    };
-
-    const estimateCost = async () => {
-        setEstimating(true);
-        setError(null);
-
-        // Update URL with current query
-        updateUrlParams({ sql: query });
-
-        const processedSql = applyUrlFiltersToSql(query);
-        setLastProcessedSql(processedSql);
-
-        try {
-            const response = await fetch('/api/bigquery/estimate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ query: processedSql, analysisType: 'Sqlverktøy' }),
-            });
-
-            const data: QueryStats & { error?: string } = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Estimation failed');
-            }
-
-            setEstimate(data);
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'An error occurred';
-            setError(message);
-        } finally {
-            setEstimating(false);
-        }
-    };
-
-    const executeQuery = async () => {
-        setLoading(true);
-        setError(null);
-        setResult(null);
-        setHasAttemptedFetch(true);
-
-        // Update URL with current query
-        updateUrlParams({ sql: query });
-
-        const processedSql = applyUrlFiltersToSql(query);
-        setLastProcessedSql(processedSql);
-
-
-
-        try {
-            const response = await fetch('/api/bigquery', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ query: processedSql, analysisType: 'Sqlverktøy' }),
-            });
-
-            const data: QueryResult & { error?: string } = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Query failed');
-            }
-
-            setResult(data);
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'An error occurred';
-            setError(message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Helper to temporarily replace Metabase placeholders with valid SQL for formatting/validation
-    const sanitizePlaceholders = (sql: string): { sanitized: string; placeholders: Map<string, string> } => {
-        const placeholders = new Map<string, string>();
-        let sanitized = sql;
-        let counter = 0;
-
-        // Replace [[...]] optional blocks with a unique token
-        sanitized = sanitized.replace(/\[\[[^\]]*\]\]/g, (match) => {
-            const token = `__METABASE_OPT_${counter++}__`;
-            placeholders.set(token, match);
-            return `/* ${token} */`;
-        });
-
-        // Replace {{...}} variable placeholders with a unique token
-        sanitized = sanitized.replace(/\{\{[^}]+\}\}/g, (match) => {
-            const token = `__METABASE_VAR_${counter++}__`;
-            placeholders.set(token, match);
-            return `'${token}'`;
-        });
-
-        return { sanitized, placeholders };
-    };
-
-    // Helper to restore Metabase placeholders after formatting
-    const restorePlaceholders = (sql: string, placeholders: Map<string, string>): string => {
-        let restored = sql;
-        placeholders.forEach((original, token) => {
-            // Handle both comment-wrapped optional blocks and quoted variables
-            restored = restored.replace(new RegExp(`/\\*\\s*${token}\\s*\\*/`, 'g'), original);
-            restored = restored.replace(new RegExp(`'${token}'`, 'g'), original);
-        });
-        return restored;
-    };
-
-    // Simple SQL validation: check for empty input and basic SELECT/statement
-    const validateSQL = () => {
-        // Update URL with current query
-        updateUrlParams({ sql: query });
-
-        if (!query.trim()) {
-            setValidateError('SQL kan ikke være tom.');
-            setShowValidation(true);
-            return false;
-        }
-        // Basic check for SQL command
-        const valid = /\b(SELECT|INSERT|UPDATE|DELETE|WITH|CREATE|DROP|ALTER|SHOW|DESCRIBE)\b/i.test(query);
-        if (!valid) {
-            setValidateError('SQL må inneholde en gyldig kommando (f.eks. SELECT, INSERT, ...).');
-            setShowValidation(true);
-            return false;
-        }
-        // Try formatting to catch syntax errors (with placeholder sanitization)
-        try {
-            const { sanitized } = sanitizePlaceholders(query);
-            sqlFormatter.format(sanitized);
-            setValidateError('SQL er gyldig!');
-            setShowValidation(true);
-            return true;
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Syntaksfeil';
-            setValidateError('Ugyldig SQL: ' + message);
-            setShowValidation(true);
-            return false;
-        }
-    };
-
-    const formatSQL = () => {
-        // Update URL with current query
-        updateUrlParams({ sql: query });
-
-        try {
-            const { sanitized, placeholders } = sanitizePlaceholders(query);
-            const formatted = sqlFormatter.format(sanitized);
-            const restored = restorePlaceholders(formatted, placeholders);
-            setQuery(restored);
-            setFormatSuccess(true);
-            setTimeout(() => setFormatSuccess(false), 2000);
-        } catch (e) {
-            setValidateError('Kunne ikke formatere SQL. Sjekk om den er gyldig.');
-            setShowValidation(true);
-        }
-    };
-
-    const shareQuery = () => {
-        const encodedSql = encodeURIComponent(query);
-        const shareUrl = `${window.location.origin}/sql?sql=${encodedSql}`;
-        navigator.clipboard.writeText(shareUrl);
-        setShareSuccess(true);
-        setTimeout(() => setShareSuccess(false), 3000);
-    };
-
-    // Clear validation message on edit
-    const handleQueryChange = (val: string) => {
-        setQuery(val);
-        setShowValidation(false);
-    };
-
-    // Prepare chart data functions
-    const prepareLineChartData = (includeAverage: boolean = false) => {
-        if (!result?.data || result.data.length === 0) return null;
-
-        const data = result.data;
-        const keys = Object.keys(data[0] ?? {});
-        if (keys.length < 2) return null;
-
-        // Check if we have 3 columns - likely x-axis, series grouping, and y-axis
-        if (keys.length === 3) {
-            const xKey = keys[0];
-            const seriesKey = keys[1];
-            const yKey = keys[2];
-
-            const seriesMap = new Map<string, { x: number | Date; y: number; xAxisCalloutData: string; yAxisCalloutData: string }[]>();
-
-            data.forEach((row, rowIndex: number) => {
-                const rawSeriesValue = row[seriesKey];
-                const translatedSeriesValue = translateValue(seriesKey, rawSeriesValue ?? '');
-                const seriesValue = String(translatedSeriesValue || 'Ukjent');
-                if (!seriesMap.has(seriesValue)) {
-                    seriesMap.set(seriesValue, []);
-                }
-
-                const xValue = row[xKey];
-                const rawY = row[yKey];
-                const yValue = typeof rawY === 'number' ? rawY : parseFloat(String(rawY)) || 0;
-
-                let x: number | Date;
-                if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-                    const parsedDate = new Date(xValue);
-                    x = !isNaN(parsedDate.getTime()) ? parsedDate : rowIndex;
-                } else if (typeof xValue === 'number') {
-                    x = xValue;
-                } else {
-                    const parsedDate = new Date(String(xValue));
-                    x = !isNaN(parsedDate.getTime()) ? parsedDate : rowIndex;
-                }
-
-                seriesMap.get(seriesValue)!.push({
-                    x,
-                    y: yValue,
-                    xAxisCalloutData: String(xValue),
-                    yAxisCalloutData: String(yValue),
-                });
-            });
-
-            // Convert to line chart format with colors
-            // Using colorblind-friendly palette with good contrast
-            const colors = [
-                '#0067C5', // Blue (NAV blue)
-                '#FF9100', // Orange
-                '#06893A', // Green
-                '#C30000', // Red
-                '#634689', // Purple
-                '#A8874C', // Brown/Gold
-                '#005B82', // Teal
-                '#E18AAA', // Pink
-            ];
-            const lineChartData = Array.from(seriesMap.entries()).map(([seriesName, points], index) => ({
-                legend: seriesName,
-                data: points,
-                color: colors[index % colors.length],
-                lineOptions: {
-                    lineBorderWidth: '2',
-                },
-            }));
-
-            // Calculate average line across all data points (only if requested)
-            if (includeAverage) {
-                // Collect all unique x values
-                const allXValues = new Set<number>();
-                lineChartData.forEach(series => {
-                    series.data.forEach(point => {
-                        const xVal = point.x instanceof Date ? point.x.getTime() : Number(point.x);
-                        allXValues.add(xVal);
-                    });
-                });
-
-                // For each x value, calculate the average y value across all series
-                const averagePoints = Array.from(allXValues)
-                    .sort((a, b) => a - b)
-                    .map((xVal) => {
-                        const yValues: number[] = [];
-                        lineChartData.forEach(series => {
-                            const point = series.data.find((p) => {
-                                const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
-                                return pxVal === xVal;
-                            });
-                            if (point) yValues.push(point.y);
-                        });
-
-                        const avgY = yValues.length > 0
-                            ? yValues.reduce((sum, val) => sum + val, 0) / yValues.length
-                            : 0;
-
-                        const originalPoint = lineChartData[0]?.data.find((p) => {
-                            const pxVal = p.x instanceof Date ? p.x.getTime() : Number(p.x);
-                            return pxVal === xVal;
-                        });
-
-                        return {
-                            x: new Date(xVal),
-                            y: avgY,
-                            xAxisCalloutData: originalPoint?.xAxisCalloutData || String(xVal),
-                            yAxisCalloutData: avgY.toFixed(2),
-                        };
-                    });
-
-                lineChartData.push({
-                    legend: 'Gjennomsnitt',
-                    data: averagePoints,
-                    color: '#262626',
-                    lineOptions: {
-                        lineBorderWidth: '2',
-                    },
-                });
-            }
-
-            return {
-                data: { lineChartData },
-                enabledLegendsWrapLines: true,
-            };
-        }
-
-        // Single line
-        const xKey = keys[0];
-        const yKey = keys[1];
-
-        const chartPoints = data.map((row, index: number) => {
-            const xValue = row[xKey];
-            const rawY = row[yKey];
-            const yValue = typeof rawY === 'number' ? rawY : parseFloat(String(rawY)) || 0;
-
-            let x: number | Date;
-            if (typeof xValue === 'string' && xValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-                x = new Date(xValue);
-            } else if (typeof xValue === 'number') {
-                x = xValue;
-            } else {
-                x = index;
-            }
-
-            return {
-                x,
-                y: yValue,
-                xAxisCalloutData: String(xValue),
-                yAxisCalloutData: String(yValue),
-            };
-        });
-
-        const lineChartData = [{
-            legend: yKey,
-            data: chartPoints,
-            color: '#0067C5',
-            lineOptions: {
-                lineBorderWidth: '2',
-            },
-        }];
-
-        if (includeAverage) {
-            const avgY = chartPoints.reduce((sum: number, point) => sum + point.y, 0) / chartPoints.length;
-
-            const averageLinePoints = chartPoints.map((point) => ({
-                x: point.x,
-                y: avgY,
-                xAxisCalloutData: point.xAxisCalloutData,
-                yAxisCalloutData: avgY.toFixed(2),
-            }));
-
-            lineChartData.push({
-                legend: 'Gjennomsnitt',
-                data: averageLinePoints,
-                color: '#262626',
-                lineOptions: {
-                    lineBorderWidth: '2',
-                },
-            });
-        }
-
-        return {
-            data: { lineChartData },
-            enabledLegendsWrapLines: true,
-        };
-    };
-
-    const prepareBarChartData = () => {
-        if (!result?.data || result.data.length === 0) return null;
-        const data = result.data;
-
-        // Only show bar chart if 12 or fewer items
-        if (data.length > 12) return null;
-
-        const keys = Object.keys(data[0]);
-
-        // Need at least 2 columns (label and value)
-        if (keys.length < 2) return null;
-
-        // Assume first column is label and second is value
-        const labelKey = keys[0];
-        const valueKey = keys[1];
-
-        // Calculate total for percentages
-        const total = data.reduce((sum: number, row) => {
-            const raw = row[valueKey];
-            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
-            return sum + value;
-        }, 0);
-
-        const barChartData = data.map((row) => {
-            const raw = row[valueKey];
-            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-
-            // Use label for x-axis, with translation
-            const rawLabel = row[labelKey];
-            const translatedLabel = translateValue(labelKey, rawLabel ?? '');
-            const label = String(translatedLabel || 'Ukjent');
-
-            return {
-                x: label,
-                y: value,
-                xAxisCalloutData: label,
-                yAxisCalloutData: `${value} (${percentage}%)`,
-                color: '#0067C5', // NAV blue color
-                legend: label,
-            };
-        });
-
-        return {
-            data: barChartData,
-            barWidth: 'auto' as const,
-            yAxisTickCount: 5,
-            enableReflow: true,
-            legendProps: {
-                allowFocusOnLegends: true,
-                canSelectMultipleLegends: false,
-                styles: {
-                    root: {
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        rowGap: '8px',
-                        columnGap: '16px',
-                        maxWidth: '100%',
-                    },
-                    legend: {
-                        marginRight: 0,
-                    },
-                },
-            },
-        };
-    };
-
-    const preparePieChartData = () => {
-        if (!result?.data || result.data.length === 0) return null;
-        const data = result.data;
-
-        // Only show pie chart if 12 or fewer items
-        if (data.length > 12) return null;
-
-        const keys = Object.keys(data[0]);
-
-        // Need at least 2 columns (label and value)
-        if (keys.length < 2) return null;
-
-        // Assume first column is label and second is value
-        const labelKey = keys[0];
-        const valueKey = keys[1];
-
-        // Calculate total for percentages
-        const total = data.reduce((sum: number, row) => {
-            const raw = row[valueKey];
-            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
-            return sum + value;
-        }, 0);
-
-        const pieChartData = data.map((row) => {
-            const raw = row[valueKey];
-            const value = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
-            const rawLabel = row[labelKey];
-            const translatedLabel = translateValue(labelKey, rawLabel ?? '');
-            const label = String(translatedLabel || 'Ukjent');
-
-            return {
-                y: value,
-                x: label,
-            };
-        });
-
-        return {
-            data: pieChartData,
-            total,
-        };
-    };
+    const {
+        query,
+        result,
+        estimate,
+        loading,
+        estimating,
+        error,
+        validateError,
+        showValidation,
+        showEstimate,
+        shareSuccess,
+        formatSuccess,
+        lastProcessedSql,
+        copiedMetabase,
+        editorHeight,
+        hasAttemptedFetch,
+        oldTableWarning,
+        showUpgradeSuccess,
+        websiteId,
+        period,
+        dateRange,
+        urlPath,
+        selectedWebsite,
+        customVariables,
+        customVariableValues,
+        hasMetabaseDateFilter,
+        hasUrlPathFilter,
+        hasWebsiteIdPlaceholder,
+        hasNettsidePlaceholder,
+        hasHardcodedWebsiteId,
+
+        setEditorHeight,
+        setShowValidation,
+        setShowEstimate,
+        setShowUpgradeSuccess,
+        setUrlPath,
+        setCustomVariableValues,
+
+        handleQueryChange,
+        handleWebsiteChange,
+        handleUpgradeTables,
+        handleAddDateFilter,
+        handleCopyMetabase,
+        handlePeriodChange,
+        handleStartDateChange,
+        handleEndDateChange,
+        estimateCost,
+        executeQuery,
+        validateSQL,
+        formatSQL,
+        shareQuery,
+
+        prepareLineChartData,
+        prepareBarChartData,
+        preparePieChartData,
+    } = useSqlEditor();
 
     return (
         <ChartLayout
@@ -967,22 +85,7 @@ export default function SqlEditor() {
                                     <div className="flex-1 min-w-[260px]">
                                         <WebsitePicker
                                             selectedWebsite={selectedWebsite}
-                                            onWebsiteChange={(website) => {
-                                                setSelectedWebsite(website);
-                                                setWebsiteIdState(website?.id || '');
-
-                                                // Only modify the query if user is switching to a DIFFERENT website
-                                                // Don't modify if it's the same website that's already in the SQL
-                                                const currentWebsiteIdInSql = extractWebsiteId(query);
-                                                const isNewWebsite = website?.id && website.id !== currentWebsiteIdInSql;
-
-                                                if (hasHardcodedWebsiteId && isNewWebsite) {
-                                                    // Replace the hardcoded website_id with the new one
-                                                    setQuery(prev => replaceHardcodedWebsiteId(prev, website.id));
-                                                } else if (!hasHardcodedWebsiteId && !hasNettsidePlaceholder) {
-                                                    setQuery(prev => ensureWebsitePlaceholder(prev));
-                                                }
-                                            }}
+                                            onWebsiteChange={handleWebsiteChange}
                                             variant="minimal"
                                             disableAutoRestore={hasHardcodedWebsiteId}
                                             customLabel={hasHardcodedWebsiteId ? "Nettside eller app (overskriver SQL-koden)" : "Nettside eller app"}
@@ -994,60 +97,11 @@ export default function SqlEditor() {
                                     <div className="flex-1 min-w-[260px]">
                                         <PeriodPicker
                                             period={period}
-                                            onPeriodChange={(newPeriod) => {
-                                                setPeriod(newPeriod);
-                                                const now = new Date();
-                                                let newFrom: Date | undefined;
-                                                let newTo: Date | undefined;
-
-                                                if (newPeriod === 'today') {
-                                                    newFrom = now;
-                                                    newTo = now;
-                                                } else if (newPeriod === 'current_month') {
-                                                    newFrom = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-                                                    newTo = now;
-                                                } else if (newPeriod === 'last_month') {
-                                                    newFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                                    newTo = new Date(now.getFullYear(), now.getMonth(), 0);
-                                                }
-
-                                                if (newFrom && newTo) {
-                                                    setDateRange({ from: newFrom, to: newTo });
-                                                }
-
-                                                // Update URL
-                                                updateUrlParams({
-                                                    dateRange: newPeriod,
-                                                    customStartDate: null,
-                                                    customEndDate: null
-                                                });
-                                            }}
+                                            onPeriodChange={handlePeriodChange}
                                             startDate={dateRange.from}
-                                            onStartDateChange={(date) => {
-                                                setDateRange(prev => {
-                                                    const newState = { ...prev, from: date };
-                                                    setPeriod('custom');
-                                                    updateUrlParams({
-                                                        dateRange: 'custom',
-                                                        customStartDate: date ? date.toISOString() : null,
-                                                        customEndDate: newState.to ? newState.to.toISOString() : null
-                                                    });
-                                                    return newState;
-                                                });
-                                            }}
+                                            onStartDateChange={handleStartDateChange}
                                             endDate={dateRange.to}
-                                            onEndDateChange={(date) => {
-                                                setDateRange(prev => {
-                                                    const newState = { ...prev, to: date };
-                                                    setPeriod('custom');
-                                                    updateUrlParams({
-                                                        dateRange: 'custom',
-                                                        customStartDate: newState.from ? newState.from.toISOString() : null,
-                                                        customEndDate: date ? date.toISOString() : null
-                                                    });
-                                                    return newState;
-                                                });
-                                            }}
+                                            onEndDateChange={handleEndDateChange}
                                         />
                                     </div>
                                 )}
@@ -1092,7 +146,7 @@ export default function SqlEditor() {
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_website`); }}
+                                        onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami.public_website`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1106,7 +160,7 @@ export default function SqlEditor() {
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami_views.session`); }}
+                                        onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami_views.session`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1120,7 +174,7 @@ export default function SqlEditor() {
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami_views.event`); }}
+                                        onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami_views.event`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1134,7 +188,7 @@ export default function SqlEditor() {
                                         size="xsmall"
                                         variant="tertiary"
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText(`${projectId}.umami_views.event_data`); }}
+                                        onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami_views.event_data`); }}
                                     >
                                         Kopier
                                     </Button>
@@ -1151,7 +205,7 @@ export default function SqlEditor() {
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_website`); }}
+                                            onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami.public_website`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1165,7 +219,7 @@ export default function SqlEditor() {
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_session`); }}
+                                            onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami.public_session`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1179,7 +233,7 @@ export default function SqlEditor() {
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_website_event`); }}
+                                            onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami.public_website_event`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1193,7 +247,7 @@ export default function SqlEditor() {
                                             size="xsmall"
                                             variant="tertiary"
                                             type="button"
-                                            onClick={() => { navigator.clipboard.writeText(`${projectId}.umami.public_event_data`); }}
+                                            onClick={() => { void navigator.clipboard.writeText(`${projectId}.umami.public_event_data`); }}
                                         >
                                             Kopier
                                         </Button>
@@ -1222,15 +276,7 @@ export default function SqlEditor() {
                                     <Button
                                         size="small"
                                         variant="primary"
-                                        onClick={() => {
-                                            // Replace old tables with new views
-                                            const newQuery = query
-                                                .replace(/umami\.public_website_event/gi, 'umami_views.event')
-                                                .replace(/umami\.public_session/gi, 'umami_views.session');
-                                            setQuery(newQuery);
-                                            setOldTableWarning(false);
-                                            setShowUpgradeSuccess(true);
-                                        }}
+                                        onClick={handleUpgradeTables}
                                     >
                                         Oppdater SQL-spørringen til nye tabeller
                                     </Button>
@@ -1396,19 +442,7 @@ export default function SqlEditor() {
                             <Button
                                 size="small"
                                 variant="secondary"
-                                onClick={() => {
-                                    // Add [[AND {{created_at}}]] to the WHERE clause
-                                    if (/WHERE/i.test(query) && !/\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i.test(query)) {
-                                        const whereMatch = query.match(/WHERE\s+([\s\S]*?)(?=\s*(GROUP BY|ORDER BY|LIMIT|$|\)[\s\n]*,))/i);
-                                        if (whereMatch) {
-                                            const whereClause = whereMatch[0];
-                                            const newWhereClause = whereClause.trimEnd() + '\n      [[AND {{created_at}}]]';
-                                            const newQuery = query.replace(whereClause, newWhereClause);
-                                            setQuery(newQuery);
-                                        }
-                                    }
-                                    setError(null);
-                                }}
+                                onClick={handleAddDateFilter}
                             >
                                 Legg til datofilter [[AND {"{{created_at}}"}]]
                             </Button>
@@ -1466,12 +500,7 @@ export default function SqlEditor() {
                                 size="small"
                                 variant="secondary"
                                 type="button"
-                                onClick={() => {
-                                    const metabaseSql = applyWebsiteIdOnly(query); // only hardcode website_id; keep other placeholders
-                                    navigator.clipboard.writeText(metabaseSql);
-                                    setCopiedMetabase(true);
-                                    setTimeout(() => setCopiedMetabase(false), 2000);
-                                }}
+                                onClick={handleCopyMetabase}
                                 icon={<Copy size={16} />}
                             >
                                 {copiedMetabase ? 'Kopiert!' : 'Kopier spørring'}
