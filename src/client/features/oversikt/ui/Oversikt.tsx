@@ -433,7 +433,7 @@ const Oversikt = () => {
 
   return (
     <DashboardLayout
-      title="Dashboard"
+      title={selectedDashboard ? `Dashboard: ${selectedDashboard.name}` : 'Dashboard'}
       filters={filters}
     >
       {error && <Alert variant="error">{error}</Alert>}
