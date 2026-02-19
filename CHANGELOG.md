@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 ### 📚 Documentation
 
 - Update CHANGELOG.md
+- Update CHANGELOG.md
 
 ### 📦 Miscellaneous
 
@@ -38,6 +39,7 @@ All notable changes to this project will be documented in this file.
 - Delete deploy-pr
 - Traffic feature structure (#115)
 - Retention feature structure (#116)
+- Split event into eventjourney and eventexplorer
 
 ### 🚀 Features
 
