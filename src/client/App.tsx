@@ -1,15 +1,17 @@
-import { Page, Theme } from "@navikt/ds-react";
+import { Loader, Page, Theme } from "@navikt/ds-react";
 import { Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Route,
   Routes,
   useLocation,
+  Link,
 } from "react-router-dom";
 import routes, { isFullWidthPath } from "./routes.tsx";
 import Footer from "./shared/ui/theme/Footer/Footer.tsx";
 import ScrollToTop from "./shared/ui/theme/ScrollToTop/ScrollToTop.tsx";
 import Header from "./shared/ui/theme/Header/Header.tsx";
+import { ErrorBoundary } from "./shared/ui/ErrorBoundary.tsx";
 import { useHead } from "@unhead/react";
 
 import "./App.css";
@@ -41,6 +43,24 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
     </Page.Block>
   );
 };
+
+// Loading fallback for lazy-loaded routes
+const PageLoader = () => (
+  <div style={{ display: "flex", justifyContent: "center", padding: "4rem 0" }}>
+    <Loader size="xlarge" title="Laster inn..." />
+  </div>
+);
+
+// 404 page for unknown routes
+const NotFound = () => (
+  <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
+    <h1>404 — Siden ble ikke funnet</h1>
+    <p style={{ marginTop: "1rem" }}>
+      Siden du leter etter finnes ikke.{" "}
+      <Link to="/">Gå til forsiden</Link>
+    </p>
+  </div>
+);
 
 function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -90,13 +110,16 @@ function App() {
         <Header theme={theme} />
         <Router>
           <PageLayout>
-            <Suspense fallback={null}>
-              <Routes>
-                {routes.map(({ path, component }) => (
-                  <Route key={path} path={path} element={component} />
-                ))}
-              </Routes>
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {routes.map(({ path, component }) => (
+                    <Route key={path} path={path} element={component} />
+                  ))}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
             <ScrollToTopWrapper />
           </PageLayout>
         </Router>
