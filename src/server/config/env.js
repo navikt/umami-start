@@ -10,7 +10,16 @@ const normalizeBaseUrl = (value) => {
 };
 
 export const BIGQUERY_TIMEZONE = 'Europe/Oslo';
-export const BACKEND_BASE_URL = normalizeBaseUrl(process.env.BACKEND_BASE_URL || process.env.VITE_BACKEND_BASE_URL);
+const defaultDevBackendBaseUrl =
+  process.env.NODE_ENV === 'production'
+    ? undefined
+    : 'https://start-umami-backend.intern.dev.nav.no';
+
+export const BACKEND_BASE_URL = normalizeBaseUrl(
+  process.env.BACKEND_BASE_URL
+  || process.env.VITE_BACKEND_BASE_URL
+  || defaultDevBackendBaseUrl,
+);
 export const SITEIMPROVE_BASE_URL = normalizeBaseUrl(process.env.SITEIMPROVE_BASE_URL || process.env.VITE_SITEIMPROVE_BASE_URL);
 export const UMAMI_BASE_URL = normalizeBaseUrl(process.env.UMAMI_BASE_URL || process.env.VITE_UMAMI_BASE_URL);
 export const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || process.env.VITE_GCP_PROJECT_ID;
