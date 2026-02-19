@@ -56,3 +56,5 @@ spec:
       value: "team-researchops-dev-4396"
     - name: BACKEND_BASE_URL
       value: "http://start-umami-backend"
+    - name: BACKEND_OBO_SCOPE
+      value: "api://dev-gcp.team-researchops.start-umami-backend/.default"
