@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Heading, Button, Table, TextField } from '@navikt/ds-react';
 import { Download } from 'lucide-react';
-import type { QueryStats } from '../../model/types.ts';
+import type { QueryStats } from '../model/types.ts';
 
 interface EventListProps {
     events: { name: string; count: number }[];

@@ -7,8 +7,8 @@ import PeriodPicker from '../../analysis/ui/PeriodPicker.tsx';
 import UrlPathFilter from '../../analysis/ui/UrlPathFilter.tsx';
 import { useEventExplorer } from '../hooks/useEventExplorer.ts';
 import { copyToClipboard } from '../utils/clipboard.ts';
-import EventList from './explorer/EventList.tsx';
-import EventDetailView from './explorer/EventDetailView.tsx';
+import EventList from './EventList.tsx';
+import EventDetailView from './EventDetailView.tsx';
 
 const EventExplorer = () => {
     const {

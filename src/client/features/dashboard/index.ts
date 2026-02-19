@@ -1,4 +1,6 @@
 // UI Components
+export { default as Dashboard } from './ui/Dashboard';
+export { default as DashboardOverview } from './ui/DashboardOverview';
 export { default as DashboardLayout } from './ui/DashboardLayout';
 export { default as DashboardWebsitePicker } from './ui/DashboardWebsitePicker';
 export { DashboardWidget } from './ui/DashboardWidget';

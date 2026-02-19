@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Switch } from '@navikt/ds-react';
 import { LineChart, ResponsiveContainer } from '@fluentui/react-charting';
-import type { SeriesPoint, QueryStats } from '../../model/types.ts';
-import { prepareLineChartData } from '../../utils/chartHelpers.ts';
+import type { SeriesPoint, QueryStats } from '../model/types.ts';
+import { prepareLineChartData } from '../utils/chartHelpers.ts';
 import EventSeriesTrendTable from './EventSeriesTrendTable.tsx';
 
 interface EventSeriesChartProps {

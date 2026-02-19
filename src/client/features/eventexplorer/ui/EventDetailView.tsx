@@ -1,6 +1,6 @@
 import { Heading, Button, Loader } from '@navikt/ds-react';
 import { ArrowLeft } from 'lucide-react';
-import type { SeriesPoint, EventProperty, ParameterValue, LatestEvent, QueryStats } from '../../model/types.ts';
+import type { SeriesPoint, EventProperty, ParameterValue, LatestEvent, QueryStats } from '../model/types.ts';
 import EventSeriesChart from './EventSeriesChart.tsx';
 import EventPropertiesSection from './EventPropertiesSection.tsx';
 

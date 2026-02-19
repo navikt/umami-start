@@ -1,6 +1,6 @@
 import { Button } from '@navikt/ds-react';
 import { Download } from 'lucide-react';
-import type { SeriesPoint, QueryStats } from '../../model/types.ts';
+import type { SeriesPoint, QueryStats } from '../model/types.ts';
 
 interface EventSeriesTrendTableProps {
     seriesData: SeriesPoint[];

@@ -11,4 +11,3 @@ export { default as Tilgjengelighet } from './ui/articles/Tilgjengelighet';
 // Topics
 export { default as Oppsett } from './ui/topics/Oppsett';
 export { default as Sporingskoder } from './ui/topics/Sporingskoder';
-export { default as DashboardOverview } from '../dashboard/ui/DashboardOverview';

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Heading, Button, BodyShort, Table, Tabs, Skeleton, Loader } from '@navikt/ds-react';
 import { ArrowLeft } from 'lucide-react';
-import type { EventProperty, ParameterValue, LatestEvent, QueryStats } from '../../model/types.ts';
+import type { EventProperty, ParameterValue, LatestEvent, QueryStats } from '../model/types.ts';
 
 interface EventPropertiesSectionProps {
     propertiesData: EventProperty[];
