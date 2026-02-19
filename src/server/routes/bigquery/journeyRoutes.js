@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent, getDryRunStats } from './helpers.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createJourneyRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -119,6 +119,7 @@ export function createJourneyRoutes({ bigquery, GCP_PROJECT_ID }) {
         query,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Sideflyt'));
 
       const [rows] = await job.getQueryResults();

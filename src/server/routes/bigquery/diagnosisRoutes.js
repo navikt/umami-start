@@ -1,5 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
+import { MAX_BYTES_BILLED } from './helpers.js';
 
 export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -42,7 +43,8 @@ export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Diagnoseverktoy'));
 
           const [rows] = await job.getQueryResults();
@@ -130,7 +132,8 @@ export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
           const [historyJob] = await bigquery.createQueryJob(addAuditLogging({
               query: historyQuery,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Diagnoseverktoy'));
 
           // Get NAV ident from authenticated user for audit logging
@@ -138,7 +141,8 @@ export function createDiagnosisRouter({ bigquery, GCP_PROJECT_ID }) {
           const [lastEventJob] = await bigquery.createQueryJob(addAuditLogging({
               query: lastEventQuery,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Diagnoseverktoy'));
 
           const [historyRows] = await historyJob.getQueryResults();

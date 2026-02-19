@@ -3,6 +3,13 @@
  */
 
 /**
+ * Maximum bytes a single query is allowed to scan (10 GB).
+ * BigQuery will abort the job before executing if it would exceed this.
+ * Must be passed as a string to the BigQuery client.
+ */
+export const MAX_BYTES_BILLED = String(10 * 1024 ** 3);
+
+/**
  * Ensures the BigQuery client is initialized.
  * Sends a 500 response and returns false if not.
  */

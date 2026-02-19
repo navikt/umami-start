@@ -1,155 +1,176 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, MAX_BYTES_BILLED } from './helpers.js';
+
+// SQL statements that are forbidden in user-submitted queries.
+// Matched against the normalised (comment-free, uppercased) query text.
+const FORBIDDEN_PATTERNS = [
+  /\bINSERT\b/,
+  /\bUPDATE\b/,
+  /\bDELETE\b/,
+  /\bDROP\b/,
+  /\bTRUNCATE\b/,
+  /\bALTER\b/,
+  /\bCREATE\b/,
+  /\bMERGE\b/,
+  /\bGRANT\b/,
+  /\bREVOKE\b/,
+  /\bCALL\b/,
+  /\bEXECUTE\b/,
+  /\bEXEC\b/,
+  /\bEXPORT\b/,
+  /\bLOAD\b/,
+];
+
+/**
+ * Validates that a SQL query is read-only.
+ *
+ * 1. Strips SQL comments (single-line `--` and multi-line).
+ * 2. Requires the first keyword to be SELECT or WITH.
+ * 3. Rejects any occurrence of DML / DDL keywords.
+ *
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateQuery(rawQuery) {
+  // Strip single-line comments (-- …) and multi-line comments (/* … */)
+  const stripped = rawQuery
+    .replace(/--[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .trim();
+
+  if (!stripped) {
+    return { valid: false, error: 'Query is empty after removing comments' };
+  }
+
+  const upper = stripped.toUpperCase();
+
+  // The first meaningful keyword must be SELECT or WITH
+  const firstKeyword = upper.match(/^\s*(\w+)/)?.[1];
+  if (firstKeyword !== 'SELECT' && firstKeyword !== 'WITH') {
+    return {
+      valid: false,
+      error: `Only SELECT queries are allowed. Got: ${firstKeyword || '(unknown)'}`,
+    };
+  }
+
+  // Scan for any forbidden DML / DDL keywords
+  for (const pattern of FORBIDDEN_PATTERNS) {
+    if (pattern.test(upper)) {
+      const keyword = upper.match(pattern)?.[0];
+      return {
+        valid: false,
+        error: `Forbidden SQL keyword detected: ${keyword}`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
 
 export function createSqlRouter({ bigquery }) {
   const router = express.Router();
 
-  // BigQuery API endpoint
+  // BigQuery API endpoint — execute a read-only query
   router.post('/api/bigquery', async (req, res) => {
-      try {
-          const { query, analysisType } = req.body
+    try {
+      const { query, analysisType } = req.body;
 
-          console.log('[BigQuery API] Request received');
-
-          if (!query) {
-              console.error('[BigQuery API] Error: Query is required');
-              return res.status(400).json({ error: 'Query is required' })
-          }
-
-          if (!bigquery) {
-              console.error('[BigQuery API] Error: BigQuery client not initialized');
-              return res.status(500).json({
-                  error: 'BigQuery client not initialized',
-                  details: 'Check server logs for initialization errors'
-              })
-          }
-
-          console.log('[BigQuery API] Submitting query...');
-
-          // Get NAV ident from authenticated user for audit logging
-          const navIdent = req.user?.navIdent || 'UNKNOWN';
-
-          const [job] = await bigquery.createQueryJob(addAuditLogging({
-              query: query,
-              location: 'europe-north1'
-          }, navIdent, analysisType || 'Sqlverktoy'));
-
-          console.log('[BigQuery API] Query job created, waiting for results...');
-
-          const [rows] = await job.getQueryResults()
-
-          console.log('[BigQuery API] Query successful, returned', rows.length, 'rows');
-
-          // Get dry run stats
-          let queryStats = null;
-          try {
-              // Get NAV ident from authenticated user for audit logging
-
-              const [dryRunJob] = await bigquery.createQueryJob(addAuditLogging({
-                  query: query,
-                  location: 'europe-north1',
-                  dryRun: true
-              }, navIdent, analysisType || 'Sqlverktoy'));
-
-              const stats = dryRunJob.metadata.statistics;
-              const bytesProcessed = parseInt(stats.totalBytesProcessed);
-              const gbProcessed = (bytesProcessed / (1024 ** 3)).toFixed(2);
-              const estimatedCostUSD = ((bytesProcessed / (1024 ** 4)) * 6.25).toFixed(3);
-
-              queryStats = {
-                  totalBytesProcessed: bytesProcessed,
-                  totalBytesProcessedGB: gbProcessed,
-                  estimatedCostUSD: estimatedCostUSD
-              };
-
-              console.log('[BigQuery API] Dry run stats - Processing', gbProcessed, 'GB, estimated cost: $' + estimatedCostUSD);
-          } catch (dryRunError) {
-              console.log('[BigQuery API] Dry run failed:', dryRunError.message);
-          }
-
-          res.json({
-              success: true,
-              data: rows,
-              rowCount: rows.length,
-              queryStats
-          })
-      } catch (error) {
-          console.error('==========================================');
-          console.error('[BigQuery API] ERROR');
-          console.error('==========================================');
-          console.error('Error message:', error.message);
-          console.error('Error code:', error.code);
-          console.error('Error name:', error.name);
-          if (error.errors) {
-              console.error('Error details:', JSON.stringify(error.errors, null, 2));
-          }
-          if (error.response) {
-              console.error('Error response:', JSON.stringify(error.response, null, 2));
-          }
-          console.error('Full error:', error);
-          console.error('==========================================');
-
-          res.status(500).json({
-              error: error.message || 'Failed to execute query',
-              details: error.toString(),
-              code: error.code
-          })
+      if (!query) {
+        return res.status(400).json({ error: 'Query is required' });
       }
-  })
 
-  // BigQuery dry run endpoint - estimate query cost
+      if (!requireBigQuery(bigquery, res)) return;
+
+      // Validate: only SELECT / WITH queries are allowed
+      const validation = validateQuery(query);
+      if (!validation.valid) {
+        return res.status(403).json({ error: validation.error });
+      }
+
+      const navIdent = getNavIdent(req);
+
+      const [job] = await bigquery.createQueryJob(addAuditLogging({
+        query,
+        location: 'europe-north1',
+        maximumBytesBilled: MAX_BYTES_BILLED,
+      }, navIdent, analysisType || 'Sqlverktoy'));
+
+      const [rows] = await job.getQueryResults();
+
+      const queryStats = await getDryRunStats(bigquery, {
+        query,
+        navIdent,
+        analysisType: analysisType || 'Sqlverktoy',
+      }, addAuditLogging);
+
+      res.json({
+        success: true,
+        data: rows,
+        rowCount: rows.length,
+        queryStats,
+      });
+    } catch (error) {
+      console.error('[BigQuery API] Error:', error.message);
+      if (error.errors) {
+        console.error('[BigQuery API] Details:', JSON.stringify(error.errors, null, 2));
+      }
+
+      res.status(500).json({
+        error: error.message || 'Failed to execute query',
+        code: error.code,
+      });
+    }
+  });
+
+  // BigQuery dry run endpoint — estimate query cost
   router.post('/api/bigquery/estimate', async (req, res) => {
-      try {
-          const { query, analysisType } = req.body
+    try {
+      const { query, analysisType } = req.body;
 
-          if (!query) {
-              return res.status(400).json({ error: 'Query is required' })
-          }
-
-          if (!bigquery) {
-              return res.status(500).json({
-                  error: 'BigQuery client not initialized',
-                  details: 'Check server logs for initialization errors'
-              })
-          }
-
-          // Dry run to get query statistics without executing
-          // Get NAV ident from authenticated user for audit logging
-          const navIdent = req.user?.navIdent || 'UNKNOWN';
-
-          const [job] = await bigquery.createQueryJob(addAuditLogging({
-              query: query,
-              location: 'europe-north1',
-              dryRun: true
-          }, navIdent, analysisType || 'Sqlverktoy'));
-
-          const stats = job.metadata.statistics;
-          const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);
-          const totalBytesBilled = parseInt(stats.query?.totalBytesBilled || totalBytesProcessed);
-
-          // BigQuery pricing: $6.25 per TB (as of 2024)
-          // First 1 TB per month is free
-          const costPerTB = 6.25;
-          const bytesPerTB = 1024 * 1024 * 1024 * 1024;
-          const estimatedCostUSD = (totalBytesBilled / bytesPerTB) * costPerTB;
-
-          res.json({
-              success: true,
-              totalBytesProcessed: totalBytesProcessed,
-              totalBytesBilled: totalBytesBilled,
-              totalBytesProcessedMB: (totalBytesProcessed / (1024 * 1024)).toFixed(2),
-              totalBytesProcessedGB: (totalBytesProcessed / (1024 * 1024 * 1024)).toFixed(1),
-              estimatedCostUSD: estimatedCostUSD.toFixed(3),
-              cacheHit: stats.query?.cacheHit || false,
-          })
-      } catch (error) {
-          console.error('BigQuery estimate error:', error)
-          res.status(500).json({
-              error: error.message || 'Failed to estimate query',
-              details: error.toString()
-          })
+      if (!query) {
+        return res.status(400).json({ error: 'Query is required' });
       }
-  })
+
+      if (!requireBigQuery(bigquery, res)) return;
+
+      // Same validation — don't even dry-run forbidden queries
+      const validation = validateQuery(query);
+      if (!validation.valid) {
+        return res.status(403).json({ error: validation.error });
+      }
+
+      const navIdent = getNavIdent(req);
+
+      const [job] = await bigquery.createQueryJob(addAuditLogging({
+        query,
+        location: 'europe-north1',
+        dryRun: true,
+      }, navIdent, analysisType || 'Sqlverktoy'));
+
+      const stats = job.metadata.statistics;
+      const totalBytesProcessed = parseInt(stats.totalBytesProcessed || 0);
+      const totalBytesBilled = parseInt(stats.query?.totalBytesBilled || totalBytesProcessed);
+
+      // BigQuery pricing: $6.25 per TB
+      const estimatedCostUSD = (totalBytesBilled / (1024 ** 4)) * 6.25;
+
+      res.json({
+        success: true,
+        totalBytesProcessed,
+        totalBytesBilled,
+        totalBytesProcessedMB: (totalBytesProcessed / (1024 ** 2)).toFixed(2),
+        totalBytesProcessedGB: (totalBytesProcessed / (1024 ** 3)).toFixed(1),
+        estimatedCostUSD: estimatedCostUSD.toFixed(3),
+        cacheHit: stats.query?.cacheHit || false,
+        maximumBytesBilled: MAX_BYTES_BILLED,
+      });
+    } catch (error) {
+      console.error('[BigQuery Estimate] Error:', error.message);
+      res.status(500).json({
+        error: error.message || 'Failed to estimate query',
+      });
+    }
+  });
 
   return router;
 }

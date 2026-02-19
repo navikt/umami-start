@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent, getDryRunStats } from './helpers.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -58,6 +58,7 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
         try {
           const [siteRows] = await bigquery.query(addAuditLogging({
             query: `SELECT website_id, name FROM \`${GCP_PROJECT_ID}.umami.public_website\``,
+            maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Personvernssjekk'));
           siteRows.forEach(r => websiteMap.set(r.website_id, r.name));
         } catch (e) {
@@ -202,6 +203,7 @@ export function createPrivacyRoutes({ bigquery, GCP_PROJECT_ID }) {
         query: finalQuery,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Personvernssjekk'));
 
       const [rows] = await job.getQueryResults();

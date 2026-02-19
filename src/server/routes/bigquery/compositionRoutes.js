@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql } from './helpers.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createCompositionRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -91,6 +91,7 @@ export function createCompositionRoutes({ bigquery, GCP_PROJECT_ID }) {
         query,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Brukersammensetning'));
 
       const [rows] = await job.getQueryResults();

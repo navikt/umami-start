@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent } from './helpers.js';
+import { requireBigQuery, getNavIdent, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createWebsiteRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -29,6 +29,7 @@ export function createWebsiteRoutes({ bigquery, GCP_PROJECT_ID }) {
       const [job] = await bigquery.createQueryJob(addAuditLogging({
         query,
         location: 'europe-north1',
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Nettsidevelger'));
 
       const [rows] = await job.getQueryResults();

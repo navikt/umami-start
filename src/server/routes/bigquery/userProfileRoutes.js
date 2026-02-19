@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql } from './helpers.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -129,6 +129,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
         query,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Brukerprofiler'));
 
       const [rows] = await job.getQueryResults();
@@ -153,6 +154,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
         query: countQuery,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Brukerprofiler'));
 
       const [countRows] = await countJob.getQueryResults();
@@ -215,6 +217,7 @@ export function createUserProfileRoutes({ bigquery, GCP_PROJECT_ID }) {
         query,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Brukerprofiler'));
 
       const [rows] = await job.getQueryResults();

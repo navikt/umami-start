@@ -1,6 +1,6 @@
 import express from 'express';
 import { addAuditLogging, substituteQueryParameters } from '../../bigquery/audit.js';
-import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql } from './helpers.js';
+import { requireBigQuery, getNavIdent, getDryRunStats, normalizeUrlSql, MAX_BYTES_BILLED } from './helpers.js';
 
 export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
   const router = express.Router();
@@ -193,6 +193,7 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
         query,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Traktanalyse'));
 
       const [rows] = await job.getQueryResults();
@@ -375,6 +376,7 @@ export function createFunnelRoutes({ bigquery, GCP_PROJECT_ID }) {
         query,
         location: 'europe-north1',
         params,
+        maximumBytesBilled: MAX_BYTES_BILLED,
       }, navIdent, 'Traktanalyse'));
 
       const [rows] = await job.getQueryResults();

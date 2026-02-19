@@ -1,5 +1,6 @@
 import express from 'express';
 import { addAuditLogging, getAnalysisTypeOverride } from '../../bigquery/audit.js';
+import { MAX_BYTES_BILLED } from './helpers.js';
 
 export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();
@@ -187,7 +188,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Trafikkanalyse'));
 
           const [rows] = await job.getQueryResults();
@@ -224,7 +226,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
               const [totalJob] = await bigquery.createQueryJob(addAuditLogging({
                   query: totalQuery,
                   location: 'europe-north1',
-                  params: params
+                  params: params,
+                  maximumBytesBilled: MAX_BYTES_BILLED,
               }, navIdent, 'Trafikkanalyse'));
 
               const [totalRows] = await totalJob.getQueryResults();
@@ -438,7 +441,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Trafikkanalyse'));
 
           const [rows] = await job.getQueryResults();
@@ -578,7 +582,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'trafikkanalyse'));
 
           const [rows] = await job.getQueryResults();
@@ -745,7 +750,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'trafikkanalyse'));
 
           const [rows] = await job.getQueryResults();
@@ -897,7 +903,8 @@ export function createTrafficRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZON
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, getAnalysisTypeOverride(req, 'Markedsanalyse')));
 
           const [rows] = await job.getQueryResults();

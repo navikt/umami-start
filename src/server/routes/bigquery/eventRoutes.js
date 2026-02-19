@@ -1,5 +1,6 @@
 import express from 'express';
 import { addAuditLogging } from '../../bigquery/audit.js';
+import { MAX_BYTES_BILLED } from './helpers.js';
 
 export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE }) {
   const router = express.Router();
@@ -62,7 +63,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesutforsker'));
 
           const [rows] = await job.getQueryResults();
@@ -233,7 +235,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesutforsker'));
 
           const [rows] = await job.getQueryResults();
@@ -365,7 +368,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesutforsker'));
 
           const [rows] = await job.getQueryResults();
@@ -417,7 +421,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
               location: 'europe-north1',
               params: {
                   websiteId: websiteId
-              }
+              },
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Datovelger'));
 
           const [rows] = await job.getQueryResults();
@@ -510,7 +515,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesutforsker'));
 
           const [rows] = await job.getQueryResults();
@@ -631,7 +637,8 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           const [job] = await bigquery.createQueryJob(addAuditLogging({
               query: query,
               location: 'europe-north1',
-              params: params
+              params: params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesutforsker'));
 
           const [rows] = await job.getQueryResults();
@@ -905,14 +912,16 @@ export function createEventRouter({ bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE 
           const [journeyJob] = await bigquery.createQueryJob(addAuditLogging({
               query,
               location: 'europe-north1',
-              params
+              params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesflyt'));
           const [journeyRows] = await journeyJob.getQueryResults();
 
           const [statsJob] = await bigquery.createQueryJob(addAuditLogging({
               query: statsQuery,
               location: 'europe-north1',
-              params
+              params,
+              maximumBytesBilled: MAX_BYTES_BILLED,
           }, navIdent, 'Hendelsesflyt'));
           const [statsRows] = await statsJob.getQueryResults();
           const journeyStats = statsRows[0] || {};
