@@ -12,6 +12,7 @@ export { default as SqlViewer } from './ui/results/SqlViewer';
 // Hooks
 export { useChartConfig } from './hooks/useChartConfig';
 export { useDebounce } from './hooks/useDebounce';
+export { useGrafdeling } from './hooks/useGrafdeling';
 
 // Model / Constants
 export { DATE_FORMATS, METRICS, SESSION_COLUMNS } from './model/constants';
@@ -22,3 +23,4 @@ export { isRecord, safeParseJson, isMetricArray, isWebsiteLike, isFilterLike, is
 export { getMetricColumns, getParameterAggregator } from './utils/metricColumns';
 export { isSessionColumn, getRequiredSessionColumns, getRequiredTables } from './utils/sessionUtils';
 export { generateSQLCore, getMetricSQL, getMetricSQLByType, getDateFilterConditions } from './utils/sqlGenerator';
+export { applyUrlFiltersToSql, extractWebsiteId } from './utils/sqlFilters';
