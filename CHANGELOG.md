@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 
 - Update CHANGELOG.md
 - Update CHANGELOG.md
+- Update CHANGELOG.md
 
 ### 📦 Miscellaneous
 
@@ -40,6 +41,7 @@ All notable changes to this project will be documented in this file.
 - Traffic feature structure (#115)
 - Retention feature structure (#116)
 - Split event into eventjourney and eventexplorer
+- Analysis feature structure (#117)
 
 ### 🚀 Features
 
