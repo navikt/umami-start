@@ -139,13 +139,14 @@ const QueryPreview = ({
   const [projectName, setProjectName] = useState('Start Umami');
   const [dashboardName, setDashboardName] = useState('Grafbygger');
   const [graphName, setGraphName] = useState('Ny graf');
-  const [graphType, setGraphType] = useState('LINE');
+  const [graphType, setGraphType] = useState('TABLE');
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
   const [selectedProjectOption, setSelectedProjectOption] = useState<string | null>(null);
   const [selectedDashboardOption, setSelectedDashboardOption] = useState<string | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
+  const [showMetabaseInstructions, setShowMetabaseInstructions] = useState(false);
 
   // Check if parameters have changed
   const hasChanges = () => {
@@ -1092,11 +1093,32 @@ const QueryPreview = ({
 
             {/* Save + Metabase Section */}
             <div className="space-y-3 mb-4">
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <Button size="small" variant="primary" onClick={openSaveModal}>
                   Lagre graf
                 </Button>
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => setShowMetabaseInstructions((prev) => !prev)}
+                >
+                  Overfør graf til Metabase
+                </Button>
               </div>
+
+              {showMetabaseInstructions && (
+                <Alert variant="info" size="small">
+                  <div className="space-y-2">
+                    <p className="font-medium">Slik overfører du grafen til Metabase</p>
+                    <ol className="list-decimal pl-5 space-y-1">
+                      <li>Klikk "Kopier spørringen".</li>
+                      <li>Åpne Metabase og opprett et nytt spørsmål (Native query).</li>
+                      <li>Lim inn SQL-koden og lagre spørsmålet.</li>
+                      <li>Legg spørsmålet til i ønsket dashboard i Metabase.</li>
+                    </ol>
+                  </div>
+                </Alert>
+              )}
 
               {saveSuccess && savedLocation && (
                 <Alert variant="success" size="small">
