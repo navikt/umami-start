@@ -66,6 +66,19 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
     }
 
     const total = displayData.reduce((sum, item) => sum + item.y, 0);
+    const chartLabels = (() => {
+        let currentAngle = -Math.PI / 2;
+        return displayData.map((item) => {
+            const sweep = total > 0 ? (item.y / total) * Math.PI * 2 : 0;
+            const mid = currentAngle + sweep / 2;
+            currentAngle += sweep;
+            return {
+                marker: item.marker,
+                x: 50 + Math.cos(mid) * 40,
+                y: 50 + Math.sin(mid) * 40,
+            };
+        });
+    })();
 
     return (
         <div className="w-full md:grid md:h-[350px] md:grid-cols-[minmax(170px,200px)_minmax(0,1fr)] md:items-center md:gap-0">
@@ -74,16 +87,30 @@ const DashboardWidgetPieChart = ({ data }: DashboardWidgetPieChartProps) => {
                     opacity: 0 !important;
                     pointer-events: none !important;
                 }
-                .dashboard-pie-chart g.arc:focus text,
-                .dashboard-pie-chart g.arc:focus-within text,
-                .dashboard-pie-chart g.arc:hover text {
-                    opacity: 1 !important;
-                }
             `}</style>
-            <div className="dashboard-pie-chart md:order-2" style={{ width: '100%', height: '350px' }}>
+            <div className="dashboard-pie-chart relative md:order-2" style={{ width: '100%', height: '350px' }}>
                 <ResponsiveContainer>
                     <PieChart data={displayData} chartTitle="" />
                 </ResponsiveContainer>
+                <svg
+                    className="pointer-events-none absolute inset-0"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="xMidYMid meet"
+                    aria-hidden="true"
+                >
+                    {chartLabels.map((item) => (
+                        <text
+                            key={item.marker}
+                            x={item.x}
+                            y={item.y}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="fill-[var(--ax-text-default)] text-[5px] font-semibold"
+                        >
+                            {item.marker}
+                        </text>
+                    ))}
+                </svg>
             </div>
             <div className="mt-2 space-y-1 md:order-1 md:mt-0 md:max-h-[350px] md:overflow-auto" role="list" aria-label="Sektordiagram forklaring">
                 {displayData.map((item, index) => {
