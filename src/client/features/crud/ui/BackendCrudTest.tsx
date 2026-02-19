@@ -15,7 +15,7 @@ const requestJson = async <T,>(url: string, init?: RequestInit): Promise<T> => {
     const errorMessage =
       payload && typeof payload === 'object' && 'error' in payload
         ? String((payload as { error?: string }).error)
-        : `Request failed (${response.status})`;
+        : `Foresporsel feilet (${response.status})`;
     throw new Error(errorMessage);
   }
 
@@ -88,7 +88,7 @@ const BackendCrudTest = () => {
     try {
       await task();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Ukjent feil');
     } finally {
       setLoading(false);
     }
@@ -136,7 +136,7 @@ const BackendCrudTest = () => {
   }, [selectedProjectId, selectedDashboardId, selectedGraphId]);
 
   const createProject = () => run(async () => {
-    if (!projectName.trim()) throw new Error('Project name is required');
+    if (!projectName.trim()) throw new Error('Prosjektnavn er påkrevd');
 
     await requestJson<ProjectDto>('/api/backend/projects', {
       method: 'POST',
@@ -149,12 +149,12 @@ const BackendCrudTest = () => {
     setProjectName('');
     setProjectDescription('');
     await loadProjects();
-    setMessage('Project created');
+    setMessage('Prosjekt opprettet');
   });
 
   const createDashboard = () => run(async () => {
-    if (!selectedProjectId) throw new Error('Select a project first');
-    if (!dashboardName.trim()) throw new Error('Dashboard name is required');
+    if (!selectedProjectId) throw new Error('Velg et prosjekt først');
+    if (!dashboardName.trim()) throw new Error('Dashboard-navn er påkrevd');
 
     await requestJson<DashboardDto>(`/api/backend/projects/${selectedProjectId}/dashboards`, {
       method: 'POST',
@@ -167,12 +167,12 @@ const BackendCrudTest = () => {
     setDashboardName('');
     setDashboardDescription('');
     await loadDashboards(selectedProjectId);
-    setMessage('Dashboard created');
+    setMessage('Dashboard opprettet');
   });
 
   const createGraph = () => run(async () => {
-    if (!selectedProjectId || !selectedDashboardId) throw new Error('Select project and dashboard first');
-    if (!graphName.trim()) throw new Error('Graph name is required');
+    if (!selectedProjectId || !selectedDashboardId) throw new Error('Velg prosjekt og dashboard først');
+    if (!graphName.trim()) throw new Error('Grafnavn er påkrevd');
 
     await requestJson<GraphDto>(`/api/backend/projects/${selectedProjectId}/dashboards/${selectedDashboardId}/graphs`, {
       method: 'POST',
@@ -184,15 +184,15 @@ const BackendCrudTest = () => {
     });
     setGraphName('');
     await loadGraphs(selectedProjectId, selectedDashboardId);
-    setMessage('Graph created');
+    setMessage('Graf opprettet');
   });
 
   const createQuery = () => run(async () => {
     if (!selectedProjectId || !selectedDashboardId || !selectedGraphId) {
-      throw new Error('Select project, dashboard and graph first');
+      throw new Error('Velg prosjekt, dashboard og graf først');
     }
-    if (!queryName.trim()) throw new Error('Query name is required');
-    if (!querySql.trim()) throw new Error('SQL is required');
+    if (!queryName.trim()) throw new Error('Sporringsnavn er påkrevd');
+    if (!querySql.trim()) throw new Error('SQL er påkrevd');
 
     await requestJson<QueryDto>(`/api/backend/projects/${selectedProjectId}/dashboards/${selectedDashboardId}/graphs/${selectedGraphId}/queries`, {
       method: 'POST',
@@ -204,25 +204,23 @@ const BackendCrudTest = () => {
     });
     setQueryName('');
     await loadQueries(selectedProjectId, selectedDashboardId, selectedGraphId);
-    setMessage('Query created');
+    setMessage('Sporring opprettet');
   });
 
   return (
     <Page.Block width="xl" gutters>
       <div className="py-8 space-y-6">
         <Heading level="1" size="large">Backend CRUD test</Heading>
-        <BodyLong size="small">
-          Swagger confirms no team field is required. Flow is Project → Dashboard → Graph → Query.
-        </BodyLong>
+
 
         {error && <Alert variant="error">{error}</Alert>}
         {message && <Alert variant="success">{message}</Alert>}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3 p-4 border rounded-md">
-            <Heading level="2" size="small">Projects</Heading>
+            <Heading level="2" size="small">Prosjekter</Heading>
             <Select
-              label="Select project"
+              label="Velg prosjekt"
               size="small"
               value={selectedProjectId ?? ''}
               onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
@@ -230,15 +228,15 @@ const BackendCrudTest = () => {
               <option value="">-</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name} (#{p.id})</option>)}
             </Select>
-            <TextField label="Name" size="small" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
-            <TextField label="Description" size="small" value={projectDescription} onChange={(e) => setProjectDescription(e.target.value)} />
-            <Button size="small" onClick={createProject} loading={loading}>Create project</Button>
+            <TextField label="Navn" size="small" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+            <TextField label="Beskrivelse" size="small" value={projectDescription} onChange={(e) => setProjectDescription(e.target.value)} />
+            <Button size="small" onClick={createProject} loading={loading}>Opprett prosjekt</Button>
           </div>
 
           <div className="space-y-3 p-4 border rounded-md">
             <Heading level="2" size="small">Dashboards</Heading>
             <Select
-              label="Select dashboard"
+              label="Velg dashboard"
               size="small"
               value={selectedDashboardId ?? ''}
               onChange={(e) => setSelectedDashboardId(e.target.value ? Number(e.target.value) : null)}
@@ -246,15 +244,15 @@ const BackendCrudTest = () => {
               <option value="">-</option>
               {dashboards.map((d) => <option key={d.id} value={d.id}>{d.name} (#{d.id})</option>)}
             </Select>
-            <TextField label="Name" size="small" value={dashboardName} onChange={(e) => setDashboardName(e.target.value)} />
-            <TextField label="Description" size="small" value={dashboardDescription} onChange={(e) => setDashboardDescription(e.target.value)} />
-            <Button size="small" onClick={createDashboard} loading={loading}>Create dashboard</Button>
+            <TextField label="Navn" size="small" value={dashboardName} onChange={(e) => setDashboardName(e.target.value)} />
+            <TextField label="Beskrivelse" size="small" value={dashboardDescription} onChange={(e) => setDashboardDescription(e.target.value)} />
+            <Button size="small" onClick={createDashboard} loading={loading}>Opprett dashboard</Button>
           </div>
 
           <div className="space-y-3 p-4 border rounded-md">
-            <Heading level="2" size="small">Graphs</Heading>
+            <Heading level="2" size="small">Grafer</Heading>
             <Select
-              label="Select graph"
+              label="Velg graf"
               size="small"
               value={selectedGraphId ?? ''}
               onChange={(e) => setSelectedGraphId(e.target.value ? Number(e.target.value) : null)}
@@ -262,34 +260,34 @@ const BackendCrudTest = () => {
               <option value="">-</option>
               {graphs.map((g) => <option key={g.id} value={g.id}>{g.name} (#{g.id})</option>)}
             </Select>
-            <TextField label="Name" size="small" value={graphName} onChange={(e) => setGraphName(e.target.value)} />
-            <Select label="Graph type" size="small" value={graphType} onChange={(e) => setGraphType(e.target.value)}>
-              <option value="LINE">LINE</option>
-              <option value="BAR">BAR</option>
-              <option value="PIE">PIE</option>
-              <option value="TABLE">TABLE</option>
+            <TextField label="Navn" size="small" value={graphName} onChange={(e) => setGraphName(e.target.value)} />
+            <Select label="Graftype" size="small" value={graphType} onChange={(e) => setGraphType(e.target.value)}>
+              <option value="LINE">Linjediagram</option>
+              <option value="BAR">Stolpediagram</option>
+              <option value="PIE">Sektordiagram</option>
+              <option value="TABLE">Tabell</option>
             </Select>
-            <Button size="small" onClick={createGraph} loading={loading}>Create graph</Button>
+            <Button size="small" onClick={createGraph} loading={loading}>Opprett graf</Button>
           </div>
 
           <div className="space-y-3 p-4 border rounded-md">
-            <Heading level="2" size="small">Queries</Heading>
-            <TextField label="Name" size="small" value={queryName} onChange={(e) => setQueryName(e.target.value)} />
-            <Textarea label="SQL text" size="small" minRows={6} value={querySql} onChange={(e) => setQuerySql(e.target.value)} />
-            <Button size="small" onClick={createQuery} loading={loading}>Create query</Button>
+            <Heading level="2" size="small">Sporringer</Heading>
+            <TextField label="Navn" size="small" value={queryName} onChange={(e) => setQueryName(e.target.value)} />
+            <Textarea label="SQL-tekst" size="small" minRows={6} value={querySql} onChange={(e) => setQuerySql(e.target.value)} />
+            <Button size="small" onClick={createQuery} loading={loading}>Opprett sporring</Button>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Heading level="2" size="small">Selected chain</Heading>
+          <Heading level="2" size="small">Valgt kjede</Heading>
           <BodyLong size="small">
-            Project: {selectedProject ? `${selectedProject.name} (#${selectedProject.id})` : '-'}
+            Prosjekt: {selectedProject ? `${selectedProject.name} (#${selectedProject.id})` : '-'}
             <br />
             Dashboard: {selectedDashboard ? `${selectedDashboard.name} (#${selectedDashboard.id})` : '-'}
             <br />
-            Graph: {selectedGraph ? `${selectedGraph.name} (#${selectedGraph.id})` : '-'}
+            Graf: {selectedGraph ? `${selectedGraph.name} (#${selectedGraph.id})` : '-'}
             <br />
-            Queries on graph: {queries.length}
+            Sporringer på graf: {queries.length}
           </BodyLong>
         </div>
       </div>

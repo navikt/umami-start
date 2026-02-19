@@ -29,16 +29,6 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
     || (backendClientId ? `api://${backendClientId}/.default` : null)
     || derivedNaisOboScope;
 
-  console.info('[BackendProxy] init', {
-    backendBaseUrl: apiBaseUrl.origin,
-    isLocalBackend,
-    backendAppName,
-    hasBackendClientId: Boolean(backendClientId),
-    hasOboScope: Boolean(oboScope),
-    oboScope,
-    hasServiceTokenConfig: Boolean(tokenUrl && tokenClientId && tokenClientSecret && tokenAudience),
-  });
-
   let cachedToken = null;
   let cachedTokenExpiresAt = 0;
 
@@ -48,10 +38,7 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       return cachedToken;
     }
 
-    if (!tokenUrl || !tokenClientId || !tokenClientSecret || !tokenAudience) {
-      console.warn('[BackendProxy] service token config missing');
-      return null;
-    }
+    if (!tokenUrl || !tokenClientId || !tokenClientSecret || !tokenAudience) return null;
 
     const body = new URLSearchParams({
       grant_type: 'client_credentials',
@@ -68,10 +55,6 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
 
     const payload = await response.json();
     if (!response.ok || !payload?.access_token) {
-      console.error('[BackendProxy] service token request failed', {
-        status: response.status,
-        hasAccessToken: Boolean(payload?.access_token),
-      });
       throw new Error(`Failed to fetch backend token (${response.status})`);
     }
 
@@ -90,30 +73,16 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       || typeof oasis.requestOboToken !== 'function'
       || typeof oasis.getToken !== 'function'
       || typeof oasis.validateToken !== 'function'
-    ) {
-      console.warn('[BackendProxy] oasis missing for OBO');
-      return null;
-    }
+    ) return null;
 
     const userToken = oasis.getToken(req);
-    if (!userToken) {
-      console.warn('[BackendProxy] no user token available for OBO exchange');
-      return null;
-    }
+    if (!userToken) return null;
 
     const validation = await oasis.validateToken(userToken);
-    if (!validation.ok) {
-      console.error('[BackendProxy] user token validation failed before OBO');
-      return null;
-    }
+    if (!validation.ok) return null;
 
     const result = await oasis.requestOboToken(userToken, oboScope);
-    if (!result.ok || !result.token) {
-      console.error('[BackendProxy] OBO token exchange failed', {
-        hasScope: Boolean(oboScope),
-      });
-      throw new Error('Failed to exchange OBO token for backend');
-    }
+    if (!result.ok || !result.token) throw new Error('Failed to exchange OBO token for backend');
 
     return result.token;
   };
@@ -124,26 +93,9 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       const targetUrl = new URL(targetPath, apiBaseUrl);
       const oboToken = await getOboToken(req);
       const serviceToken = !req.headers.authorization && !oboToken ? await getServiceToken() : null;
-      const authMode = oboToken
-        ? 'obo'
-        : serviceToken
-          ? 'service-token'
-          : req.headers.authorization
-            ? 'forwarded-user-token'
-            : 'none';
       const resolvedAuthorization = oboToken
         ? `Bearer ${oboToken}`
         : req.headers.authorization || (serviceToken ? `Bearer ${serviceToken}` : undefined);
-
-      if (authMode !== 'obo') {
-        console.warn(`[BackendProxy] auth mode=${authMode}; consider setting BACKEND_OBO_SCOPE or BACKEND_CLIENT_ID`);
-      }
-      console.info('[BackendProxy] forwarding request', {
-        method: req.method,
-        path: targetUrl.pathname,
-        authMode,
-        hasAuthHeader: Boolean(resolvedAuthorization),
-      });
 
       const forwardHeaders = {
         accept: req.headers.accept,
@@ -159,15 +111,6 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       });
 
       const data = await response.text();
-
-      if (response.status === 401) {
-        console.error('[BackendProxy] backend returned 401', {
-          method: req.method,
-          path: targetUrl.pathname,
-          authMode,
-          wwwAuthenticate: response.headers.get('www-authenticate'),
-        });
-      }
 
       res.status(response.status);
       response.headers.forEach((value, key) => {

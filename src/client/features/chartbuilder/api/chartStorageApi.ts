@@ -79,8 +79,16 @@ const findByName = <T extends { name: string }>(items: T[], name: string): T | u
 
 const compactSqlForStorage = (sql: string): string => sql.replace(/\s+/g, ' ').trim();
 
+export async function fetchProjects(): Promise<ProjectDto[]> {
+  return requestJson<ProjectDto[]>('/api/backend/projects');
+}
+
+export async function fetchDashboards(projectId: number): Promise<DashboardDto[]> {
+  return requestJson<DashboardDto[]>(`/api/backend/projects/${projectId}/dashboards`);
+}
+
 export async function saveChartToBackend(params: SaveChartParams): Promise<SaveChartResult> {
-  const projects = await requestJson<ProjectDto[]>('/api/backend/projects');
+  const projects = await fetchProjects();
   const existingProject = findByName(projects, params.projectName);
 
   const project = existingProject ?? await requestJson<ProjectDto>('/api/backend/projects', {
@@ -92,7 +100,7 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
     }),
   });
 
-  const dashboards = await requestJson<DashboardDto[]>(`/api/backend/projects/${project.id}/dashboards`);
+  const dashboards = await fetchDashboards(project.id);
   const existingDashboard = findByName(dashboards, params.dashboardName);
 
   const dashboard = existingDashboard ?? await requestJson<DashboardDto>(`/api/backend/projects/${project.id}/dashboards`, {
@@ -151,4 +159,4 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
   return {project, dashboard, graph, query};
 }
 
-export type { SaveChartParams, SaveChartResult };
+export type { ProjectDto, DashboardDto, SaveChartParams, SaveChartResult };

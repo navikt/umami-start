@@ -6,7 +6,8 @@ import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
-import { saveChartToBackend } from '../../api/chartStorageApi.ts';
+import { fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
+import type { DashboardDto, ProjectDto } from '../../api/chartStorageApi.ts';
 
 type JsonPrimitive = string | number | boolean | null;
 interface JsonObject {
@@ -132,8 +133,11 @@ const QueryPreview = ({
   const [projectName, setProjectName] = useState('Start Umami');
   const [dashboardName, setDashboardName] = useState('Grafbygger');
   const [graphName, setGraphName] = useState('Ny graf');
-  const [queryName, setQueryName] = useState('Grafsporring');
   const [graphType, setGraphType] = useState('LINE');
+  const [projects, setProjects] = useState<ProjectDto[]>([]);
+  const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
+  const [selectedProjectOption, setSelectedProjectOption] = useState<string | null>(null);
+  const [selectedDashboardOption, setSelectedDashboardOption] = useState<string | null>(null);
 
   // Check if parameters have changed
   const hasChanges = () => {
@@ -627,15 +631,81 @@ const QueryPreview = ({
     if (!graphName || graphName === 'Ny graf') {
       const timestamp = format(new Date(), 'yyyy-MM-dd HH:mm');
       setGraphName(`Graf ${timestamp}`);
-      setQueryName(`Sporring ${timestamp}`);
     }
 
+    const loadSaveData = async () => {
+      try {
+        const projectItems = await fetchProjects();
+        setProjects(projectItems);
+
+        const selectedProject = projectItems.find((project) => project.name === projectName) ?? null;
+        if (selectedProject) {
+          const projectOptionValue = String(selectedProject.id);
+          setSelectedProjectOption(projectOptionValue);
+          const dashboardItems = await fetchDashboards(selectedProject.id);
+          setDashboards(dashboardItems);
+
+          const selectedDashboard = dashboardItems.find((dashboard) => dashboard.name === dashboardName) ?? null;
+          setSelectedDashboardOption(selectedDashboard ? String(selectedDashboard.id) : null);
+        } else {
+          setSelectedProjectOption(null);
+          setDashboards([]);
+          setSelectedDashboardOption(null);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Klarte ikke laste team og dashboards';
+        setSaveError(message);
+      }
+    };
+
     setShowSaveModal(true);
+    void loadSaveData();
+  };
+
+  const handleProjectSelection = async (option: string, isSelected: boolean) => {
+    if (!isSelected) {
+      setSelectedProjectOption(null);
+      setProjectName('');
+      setDashboards([]);
+      setDashboardName('');
+      setSelectedDashboardOption(null);
+      return;
+    }
+
+    const selectedProject = projects.find((project) => String(project.id) === option);
+    if (!selectedProject) return;
+
+    setSelectedProjectOption(option);
+    setProjectName(selectedProject.name);
+    setDashboardName('');
+    setSelectedDashboardOption(null);
+
+    try {
+      const dashboardItems = await fetchDashboards(selectedProject.id);
+      setDashboards(dashboardItems);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Klarte ikke laste dashboards';
+      setSaveError(message);
+    }
+  };
+
+  const handleDashboardSelection = (option: string, isSelected: boolean) => {
+    if (!isSelected) {
+      setSelectedDashboardOption(null);
+      setDashboardName('');
+      return;
+    }
+
+    const selectedDashboard = dashboards.find((dashboard) => String(dashboard.id) === option);
+    if (!selectedDashboard) return;
+
+    setSelectedDashboardOption(option);
+    setDashboardName(selectedDashboard.name);
   };
 
   const handleSaveChart = async () => {
-    if (!graphName.trim() || !queryName.trim() || !projectName.trim() || !dashboardName.trim()) {
-      setSaveError('Fyll ut prosjekt, dashboard, grafnavn og sporingsnavn.');
+    if (!graphName.trim() || !projectName.trim() || !dashboardName.trim()) {
+      setSaveError('Velg team/prosjekt, dashboard og fyll ut grafnavn.');
       return;
     }
 
@@ -648,7 +718,7 @@ const QueryPreview = ({
         projectName: projectName.trim(),
         dashboardName: dashboardName.trim(),
         graphName: graphName.trim(),
-        queryName: queryName.trim(),
+        queryName: `${graphName.trim()} - query`,
         graphType: graphType.trim(),
         sqlText: getProcessedSql({ preserveMetabasePlaceholders: true }),
       });
@@ -663,6 +733,19 @@ const QueryPreview = ({
       setSavingChart(false);
     }
   };
+
+  const projectOptions = projects.map((project) => ({
+    label: `${project.name} (#${project.id})`,
+    value: String(project.id),
+  }));
+
+  const dashboardOptions = dashboards.map((dashboard) => ({
+    label: `${dashboard.name} (#${dashboard.id})`,
+    value: String(dashboard.id),
+  }));
+
+  const selectedProjectLabel = projectOptions.find((option) => option.value === selectedProjectOption)?.label;
+  const selectedDashboardLabel = dashboardOptions.find((option) => option.value === selectedDashboardOption)?.label;
 
   // Show loading message after 10 seconds
   useEffect(() => {
@@ -1101,32 +1184,37 @@ const QueryPreview = ({
       <Modal
         open={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        header={{ heading: 'Lagre graf til backend' }}
+        header={{ heading: 'Lagre graf' }}
       >
         <Modal.Body>
           <div className="space-y-4">
-            <TextField
-              label="Prosjekt"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
+            <UNSAFE_Combobox
+              label="Team/Prosjekt"
+              options={projectOptions}
+              selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
+              onToggleSelected={(option: string, isSelected: boolean) => {
+                void handleProjectSelection(option, isSelected);
+              }}
+              isMultiSelect={false}
               size="small"
+              clearButton
             />
-            <TextField
+            <UNSAFE_Combobox
               label="Dashboard"
-              value={dashboardName}
-              onChange={(e) => setDashboardName(e.target.value)}
+              options={dashboardOptions}
+              selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
+              onToggleSelected={(option: string, isSelected: boolean) => {
+                handleDashboardSelection(option, isSelected);
+              }}
+              isMultiSelect={false}
               size="small"
+              clearButton
+              disabled={!selectedProjectOption}
             />
             <TextField
               label="Grafnavn"
               value={graphName}
               onChange={(e) => setGraphName(e.target.value)}
-              size="small"
-            />
-            <TextField
-              label="Sporringsnavn"
-              value={queryName}
-              onChange={(e) => setQueryName(e.target.value)}
               size="small"
             />
             <Select
@@ -1135,10 +1223,10 @@ const QueryPreview = ({
               onChange={(e) => setGraphType(e.target.value)}
               size="small"
             >
-              <option value="LINE">LINE</option>
-              <option value="BAR">BAR</option>
-              <option value="PIE">PIE</option>
-              <option value="TABLE">TABLE</option>
+              <option value="LINE">Linjediagram</option>
+              <option value="BAR">Stolpediagram</option>
+              <option value="PIE">Sektordiagram</option>
+              <option value="TABLE">Tabell</option>
             </Select>
 
             {saveError && (
@@ -1147,7 +1235,7 @@ const QueryPreview = ({
               </Alert>
             )}
             <p className="text-sm text-[var(--ax-text-subtle)]">
-              SQL lagres med Metabase-parametere der det er valgt interaktive filtre.
+              SQL lagres med Metabase-parametere der det er valgt interaktive filtre. Sporringsnavn genereres automatisk fra grafnavn.
             </p>
           </div>
         </Modal.Body>
