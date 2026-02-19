@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { ChartActionModalProps } from '../model/types.ts';
 import { generateShareUrl, buildEditorUrl, downloadChartCsv } from '../utils/chartActions.ts';
 
@@ -56,6 +57,9 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
         onDeleteChart?.();
     };
 
+    const actionButtonClass = '!w-full !justify-start';
+    const iconSlotClass = 'inline-flex w-5 justify-center';
+
     return (
         <Modal open={open} onClose={onClose} header={{ heading: 'Hva vil du gjøre med grafen?' }} width="small" >
             <Modal.Body>
@@ -68,53 +72,69 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                         <Button
                             variant="secondary"
                             onClick={handleOpenInNewTab}
-                            icon={<ZoomPlusIcon aria-hidden />}
-                            className="justify-start"
+                            className={actionButtonClass}
                         >
-                            Utforsk grafen
+                            <span className="inline-flex items-center gap-2">
+                                <span className={iconSlotClass}><ZoomPlusIcon aria-hidden /></span>
+                                <span>Utforsk grafen</span>
+                            </span>
                         </Button>
                         <Button
                             variant="secondary"
                             onClick={handleCopyLink}
-                            icon={copyFeedback ? <CheckmarkIcon aria-hidden /> : <LinkIcon aria-hidden />}
-                            className="justify-start"
+                            className={actionButtonClass}
                         >
-                            {copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}
+                            <span className="inline-flex items-center gap-2">
+                                <span className={iconSlotClass}>
+                                    {copyFeedback ? <CheckmarkIcon aria-hidden /> : <LinkIcon aria-hidden />}
+                                </span>
+                                <span>{copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}</span>
+                            </span>
                         </Button>
                         <Button
                             variant="secondary"
                             onClick={handleOpenInEditor}
-                            icon={<FileCodeIcon aria-hidden />}
-                            className="justify-start"
+                            className={actionButtonClass}
                         >
-                            Åpne i SQL-editor
+                            <span className="inline-flex items-center gap-2">
+                                <span className={iconSlotClass}><FileCodeIcon aria-hidden /></span>
+                                <span>Åpne i SQL-editor</span>
+                            </span>
                         </Button>
                         {onEditChart && (
                             <Button
                                 variant="secondary"
                                 onClick={handleEdit}
-                                className="justify-start"
+                                className={actionButtonClass}
                             >
-                                Rediger graf
+                                <span className="inline-flex items-center gap-2">
+                                    <span className={iconSlotClass}><Pencil aria-hidden size={16} /></span>
+                                    <span>Rediger graf</span>
+                                </span>
                             </Button>
                         )}
                         {onDeleteChart && (
                             <Button
                                 variant="secondary"
                                 onClick={handleDelete}
-                                className="justify-start"
+                                className={actionButtonClass}
                             >
-                                Slett graf
+                                <span className="inline-flex items-center gap-2">
+                                    <span className={iconSlotClass}><Trash2 aria-hidden size={16} /></span>
+                                    <span>Slett graf</span>
+                                </span>
                             </Button>
                         )}
                         {data && data.length > 0 && (
                             <Button
                                 variant="secondary"
                                 onClick={handleDownloadCsv}
-                                icon={<DownloadIcon aria-hidden />}
-                                className="justify-start"
+                                className={actionButtonClass}
                             >
-                                Last ned CSV
+                                <span className="inline-flex items-center gap-2">
+                                    <span className={iconSlotClass}><DownloadIcon aria-hidden /></span>
+                                    <span>Last ned CSV</span>
+                                </span>
                             </Button>
                         )}
                     </div>
