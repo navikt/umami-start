@@ -130,7 +130,12 @@ const QueryPreview = ({
   const [savingChart, setSavingChart] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
-  const [savedLocation, setSavedLocation] = useState<{ projectId: number; dashboardId: number } | null>(null);
+  const [savedLocation, setSavedLocation] = useState<{
+    projectId: number;
+    dashboardId: number;
+    projectName: string;
+    dashboardName: string;
+  } | null>(null);
   const [projectName, setProjectName] = useState('Start Umami');
   const [dashboardName, setDashboardName] = useState('Grafbygger');
   const [graphName, setGraphName] = useState('Ny graf');
@@ -725,13 +730,14 @@ const QueryPreview = ({
         sqlText: getProcessedSql({ preserveMetabasePlaceholders: true }),
       });
 
-      setSaveSuccess(
-        `Lagret. Prosjekt #${saved.project.id}, dashboard #${saved.dashboard.id}, graf #${saved.graph.id}, sporring #${saved.query.id}.`,
-      );
+      setSaveSuccess('Lagret');
       setSavedLocation({
         projectId: saved.project.id,
         dashboardId: saved.dashboard.id,
+        projectName: saved.project.name,
+        dashboardName: saved.dashboard.name,
       });
+      setShowSaveModal(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Klarte ikke lagre grafen';
       setSaveError(message);
@@ -741,12 +747,12 @@ const QueryPreview = ({
   };
 
   const projectOptions = projects.map((project) => ({
-    label: `${project.name} (#${project.id})`,
+    label: project.name,
     value: String(project.id),
   }));
 
   const dashboardOptions = dashboards.map((dashboard) => ({
-    label: `${dashboard.name} (#${dashboard.id})`,
+    label: dashboard.name,
     value: String(dashboard.id),
   }));
 
@@ -1049,16 +1055,11 @@ const QueryPreview = ({
                 </Button>
               </div>
 
-              {saveSuccess && (
+              {saveSuccess && savedLocation && (
                 <Alert variant="success" size="small">
-                  <div className="space-y-1">
-                    <p>{saveSuccess}</p>
-                    {savedLocation && (
-                      <Link href={`/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`}>
-                        Åpne i Oversikt
-                      </Link>
-                    )}
-                  </div>
+                  <Link href={`/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`}>
+                    Graf lagret i dashboard "{savedLocation.dashboardName}" i prosjekt "{savedLocation.projectName}". Åpne i Oversikt
+                  </Link>
                 </Alert>
               )}
 
@@ -1202,7 +1203,7 @@ const QueryPreview = ({
         <Modal.Body>
           <div className="space-y-4">
             <UNSAFE_Combobox
-              label="Team/Prosjekt"
+              label="Prosjekt"
               options={projectOptions}
               selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
@@ -1238,7 +1239,7 @@ const QueryPreview = ({
             >
               <option value="LINE">Linjediagram</option>
               <option value="BAR">Stolpediagram</option>
-              <option value="PIE">Sektordiagram</option>
+              <option value="PIE">Kakediagram</option>
               <option value="TABLE">Tabell</option>
             </Select>
 
@@ -1247,9 +1248,6 @@ const QueryPreview = ({
                 {saveError}
               </Alert>
             )}
-            <p className="text-sm text-[var(--ax-text-subtle)]">
-              SQL lagres med Metabase-parametere der det er valgt interaktive filtre. Sporringsnavn genereres automatisk fra grafnavn.
-            </p>
           </div>
         </Modal.Body>
         <Modal.Footer>

@@ -5,6 +5,8 @@ import type { SavedChart } from '../../../../data/dashboard';
 import AnalysisActionModal from '../../analysis/ui/AnalysisActionModal.tsx';
 import ChartActionModal from '../../analysis/ui/ChartActionModal.tsx';
 import DashboardWidgetLineChart from './widget/DashboardWidgetLineChart.tsx';
+import DashboardWidgetBarChart from './widget/DashboardWidgetBarChart.tsx';
+import DashboardWidgetPieChart from './widget/DashboardWidgetPieChart.tsx';
 import DashboardWidgetTable from './widget/DashboardWidgetTable.tsx';
 import DashboardWidgetSiteimprove from './widget/DashboardWidgetSiteimprove.tsx';
 import { processDashboardSql } from '../utils/queryUtils.ts';
@@ -181,6 +183,10 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                     title={chart.title}
                 />
             );
+        } else if (chart.type === 'bar') {
+            return <DashboardWidgetBarChart data={data} />;
+        } else if (chart.type === 'pie') {
+            return <DashboardWidgetPieChart data={data} />;
         } else if (chart.type === 'table') {
             return (
                 <DashboardWidgetTable
@@ -261,4 +267,3 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
         </>
     );
 };
-

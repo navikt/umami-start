@@ -42,8 +42,9 @@ const arraysEqual = (a: string[], b: string[]) => {
 
 const mapGraphTypeToChart = (graphType?: string): SavedChart['type'] => {
   if (graphType === 'LINE') return 'line';
+  if (graphType === 'BAR') return 'bar';
+  if (graphType === 'PIE') return 'pie';
   if (graphType === 'TABLE') return 'table';
-  // DashboardWidget supports line/table/siteimprove/title right now.
   return 'table';
 };
 
