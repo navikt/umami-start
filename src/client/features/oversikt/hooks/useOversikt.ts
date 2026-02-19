@@ -4,10 +4,10 @@ import { normalizeUrlToPath } from '../../../shared/lib/utils.ts';
 import type { Website } from '../../dashboard/model/types.ts';
 import type {
     ProjectDto, DashboardDto, GraphWithQueries, FilterState, MetricType,
-    SavedChart, OversiktSelectOption,
+    OversiktChart, OversiktSelectOption,
 } from '../model/types.ts';
 import { fetchProjects, fetchDashboards, fetchGraphs, fetchQueries } from '../api/oversiktApi.ts';
-import { parseId, arraysEqual, mapGraphTypeToChart } from '../utils/oversikt.ts';
+import { parseId, arraysEqual, mapGraphTypeToChart, normalizeGraphType } from '../utils/oversikt.ts';
 
 export const useOversikt = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -64,16 +64,23 @@ export const useOversikt = () => {
     const selectedDashboardLabel = dashboardOptions.find((o) => o.value === String(selectedDashboardId))?.label;
     const activeWebsiteId = activeWebsite?.id ?? '';
 
-    const charts = useMemo<SavedChart[]>(() => {
+    const charts = useMemo<OversiktChart[]>(() => {
         return graphs
             .filter((item) => item.queries.length > 0)
-            .map((item) => ({
-                id: `graph-${item.graph.id}`,
-                title: item.graph.name,
-                type: mapGraphTypeToChart(item.graph.graphType),
-                sql: item.queries[0].sqlText,
-                width: 'half' as const,
-            }));
+            .map((item) => {
+                const primaryQuery = item.queries[0];
+                return {
+                    id: `graph-${item.graph.id}`,
+                    title: item.graph.name,
+                    type: mapGraphTypeToChart(item.graph.graphType),
+                    sql: primaryQuery.sqlText,
+                    width: 'half' as const,
+                    graphId: item.graph.id,
+                    graphType: normalizeGraphType(item.graph.graphType),
+                    queryId: primaryQuery.id,
+                    queryName: primaryQuery.name,
+                };
+            });
     }, [graphs]);
 
     const supportsStandardFilters = useMemo(() => {
@@ -235,33 +242,33 @@ export const useOversikt = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProjectId]);
 
-    useEffect(() => {
+    const refreshGraphs = useCallback(async () => {
         if (!selectedProjectId || !selectedDashboardId) {
             setGraphs([]);
             return;
         }
 
-        const run = async () => {
-            setLoadingGraphs(true);
-            setError(null);
-            try {
-                const graphItems = await fetchGraphs(selectedProjectId, selectedDashboardId);
-                const graphWithQueries = await Promise.all(
-                    graphItems.map(async (graph) => ({
-                        graph,
-                        queries: await fetchQueries(selectedProjectId, selectedDashboardId, graph.id),
-                    })),
-                );
-                setGraphs(graphWithQueries);
-            } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : 'Klarte ikke laste grafer');
-            } finally {
-                setLoadingGraphs(false);
-            }
-        };
-
-        void run();
+        setLoadingGraphs(true);
+        setError(null);
+        try {
+            const graphItems = await fetchGraphs(selectedProjectId, selectedDashboardId);
+            const graphWithQueries = await Promise.all(
+                graphItems.map(async (graph) => ({
+                    graph,
+                    queries: await fetchQueries(selectedProjectId, selectedDashboardId, graph.id),
+                })),
+            );
+            setGraphs(graphWithQueries);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Klarte ikke laste grafer');
+        } finally {
+            setLoadingGraphs(false);
+        }
     }, [selectedProjectId, selectedDashboardId]);
+
+    useEffect(() => {
+        void refreshGraphs();
+    }, [refreshGraphs]);
 
     useEffect(() => {
         const currentProjectId = searchParams.get('projectId');
@@ -330,6 +337,6 @@ export const useOversikt = () => {
         handleDashboardSelected,
         handleUrlToggleSelected,
         handleComboChange,
+        refreshGraphs,
     };
 };
-

@@ -12,7 +12,9 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     filters,
     domain,
     data,
-    dashboardTitle
+    dashboardTitle,
+    onEditChart,
+    onDeleteChart,
 }) => {
     const [copyFeedback, setCopyFeedback] = useState(false);
 
@@ -42,6 +44,16 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
         if (!data || data.length === 0) return;
         downloadChartCsv(data, chart.title);
         onClose();
+    };
+
+    const handleEdit = () => {
+        onClose();
+        onEditChart?.();
+    };
+
+    const handleDelete = () => {
+        onClose();
+        onDeleteChart?.();
     };
 
     return (
@@ -77,6 +89,24 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                         >
                             Åpne i SQL-editor
                         </Button>
+                        {onEditChart && (
+                            <Button
+                                variant="secondary"
+                                onClick={handleEdit}
+                                className="justify-start"
+                            >
+                                Rediger graf
+                            </Button>
+                        )}
+                        {onDeleteChart && (
+                            <Button
+                                variant="secondary"
+                                onClick={handleDelete}
+                                className="justify-start"
+                            >
+                                Slett graf
+                            </Button>
+                        )}
                         {data && data.length > 0 && (
                             <Button
                                 variant="secondary"

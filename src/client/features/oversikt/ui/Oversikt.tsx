@@ -1,12 +1,18 @@
+import { useState } from 'react';
 import { Alert, Button, Label, Loader, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
 import { useOversikt } from '../hooks/useOversikt.ts';
+import type { GraphType, OversiktChart } from '../model/types.ts';
+import { deleteGraph, updateGraph, updateQuery } from '../api/oversiktApi.ts';
+import EditChartDialog from './dialogs/EditChartDialog.tsx';
+import DeleteChartDialog from './dialogs/DeleteChartDialog.tsx';
 
 const Oversikt = () => {
     const {
         selectedProject, selectedDashboard,
+        selectedProjectId, selectedDashboardId,
         projectOptions, dashboardOptions,
         selectedProjectLabel, selectedDashboardLabel,
         selectedWebsite, setSelectedWebsite,
@@ -21,7 +27,66 @@ const Oversikt = () => {
         isLoading, loadingProjects, loadingDashboards, error,
         handleUpdate, handleProjectSelected, handleDashboardSelected,
         handleUrlToggleSelected, handleComboChange,
+        refreshGraphs,
     } = useOversikt();
+    const [editChart, setEditChart] = useState<OversiktChart | null>(null);
+    const [deleteChartTarget, setDeleteChartTarget] = useState<OversiktChart | null>(null);
+    const [mutationError, setMutationError] = useState<string | null>(null);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [deletingChart, setDeletingChart] = useState(false);
+
+    const openEditDialog = (chartId?: string) => {
+        if (!chartId) return;
+        const chart = charts.find((item) => item.id === chartId) ?? null;
+        if (!chart) return;
+        setMutationError(null);
+        setEditChart(chart);
+    };
+
+    const openDeleteDialog = (chartId?: string) => {
+        if (!chartId) return;
+        const chart = charts.find((item) => item.id === chartId) ?? null;
+        if (!chart) return;
+        setMutationError(null);
+        setDeleteChartTarget(chart);
+    };
+
+    const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string }) => {
+        if (!editChart || !selectedProjectId || !selectedDashboardId) return;
+        setSavingEdit(true);
+        setMutationError(null);
+        try {
+            await updateGraph(selectedProjectId, selectedDashboardId, editChart.graphId, {
+                name: params.name,
+                graphType: params.graphType,
+            });
+            await updateQuery(selectedProjectId, selectedDashboardId, editChart.graphId, editChart.queryId, {
+                name: editChart.queryName,
+                sqlText: params.sqlText,
+            });
+            await refreshGraphs();
+            setEditChart(null);
+        } catch (err: unknown) {
+            setMutationError(err instanceof Error ? err.message : 'Kunne ikke oppdatere graf');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleDeleteChart = async () => {
+        if (!deleteChartTarget || !selectedProjectId || !selectedDashboardId) return;
+        setDeletingChart(true);
+        setMutationError(null);
+        try {
+            await deleteGraph(selectedProjectId, selectedDashboardId, deleteChartTarget.graphId);
+            await refreshGraphs();
+            setDeleteChartTarget(null);
+        } catch (err: unknown) {
+            setMutationError(err instanceof Error ? err.message : 'Kunne ikke slette graf');
+        } finally {
+            setDeletingChart(false);
+        }
+    };
 
     const filters = (
         <>
@@ -175,10 +240,37 @@ const Oversikt = () => {
                             filters={activeFilters}
                             selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
                             dashboardTitle={selectedDashboard.name}
+                            onEditChart={openEditDialog}
+                            onDeleteChart={openDeleteDialog}
                         />
                     ))}
                 </div>
             )}
+
+            <EditChartDialog
+                key={editChart?.id ?? 'edit-chart-dialog'}
+                open={!!editChart}
+                chart={editChart}
+                loading={savingEdit}
+                error={mutationError}
+                onClose={() => {
+                    setEditChart(null);
+                    setMutationError(null);
+                }}
+                onSave={handleSaveChart}
+            />
+
+            <DeleteChartDialog
+                open={!!deleteChartTarget}
+                chart={deleteChartTarget}
+                loading={deletingChart}
+                error={mutationError}
+                onClose={() => {
+                    setDeleteChartTarget(null);
+                    setMutationError(null);
+                }}
+                onConfirm={handleDeleteChart}
+            />
         </DashboardLayout>
     );
 };

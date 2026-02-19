@@ -32,6 +32,8 @@ export type GraphWithQueries = {
     queries: QueryDto[];
 };
 
+export type GraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE';
+
 export type MetricType = 'visitors' | 'pageviews' | 'proportion' | 'visits';
 
 export type FilterState = {
@@ -48,5 +50,11 @@ export type OversiktSelectOption = {
     value: string;
 };
 
-export type { SavedChart };
+export type OversiktChart = SavedChart & {
+    graphId: number;
+    graphType: GraphType;
+    queryId: number;
+    queryName: string;
+};
 
+export type { SavedChart };

@@ -1,4 +1,4 @@
-import type { SavedChart } from '../model/types.ts';
+import type { SavedChart, GraphType } from '../model/types.ts';
 
 export const parseId = (value: string | null): number | null => {
     if (!value) return null;
@@ -19,3 +19,9 @@ export const mapGraphTypeToChart = (graphType?: string): SavedChart['type'] => {
     return 'table';
 };
 
+export const normalizeGraphType = (graphType?: string): GraphType => {
+    if (graphType === 'LINE' || graphType === 'BAR' || graphType === 'PIE' || graphType === 'TABLE') {
+        return graphType;
+    }
+    return 'TABLE';
+};

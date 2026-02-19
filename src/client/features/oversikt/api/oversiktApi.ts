@@ -1,4 +1,4 @@
-import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../model/types.ts';
+import type { ProjectDto, DashboardDto, GraphDto, QueryDto, GraphType } from '../model/types.ts';
 
 const toErrorMessage = (status: number, payload: unknown): string => {
   if (payload && typeof payload === 'object') {
@@ -44,4 +44,41 @@ export async function fetchGraphs(projectId: number, dashboardId: number): Promi
 
 export async function fetchQueries(projectId: number, dashboardId: number, graphId: number): Promise<QueryDto[]> {
   return requestJson<QueryDto[]>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries`);
+}
+
+export async function updateGraph(
+  projectId: number,
+  dashboardId: number,
+  graphId: number,
+  params: { name: string; graphType: GraphType },
+): Promise<GraphDto> {
+  return requestJson<GraphDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+}
+
+export async function updateQuery(
+  projectId: number,
+  dashboardId: number,
+  graphId: number,
+  queryId: number,
+  params: { name: string; sqlText: string },
+): Promise<QueryDto> {
+  return requestJson<QueryDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries/${queryId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+}
+
+export async function deleteGraph(
+  projectId: number,
+  dashboardId: number,
+  graphId: number,
+): Promise<void> {
+  await requestJson<unknown>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}`, {
+    method: 'DELETE',
+  });
 }

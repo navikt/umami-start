@@ -42,9 +42,23 @@ interface DashboardWidgetProps {
     // Siteimprove group ID for group-level scoring (from custom filter selection)
     siteimproveGroupId?: string;
     dashboardTitle?: string;
+    onEditChart?: (chartId?: string) => void;
+    onDeleteChart?: (chartId?: string) => void;
 }
 
-export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selectedWebsite, prefetchedData, shouldWaitForBatch, siteimproveGroupId, dashboardTitle }: DashboardWidgetProps) => {
+export const DashboardWidget = ({
+    chart,
+    websiteId,
+    filters,
+    onDataLoaded,
+    selectedWebsite,
+    prefetchedData,
+    shouldWaitForBatch,
+    siteimproveGroupId,
+    dashboardTitle,
+    onEditChart,
+    onDeleteChart,
+}: DashboardWidgetProps) => {
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<DashboardRow[]>([]);
@@ -263,6 +277,8 @@ export const DashboardWidget = ({ chart, websiteId, filters, onDataLoaded, selec
                 domain={selectedWebsite?.domain}
                 data={data}
                 dashboardTitle={dashboardTitle}
+                onEditChart={onEditChart ? () => onEditChart(chart.id) : undefined}
+                onDeleteChart={onDeleteChart ? () => onDeleteChart(chart.id) : undefined}
             />
         </>
     );

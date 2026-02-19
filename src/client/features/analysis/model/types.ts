@@ -204,6 +204,8 @@ export interface ChartActionModalProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any[];
     dashboardTitle?: string;
+    onEditChart?: () => void;
+    onDeleteChart?: () => void;
 }
 
 // ===== ChartLayout types =====
@@ -499,4 +501,3 @@ export interface FunnelStatsStep {
 export interface FunnelStatsProps {
     data: FunnelStatsStep[];
 }
-
