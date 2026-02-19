@@ -1,10 +1,10 @@
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import QueryPreview from './results/QueryPreview.tsx';
-import EventFilter from './EventFilter.tsx';
+import EventFilter from './grafbygger/EventFilter.tsx';
 import ChartLayout from '../../analysis/ui/ChartLayoutOriginal.tsx';
-import MetricSelector from './MetricSelector.tsx';
-import GroupingOptions from './GroupingOptions.tsx';
-import AlertWithCloseButton from './AlertWithCloseButton.tsx';
+import MetricSelector from './grafbygger/MetricSelector.tsx';
+import GroupingOptions from './grafbygger/GroupingOptions.tsx';
+import AlertWithCloseButton from './grafbygger/AlertWithCloseButton.tsx';
 import { FILTER_COLUMNS } from '../../../shared/lib/constants.ts';
 import { DATE_FORMATS, METRICS } from '../model/constants.ts';
 import { sanitizeColumnName } from '../utils/sanitize.ts';

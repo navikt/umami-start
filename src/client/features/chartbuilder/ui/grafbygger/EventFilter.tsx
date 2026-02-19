@@ -1,7 +1,7 @@
 import { Button, Heading } from '@navikt/ds-react';
 import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import type { Filter, Parameter } from '../../../shared/types/chart.ts';
-import { FILTER_COLUMNS, OPERATORS } from '../../../shared/lib/constants.ts';
+import type { Filter, Parameter } from '../../../../shared/types/chart.ts';
+import { FILTER_COLUMNS, OPERATORS } from '../../../../shared/lib/constants.ts';
 import DateRangeSelector from './DateRangeSelector.tsx';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx';
 import EventSelector from './EventSelector.tsx';

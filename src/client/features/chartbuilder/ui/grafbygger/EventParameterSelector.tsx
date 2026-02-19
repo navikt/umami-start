@@ -15,8 +15,8 @@ import {
   Search,
   List
 } from '@navikt/ds-react';
-import type { Parameter } from '../../../shared/types/chart.ts';
-import { FILTER_COLUMNS } from '../../../shared/lib/constants.ts';
+import type { Parameter } from '../../../../shared/types/chart.ts';
+import { FILTER_COLUMNS } from '../../../../shared/lib/constants.ts';
 // import AlertWithCloseButton from '../chartbuilder/AlertWithCloseButton';
 
 interface EventParameterSelectorProps {

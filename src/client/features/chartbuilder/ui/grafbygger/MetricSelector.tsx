@@ -7,7 +7,7 @@ import type {
   MetricOption,
   ColumnOption,
   Filter
-} from '../../../shared/types/chart.ts';
+} from '../../../../shared/types/chart.ts';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx';
 
 interface SummarizeProps {
