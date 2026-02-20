@@ -42,8 +42,8 @@ app.use(createBigQueryRouter({bigquery, GCP_PROJECT_ID, BIGQUERY_TIMEZONE}));
 // Serve index.html with injected runtime config
 registerFrontend(app, {buildPath, UMAMI_BASE_URL, GCP_PROJECT_ID});
 
-const server = app.listen(8080, () => {
-    console.log('Listening on port 8080');
+const server = app.listen(8081, () => {
+    console.log('Listening on port 8081');
     console.log('Server timeout set to 2 minutes');
 });
 
