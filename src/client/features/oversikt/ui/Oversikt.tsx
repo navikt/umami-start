@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
-import { ActionMenu, Alert, Button, Label, Link, Loader, Select, UNSAFE_Combobox } from '@navikt/ds-react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { DragEvent, KeyboardEvent } from 'react';
+import { GripVertical } from 'lucide-react';
+import { Alert, Button, Label, Link, Loader, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
@@ -46,6 +47,51 @@ const Oversikt = () => {
     const [deleteDashboardTarget, setDeleteDashboardTarget] = useState<DashboardDto | null>(null);
     const [savingDashboard, setSavingDashboard] = useState(false);
     const [deletingDashboard, setDeletingDashboard] = useState(false);
+    const [reorderingGraphId, setReorderingGraphId] = useState<number | null>(null);
+    const [grabbedGraphId, setGrabbedGraphId] = useState<number | null>(null);
+    const [draggedGraphId, setDraggedGraphId] = useState<number | null>(null);
+    const [dropTargetGraphId, setDropTargetGraphId] = useState<number | null>(null);
+    const [reorderAnnouncement, setReorderAnnouncement] = useState('');
+    const [isReorderMode, setIsReorderMode] = useState(false);
+    const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+    const chartRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+    const chartPositionsRef = useRef<Map<number, DOMRect>>(new Map());
+
+    useLayoutEffect(() => {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) {
+            const currentPositions = new Map<number, DOMRect>();
+            chartRefs.current.forEach((element, graphId) => {
+                currentPositions.set(graphId, element.getBoundingClientRect());
+            });
+            chartPositionsRef.current = currentPositions;
+            return;
+        }
+
+        const currentPositions = new Map<number, DOMRect>();
+        chartRefs.current.forEach((element, graphId) => {
+            currentPositions.set(graphId, element.getBoundingClientRect());
+        });
+
+        currentPositions.forEach((newRect, graphId) => {
+            const element = chartRefs.current.get(graphId);
+            const oldRect = chartPositionsRef.current.get(graphId);
+            if (!element || !oldRect) return;
+
+            const deltaX = oldRect.left - newRect.left;
+            const deltaY = oldRect.top - newRect.top;
+            if (deltaX === 0 && deltaY === 0) return;
+
+            element.style.transition = 'none';
+            element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            requestAnimationFrame(() => {
+                element.style.transition = 'transform 220ms ease';
+                element.style.transform = '';
+            });
+        });
+
+        chartPositionsRef.current = currentPositions;
+    }, [charts]);
 
     const openEditDialog = (chartId?: string) => {
         if (!chartId) return;
@@ -157,6 +203,91 @@ const Oversikt = () => {
         }
     };
 
+    const handleMoveChart = async (fromIndex: number, toIndex: number): Promise<boolean> => {
+        if (fromIndex === toIndex) return true;
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= charts.length || toIndex >= charts.length) return false;
+
+        const movedChart = charts[fromIndex];
+        if (!movedChart) return false;
+
+        setReorderingGraphId(movedChart.graphId);
+        const success = await handleReorderCharts(fromIndex, toIndex);
+        if (success) {
+            setReorderAnnouncement(`${movedChart.title} flyttet til plass ${toIndex + 1} av ${charts.length}.`);
+        } else {
+            setReorderAnnouncement(`Kunne ikke flytte ${movedChart.title}. Prøv igjen.`);
+        }
+        setReorderingGraphId(null);
+        return success;
+    };
+
+    const getChartIndex = (graphId: number) => charts.findIndex((item) => item.graphId === graphId);
+
+    const handleMoveHandleKeyDown = async (event: KeyboardEvent<HTMLButtonElement>, graphId: number, title: string) => {
+        if (!isReorderMode) return;
+        if (charts.length <= 1) return;
+
+        if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            if (grabbedGraphId === graphId) {
+                setGrabbedGraphId(null);
+                setReorderAnnouncement(`${title} sluppet.`);
+            } else {
+                const index = getChartIndex(graphId);
+                if (index < 0) return;
+                setGrabbedGraphId(graphId);
+                setReorderAnnouncement(`${title} valgt for flytting. Plass ${index + 1} av ${charts.length}.`);
+            }
+            return;
+        }
+
+        if (event.key === 'Escape' && grabbedGraphId === graphId) {
+            event.preventDefault();
+            setGrabbedGraphId(null);
+            setReorderAnnouncement(`Flytting av ${title} avbrutt.`);
+            return;
+        }
+
+        if (grabbedGraphId !== graphId) return;
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+
+        event.preventDefault();
+        const fromIndex = getChartIndex(graphId);
+        if (fromIndex < 0) return;
+        const toIndex = event.key === 'ArrowUp' ? fromIndex - 1 : fromIndex + 1;
+        if (toIndex < 0 || toIndex >= charts.length) return;
+        await handleMoveChart(fromIndex, toIndex);
+    };
+
+    const handleDragStart = (event: DragEvent<HTMLButtonElement>, graphId: number, title: string) => {
+        if (!isReorderMode) return;
+        setDraggedGraphId(graphId);
+        setDropTargetGraphId(null);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(graphId));
+        const chartElement = chartRefs.current.get(graphId);
+        if (chartElement) {
+            event.dataTransfer.setDragImage(chartElement, 24, 24);
+        }
+        const index = getChartIndex(graphId);
+        if (index >= 0) {
+            setReorderAnnouncement(`${title} valgt for flytting. Plass ${index + 1} av ${charts.length}.`);
+        }
+    };
+
+    const handleDropOnChart = async (event: DragEvent<HTMLDivElement>, targetGraphId: number) => {
+        if (!isReorderMode) return;
+        event.preventDefault();
+        const sourceGraphId = draggedGraphId ?? Number(event.dataTransfer.getData('text/plain'));
+        if (!Number.isFinite(sourceGraphId)) return;
+        const fromIndex = getChartIndex(sourceGraphId);
+        const toIndex = getChartIndex(targetGraphId);
+        if (fromIndex < 0 || toIndex < 0) return;
+        await handleMoveChart(fromIndex, toIndex);
+        setDraggedGraphId(null);
+        setDropTargetGraphId(null);
+    };
+
     const filters = (
         <>
             <div className="w-full md:w-[20rem]">
@@ -189,30 +320,6 @@ const Oversikt = () => {
                     clearButton
                     disabled={!selectedProject || loadingDashboards}
                 />
-                <ActionMenu>
-                    <ActionMenu.Trigger>
-                        <Button
-                            variant="tertiary"
-                            size="small"
-                            icon={<MoreVertical aria-hidden />}
-                            title="Dashboardvalg"
-                            aria-label="Dashboardvalg"
-                            disabled={!selectedDashboard}
-                        />
-                    </ActionMenu.Trigger>
-                    <ActionMenu.Content>
-                        <ActionMenu.Item onSelect={openEditDashboardDialog}>
-                            Rediger dashboard
-                        </ActionMenu.Item>
-                        <ActionMenu.Item onSelect={openDeleteDashboardDialog}>
-                            Slett dashboard
-                        </ActionMenu.Item>
-                        <ActionMenu.Divider />
-                        <ActionMenu.Item as="a" href="/prosjekter">
-                            Administrer prosjekt
-                        </ActionMenu.Item>
-                    </ActionMenu.Content>
-                </ActionMenu>
             </div>
 
             {supportsStandardFilters && (
@@ -298,6 +405,9 @@ const Oversikt = () => {
             filters={filters}
         >
             {error && <Alert variant="error">{error}</Alert>}
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
+                {reorderAnnouncement}
+            </p>
 
             {isLoading && (
                 <div className="flex justify-center p-8">
@@ -331,37 +441,114 @@ const Oversikt = () => {
 
             {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && charts.length > 0 && (
                 <>
-                    <div className="flex justify-end mb-4">
+                    <div className="flex justify-end gap-2 mb-4">
+                        <Button
+                            variant={isEditPanelOpen ? 'primary' : 'secondary'}
+                            size="small"
+                            onClick={() => {
+                                setIsEditPanelOpen((prev) => {
+                                    const next = !prev;
+                                    if (!next && isReorderMode) {
+                                        setIsReorderMode(false);
+                                        setGrabbedGraphId(null);
+                                        setDraggedGraphId(null);
+                                        setDropTargetGraphId(null);
+                                        setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
+                                    }
+                                    return next;
+                                });
+                            }}
+                        >
+                            {isEditPanelOpen ? 'Lukk' : 'Rediger'}
+                        </Button>
                         <Button as="a" href="/grafbygger" variant="secondary" size="small">
                             Legg til ny graf
                         </Button>
                     </div>
-
+                    {isEditPanelOpen && (
+                        <section className="mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
+                            <div className="flex flex-wrap items-center gap-2">
+                                {charts.length > 1 && (
+                                    <Button
+                                        variant={isReorderMode ? 'primary' : 'secondary'}
+                                        size="small"
+                                        onClick={() => {
+                                            setIsReorderMode((prev) => {
+                                                const next = !prev;
+                                                if (!next) {
+                                                    setGrabbedGraphId(null);
+                                                    setDraggedGraphId(null);
+                                                    setDropTargetGraphId(null);
+                                                    setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
+                                                } else {
+                                                    setReorderAnnouncement('Rekkefølge-redigering aktivert.');
+                                                }
+                                                return next;
+                                            });
+                                        }}
+                                    >
+                                        {isReorderMode ? 'Ferdig med rekkefølge' : 'Rediger rekkefølge'}
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="secondary"
+                                    size="small"
+                                    onClick={openEditDashboardDialog}
+                                    disabled={!selectedDashboard}
+                                >
+                                    Rediger navn / plassering
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    size="small"
+                                    onClick={openDeleteDashboardDialog}
+                                    disabled={!selectedDashboard}
+                                >
+                                    Slett dashboard
+                                </Button>
+                                <Button
+                                    as="a"
+                                    href="/prosjekter"
+                                    variant="tertiary"
+                                    size="small"
+                                >
+                                    Administrer prosjekt
+                                </Button>
+                            </div>
+                        </section>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
                         {charts.map((chart, index) => (
-                            <div key={chart.id} className={`relative ${getSpanClass(chart.width)}`}>
-                                {charts.length > 1 && (
-                                    <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-10">
-                                        <Button
-                                            variant="tertiary"
-                                            size="xsmall"
-                                            icon={<ArrowUp aria-hidden />}
-                                            title="Flytt opp"
-                                            aria-label={`Flytt ${chart.title} opp`}
-                                            disabled={index === 0}
-                                            onClick={() => void handleReorderCharts(index, index - 1)}
-                                        />
-                                        <Button
-                                            variant="tertiary"
-                                            size="xsmall"
-                                            icon={<ArrowDown aria-hidden />}
-                                            title="Flytt ned"
-                                            aria-label={`Flytt ${chart.title} ned`}
-                                            disabled={index === charts.length - 1}
-                                            onClick={() => void handleReorderCharts(index, index + 1)}
-                                        />
-                                    </div>
-                                )}
+                            <div
+                                key={chart.id}
+                                className={`relative ${getSpanClass(chart.width)}`}
+                                ref={(element) => {
+                                    if (element) chartRefs.current.set(chart.graphId, element);
+                                    else chartRefs.current.delete(chart.graphId);
+                                }}
+                                onDragOver={(event) => {
+                                    if (!isReorderMode || draggedGraphId === null) return;
+                                    event.preventDefault();
+                                    event.dataTransfer.dropEffect = 'move';
+                                }}
+                                onDragEnter={() => {
+                                    if (!isReorderMode || draggedGraphId === null || draggedGraphId === chart.graphId) return;
+                                    setDropTargetGraphId(chart.graphId);
+                                }}
+                                onDragLeave={() => {
+                                    if (dropTargetGraphId === chart.graphId) {
+                                        setDropTargetGraphId(null);
+                                    }
+                                }}
+                                onDrop={(event) => {
+                                    void handleDropOnChart(event, chart.graphId);
+                                }}
+                                style={{
+                                    opacity: draggedGraphId === chart.graphId ? 0.65 : 1,
+                                    outline: dropTargetGraphId === chart.graphId ? '2px dashed var(--ax-border-accent)' : 'none',
+                                    outlineOffset: dropTargetGraphId === chart.graphId ? '4px' : undefined,
+                                }}
+                            >
                                 <DashboardWidget
                                     chart={chart}
                                     websiteId={activeWebsiteId}
@@ -370,6 +557,29 @@ const Oversikt = () => {
                                     dashboardTitle={selectedDashboard.name}
                                     onEditChart={openEditDialog}
                                     onDeleteChart={openDeleteDialog}
+                                    titlePrefix={isReorderMode && charts.length > 1 ? (
+                                        <Button
+                                            variant="secondary"
+                                            size="xsmall"
+                                            icon={<GripVertical aria-hidden />}
+                                            title={grabbedGraphId === chart.graphId ? 'Slipp graf' : 'Flytt graf'}
+                                            aria-label={`${grabbedGraphId === chart.graphId ? 'Slipp' : 'Flytt'} ${chart.title}. Plass ${index + 1} av ${charts.length}.`}
+                                            aria-pressed={grabbedGraphId === chart.graphId}
+                                            disabled={reorderingGraphId !== null}
+                                            loading={reorderingGraphId === chart.graphId}
+                                            draggable={reorderingGraphId === null}
+                                            onKeyDown={(event) => {
+                                                void handleMoveHandleKeyDown(event, chart.graphId, chart.title);
+                                            }}
+                                            onDragStart={(event) => handleDragStart(event, chart.graphId, chart.title)}
+                                            onDragEnd={() => {
+                                                setDraggedGraphId(null);
+                                                setDropTargetGraphId(null);
+                                            }}
+                                        >
+                                            Flytt
+                                        </Button>
+                                    ) : undefined}
                                 />
                             </div>
                         ))}

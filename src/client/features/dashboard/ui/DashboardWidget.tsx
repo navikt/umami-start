@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Loader, Alert, Button } from '@navikt/ds-react';
 import { MoreVertical } from 'lucide-react';
 import type { SavedChart } from '../../../../data/dashboard';
@@ -44,6 +45,7 @@ interface DashboardWidgetProps {
     dashboardTitle?: string;
     onEditChart?: (chartId?: string) => void;
     onDeleteChart?: (chartId?: string) => void;
+    titlePrefix?: ReactNode;
 }
 
 export const DashboardWidget = ({
@@ -58,6 +60,7 @@ export const DashboardWidget = ({
     dashboardTitle,
     onEditChart,
     onDeleteChart,
+    titlePrefix,
 }: DashboardWidgetProps) => {
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
@@ -233,9 +236,12 @@ export const DashboardWidget = ({
             <div className={`bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
                 <div className="flex flex-col mb-4">
                     <div className="flex items-center justify-between gap-3">
-                        <h2 className="text-xl font-semibold text-[var(--ax-text-default)]">
-                            {chart.title}
-                        </h2>
+                        <div className="flex items-center gap-2 min-w-0">
+                            {titlePrefix}
+                            <h2 className="text-xl font-semibold text-[var(--ax-text-default)] truncate">
+                                {chart.title}
+                            </h2>
+                        </div>
                         {chart.sql && (
                             <Button
                                 variant="tertiary"

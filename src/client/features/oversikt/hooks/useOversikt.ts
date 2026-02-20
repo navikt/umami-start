@@ -330,12 +330,14 @@ export const useOversikt = () => {
 
     const handleReorderCharts = useCallback(
         async (fromIndex: number, toIndex: number) => {
-            if (!selectedProjectId || !selectedDashboardId) return;
-            if (fromIndex === toIndex) return;
+            if (!selectedProjectId || !selectedDashboardId) return false;
+            if (fromIndex === toIndex) return true;
+            if (fromIndex < 0 || toIndex < 0 || fromIndex >= charts.length || toIndex >= charts.length) return false;
 
             // Compute reordered list from current charts
             const reordered = [...charts];
             const [moved] = reordered.splice(fromIndex, 1);
+            if (!moved) return false;
             reordered.splice(toIndex, 0, moved);
 
             const ordering = reordered.map((chart, index) => ({
@@ -357,10 +359,12 @@ export const useOversikt = () => {
 
             try {
                 await updateGraphOrdering(selectedProjectId, selectedDashboardId, ordering);
+                return true;
             } catch (err: unknown) {
                 setError(err instanceof Error ? err.message : 'Kunne ikke oppdatere rekkefølge');
                 // Revert by re-fetching
                 await refreshGraphs();
+                return false;
             }
         },
         [selectedProjectId, selectedDashboardId, charts, refreshGraphs],
