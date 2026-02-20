@@ -1264,6 +1264,9 @@ const QueryPreview = ({
       >
         <Modal.Body>
           <div className="space-y-4">
+            <Alert variant="info" size="small">
+              Du kan velge eksisterende prosjekt/dashboard, eller skrive et nytt navn og trykke Enter for å opprette det.
+            </Alert>
             <UNSAFE_Combobox
               label="Prosjekt"
               options={projectOptions}

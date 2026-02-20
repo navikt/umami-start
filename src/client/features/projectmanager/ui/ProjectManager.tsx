@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, BodyShort, Button, Heading, Modal, Page, TextField } from '@navikt/ds-react';
 import { PageHeader } from '../../../shared/ui/theme/PageHeader/PageHeader.tsx';
 import { useProjectManager } from '../hooks/useProjectManager.ts';
@@ -24,6 +24,7 @@ const ProjectManager = () => {
     const [editDescription, setEditDescription] = useState('');
     const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
+    const projectNameInputRef = useRef<HTMLInputElement | null>(null);
     const totalProjects = projectSummaries.length;
     const totalDashboards = projectSummaries.reduce((sum, item) => sum + item.dashboardCount, 0);
     const totalCharts = projectSummaries.reduce((sum, item) => sum + item.chartCount, 0);
@@ -74,6 +75,15 @@ const ProjectManager = () => {
                     {error && <Alert variant="error">{error}</Alert>}
                     {message && <Alert variant="success">{message}</Alert>}
 
+                    <div className="flex justify-end">
+                        <Button
+                            size="small"
+                            onClick={() => projectNameInputRef.current?.focus()}
+                        >
+                            Legg til prosjekt
+                        </Button>
+                    </div>
+
                     <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <article className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Prosjekter totalt</div>
@@ -95,6 +105,7 @@ const ProjectManager = () => {
                             <TextField
                                 label="Prosjektnavn"
                                 size="small"
+                                ref={projectNameInputRef}
                                 value={newProjectName}
                                 onChange={(event) => setNewProjectName(event.target.value)}
                             />
