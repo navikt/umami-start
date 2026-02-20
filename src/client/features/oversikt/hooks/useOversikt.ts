@@ -6,7 +6,7 @@ import type {
     ProjectDto, DashboardDto, GraphWithQueries, FilterState, MetricType,
     OversiktChart, OversiktSelectOption,
 } from '../model/types.ts';
-import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchGraphs, fetchQueries } from '../api/oversiktApi.ts';
+import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchGraphs, fetchQueries, updateGraphOrdering } from '../api/oversiktApi.ts';
 import {
     parseId,
     arraysEqual,
@@ -74,7 +74,8 @@ export const useOversikt = () => {
     const activeWebsiteId = activeWebsite?.id ?? '';
 
     const charts = useMemo<OversiktChart[]>(() => {
-        return graphs
+        return [...graphs]
+            .sort((a, b) => (a.graph.ordering ?? 0) - (b.graph.ordering ?? 0))
             .filter((item) => item.queries.length > 0)
             .map((item) => {
                 const primaryQuery = item.queries[0];
@@ -226,6 +227,7 @@ export const useOversikt = () => {
         [],
     );
 
+
     // ── Effects ──
 
     useEffect(() => {
@@ -326,6 +328,44 @@ export const useOversikt = () => {
         void refreshGraphs();
     }, [refreshGraphs]);
 
+    const handleReorderCharts = useCallback(
+        async (fromIndex: number, toIndex: number) => {
+            if (!selectedProjectId || !selectedDashboardId) return;
+            if (fromIndex === toIndex) return;
+
+            // Compute reordered list from current charts
+            const reordered = [...charts];
+            const [moved] = reordered.splice(fromIndex, 1);
+            reordered.splice(toIndex, 0, moved);
+
+            const ordering = reordered.map((chart, index) => ({
+                id: chart.graphId,
+                ordering: index,
+            }));
+
+            // Optimistically update local graph ordering
+            setGraphs((prev) => {
+                const orderMap = new Map(ordering.map((entry) => [entry.id, entry.ordering]));
+                return prev.map((item) => ({
+                    ...item,
+                    graph: {
+                        ...item.graph,
+                        ordering: orderMap.get(item.graph.id) ?? item.graph.ordering,
+                    },
+                }));
+            });
+
+            try {
+                await updateGraphOrdering(selectedProjectId, selectedDashboardId, ordering);
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Kunne ikke oppdatere rekkefølge');
+                // Revert by re-fetching
+                await refreshGraphs();
+            }
+        },
+        [selectedProjectId, selectedDashboardId, charts, refreshGraphs],
+    );
+
     useEffect(() => {
         const currentProjectId = searchParams.get('projectId');
         const currentDashboardId = searchParams.get('dashboardId');
@@ -404,6 +444,7 @@ export const useOversikt = () => {
         handleDashboardSelected,
         handleUrlToggleSelected,
         handleComboChange,
+        handleReorderCharts,
         refreshGraphs,
         refreshDashboards,
     };

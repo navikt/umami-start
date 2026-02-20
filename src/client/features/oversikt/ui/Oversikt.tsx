@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical } from 'lucide-react';
+import { ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
 import { ActionMenu, Alert, Button, Label, Loader, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
@@ -32,6 +32,7 @@ const Oversikt = () => {
         isLoading, loadingProjects, loadingDashboards, error,
         handleUpdate, handleProjectSelected, handleDashboardSelected,
         handleUrlToggleSelected, handleComboChange,
+        handleReorderCharts,
         refreshGraphs, refreshDashboards,
     } = useOversikt();
     const [editChart, setEditChart] = useState<OversiktChart | null>(null);
@@ -328,17 +329,40 @@ const Oversikt = () => {
 
             {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && charts.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
-                    {charts.map((chart) => (
-                        <DashboardWidget
-                            key={chart.id}
-                            chart={chart}
-                            websiteId={activeWebsiteId}
-                            filters={activeFilters}
-                            selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
-                            dashboardTitle={selectedDashboard.name}
-                            onEditChart={openEditDialog}
-                            onDeleteChart={openDeleteDialog}
-                        />
+                    {charts.map((chart, index) => (
+                        <div key={chart.id} className="relative col-span-full md:col-span-10">
+                            {charts.length > 1 && (
+                                <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-10">
+                                    <Button
+                                        variant="tertiary"
+                                        size="xsmall"
+                                        icon={<ArrowUp aria-hidden />}
+                                        title="Flytt opp"
+                                        aria-label={`Flytt ${chart.title} opp`}
+                                        disabled={index === 0}
+                                        onClick={() => void handleReorderCharts(index, index - 1)}
+                                    />
+                                    <Button
+                                        variant="tertiary"
+                                        size="xsmall"
+                                        icon={<ArrowDown aria-hidden />}
+                                        title="Flytt ned"
+                                        aria-label={`Flytt ${chart.title} ned`}
+                                        disabled={index === charts.length - 1}
+                                        onClick={() => void handleReorderCharts(index, index + 1)}
+                                    />
+                                </div>
+                            )}
+                            <DashboardWidget
+                                chart={chart}
+                                websiteId={activeWebsiteId}
+                                filters={activeFilters}
+                                selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
+                                dashboardTitle={selectedDashboard.name}
+                                onEditChart={openEditDialog}
+                                onDeleteChart={openDeleteDialog}
+                            />
+                        </div>
                     ))}
                 </div>
             )}

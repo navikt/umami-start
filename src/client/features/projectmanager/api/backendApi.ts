@@ -1,4 +1,4 @@
-import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../model/types.ts';
+import type { ProjectDto, DashboardDto, GraphDto, GraphOrderingEntry, QueryDto } from '../model/types.ts';
 import { requestJson } from '../../../shared/lib/apiClient.ts';
 
 // ── Projects ──
@@ -64,6 +64,20 @@ export const createGraph = (
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, graphType }),
+        },
+    );
+
+export const updateGraphOrdering = (
+    projectId: number,
+    dashboardId: number,
+    ordering: GraphOrderingEntry[],
+): Promise<void> =>
+    requestJson<void>(
+        `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/ordering`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ordering),
         },
     );
 

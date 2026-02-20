@@ -23,7 +23,14 @@ export type GraphDto = {
     dashboardId: number;
     name: string;
     graphType?: string;
+    width?: number;
+    ordering?: number;
     updatedAt?: string;
+};
+
+export type GraphOrderingEntry = {
+    id: number;
+    ordering: number;
 };
 
 export type QueryDto = {
