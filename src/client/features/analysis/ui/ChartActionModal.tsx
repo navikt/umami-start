@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
 import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Trash2 } from 'lucide-react';
 import type { ChartActionModalProps } from '../model/types.ts';
 import { generateShareUrl, buildEditorUrl, downloadChartCsv } from '../utils/chartActions.ts';
 
@@ -16,6 +16,7 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     dashboardTitle,
     onEditChart,
     onDeleteChart,
+    onCopyChart,
 }) => {
     const [copyFeedback, setCopyFeedback] = useState(false);
 
@@ -55,6 +56,11 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     const handleDelete = () => {
         onClose();
         onDeleteChart?.();
+    };
+
+    const handleCopy = () => {
+        onClose();
+        onCopyChart?.();
     };
 
     const actionButtonClass = '!w-full !justify-start';
@@ -101,6 +107,18 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                                 <span>Åpne i SQL-editor</span>
                             </span>
                         </Button>
+                        {onCopyChart && (
+                            <Button
+                                variant="secondary"
+                                onClick={handleCopy}
+                                className={actionButtonClass}
+                            >
+                                <span className="inline-flex items-center gap-2">
+                                    <span className={iconSlotClass}><Copy aria-hidden size={16} /></span>
+                                    <span>Kopier graf</span>
+                                </span>
+                            </Button>
+                        )}
                         {onEditChart && (
                             <Button
                                 variant="secondary"

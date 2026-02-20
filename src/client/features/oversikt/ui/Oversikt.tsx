@@ -1,18 +1,51 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
-import { Alert, Button, Label, Link, Loader, Select, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Alert, Button, Label, Link, Loader, Modal, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
 import { getSpanClass } from '../../dashboard/utils/widgetUtils.ts';
 import { useOversikt } from '../hooks/useOversikt.ts';
 import type { DashboardDto, GraphType, OversiktChart } from '../model/types.ts';
-import { deleteDashboard, deleteGraph, updateDashboard, updateGraph, updateQuery } from '../api/oversiktApi.ts';
+import {
+    createGraph,
+    createQuery,
+    deleteDashboard,
+    deleteGraph,
+    fetchDashboards,
+    fetchGraphs,
+    fetchQueries,
+    updateDashboard,
+    updateGraph,
+    updateQuery,
+} from '../api/oversiktApi.ts';
 import EditChartDialog from './dialogs/EditChartDialog.tsx';
 import DeleteChartDialog from './dialogs/DeleteChartDialog.tsx';
 import EditDashboardDialog from './dialogs/EditDashboardDialog.tsx';
 import DeleteDashboardDialog from './dialogs/DeleteDashboardDialog.tsx';
+import CopyChartDialog from './dialogs/CopyChartDialog.tsx';
+import { applyWebsiteIdOnly, extractWebsiteId, replaceHardcodedWebsiteId } from '../../sql/utils/sqlProcessing.ts';
+
+const parseChartWidth = (width?: string): number | undefined => {
+    const parsed = Number(width);
+    if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+    return Math.round(parsed);
+};
+
+const rewriteSqlWebsiteId = (sql: string, targetWebsiteId?: string): string => {
+    if (!targetWebsiteId) return sql;
+    const withPlaceholderApplied = applyWebsiteIdOnly(sql, targetWebsiteId);
+    return replaceHardcodedWebsiteId(withPlaceholderApplied, targetWebsiteId);
+};
+
+type CopySuccessState = {
+    projectId: number;
+    projectName: string;
+    dashboardId: number;
+    dashboardName: string;
+    chartName: string;
+};
 
 const Oversikt = () => {
     const {
@@ -47,6 +80,10 @@ const Oversikt = () => {
     const [deleteDashboardTarget, setDeleteDashboardTarget] = useState<DashboardDto | null>(null);
     const [savingDashboard, setSavingDashboard] = useState(false);
     const [deletingDashboard, setDeletingDashboard] = useState(false);
+    const [copyChartTarget, setCopyChartTarget] = useState<{ chart: OversiktChart; sourceWebsiteId?: string } | null>(null);
+    const [copyMutationError, setCopyMutationError] = useState<string | null>(null);
+    const [copyingChart, setCopyingChart] = useState(false);
+    const [copySuccess, setCopySuccess] = useState<CopySuccessState | null>(null);
     const [reorderingGraphId, setReorderingGraphId] = useState<number | null>(null);
     const [grabbedGraphId, setGrabbedGraphId] = useState<number | null>(null);
     const [draggedGraphId, setDraggedGraphId] = useState<number | null>(null);
@@ -108,11 +145,24 @@ const Oversikt = () => {
         setDeleteChartTarget(chart);
     };
 
-    const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string; width: number }) => {
+    const openCopyDialog = (chartId?: string, sourceWebsiteId?: string) => {
+        if (!chartId) return;
+        const chart = charts.find((item) => item.id === chartId) ?? null;
+        if (!chart) return;
+        const resolvedSourceWebsiteId =
+            sourceWebsiteId
+            || (chart.sql ? extractWebsiteId(chart.sql) : undefined)
+            || (activeWebsiteId || undefined);
+        setCopyMutationError(null);
+        setCopyChartTarget({ chart, sourceWebsiteId: resolvedSourceWebsiteId });
+    };
+
+    const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string; width: number; websiteId?: string }) => {
         if (!editChart || !selectedProjectId || !selectedDashboardId) return;
         setSavingEdit(true);
         setMutationError(null);
         try {
+            const sqlForSave = rewriteSqlWebsiteId(params.sqlText, params.websiteId);
             await updateGraph(selectedProjectId, selectedDashboardId, editChart.graphId, {
                 name: params.name,
                 graphType: params.graphType,
@@ -120,7 +170,7 @@ const Oversikt = () => {
             });
             await updateQuery(selectedProjectId, selectedDashboardId, editChart.graphId, editChart.queryId, {
                 name: editChart.queryName,
-                sqlText: params.sqlText,
+                sqlText: sqlForSave,
             });
             await refreshGraphs();
             setEditChart(null);
@@ -144,6 +194,99 @@ const Oversikt = () => {
         } finally {
             setDeletingChart(false);
         }
+    };
+
+    const handleCopyChart = async (params: {
+        projectId: number;
+        projectName: string;
+        dashboardId: number;
+        dashboardName: string;
+        chartName: string;
+        websiteId?: string;
+    }) => {
+        if (!copyChartTarget) return;
+        const sqlText = copyChartTarget.chart.sql?.trim() ?? '';
+        if (!sqlText) {
+            setCopyMutationError('Grafen mangler SQL og kan ikke kopieres');
+            return;
+        }
+        if (!params.chartName.trim()) {
+            setCopyMutationError('Grafnavn er påkrevd');
+            return;
+        }
+        const sqlForCopy = rewriteSqlWebsiteId(sqlText, params.websiteId);
+
+        setCopyingChart(true);
+        setCopyMutationError(null);
+        try {
+            const graphItems = await fetchGraphs(params.projectId, params.dashboardId);
+            const sourceName = params.chartName.trim();
+            const sourceNameLower = sourceName.toLowerCase();
+            const isSameDashboard =
+                selectedProjectId === params.projectId && selectedDashboardId === params.dashboardId;
+            const existingGraph = graphItems.find((graph) => {
+                if (isSameDashboard && graph.id === copyChartTarget.chart.graphId) return false;
+                return graph.name.trim().toLowerCase() === sourceNameLower;
+            });
+
+            const width = parseChartWidth(copyChartTarget.chart.width);
+            if (existingGraph) {
+                await updateGraph(params.projectId, params.dashboardId, existingGraph.id, {
+                    name: sourceName,
+                    graphType: copyChartTarget.chart.graphType,
+                    width,
+                });
+
+                const existingQueries = await fetchQueries(params.projectId, params.dashboardId, existingGraph.id);
+                const firstQuery = existingQueries[0];
+                if (firstQuery) {
+                    await updateQuery(params.projectId, params.dashboardId, existingGraph.id, firstQuery.id, {
+                        name: copyChartTarget.chart.queryName,
+                        sqlText: sqlForCopy,
+                    });
+                } else {
+                    await createQuery(params.projectId, params.dashboardId, existingGraph.id, {
+                        name: copyChartTarget.chart.queryName,
+                        sqlText: sqlForCopy,
+                    });
+                }
+            } else {
+                const createdGraph = await createGraph(params.projectId, params.dashboardId, {
+                    name: sourceName,
+                    graphType: copyChartTarget.chart.graphType,
+                    width,
+                });
+
+                await createQuery(params.projectId, params.dashboardId, createdGraph.id, {
+                    name: copyChartTarget.chart.queryName,
+                    sqlText: sqlForCopy,
+                });
+            }
+
+            if (isSameDashboard) {
+                await refreshGraphs();
+            }
+
+            setCopyChartTarget(null);
+            setCopySuccess({
+                projectId: params.projectId,
+                projectName: params.projectName,
+                dashboardId: params.dashboardId,
+                dashboardName: params.dashboardName,
+                chartName: params.chartName.trim(),
+            });
+        } catch (err: unknown) {
+            setCopyMutationError(err instanceof Error ? err.message : 'Kunne ikke kopiere graf');
+        } finally {
+            setCopyingChart(false);
+        }
+    };
+
+    const handleGoToCopiedDashboard = async () => {
+        if (!copySuccess) return;
+        setSelectedProjectId(copySuccess.projectId);
+        await refreshDashboards(copySuccess.projectId, copySuccess.dashboardId);
+        setCopySuccess(null);
     };
 
     const openEditDashboardDialog = () => {
@@ -533,6 +676,7 @@ const Oversikt = () => {
                                     dashboardTitle={selectedDashboard.name}
                                     onEditChart={openEditDialog}
                                     onDeleteChart={openDeleteDialog}
+                                    onCopyChart={openCopyDialog}
                                     titlePrefix={isEditPanelOpen && charts.length > 1 ? (
                                         <Button
                                             variant="secondary"
@@ -575,6 +719,11 @@ const Oversikt = () => {
                 key={editChart?.id ?? 'edit-chart-dialog'}
                 open={!!editChart}
                 chart={editChart}
+                defaultWebsiteId={
+                    editChart?.sql
+                        ? (extractWebsiteId(editChart.sql) ?? (activeWebsiteId || undefined))
+                        : (activeWebsiteId || undefined)
+                }
                 loading={savingEdit}
                 error={mutationError}
                 onClose={() => {
@@ -595,6 +744,46 @@ const Oversikt = () => {
                 }}
                 onConfirm={handleDeleteChart}
             />
+
+            <CopyChartDialog
+                open={!!copyChartTarget}
+                chart={copyChartTarget?.chart ?? null}
+                projects={projects}
+                selectedProjectId={selectedProjectId}
+                selectedDashboardId={selectedDashboardId}
+                loading={copyingChart}
+                error={copyMutationError}
+                onClose={() => {
+                    setCopyChartTarget(null);
+                    setCopyMutationError(null);
+                }}
+                sourceWebsiteId={copyChartTarget?.sourceWebsiteId}
+                loadDashboards={fetchDashboards}
+                onCopy={handleCopyChart}
+            />
+
+            <Modal
+                open={!!copySuccess}
+                onClose={() => setCopySuccess(null)}
+                header={{ heading: 'Graf kopiert' }}
+                width="small"
+            >
+                <Modal.Body>
+                    {copySuccess && (
+                        <p>
+                            {copySuccess.chartName} er kopiert til {copySuccess.projectName} / {copySuccess.dashboardName}. Vil du gå dit nå?
+                        </p>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleGoToCopiedDashboard()}>
+                        Ja, gå dit
+                    </Button>
+                    <Button variant="secondary" onClick={() => setCopySuccess(null)}>
+                        Nei, bli her
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <EditDashboardDialog
                 key={editDashboardTarget ? `edit-dashboard-${editDashboardTarget.id}-${editDashboardTarget.projectId}` : 'edit-dashboard-dialog'}

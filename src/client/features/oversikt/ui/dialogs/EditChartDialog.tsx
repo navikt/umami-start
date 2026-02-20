@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Button, Modal, Select, Switch, Textarea, TextField } from '@navikt/ds-react';
 import type { GraphType, OversiktChart } from '../../model/types.ts';
+import type { Website } from '../../../../shared/types/website.ts';
+import { fetchWebsites } from '../../../../shared/api/websiteApi.ts';
 
 type EditChartDialogProps = {
     open: boolean;
     chart: OversiktChart | null;
+    defaultWebsiteId?: string;
     loading?: boolean;
     error?: string | null;
     onClose: () => void;
-    onSave: (params: { name: string; graphType: GraphType; sqlText: string; width: number }) => Promise<void>;
+    onSave: (params: { name: string; graphType: GraphType; sqlText: string; width: number; websiteId?: string }) => Promise<void>;
 };
 
 const widthToPercent = (width?: OversiktChart['width']): number => {
@@ -19,13 +22,28 @@ const widthToPercent = (width?: OversiktChart['width']): number => {
     return Math.round(parsed);
 };
 
-const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave }: EditChartDialogProps) => {
+const EditChartDialog = ({ open, chart, defaultWebsiteId, loading = false, error, onClose, onSave }: EditChartDialogProps) => {
     const [name, setName] = useState(chart?.title ?? '');
     const [graphType, setGraphType] = useState<GraphType>(chart?.graphType ?? 'TABLE');
     const [width, setWidth] = useState(String(widthToPercent(chart?.width)));
     const [sqlText, setSqlText] = useState(chart?.sql ?? '');
     const [showSql, setShowSql] = useState(false);
+    const [websites, setWebsites] = useState<Website[]>([]);
+    const [websiteId, setWebsiteId] = useState(defaultWebsiteId ?? '');
     const [localError, setLocalError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const run = async () => {
+            try {
+                const items = await fetchWebsites();
+                setWebsites(items);
+            } catch {
+                setWebsites([]);
+            }
+        };
+        void run();
+    }, [open]);
 
     const handleSave = async () => {
         if (!chart) return;
@@ -50,6 +68,7 @@ const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave 
             graphType,
             width: normalizedWidth,
             sqlText: showSql ? sqlText : (chart.sql ?? ''),
+            websiteId: websiteId || undefined,
         });
     };
 
@@ -83,6 +102,20 @@ const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave 
                         onChange={(event) => setWidth(event.target.value)}
                         size="small"
                     />
+                    <Select
+                        label="Nettside"
+                        description="Velg hvilken nettside grafen skal bruke."
+                        value={websiteId}
+                        onChange={(event) => setWebsiteId(event.target.value)}
+                        size="small"
+                    >
+                        <option value="">Velg nettside</option>
+                        {websites.map((website) => (
+                            <option key={website.id} value={website.id}>
+                                {website.name}
+                            </option>
+                        ))}
+                    </Select>
                     <Switch checked={showSql} onChange={(event) => setShowSql(event.target.checked)}>
                         Vis SQL kode
                     </Switch>

@@ -89,6 +89,31 @@ export async function fetchQueries(projectId: number, dashboardId: number, graph
   return requestJson<QueryDto[]>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries`);
 }
 
+export async function createGraph(
+  projectId: number,
+  dashboardId: number,
+  params: { name: string; graphType: GraphType; width?: number },
+): Promise<GraphDto> {
+  return requestJson<GraphDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+}
+
+export async function createQuery(
+  projectId: number,
+  dashboardId: number,
+  graphId: number,
+  params: { name: string; sqlText: string },
+): Promise<QueryDto> {
+  return requestJson<QueryDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+}
+
 export async function updateGraph(
   projectId: number,
   dashboardId: number,

@@ -204,6 +204,7 @@ export interface ChartActionModalProps {
     dashboardTitle?: string;
     onEditChart?: () => void;
     onDeleteChart?: () => void;
+    onCopyChart?: () => void;
 }
 
 // ===== ChartLayout types =====
