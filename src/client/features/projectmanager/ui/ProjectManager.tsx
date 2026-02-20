@@ -165,17 +165,17 @@ const ProjectManager = () => {
                                                         )}
                                                         {summary.dashboards.map((dashboard) => (
                                                             <div key={dashboard.id} className="p-3 rounded border border-[var(--ax-border-neutral-subtle)]">
-                                                                <div className="font-semibold mb-1">{dashboard.name}</div>
+                                                                <div className="font-semibold mb-1">
+                                                                    <Link href={`/oversikt?projectId=${summary.project.id}&dashboardId=${dashboard.id}`}>
+                                                                        {dashboard.name}
+                                                                    </Link>
+                                                                </div>
                                                                 {dashboard.charts.length === 0 ? (
                                                                     <BodyShort size="small">Ingen grafer.</BodyShort>
                                                                 ) : (
                                                                     <ul className="list-disc pl-5 space-y-1">
                                                                         {dashboard.charts.map((chart) => (
-                                                                            <li key={chart.id}>
-                                                                                <Link href={`/oversikt?projectId=${summary.project.id}&dashboardId=${dashboard.id}&chartId=graph-${chart.id}`}>
-                                                                                    {chart.name}
-                                                                                </Link>
-                                                                            </li>
+                                                                            <li key={chart.id}>{chart.name}</li>
                                                                         ))}
                                                                     </ul>
                                                                 )}

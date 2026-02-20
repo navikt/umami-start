@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { ActionMenu, Alert, Button, Label, Loader, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
@@ -153,17 +153,6 @@ const Oversikt = () => {
             setDeletingDashboard(false);
         }
     };
-
-    useEffect(() => {
-        if (isLoading || charts.length === 0) return;
-        const chartId = new URLSearchParams(window.location.search).get('chartId');
-        if (!chartId) return;
-
-        const targetElement = document.getElementById(chartId);
-        if (!targetElement) return;
-
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, [isLoading, charts]);
 
     const filters = (
         <>
@@ -340,17 +329,16 @@ const Oversikt = () => {
             {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && charts.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
                     {charts.map((chart) => (
-                        <div key={chart.id} id={chart.id}>
-                            <DashboardWidget
-                                chart={chart}
-                                websiteId={activeWebsiteId}
-                                filters={activeFilters}
-                                selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
-                                dashboardTitle={selectedDashboard.name}
-                                onEditChart={openEditDialog}
-                                onDeleteChart={openDeleteDialog}
-                            />
-                        </div>
+                        <DashboardWidget
+                            key={chart.id}
+                            chart={chart}
+                            websiteId={activeWebsiteId}
+                            filters={activeFilters}
+                            selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
+                            dashboardTitle={selectedDashboard.name}
+                            onEditChart={openEditDialog}
+                            onDeleteChart={openDeleteDialog}
+                        />
                     ))}
                 </div>
             )}
