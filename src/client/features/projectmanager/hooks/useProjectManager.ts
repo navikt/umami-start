@@ -6,6 +6,14 @@ type ProjectSummary = {
     project: ProjectDto;
     dashboardCount: number;
     chartCount: number;
+    dashboards: Array<{
+        id: number;
+        name: string;
+        charts: Array<{
+            id: number;
+            name: string;
+        }>;
+    }>;
 };
 
 export const useProjectManager = () => {
@@ -35,16 +43,24 @@ export const useProjectManager = () => {
 
         const summaryItems = await Promise.all(projectItems.map(async (project) => {
             const dashboards = await api.fetchDashboards(project.id);
-            const chartCountList = await Promise.all(dashboards.map(async (dashboard) => {
+            const chartListByDashboard = await Promise.all(dashboards.map(async (dashboard) => {
                 const graphs = await api.fetchGraphs(project.id, dashboard.id);
-                return graphs.length;
+                return {
+                    id: dashboard.id,
+                    name: dashboard.name,
+                    charts: graphs.map((graph) => ({
+                        id: graph.id,
+                        name: graph.name,
+                    })),
+                };
             }));
-            const chartCount = chartCountList.reduce((sum, count) => sum + count, 0);
+            const chartCount = chartListByDashboard.reduce((sum, dashboard) => sum + dashboard.charts.length, 0);
 
             return {
                 project,
                 dashboardCount: dashboards.length,
                 chartCount,
+                dashboards: chartListByDashboard,
             };
         }));
 

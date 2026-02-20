@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert, BodyShort, Button, Heading, Modal, Page, TextField } from '@navikt/ds-react';
+import { Alert, BodyShort, Button, Heading, Link, Modal, Page, Table, TextField } from '@navikt/ds-react';
 import { PageHeader } from '../../../shared/ui/theme/PageHeader/PageHeader.tsx';
 import { useProjectManager } from '../hooks/useProjectManager.ts';
 import type { ProjectSummary } from '../hooks/useProjectManager.ts';
@@ -142,36 +142,82 @@ const ProjectManager = () => {
                         {projectSummaries.length === 0 && (
                             <Alert variant="info" size="small">Ingen prosjekter funnet.</Alert>
                         )}
-
-                        {projectSummaries.map((summary) => (
-                            <article
-                                key={summary.project.id}
-                                className="p-4 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]"
-                            >
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                    <div className="space-y-1">
-                                        <Heading level="3" size="xsmall">{summary.project.name}</Heading>
-                                        {summary.project.description && (
-                                            <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
-                                                {summary.project.description}
-                                            </BodyShort>
-                                        )}
-                                        <BodyShort size="small">
-                                            Dashboards: <strong>{summary.dashboardCount}</strong> · Grafer: <strong>{summary.chartCount}</strong>
-                                        </BodyShort>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <Button size="small" variant="secondary" onClick={() => openEdit(summary)}>
-                                            Rediger
-                                        </Button>
-                                        <Button size="small" variant="secondary" onClick={() => openDelete(summary)}>
-                                            Slett
-                                        </Button>
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
+                        {projectSummaries.length > 0 && (
+                            <Table size="small">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.HeaderCell />
+                                        <Table.HeaderCell scope="col">Prosjekt</Table.HeaderCell>
+                                        <Table.HeaderCell scope="col">Dashboards</Table.HeaderCell>
+                                        <Table.HeaderCell scope="col">Grafer</Table.HeaderCell>
+                                        <Table.HeaderCell scope="col">Handlinger</Table.HeaderCell>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {projectSummaries.map((summary) => {
+                                        return (
+                                            <Table.ExpandableRow
+                                                key={summary.project.id}
+                                                content={
+                                                    <div className="space-y-3">
+                                                        {summary.dashboards.length === 0 && (
+                                                            <BodyShort size="small">Ingen dashboards.</BodyShort>
+                                                        )}
+                                                        {summary.dashboards.map((dashboard) => (
+                                                            <div key={dashboard.id} className="p-3 rounded border border-[var(--ax-border-neutral-subtle)]">
+                                                                <div className="font-semibold mb-1">{dashboard.name}</div>
+                                                                {dashboard.charts.length === 0 ? (
+                                                                    <BodyShort size="small">Ingen grafer.</BodyShort>
+                                                                ) : (
+                                                                    <ul className="list-disc pl-5 space-y-1">
+                                                                        {dashboard.charts.map((chart) => (
+                                                                            <li key={chart.id}>
+                                                                                <Link href={`/oversikt?projectId=${summary.project.id}&dashboardId=${dashboard.id}&chartId=graph-${chart.id}`}>
+                                                                                    {chart.name}
+                                                                                </Link>
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                }
+                                                togglePlacement="left"
+                                            >
+                                                <Table.HeaderCell scope="row">{summary.project.name}</Table.HeaderCell>
+                                                <Table.DataCell>{summary.dashboardCount}</Table.DataCell>
+                                                <Table.DataCell>{summary.chartCount}</Table.DataCell>
+                                                <Table.DataCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            size="xsmall"
+                                                            variant="secondary"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                openEdit(summary);
+                                                            }}
+                                                        >
+                                                            Rediger
+                                                        </Button>
+                                                        <Button
+                                                            size="xsmall"
+                                                            variant="secondary"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                openDelete(summary);
+                                                            }}
+                                                        >
+                                                            Slett
+                                                        </Button>
+                                                    </div>
+                                                </Table.DataCell>
+                                            </Table.ExpandableRow>
+                                        );
+                                    })}
+                                </Table.Body>
+                            </Table>
+                        )}
                     </section>
                 </div>
             </Page.Block>
