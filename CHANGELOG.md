@@ -68,5 +68,6 @@ All notable changes to this project will be documented in this file.
 - Outbound start-umami-backend
 - Lagre og vise grafer (#119)
 - Validate and max bill bigquery
+- Graph ordering (#122)
 
 
