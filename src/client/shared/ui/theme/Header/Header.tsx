@@ -18,6 +18,8 @@ export default function Header({ theme }: HeaderProps) {
   const [isMobile, setIsMobile] = useState(false);
   const { hostname, pathname, search, hash } = window.location;
   const currentPath = `${pathname}${search}${hash}`;
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+  const isDevEnvironment = isLocalhost || hostname.includes(".dev.nav.no");
 
   const guideLinks = [
     {
@@ -94,6 +96,14 @@ export default function Header({ theme }: HeaderProps) {
       ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]"
       : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
 
+  const logoShellClass =
+    "w-9 h-9 md:w-10 md:h-10 rounded-xl grid place-items-center ring-1 " +
+    (theme === "dark"
+      ? "ring-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-accent-softA)]"
+      : "ring-white/35 bg-white/15");
+
+  const environmentBadgeLabel = isLocalhost ? "Localhost" : "Dev";
+
   const setupMenu = (
     <ActionMenu>
       <Tooltip content="Teknisk meny" describesChild>
@@ -157,32 +167,51 @@ export default function Header({ theme }: HeaderProps) {
               variant="tertiary"
               className={`${linkButton} !px-0`}
               href="/"
-              aria-label="Start Umami"
+              aria-label="Innblikk"
             >
-              <div className="flex items-center gap-2">
-                <svg
-                  width="1em"
-                  height="1em"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-2xl"
+              <div className="flex items-center gap-3 py-1.5">
+                <span
                   aria-hidden="true"
+                  className={logoShellClass}
                 >
-                  <path
-                    d="M5 4L19 12L5 20V4Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-2xl whitespace-nowrap">
-                  Umami
-                  {window.location.hostname.includes(".dev.nav.no")
-                    ? " Dev"
-                    : ""}
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4.5 5.25L16.75 12L4.5 18.75V5.25Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="18.25" cy="12" r="1.6" fill="currentColor" />
+                  </svg>
                 </span>
+                <div className="flex flex-col items-start leading-tight">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl md:text-2xl font-semibold tracking-tight whitespace-nowrap">
+                      Innblikk
+                    </span>
+                    {isDevEnvironment && (
+                      <span className="text-[11px] uppercase tracking-[0.08em] font-semibold px-2 py-[1px] rounded-full border border-current/40">
+                        {environmentBadgeLabel}
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={
+                      theme === "dark"
+                        ? "text-xs md:text-sm text-[var(--ax-text-subtle)] whitespace-nowrap"
+                        : "text-xs md:text-sm text-white/80 whitespace-nowrap"
+                    }
+                  >
+                    Data fra Umami og Siteimprove
+                  </span>
+                </div>
               </div>
             </Button>
           </div>
