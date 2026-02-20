@@ -227,43 +227,6 @@ export const useOversikt = () => {
         [],
     );
 
-    const handleReorderCharts = useCallback(
-        async (fromIndex: number, toIndex: number) => {
-            if (!selectedProjectId || !selectedDashboardId) return;
-            if (fromIndex === toIndex) return;
-
-            // Compute reordered list from current charts
-            const reordered = [...charts];
-            const [moved] = reordered.splice(fromIndex, 1);
-            reordered.splice(toIndex, 0, moved);
-
-            const ordering = reordered.map((chart, index) => ({
-                id: chart.graphId,
-                ordering: index,
-            }));
-
-            // Optimistically update local graph ordering
-            setGraphs((prev) => {
-                const orderMap = new Map(ordering.map((entry) => [entry.id, entry.ordering]));
-                return prev.map((item) => ({
-                    ...item,
-                    graph: {
-                        ...item.graph,
-                        ordering: orderMap.get(item.graph.id) ?? item.graph.ordering,
-                    },
-                }));
-            });
-
-            try {
-                await updateGraphOrdering(selectedProjectId, selectedDashboardId, ordering);
-            } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : 'Kunne ikke oppdatere rekkefølge');
-                // Revert by re-fetching
-                await refreshGraphs();
-            }
-        },
-        [selectedProjectId, selectedDashboardId, charts, refreshGraphs],
-    );
 
     // ── Effects ──
 
@@ -364,6 +327,44 @@ export const useOversikt = () => {
     useEffect(() => {
         void refreshGraphs();
     }, [refreshGraphs]);
+
+    const handleReorderCharts = useCallback(
+        async (fromIndex: number, toIndex: number) => {
+            if (!selectedProjectId || !selectedDashboardId) return;
+            if (fromIndex === toIndex) return;
+
+            // Compute reordered list from current charts
+            const reordered = [...charts];
+            const [moved] = reordered.splice(fromIndex, 1);
+            reordered.splice(toIndex, 0, moved);
+
+            const ordering = reordered.map((chart, index) => ({
+                id: chart.graphId,
+                ordering: index,
+            }));
+
+            // Optimistically update local graph ordering
+            setGraphs((prev) => {
+                const orderMap = new Map(ordering.map((entry) => [entry.id, entry.ordering]));
+                return prev.map((item) => ({
+                    ...item,
+                    graph: {
+                        ...item.graph,
+                        ordering: orderMap.get(item.graph.id) ?? item.graph.ordering,
+                    },
+                }));
+            });
+
+            try {
+                await updateGraphOrdering(selectedProjectId, selectedDashboardId, ordering);
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Kunne ikke oppdatere rekkefølge');
+                // Revert by re-fetching
+                await refreshGraphs();
+            }
+        },
+        [selectedProjectId, selectedDashboardId, charts, refreshGraphs],
+    );
 
     useEffect(() => {
         const currentProjectId = searchParams.get('projectId');
