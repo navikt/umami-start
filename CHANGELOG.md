@@ -9,8 +9,13 @@ All notable changes to this project will be documented in this file.
 - Dependabot
 - Dependabot
 
+### 👷 CI
+
+- Change changelog workflow commit message
+
 ### 📚 Documentation
 
+- Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
