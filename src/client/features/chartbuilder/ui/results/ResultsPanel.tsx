@@ -1160,7 +1160,7 @@ const ResultsPanel = ({
               <SqlViewer sql={sql} showEditButton={showEditButton} />
             )}
 
-            {/* Share Button */}
+            {/* Share Button
             {sql && result && result.data && result.data.length > 0 && (
               <div className="mt-3 flex justify-end">
                 <Button
@@ -1172,7 +1172,7 @@ const ResultsPanel = ({
                   Del tabell & graf
                 </Button>
               </div>
-            )}
+            )} */}
 
           </div>
         )}
