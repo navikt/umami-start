@@ -1,4 +1,4 @@
-import { CogIcon, ExternalLinkIcon, MenuHamburgerIcon } from "@navikt/aksel-icons";
+import { CogIcon, ExternalLinkIcon, MenuHamburgerIcon, ThemeIcon } from "@navikt/aksel-icons";
 import { ActionMenu, Button, Dropdown, Link, Page, Tooltip } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
 import "../../../../tailwind.css";
@@ -103,6 +103,25 @@ export default function Header({ theme }: HeaderProps) {
       : "ring-white/35 bg-white/15");
 
   const environmentBadgeLabel = isLocalhost ? "Localhost" : "Dev";
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    const root = document.documentElement;
+    const themeElement = document.querySelector(".aksel-theme");
+
+    root.classList.remove("light", "dark");
+    if (themeElement) {
+      themeElement.classList.remove("light", "dark");
+    }
+
+    root.classList.add(newTheme);
+    if (themeElement) {
+      themeElement.classList.add(newTheme);
+    }
+
+    localStorage.setItem("umami-theme", newTheme);
+    window.dispatchEvent(new CustomEvent("themeChange", { detail: newTheme }));
+  };
 
   const setupMenu = (
     <ActionMenu>
@@ -216,13 +235,13 @@ export default function Header({ theme }: HeaderProps) {
             </Button>
           </div>
           {isMobile ? (
-            <div className="flex items-center gap-2">
-              <ThemeButton />
+            <div className="flex items-center">
               <Dropdown>
                 <Button
                   as={Dropdown.Toggle}
                   variant="tertiary"
                   className={linkButton}
+                  aria-label="Meny"
                 >
                   <MenuHamburgerIcon title="meny" fontSize="1.5rem" />
                 </Button>
@@ -241,6 +260,16 @@ export default function Header({ theme }: HeaderProps) {
                       className="no-underline"
                     >
                       <span className="whitespace-nowrap">Dashboard</span>
+                    </Dropdown.Menu.List.Item>
+                    <Dropdown.Menu.List.Item
+                      as="button"
+                      onClick={toggleTheme}
+                      className="w-full text-left"
+                    >
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <ThemeIcon aria-hidden fontSize="1rem" />
+                        Bytt til {theme === "dark" ? "lyst" : "mørkt"} tema
+                      </span>
                     </Dropdown.Menu.List.Item>
                   </Dropdown.Menu.List>
                 </Dropdown.Menu>
