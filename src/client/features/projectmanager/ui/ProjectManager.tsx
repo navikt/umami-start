@@ -24,6 +24,7 @@ const ProjectManager = () => {
     const [editDescription, setEditDescription] = useState('');
     const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const projectNameInputRef = useRef<HTMLInputElement | null>(null);
     const totalProjects = projectSummaries.length;
     const totalDashboards = projectSummaries.reduce((sum, item) => sum + item.dashboardCount, 0);
@@ -75,15 +76,6 @@ const ProjectManager = () => {
                     {error && <Alert variant="error">{error}</Alert>}
                     {message && <Alert variant="success">{message}</Alert>}
 
-                    <div className="flex justify-end">
-                        <Button
-                            size="small"
-                            onClick={() => projectNameInputRef.current?.focus()}
-                        >
-                            Legg til prosjekt
-                        </Button>
-                    </div>
-
                     <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <article className="bg-[var(--ax-bg-default)] p-4 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm">
                             <div className="text-sm text-[var(--ax-text-default)] font-medium mb-1">Prosjekter totalt</div>
@@ -99,30 +91,54 @@ const ProjectManager = () => {
                         </article>
                     </section>
 
-                    <section className="p-4 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
-                        <Heading level="2" size="small" spacing>Nytt prosjekt</Heading>
-                        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
-                            <TextField
-                                label="Prosjektnavn"
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <Heading level="2" size="small">Prosjektliste</Heading>
+                            <Button
                                 size="small"
-                                ref={projectNameInputRef}
-                                value={newProjectName}
-                                onChange={(event) => setNewProjectName(event.target.value)}
-                            />
-                            <TextField
-                                label="Beskrivelse (valgfri)"
-                                size="small"
-                                value={newProjectDescription}
-                                onChange={(event) => setNewProjectDescription(event.target.value)}
-                            />
-                            <Button size="small" onClick={createProject} loading={loading}>
-                                Opprett prosjekt
+                                onClick={() => {
+                                    setIsCreateOpen((prev) => !prev);
+                                    setTimeout(() => {
+                                        projectNameInputRef.current?.focus();
+                                    }, 0);
+                                }}
+                            >
+                                {isCreateOpen ? 'Lukk' : 'Legg til nytt prosjekt'}
                             </Button>
                         </div>
-                    </section>
 
-                    <section className="space-y-3">
-                        <Heading level="2" size="small">Prosjektliste</Heading>
+                        {isCreateOpen && (
+                            <section className="p-4 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
+                                <Heading level="3" size="xsmall" spacing>Nytt prosjekt</Heading>
+                                <div className="flex flex-col md:flex-row md:items-end gap-3">
+                                    <div className="w-full md:w-[320px]">
+                                        <TextField
+                                            label="Prosjektnavn"
+                                            size="small"
+                                            ref={projectNameInputRef}
+                                            value={newProjectName}
+                                            onChange={(event) => setNewProjectName(event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="w-full md:w-[420px]">
+                                        <TextField
+                                            label="Beskrivelse (valgfri)"
+                                            size="small"
+                                            value={newProjectDescription}
+                                            onChange={(event) => setNewProjectDescription(event.target.value)}
+                                        />
+                                    </div>
+                                    <Button
+                                        size="small"
+                                        onClick={createProject}
+                                        loading={loading}
+                                    >
+                                        Opprett prosjekt
+                                    </Button>
+                                </div>
+                            </section>
+                        )}
+
                         {projectSummaries.length === 0 && (
                             <Alert variant="info" size="small">Ingen prosjekter funnet.</Alert>
                         )}
