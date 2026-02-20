@@ -233,7 +233,7 @@ export const DashboardWidget = ({
 
     return (
         <>
-            <div className={`bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
+            <div className={`h-full bg-[var(--ax-bg-default)] p-6 rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm min-h-[400px] ${colClass}`}>
                 <div className="flex flex-col mb-4">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">

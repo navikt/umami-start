@@ -44,7 +44,7 @@ const DashboardWidgetLineChart = ({ data, title }: DashboardWidgetLineChartProps
                     key={chartKey}
                     data={{ lineChartData: lines }}
                     yAxisTickFormat={(d: number) => d.toLocaleString('nb-NO')}
-                    margins={{ left: 60, right: 20, top: 20, bottom: 40 }}
+                    margins={{ left: 60, right: 40, top: 20, bottom: 40 }}
                     styles={{
                         xAxis: { text: { fill: 'var(--ax-text-subtle)' } },
                         yAxis: { text: { fill: 'var(--ax-text-subtle)' } },
@@ -61,4 +61,3 @@ const DashboardWidgetLineChart = ({ data, title }: DashboardWidgetLineChartProps
 };
 
 export default DashboardWidgetLineChart;
-
