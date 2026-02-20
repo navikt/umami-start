@@ -26,21 +26,21 @@ function LogoBlock() {
         <div>
             <div className="text-2xl whitespace-nowrap flex items-center !text-white" aria-label="Start Umami" role="img">
                 <svg
-                    width="1em"
-                    height="1em"
+                    width="34"
+                    height="34"
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="text-2xl mr-1"
+                    className="mr-2 shrink-0"
                     aria-hidden="true"
                 >
                     <path
-                        d="M5 4L19 12L5 20V4Z"
+                        d="M16.5 10.5C16.5 13.8137 13.8137 16.5 10.5 16.5C7.18629 16.5 4.5 13.8137 4.5 10.5C4.5 7.18629 7.18629 4.5 10.5 4.5C13.8137 4.5 16.5 7.18629 16.5 10.5Z"
                         stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeWidth="1.9"
                     />
+                    <path d="M15.2 15.2L20.5 20.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+                    <path d="M7.9 12.5V10.2M10.5 12.5V8.5M13.1 12.5V9.3" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
                 </svg>
                 <span>Innblikk</span>
             </div>

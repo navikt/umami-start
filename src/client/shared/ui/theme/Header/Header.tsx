@@ -96,12 +96,6 @@ export default function Header({ theme }: HeaderProps) {
       ? "!text-[var(--ax-text-default)] hover:!text-[var(--ax-text-default)]"
       : "!text-white hover:!text-white focus:!text-black focus:!bg-blue-100");
 
-  const logoShellClass =
-    "w-9 h-9 md:w-10 md:h-10 rounded-xl grid place-items-center ring-1 " +
-    (theme === "dark"
-      ? "ring-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-accent-softA)]"
-      : "ring-white/35 bg-white/15");
-
   const environmentBadgeLabel = isLocalhost ? "Localhost" : "Dev";
 
   const toggleTheme = () => {
@@ -188,30 +182,30 @@ export default function Header({ theme }: HeaderProps) {
               href="/"
               aria-label="Innblikk"
             >
-              <div className="flex items-center gap-3 py-1.5">
+              <div className="flex items-start gap-2.5 py-1">
                 <span
                   aria-hidden="true"
-                  className={logoShellClass}
+                  className="grid place-items-center mt-0.5 shrink-0"
                 >
                   <svg
-                    width="24"
-                    height="24"
+                    width="45"
+                    height="45"
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      d="M6.5 6L17 12L6.5 18V6Z"
+                      d="M16.5 10.5C16.5 13.8137 13.8137 16.5 10.5 16.5C7.18629 16.5 4.5 13.8137 4.5 10.5C4.5 7.18629 7.18629 4.5 10.5 4.5C13.8137 4.5 16.5 7.18629 16.5 10.5Z"
                       stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                      strokeWidth="1.9"
                     />
+                    <path d="M15.2 15.2L20.5 20.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+                    <path d="M7.9 12.5V10.2M10.5 12.5V8.5M13.1 12.5V9.3" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
                   </svg>
                 </span>
                 <div className="flex flex-col items-start leading-tight">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl md:text-2xl font-semibold tracking-tight whitespace-nowrap">
+                    <span className="text-xl md:text-2xl font-bold tracking-tight whitespace-nowrap">
                       Innblikk
                     </span>
                     {isDevEnvironment && (
