@@ -46,6 +46,7 @@ All notable changes to this project will be documented in this file.
 - Feature structure oversikt and prosjectmanager
 - Split dashboardRoutes into smaller routes
 - Shared components
+- MAX_BYTES_BILLED 500 GB
 
 ### 🔧 Refactor
 
