@@ -60,6 +60,43 @@ interface QueryPreviewProps {
 }
 
 const API_TIMEOUT_MS = 60000; // timeout
+const getHostPrefix = () => (typeof window === 'undefined' ? 'server' : window.location.hostname.replace(/\./g, '_'));
+const LAST_PROJECT_ID_KEY = `grafbygger_last_project_id_${getHostPrefix()}`;
+const LAST_DASHBOARD_ID_KEY = `grafbygger_last_dashboard_id_${getHostPrefix()}`;
+
+const parseStoredId = (value: string | null): number | null => {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getLastProjectId = (): number | null => {
+  if (typeof window === 'undefined') return null;
+  return parseStoredId(window.localStorage.getItem(LAST_PROJECT_ID_KEY));
+};
+
+const getLastDashboardId = (): number | null => {
+  if (typeof window === 'undefined') return null;
+  return parseStoredId(window.localStorage.getItem(LAST_DASHBOARD_ID_KEY));
+};
+
+const saveLastProjectId = (projectId: number | null) => {
+  if (typeof window === 'undefined') return;
+  if (projectId) {
+    window.localStorage.setItem(LAST_PROJECT_ID_KEY, String(projectId));
+  } else {
+    window.localStorage.removeItem(LAST_PROJECT_ID_KEY);
+  }
+};
+
+const saveLastDashboardId = (dashboardId: number | null) => {
+  if (typeof window === 'undefined') return;
+  if (dashboardId) {
+    window.localStorage.setItem(LAST_DASHBOARD_ID_KEY, String(dashboardId));
+  } else {
+    window.localStorage.removeItem(LAST_DASHBOARD_ID_KEY);
+  }
+};
 
 const timeoutPromise = (ms: number) => {
   return new Promise<never>((_, reject) => {
@@ -648,15 +685,27 @@ const QueryPreview = ({
         const projectItems = await fetchProjects();
         setProjects(projectItems);
 
-        const selectedProject = projectItems.find((project) => project.name === projectName) ?? null;
+        const rememberedProjectId = getLastProjectId();
+        const selectedProject =
+          (rememberedProjectId ? projectItems.find((project) => project.id === rememberedProjectId) : null)
+          ?? projectItems.find((project) => project.name === projectName)
+          ?? null;
+
         if (selectedProject) {
           const projectOptionValue = String(selectedProject.id);
           setSelectedProjectOption(projectOptionValue);
+          setProjectName(selectedProject.name);
           const dashboardItems = await fetchDashboards(selectedProject.id);
           setDashboards(dashboardItems);
 
-          const selectedDashboard = dashboardItems.find((dashboard) => dashboard.name === dashboardName) ?? null;
+          const rememberedDashboardId = getLastDashboardId();
+          const selectedDashboard =
+            (rememberedDashboardId ? dashboardItems.find((dashboard) => dashboard.id === rememberedDashboardId) : null)
+            ?? dashboardItems.find((dashboard) => dashboard.name === dashboardName)
+            ?? null;
+
           setSelectedDashboardOption(selectedDashboard ? String(selectedDashboard.id) : null);
+          setDashboardName(selectedDashboard?.name ?? dashboardName);
         } else {
           setSelectedProjectOption(null);
           setDashboards([]);
@@ -676,9 +725,11 @@ const QueryPreview = ({
     if (!isSelected) {
       setSelectedProjectOption(null);
       setProjectName('');
+      saveLastProjectId(null);
       setDashboards([]);
       setDashboardName('');
       setSelectedDashboardOption(null);
+      saveLastDashboardId(null);
       return;
     }
 
@@ -704,6 +755,8 @@ const QueryPreview = ({
 
       setSelectedProjectOption(String(projectToUse.id));
       setProjectName(projectToUse.name);
+      saveLastProjectId(projectToUse.id);
+      saveLastDashboardId(null);
 
       const dashboardItems = await fetchDashboards(projectToUse.id);
       setDashboards(dashboardItems);
@@ -719,6 +772,7 @@ const QueryPreview = ({
     if (!isSelected) {
       setSelectedDashboardOption(null);
       setDashboardName('');
+      saveLastDashboardId(null);
       return;
     }
 
@@ -746,6 +800,7 @@ const QueryPreview = ({
 
       setSelectedDashboardOption(String(dashboardToUse.id));
       setDashboardName(dashboardToUse.name);
+      saveLastDashboardId(dashboardToUse.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Klarte ikke velge eller opprette dashboard';
       setSaveError(message);
@@ -781,6 +836,8 @@ const QueryPreview = ({
         projectName: saved.project.name,
         dashboardName: saved.dashboard.name,
       });
+      saveLastProjectId(saved.project.id);
+      saveLastDashboardId(saved.dashboard.id);
       setShowSaveModal(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Klarte ikke lagre grafen';
@@ -1264,11 +1321,9 @@ const QueryPreview = ({
       >
         <Modal.Body>
           <div className="space-y-4">
-            <Alert variant="info" size="small">
-              Du kan velge eksisterende prosjekt/dashboard, eller skrive et nytt navn og trykke Enter for å opprette det.
-            </Alert>
             <UNSAFE_Combobox
               label="Prosjekt"
+              description="Skriv nytt prosjektnavn og trykk Enter for å opprette."
               options={projectOptions}
               selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
@@ -1282,6 +1337,7 @@ const QueryPreview = ({
             />
             <UNSAFE_Combobox
               label="Dashboard"
+              description="Skriv nytt dashboardnavn og trykk Enter for å opprette."
               options={dashboardOptions}
               selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
