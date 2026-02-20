@@ -1,46 +1,21 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../model/types.ts';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ProjectDto } from '../model/types.ts';
 import * as api from '../api/backendApi.ts';
 
+type ProjectSummary = {
+    project: ProjectDto;
+    dashboardCount: number;
+    chartCount: number;
+};
+
 export const useProjectManager = () => {
-    const [projects, setProjects] = useState<ProjectDto[]>([]);
-    const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
-    const [graphs, setGraphs] = useState<GraphDto[]>([]);
-    const [queries, setQueries] = useState<QueryDto[]>([]);
-
-    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const [selectedDashboardId, setSelectedDashboardId] = useState<number | null>(null);
-    const [selectedGraphId, setSelectedGraphId] = useState<number | null>(null);
-
+    const [projectSummaries, setProjectSummaries] = useState<ProjectSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
 
-    // Form fields
-    const [projectName, setProjectName] = useState('');
-    const [projectDescription, setProjectDescription] = useState('');
-    const [dashboardName, setDashboardName] = useState('');
-    const [dashboardDescription, setDashboardDescription] = useState('');
-    const [graphName, setGraphName] = useState('');
-    const [graphType, setGraphType] = useState('LINE');
-    const [queryName, setQueryName] = useState('');
-    const [querySql, setQuerySql] = useState('SELECT 1 AS value');
-
-    // Derived selections
-    const selectedProject = useMemo(
-        () => projects.find((p) => p.id === selectedProjectId) ?? null,
-        [projects, selectedProjectId],
-    );
-    const selectedDashboard = useMemo(
-        () => dashboards.find((d) => d.id === selectedDashboardId) ?? null,
-        [dashboards, selectedDashboardId],
-    );
-    const selectedGraph = useMemo(
-        () => graphs.find((g) => g.id === selectedGraphId) ?? null,
-        [graphs, selectedGraphId],
-    );
-
-    // ── Helpers ──
+    const [newProjectName, setNewProjectName] = useState('');
+    const [newProjectDescription, setNewProjectDescription] = useState('');
 
     const run = useCallback(async (task: () => Promise<void>) => {
         setLoading(true);
@@ -55,175 +30,85 @@ export const useProjectManager = () => {
         }
     }, []);
 
-    // ── Loaders ──
+    const loadProjectSummaries = useCallback(async () => {
+        const projectItems = await api.fetchProjects();
 
-    const loadProjects = useCallback(async () => {
-        const items = await api.fetchProjects();
-        setProjects(items);
-        setSelectedProjectId((prev) => prev ?? items[0]?.id ?? null);
+        const summaryItems = await Promise.all(projectItems.map(async (project) => {
+            const dashboards = await api.fetchDashboards(project.id);
+            const chartCountList = await Promise.all(dashboards.map(async (dashboard) => {
+                const graphs = await api.fetchGraphs(project.id, dashboard.id);
+                return graphs.length;
+            }));
+            const chartCount = chartCountList.reduce((sum, count) => sum + count, 0);
+
+            return {
+                project,
+                dashboardCount: dashboards.length,
+                chartCount,
+            };
+        }));
+
+        setProjectSummaries(summaryItems);
     }, []);
-
-    const loadDashboards = useCallback(async (projectId: number) => {
-        const items = await api.fetchDashboards(projectId);
-        setDashboards(items);
-        setSelectedDashboardId(items[0]?.id ?? null);
-    }, []);
-
-    const loadGraphs = useCallback(async (projectId: number, dashboardId: number) => {
-        const items = await api.fetchGraphs(projectId, dashboardId);
-        setGraphs(items);
-        setSelectedGraphId(items[0]?.id ?? null);
-    }, []);
-
-    const loadQueries = useCallback(async (projectId: number, dashboardId: number, graphId: number) => {
-        const items = await api.fetchQueries(projectId, dashboardId, graphId);
-        setQueries(items);
-    }, []);
-
-    // ── Effects ──
 
     useEffect(() => {
         void run(async () => {
-            await loadProjects();
+            await loadProjectSummaries();
         });
-    }, [run, loadProjects]);
-
-    useEffect(() => {
-        if (!selectedProjectId) {
-            setDashboards([]);
-            setSelectedDashboardId(null);
-            return;
-        }
-        void run(async () => {
-            await loadDashboards(selectedProjectId);
-        });
-    }, [selectedProjectId, run, loadDashboards]);
-
-    useEffect(() => {
-        if (!selectedProjectId || !selectedDashboardId) {
-            setGraphs([]);
-            setSelectedGraphId(null);
-            return;
-        }
-        void run(async () => {
-            await loadGraphs(selectedProjectId, selectedDashboardId);
-        });
-    }, [selectedProjectId, selectedDashboardId, run, loadGraphs]);
-
-    useEffect(() => {
-        if (!selectedProjectId || !selectedDashboardId || !selectedGraphId) {
-            setQueries([]);
-            return;
-        }
-        void run(async () => {
-            await loadQueries(selectedProjectId, selectedDashboardId, selectedGraphId);
-        });
-    }, [selectedProjectId, selectedDashboardId, selectedGraphId, run, loadQueries]);
-
-    // ── Create actions ──
+    }, [run, loadProjectSummaries]);
 
     const createProject = useCallback(
         () =>
             run(async () => {
-                if (!projectName.trim()) throw new Error('Prosjektnavn er påkrevd');
-                await api.createProject(projectName.trim(), projectDescription.trim() || undefined);
-                setProjectName('');
-                setProjectDescription('');
-                await loadProjects();
+                if (!newProjectName.trim()) throw new Error('Prosjektnavn er påkrevd');
+                await api.createProject(newProjectName.trim(), newProjectDescription.trim() || undefined);
+                setNewProjectName('');
+                setNewProjectDescription('');
+                await loadProjectSummaries();
                 setMessage('Prosjekt opprettet');
             }),
-        [run, projectName, projectDescription, loadProjects],
+        [run, newProjectName, newProjectDescription, loadProjectSummaries],
     );
 
-    const createDashboard = useCallback(
-        () =>
+    const editProject = useCallback(
+        (projectId: number, name: string, description?: string) =>
             run(async () => {
-                if (!selectedProjectId) throw new Error('Velg et prosjekt først');
-                if (!dashboardName.trim()) throw new Error('Dashboard-navn er påkrevd');
-                await api.createDashboard(selectedProjectId, dashboardName.trim(), dashboardDescription.trim() || undefined);
-                setDashboardName('');
-                setDashboardDescription('');
-                await loadDashboards(selectedProjectId);
-                setMessage('Dashboard opprettet');
+                if (!name.trim()) throw new Error('Prosjektnavn er påkrevd');
+                await api.updateProject(projectId, name.trim(), description?.trim() || undefined);
+                await loadProjectSummaries();
+                setMessage('Prosjekt oppdatert');
             }),
-        [run, selectedProjectId, dashboardName, dashboardDescription, loadDashboards],
+        [run, loadProjectSummaries],
     );
 
-    const createGraph = useCallback(
-        () =>
+    const deleteProject = useCallback(
+        (projectId: number) =>
             run(async () => {
-                if (!selectedProjectId || !selectedDashboardId) throw new Error('Velg prosjekt og dashboard først');
-                if (!graphName.trim()) throw new Error('Grafnavn er påkrevd');
-                await api.createGraph(selectedProjectId, selectedDashboardId, graphName.trim(), graphType);
-                setGraphName('');
-                await loadGraphs(selectedProjectId, selectedDashboardId);
-                setMessage('Graf opprettet');
+                await api.deleteProject(projectId);
+                await loadProjectSummaries();
+                setMessage('Prosjekt slettet');
             }),
-        [run, selectedProjectId, selectedDashboardId, graphName, graphType, loadGraphs],
+        [run, loadProjectSummaries],
     );
 
-    const createQuery = useCallback(
-        () =>
-            run(async () => {
-                if (!selectedProjectId || !selectedDashboardId || !selectedGraphId) {
-                    throw new Error('Velg prosjekt, dashboard og graf først');
-                }
-                if (!queryName.trim()) throw new Error('Sporringsnavn er påkrevd');
-                if (!querySql.trim()) throw new Error('SQL er påkrevd');
-                await api.createQuery(selectedProjectId, selectedDashboardId, selectedGraphId, queryName.trim(), querySql);
-                setQueryName('');
-                await loadQueries(selectedProjectId, selectedDashboardId, selectedGraphId);
-                setMessage('Sporring opprettet');
-            }),
-        [run, selectedProjectId, selectedDashboardId, selectedGraphId, queryName, querySql, loadQueries],
-    );
+    const projectSummaryById = useMemo(() => {
+        return new Map(projectSummaries.map((item) => [item.project.id, item]));
+    }, [projectSummaries]);
 
     return {
-        // Lists
-        projects,
-        dashboards,
-        graphs,
-        queries,
-
-        // Selections
-        selectedProjectId,
-        setSelectedProjectId,
-        selectedDashboardId,
-        setSelectedDashboardId,
-        selectedGraphId,
-        setSelectedGraphId,
-        selectedProject,
-        selectedDashboard,
-        selectedGraph,
-
-        // Status
+        projectSummaries,
+        projectSummaryById,
         loading,
         error,
         message,
-
-        // Form fields
-        projectName,
-        setProjectName,
-        projectDescription,
-        setProjectDescription,
-        dashboardName,
-        setDashboardName,
-        dashboardDescription,
-        setDashboardDescription,
-        graphName,
-        setGraphName,
-        graphType,
-        setGraphType,
-        queryName,
-        setQueryName,
-        querySql,
-        setQuerySql,
-
-        // Actions
+        newProjectName,
+        setNewProjectName,
+        newProjectDescription,
+        setNewProjectDescription,
         createProject,
-        createDashboard,
-        createGraph,
-        createQuery,
+        editProject,
+        deleteProject,
     };
 };
 
+export type { ProjectSummary };

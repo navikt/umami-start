@@ -204,6 +204,10 @@ const Oversikt = () => {
                         <ActionMenu.Item onSelect={openDeleteDashboardDialog}>
                             Slett dashboard
                         </ActionMenu.Item>
+                        <ActionMenu.Divider />
+                        <ActionMenu.Item as="a" href="/prosjekter">
+                            Administrer prosjekt
+                        </ActionMenu.Item>
                     </ActionMenu.Content>
                 </ActionMenu>
             </div>

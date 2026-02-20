@@ -13,6 +13,22 @@ export const createProject = (name: string, description?: string): Promise<Proje
         body: JSON.stringify({ name, description }),
     });
 
+export const updateProject = (
+    projectId: number,
+    name: string,
+    description?: string,
+): Promise<ProjectDto> =>
+    requestJson<ProjectDto>(`/api/backend/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description }),
+    });
+
+export const deleteProject = (projectId: number): Promise<void> =>
+    requestJson<void>(`/api/backend/projects/${projectId}`, {
+        method: 'DELETE',
+    });
+
 // ── Dashboards ──
 
 export const fetchDashboards = (projectId: number): Promise<DashboardDto[]> =>
@@ -77,4 +93,3 @@ export const createQuery = (
             body: JSON.stringify({ name, sqlText }),
         },
     );
-
