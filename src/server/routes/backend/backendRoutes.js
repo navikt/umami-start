@@ -6,6 +6,7 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
   const router = express.Router();
   const apiBaseUrl = new URL('/api/', BACKEND_BASE_URL);
   const isLocalBackend = ['localhost', '127.0.0.1', '::1'].includes(apiBaseUrl.hostname);
+  const staticBackendToken = process.env.BACKEND_TOKEN || null;
   const backendAppName = process.env.BACKEND_APP_NAME || null;
   const backendClientId =
     process.env.BACKEND_CLIENT_ID
@@ -92,10 +93,18 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       const targetPath = req.url.startsWith('/') ? req.url.slice(1) : req.url;
       const targetUrl = new URL(targetPath, apiBaseUrl);
       const oboToken = await getOboToken(req);
-      const serviceToken = !req.headers.authorization && !oboToken ? await getServiceToken() : null;
+      const staticAuthorization =
+        staticBackendToken && !req.headers.authorization && !oboToken
+          ? (staticBackendToken.toLowerCase().startsWith('bearer ')
+            ? staticBackendToken
+            : `Bearer ${staticBackendToken}`)
+          : null;
+      const serviceToken = !req.headers.authorization && !oboToken && !staticAuthorization ? await getServiceToken() : null;
       const resolvedAuthorization = oboToken
         ? `Bearer ${oboToken}`
-        : req.headers.authorization || (serviceToken ? `Bearer ${serviceToken}` : undefined);
+        : req.headers.authorization
+          || staticAuthorization
+          || (serviceToken ? `Bearer ${serviceToken}` : undefined);
 
       const forwardHeaders = {
         accept: req.headers.accept,
@@ -113,8 +122,22 @@ export function createBackendProxyRouter({ BACKEND_BASE_URL }) {
       const data = await response.text();
 
       res.status(response.status);
+      const hopByHopHeaders = new Set([
+        'connection',
+        'keep-alive',
+        'proxy-authenticate',
+        'proxy-authorization',
+        'te',
+        'trailer',
+        'transfer-encoding',
+        'upgrade',
+        // Avoid conflicts when Express re-calculates payload length on res.send(data)
+        'content-length',
+      ]);
       response.headers.forEach((value, key) => {
-        res.setHeader(key, value);
+        if (!hopByHopHeaders.has(key.toLowerCase())) {
+          res.setHeader(key, value);
+        }
       });
       res.send(data);
     } catch (err) {
