@@ -7,7 +7,16 @@ import type {
     OversiktChart, OversiktSelectOption,
 } from '../model/types.ts';
 import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchGraphs, fetchQueries } from '../api/oversiktApi.ts';
-import { parseId, arraysEqual, mapGraphTypeToChart, normalizeGraphType } from '../utils/oversikt.ts';
+import {
+    parseId,
+    arraysEqual,
+    mapGraphTypeToChart,
+    normalizeGraphType,
+    getLastOversiktProjectId,
+    getLastOversiktDashboardId,
+    saveLastOversiktProjectId,
+    saveLastOversiktDashboardId,
+} from '../utils/oversikt.ts';
 
 export const useOversikt = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -228,8 +237,9 @@ export const useOversikt = () => {
                 setProjects(projectItems);
 
                 const fromUrl = parseId(searchParams.get('projectId'));
+                const fromStorage = fromUrl ? null : getLastOversiktProjectId();
                 const fromState = selectedProjectId;
-                const preferredId = fromState ?? fromUrl;
+                const preferredId = fromState ?? fromUrl ?? fromStorage;
 
                 const nextProject =
                     (preferredId ? projectItems.find((item) => item.id === preferredId) : null)
@@ -264,10 +274,11 @@ export const useOversikt = () => {
 
             const fromUrlProjectId = parseId(searchParams.get('projectId'));
             const fromUrlDashboardId = parseId(searchParams.get('dashboardId'));
+            const fromStorage = fromUrlDashboardId ? null : getLastOversiktDashboardId();
             const fromState = preferredDashboardId ?? selectedDashboardId;
 
             const resolvedPreferredDashboardId =
-                fromState ?? (fromUrlProjectId === projectId ? fromUrlDashboardId : null);
+                fromState ?? (fromUrlProjectId === projectId ? fromUrlDashboardId : fromStorage);
 
             const nextDashboard =
                 (resolvedPreferredDashboardId ? dashboardItems.find((item) => item.id === resolvedPreferredDashboardId) : null)
@@ -336,6 +347,14 @@ export const useOversikt = () => {
         if (!selectedWebsite) return;
         setActiveWebsite(selectedWebsite);
     }, [selectedWebsite]);
+
+    useEffect(() => {
+        saveLastOversiktProjectId(selectedProjectId);
+    }, [selectedProjectId]);
+
+    useEffect(() => {
+        saveLastOversiktDashboardId(selectedDashboardId);
+    }, [selectedDashboardId]);
 
     return {
         // Selections & options
