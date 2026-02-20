@@ -78,7 +78,7 @@ const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave 
                     </Select>
                     <TextField
                         label="Bredde (%)"
-                        description="0 betyr standard 50%"
+                        description="Standardbredden er 50%"
                         value={width}
                         onChange={(event) => setWidth(event.target.value)}
                         size="small"
