@@ -1323,7 +1323,7 @@ const QueryPreview = ({
           <div className="space-y-4">
             <UNSAFE_Combobox
               label="Prosjekt"
-              description="Skriv nytt prosjektnavn og trykk Enter for å opprette."
+              description="Skriv for å legge til nytt prosjekt"
               options={projectOptions}
               selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
@@ -1337,7 +1337,7 @@ const QueryPreview = ({
             />
             <UNSAFE_Combobox
               label="Dashboard"
-              description="Skriv nytt dashboardnavn og trykk Enter for å opprette."
+              description="Skriv for å legge til nytt dashboard"
               options={dashboardOptions}
               selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
