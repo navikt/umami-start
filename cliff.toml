@@ -25,9 +25,7 @@ conventional_commits = true
 filter_unconventional = true
 split_commits = false
 commit_parsers = [
-    { message = "^changelog", skip = true },
-    { message = "^docs\\(changelog\\)", skip = true },
-    { message = "Update CHANGELOG", skip = true },
+    { message = "CHANGELOG", skip = true },
     { message = "^feat", group = "🚀 Features" },
     { message = "^fix", group = "🐛 Bug Fixes" },
     { message = "^docs", group = "📚 Documentation" },
