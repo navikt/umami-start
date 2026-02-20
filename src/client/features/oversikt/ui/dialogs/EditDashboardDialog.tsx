@@ -41,7 +41,6 @@ const EditDashboardDialog = ({
 
     return (
         <Modal
-            key={dashboard ? `edit-dashboard-${dashboard.id}-${dashboard.projectId}-${dashboard.name}` : 'edit-dashboard-dialog'}
             open={open}
             onClose={onClose}
             header={{ heading: 'Rediger dashboard' }}
