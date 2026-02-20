@@ -33,7 +33,7 @@ export const KontaktSeksjon = ({ showMarginBottom = false, narrowContent = false
 const KontaktContent = () => (
     <>
         <Heading as="h3" size="medium" style={{ marginBottom: '24px' }}>
-            Få hjelp med Umami
+            Ønsker du noen å sparre med?
         </Heading>
 
         <div style={{

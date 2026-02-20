@@ -12,10 +12,19 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
     const navigate = useNavigate();
     const [filteredData, setFilteredData] = useState<Website[] | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [akselSearchQuery, setAkselSearchQuery] = useState<string>('');
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
     const [hasLoadedData, setHasLoadedData] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchError, setSearchError] = useState<string | null>(null);
+    const normalizedAkselSearchQuery = akselSearchQuery.trim().toLowerCase();
+    const visibleWebsites = filteredData?.filter((item) => {
+        if (!normalizedAkselSearchQuery) return true;
+        return (
+            item.domain.toLowerCase().includes(normalizedAkselSearchQuery) ||
+            item.name.toLowerCase().includes(normalizedAkselSearchQuery)
+        );
+    });
 
     const normalizeDomain = (domain: string) => {
         const cleaned = domain
@@ -179,8 +188,23 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                 </div>
                 {children}
                 <ReadMore size="small" style={{ marginTop: "24px" }} header="Hvilke nettsider / apper støttes?" onOpenChange={handleReadMoreToggle}>
+                    <div role="search" aria-label="Søk i Aksel" style={{ maxWidth: "460px", marginBottom: "16px" }}>
+                        <Search
+                            label="Søk i Aksel"
+                            variant="simple"
+                            size="small"
+                            value={akselSearchQuery}
+                            onChange={setAkselSearchQuery}
+                            onClear={() => setAkselSearchQuery("")}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                    event.preventDefault();
+                                }
+                            }}
+                        />
+                    </div>
                     {isLoading ? (
-                        <List as="ul">
+                        <List as="ul" style={{ marginBottom: "16px" }}>
                             {[...Array(3)].map((_, index) => (
                                 <List.Item key={`skeleton-${index}`}>
                                     <Skeleton variant="text" width="60%" />
@@ -188,8 +212,8 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
                             ))}
                         </List>
                     ) : (
-                        <List as="ul">
-                            {filteredData && filteredData.map(item => (
+                        <List as="ul" style={{ marginBottom: "16px" }}>
+                            {visibleWebsites && visibleWebsites.map(item => (
                                 <List.Item key={item.id}>
                                     <Link
                                         href={`/trafikkanalyse?websiteId=${item.id}&domain=${item.domain}&urlPath=%2F`}
@@ -214,4 +238,3 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
 }
 
 export default UrlSearchForm;
-

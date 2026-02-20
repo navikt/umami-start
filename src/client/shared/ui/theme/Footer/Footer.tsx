@@ -42,7 +42,7 @@ function LogoBlock() {
                         strokeLinejoin="round"
                     />
                 </svg>
-                <span>Umami</span>
+                <span>Innblikk</span>
             </div>
             <p className="mt-3 leading-normal !text-white">&copy; {new Date().getFullYear()} Nav</p>
             <p className="leading-normal !text-white">Arbeids- og velferdsetaten</p>
