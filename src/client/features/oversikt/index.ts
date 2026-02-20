@@ -5,7 +5,7 @@ export { default as Oversikt } from './ui/Oversikt.tsx';
 export type * from './model/types';
 
 // API
-export { fetchProjects, fetchDashboards, fetchGraphs, fetchQueries } from './api/oversiktApi';
+export { fetchProjects, fetchDashboards, fetchGraphs, fetchQueries, updateGraphOrdering } from './api/oversiktApi';
 
 // Hooks
 export { useOversikt } from './hooks/useOversikt';

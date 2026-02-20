@@ -1,4 +1,4 @@
-import type { ProjectDto, DashboardDto, GraphDto, QueryDto, GraphType } from '../model/types.ts';
+import type { ProjectDto, DashboardDto, GraphDto, GraphOrderingEntry, QueryDto, GraphType } from '../model/types.ts';
 
 const toErrorMessage = (status: number, payload: unknown): string => {
   if (payload && typeof payload === 'object') {
@@ -125,3 +125,16 @@ export async function deleteGraph(
     method: 'DELETE',
   });
 }
+
+export async function updateGraphOrdering(
+  projectId: number,
+  dashboardId: number,
+  ordering: GraphOrderingEntry[],
+): Promise<void> {
+  await requestJson<void>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/ordering`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ordering),
+  });
+}
+
