@@ -93,7 +93,7 @@ export async function updateGraph(
   projectId: number,
   dashboardId: number,
   graphId: number,
-  params: { name: string; graphType: GraphType },
+  params: { name: string; graphType: GraphType; width?: number },
 ): Promise<GraphDto> {
   return requestJson<GraphDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}`, {
     method: 'PUT',
@@ -137,4 +137,3 @@ export async function updateGraphOrdering(
     body: JSON.stringify(ordering),
   });
 }
-

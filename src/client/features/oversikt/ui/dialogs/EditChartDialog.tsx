@@ -8,12 +8,21 @@ type EditChartDialogProps = {
     loading?: boolean;
     error?: string | null;
     onClose: () => void;
-    onSave: (params: { name: string; graphType: GraphType; sqlText: string }) => Promise<void>;
+    onSave: (params: { name: string; graphType: GraphType; sqlText: string; width: number }) => Promise<void>;
+};
+
+const widthToPercent = (width?: OversiktChart['width']): number => {
+    if (width === 'full') return 100;
+    if (width === 'half') return 50;
+    const parsed = Number(width);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 50;
+    return Math.round(parsed);
 };
 
 const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave }: EditChartDialogProps) => {
     const [name, setName] = useState(chart?.title ?? '');
     const [graphType, setGraphType] = useState<GraphType>(chart?.graphType ?? 'TABLE');
+    const [width, setWidth] = useState(String(widthToPercent(chart?.width)));
     const [sqlText, setSqlText] = useState(chart?.sql ?? '');
     const [showSql, setShowSql] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
@@ -28,11 +37,18 @@ const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave 
             setLocalError('SQL-kode kan ikke være tom når SQL-visning er aktiv');
             return;
         }
+        const parsedWidth = Number(width);
+        if (!Number.isFinite(parsedWidth)) {
+            setLocalError('Bredde må være et tall mellom 0 og 100');
+            return;
+        }
+        const normalizedWidth = parsedWidth <= 0 ? 50 : Math.min(100, Math.max(1, Math.round(parsedWidth)));
 
         setLocalError(null);
         await onSave({
             name: name.trim(),
             graphType,
+            width: normalizedWidth,
             sqlText: showSql ? sqlText : (chart.sql ?? ''),
         });
     };
@@ -60,6 +76,13 @@ const EditChartDialog = ({ open, chart, loading = false, error, onClose, onSave 
                         <option value="PIE">Sektordiagram</option>
                         <option value="TABLE">Tabell</option>
                     </Select>
+                    <TextField
+                        label="Bredde (%)"
+                        description="0 betyr standard 50%"
+                        value={width}
+                        onChange={(event) => setWidth(event.target.value)}
+                        size="small"
+                    />
                     <Switch checked={showSql} onChange={(event) => setShowSql(event.target.checked)}>
                         Vis SQL kode
                     </Switch>

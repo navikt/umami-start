@@ -4,6 +4,7 @@ import { ActionMenu, Alert, Button, Label, Link, Loader, Select, UNSAFE_Combobox
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
+import { getSpanClass } from '../../dashboard/utils/widgetUtils.ts';
 import { useOversikt } from '../hooks/useOversikt.ts';
 import type { DashboardDto, GraphType, OversiktChart } from '../model/types.ts';
 import { deleteDashboard, deleteGraph, updateDashboard, updateGraph, updateQuery } from '../api/oversiktApi.ts';
@@ -62,7 +63,7 @@ const Oversikt = () => {
         setDeleteChartTarget(chart);
     };
 
-    const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string }) => {
+    const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string; width: number }) => {
         if (!editChart || !selectedProjectId || !selectedDashboardId) return;
         setSavingEdit(true);
         setMutationError(null);
@@ -70,6 +71,7 @@ const Oversikt = () => {
             await updateGraph(selectedProjectId, selectedDashboardId, editChart.graphId, {
                 name: params.name,
                 graphType: params.graphType,
+                width: params.width,
             });
             await updateQuery(selectedProjectId, selectedDashboardId, editChart.graphId, editChart.queryId, {
                 name: editChart.queryName,
@@ -329,7 +331,7 @@ const Oversikt = () => {
 
             {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && charts.length > 0 && (
                 <>
-                    <div className="flex justify-end mb-2">
+                    <div className="flex justify-end mb-4">
                         <Button as="a" href="/grafbygger" variant="secondary" size="small">
                             Legg til ny graf
                         </Button>
@@ -337,7 +339,7 @@ const Oversikt = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
                         {charts.map((chart, index) => (
-                            <div key={chart.id} className="relative col-span-full md:col-span-10">
+                            <div key={chart.id} className={`relative ${getSpanClass(chart.width)}`}>
                                 {charts.length > 1 && (
                                     <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-10">
                                         <Button
@@ -374,7 +376,7 @@ const Oversikt = () => {
                     </div>
 
                     {charts.length > 4 && (
-                        <div className="flex justify-end mt-4">
+                        <div className="flex justify-end mt-4 pb-6">
                             <Button as="a" href="/grafbygger" variant="secondary" size="small">
                                 Legg til ny graf
                             </Button>

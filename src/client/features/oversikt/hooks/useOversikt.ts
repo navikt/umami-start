@@ -84,7 +84,7 @@ export const useOversikt = () => {
                     title: item.graph.name,
                     type: mapGraphTypeToChart(item.graph.graphType),
                     sql: primaryQuery.sqlText,
-                    width: 'half' as const,
+                    width: item.graph.width && item.graph.width > 0 ? String(item.graph.width) : '50',
                     graphId: item.graph.id,
                     graphType: normalizeGraphType(item.graph.graphType),
                     queryId: primaryQuery.id,
