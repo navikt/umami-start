@@ -194,20 +194,19 @@ export default function Header({ theme }: HeaderProps) {
                   className={logoShellClass}
                 >
                   <svg
-                    width="22"
-                    height="22"
+                    width="24"
+                    height="24"
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      d="M4.5 5.25L16.75 12L4.5 18.75V5.25Z"
+                      d="M6.5 6L17 12L6.5 18V6Z"
                       stroke="currentColor"
                       strokeWidth="1.8"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    <circle cx="18.25" cy="12" r="1.6" fill="currentColor" />
                   </svg>
                 </span>
                 <div className="flex flex-col items-start leading-tight">
