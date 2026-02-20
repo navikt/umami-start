@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Heading, Button, Alert, Tabs, Search, Switch, ReadMore, CopyButton, Select, Label } from '@navikt/ds-react';
-import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, Share2, ExternalLink } from 'lucide-react';
+import { PlayIcon, Download, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps, IVerticalBarChartDataPoint} from '@fluentui/react-charting';
 import { LineChart, VerticalBarChart, AreaChart, PieChart, ResponsiveContainer } from '@fluentui/react-charting';
 import { translateValue } from '../../../../shared/lib/translations.ts';
