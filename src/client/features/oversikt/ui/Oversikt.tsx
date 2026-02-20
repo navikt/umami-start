@@ -52,7 +52,6 @@ const Oversikt = () => {
     const [draggedGraphId, setDraggedGraphId] = useState<number | null>(null);
     const [dropTargetGraphId, setDropTargetGraphId] = useState<number | null>(null);
     const [reorderAnnouncement, setReorderAnnouncement] = useState('');
-    const [isReorderMode, setIsReorderMode] = useState(false);
     const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
     const chartRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const chartPositionsRef = useRef<Map<number, DOMRect>>(new Map());
@@ -224,7 +223,7 @@ const Oversikt = () => {
     const getChartIndex = (graphId: number) => charts.findIndex((item) => item.graphId === graphId);
 
     const handleMoveHandleKeyDown = async (event: KeyboardEvent<HTMLButtonElement>, graphId: number, title: string) => {
-        if (!isReorderMode) return;
+        if (!isEditPanelOpen) return;
         if (charts.length <= 1) return;
 
         if (event.key === ' ' || event.key === 'Enter') {
@@ -260,7 +259,7 @@ const Oversikt = () => {
     };
 
     const handleDragStart = (event: DragEvent<HTMLButtonElement>, graphId: number, title: string) => {
-        if (!isReorderMode) return;
+        if (!isEditPanelOpen) return;
         setDraggedGraphId(graphId);
         setDropTargetGraphId(null);
         event.dataTransfer.effectAllowed = 'move';
@@ -276,7 +275,7 @@ const Oversikt = () => {
     };
 
     const handleDropOnChart = async (event: DragEvent<HTMLDivElement>, targetGraphId: number) => {
-        if (!isReorderMode) return;
+        if (!isEditPanelOpen) return;
         event.preventDefault();
         const sourceGraphId = draggedGraphId ?? Number(event.dataTransfer.getData('text/plain'));
         if (!Number.isFinite(sourceGraphId)) return;
@@ -448,8 +447,7 @@ const Oversikt = () => {
                             onClick={() => {
                                 setIsEditPanelOpen((prev) => {
                                     const next = !prev;
-                                    if (!next && isReorderMode) {
-                                        setIsReorderMode(false);
+                                    if (!next) {
                                         setGrabbedGraphId(null);
                                         setDraggedGraphId(null);
                                         setDropTargetGraphId(null);
@@ -468,28 +466,6 @@ const Oversikt = () => {
                     {isEditPanelOpen && (
                         <section className="mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
                             <div className="flex flex-wrap items-center gap-2">
-                                {charts.length > 1 && (
-                                    <Button
-                                        variant={isReorderMode ? 'primary' : 'secondary'}
-                                        size="small"
-                                        onClick={() => {
-                                            setIsReorderMode((prev) => {
-                                                const next = !prev;
-                                                if (!next) {
-                                                    setGrabbedGraphId(null);
-                                                    setDraggedGraphId(null);
-                                                    setDropTargetGraphId(null);
-                                                    setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
-                                                } else {
-                                                    setReorderAnnouncement('Rekkefølge-redigering aktivert.');
-                                                }
-                                                return next;
-                                            });
-                                        }}
-                                    >
-                                        {isReorderMode ? 'Ferdig med rekkefølge' : 'Rediger rekkefølge'}
-                                    </Button>
-                                )}
                                 <Button
                                     variant="secondary"
                                     size="small"
@@ -527,12 +503,12 @@ const Oversikt = () => {
                                     else chartRefs.current.delete(chart.graphId);
                                 }}
                                 onDragOver={(event) => {
-                                    if (!isReorderMode || draggedGraphId === null) return;
+                                    if (!isEditPanelOpen || draggedGraphId === null) return;
                                     event.preventDefault();
                                     event.dataTransfer.dropEffect = 'move';
                                 }}
                                 onDragEnter={() => {
-                                    if (!isReorderMode || draggedGraphId === null || draggedGraphId === chart.graphId) return;
+                                    if (!isEditPanelOpen || draggedGraphId === null || draggedGraphId === chart.graphId) return;
                                     setDropTargetGraphId(chart.graphId);
                                 }}
                                 onDragLeave={() => {
@@ -557,7 +533,7 @@ const Oversikt = () => {
                                     dashboardTitle={selectedDashboard.name}
                                     onEditChart={openEditDialog}
                                     onDeleteChart={openDeleteDialog}
-                                    titlePrefix={isReorderMode && charts.length > 1 ? (
+                                    titlePrefix={isEditPanelOpen && charts.length > 1 ? (
                                         <Button
                                             variant="secondary"
                                             size="xsmall"
