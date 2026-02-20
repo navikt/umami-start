@@ -248,42 +248,42 @@ export const useOversikt = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => {
-        if (!selectedProjectId) {
+    const refreshDashboards = useCallback(async (projectId: number | null, preferredDashboardId?: number | null) => {
+        if (!projectId) {
             setDashboards([]);
             setSelectedDashboardId(null);
             setGraphs([]);
             return;
         }
 
-        const run = async () => {
-            setLoadingDashboards(true);
-            setError(null);
-            try {
-                const dashboardItems = await fetchDashboards(selectedProjectId);
-                setDashboards(dashboardItems);
+        setLoadingDashboards(true);
+        setError(null);
+        try {
+            const dashboardItems = await fetchDashboards(projectId);
+            setDashboards(dashboardItems);
 
-                const fromUrlProjectId = parseId(searchParams.get('projectId'));
-                const fromUrlDashboardId = parseId(searchParams.get('dashboardId'));
-                const fromState = selectedDashboardId;
+            const fromUrlProjectId = parseId(searchParams.get('projectId'));
+            const fromUrlDashboardId = parseId(searchParams.get('dashboardId'));
+            const fromState = preferredDashboardId ?? selectedDashboardId;
 
-                const preferredDashboardId =
-                    fromState ?? (fromUrlProjectId === selectedProjectId ? fromUrlDashboardId : null);
+            const resolvedPreferredDashboardId =
+                fromState ?? (fromUrlProjectId === projectId ? fromUrlDashboardId : null);
 
-                const nextDashboard =
-                    (preferredDashboardId ? dashboardItems.find((item) => item.id === preferredDashboardId) : null)
-                    ?? dashboardItems[0]
-                    ?? null;
+            const nextDashboard =
+                (resolvedPreferredDashboardId ? dashboardItems.find((item) => item.id === resolvedPreferredDashboardId) : null)
+                ?? dashboardItems[0]
+                ?? null;
 
-                setSelectedDashboardId(nextDashboard?.id ?? null);
-            } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : 'Klarte ikke laste dashboards');
-            } finally {
-                setLoadingDashboards(false);
-            }
-        };
+            setSelectedDashboardId(nextDashboard?.id ?? null);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Klarte ikke laste dashboards');
+        } finally {
+            setLoadingDashboards(false);
+        }
+    }, [searchParams, selectedDashboardId]);
 
-        void run();
+    useEffect(() => {
+        void refreshDashboards(selectedProjectId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProjectId]);
 
@@ -343,6 +343,9 @@ export const useOversikt = () => {
         selectedDashboard,
         selectedProjectId,
         selectedDashboardId,
+        setSelectedProjectId,
+        setSelectedDashboardId,
+        projects,
         projectOptions,
         dashboardOptions,
         selectedProjectLabel,
@@ -383,5 +386,6 @@ export const useOversikt = () => {
         handleUrlToggleSelected,
         handleComboChange,
         refreshGraphs,
+        refreshDashboards,
     };
 };

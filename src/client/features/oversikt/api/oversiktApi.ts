@@ -60,6 +60,27 @@ export async function createDashboard(projectId: number, name: string, descripti
   });
 }
 
+export async function updateDashboard(
+  projectId: number,
+  dashboardId: number,
+  params: { name: string; projectId?: number; description?: string },
+): Promise<DashboardDto> {
+  return requestJson<DashboardDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+}
+
+export async function deleteDashboard(
+  projectId: number,
+  dashboardId: number,
+): Promise<void> {
+  await requestJson<unknown>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchGraphs(projectId: number, dashboardId: number): Promise<GraphDto[]> {
   return requestJson<GraphDto[]>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs`);
 }
