@@ -1106,20 +1106,6 @@ const QueryPreview = ({
                 </Button>
               </div>
 
-              {showMetabaseInstructions && (
-                <Alert variant="info" size="small">
-                  <div className="space-y-2">
-                    <p className="font-medium">Slik overfører du grafen til Metabase</p>
-                    <ol className="list-decimal pl-5 space-y-1">
-                      <li>Klikk "Kopier spørringen".</li>
-                      <li>Åpne Metabase og opprett et nytt spørsmål (Native query).</li>
-                      <li>Lim inn SQL-koden og lagre spørsmålet.</li>
-                      <li>Legg spørsmålet til i ønsket dashboard i Metabase.</li>
-                    </ol>
-                  </div>
-                </Alert>
-              )}
-
               {saveSuccess && savedLocation && (
                 <Alert variant="success" size="small">
                   <Link href={`/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`}>
@@ -1128,106 +1114,117 @@ const QueryPreview = ({
                 </Alert>
               )}
 
-              <Heading level="2" size="small" spacing>Legg til i Metabase</Heading>
+              {showMetabaseInstructions && (
+                <Alert variant="info" size="small">
+                  <div className="space-y-3">
+                    <Heading level="2" size="small">Legg til i Metabase</Heading>
+                    <ol className="list-decimal pl-5 space-y-1 text-sm">
+                      <li>Klikk "Kopier spørringen".</li>
+                      <li>
+                        <Link
+                          href={metabaseQuestionUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1"
+                        >
+                          Åpne Metabase <ExternalLink size={14} />
+                        </Link>
+                      </li>
+                      <li>Lim inn SQL-koden og lagre spørsmålet.</li>
+                      <li>Legg spørsmålet til i ønsket dashboard.</li>
+                    </ol>
 
-              {/* Add incompatibility warning */}
-              {showIncompatibilityWarning && (
-                <Alert variant="warning" size="small">
-                  <div>
-                    <p className="font-medium">Interaktiv dato + besøksvarighet = funker ikke</p>
-                    <p className="mt-1 text-sm">
-                      Du bruker både interaktivt datofilter og besøksvarighet, som ikke fungerer sammen i Metabase.
-                    </p>
+                    {/* Add incompatibility warning */}
+                    {showIncompatibilityWarning && (
+                      <Alert variant="warning" size="small">
+                        <div>
+                          <p className="font-medium">Interaktiv dato + besøksvarighet = funker ikke</p>
+                          <p className="mt-1 text-sm">
+                            Du bruker både interaktivt datofilter og besøksvarighet, som ikke fungerer sammen i Metabase.
+                          </p>
+                        </div>
+                      </Alert>
+                    )}
+
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        {!copied ? (
+                          <Button
+                            size="small"
+                            variant="secondary"
+                            onClick={handleCopy}
+                            icon={<Copy size={18} />}
+                            loading={estimating}
+                          >
+                            Kopier spørringen
+                          </Button>
+                        ) : (
+                          <Alert variant="success" size="small" className="w-fit py-1 px-3">
+                            Spørringen er kopiert!
+                          </Alert>
+                        )}
+
+                        {/* Cost Estimate Display */}
+                        {estimating && (
+                          <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
+                            Estimerer kostnad...
+                          </div>
+                        )}
+
+                        {estimate && !estimating && (() => {
+                          const gb = Number(estimate.totalBytesProcessedGB ?? 0);
+                          // Calculate cost if not provided by backend (approx $6.25 per TB)
+                          const cost = Number(estimate.estimatedCostUSD ?? NaN) || (gb * 0.00625);
+
+                          let variant: 'info' | 'warning' | 'error' = 'info';
+                          let showAsAlert = false;
+
+                          if (gb >= 300) {
+                            variant = 'error';
+                            showAsAlert = true;
+                          } else if (gb >= 100) {
+                            variant = 'warning';
+                            showAsAlert = true;
+                          } else if (gb >= 50) {
+                            variant = 'info';
+                            showAsAlert = true;
+                          }
+
+                          if (!showAsAlert) {
+                            return (
+                              <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
+                                Data å prosessere: {gb} GB
+                                {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <Alert variant={variant} size="small" className="mt-2">
+                              <div className="text-sm space-y-1">
+                                <p>
+                                  <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
+                                  {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
+                                </p>
+                                {gb >= 300 && (
+                                  <p className="font-medium mt-2">
+                                    ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
+                                  </p>
+                                )}
+                                {gb >= 100 && gb < 300 && (
+                                  <p className="font-medium mt-2">
+                                    Dette er en stor spørring. Sjekk at du trenger all denne dataen.
+                                  </p>
+                                )}
+                              </div>
+                            </Alert>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </Alert>
               )}
-
-              {/* Actions */}
-              <div className="flex flex-col gap-3">
-                <div>
-                  {!copied ? (
-                    <Button
-                      size="small"
-                      variant="secondary"
-                      onClick={handleCopy}
-                      icon={<Copy size={18} />}
-                      loading={estimating}
-                    >
-                      Kopier spørringen
-                    </Button>
-                  ) : (
-                    <Alert variant="success" size="small" className="w-fit py-1 px-3">
-                      Spørringen er kopiert!
-                    </Alert>
-                  )}
-
-                  {/* Cost Estimate Display */}
-                  {estimating && (
-                    <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
-                      Estimerer kostnad...
-                    </div>
-                  )}
-
-                  {estimate && !estimating && (() => {
-                    const gb = Number(estimate.totalBytesProcessedGB ?? 0);
-                    // Calculate cost if not provided by backend (approx $6.25 per TB)
-                    const cost = Number(estimate.estimatedCostUSD ?? NaN) || (gb * 0.00625);
-
-                    let variant: 'info' | 'warning' | 'error' = 'info';
-                    let showAsAlert = false;
-
-                    if (gb >= 300) {
-                      variant = 'error';
-                      showAsAlert = true;
-                    } else if (gb >= 100) {
-                      variant = 'warning';
-                      showAsAlert = true;
-                    } else if (gb >= 50) {
-                      variant = 'info';
-                      showAsAlert = true;
-                    }
-
-                    if (!showAsAlert) {
-                      return (
-                        <div className="mt-2 text-sm text-[var(--ax-text-subtle)]">
-                          Data å prosessere: {gb} GB
-                          {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <Alert variant={variant} size="small" className="mt-2">
-                        <div className="text-sm space-y-1">
-                          <p>
-                            <strong>Data å prosessere:</strong> {estimate.totalBytesProcessedGB} GB
-                            {cost > 0 && ` • Kostnad: $${cost.toFixed(2)}`}
-                          </p>
-                          {gb >= 300 && (
-                            <p className="font-medium mt-2">
-                              ⚠️ Dette er en veldig stor spørring! Vurder å begrense dataene.
-                            </p>
-                          )}
-                          {gb >= 100 && gb < 300 && (
-                            <p className="font-medium mt-2">
-                              Dette er en stor spørring. Sjekk at du trenger all denne dataen.
-                            </p>
-                          )}
-                        </div>
-                      </Alert>
-                    );
-                  })()}
-                </div>
-
-                <Link
-                  href={metabaseQuestionUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1"
-                >
-                  Åpne Metabase <ExternalLink size={14} />
-                </Link>
-              </div>
 
               {/* Detailed instructions in ReadMore 
               <ReadMore header="Neste steg i Metabase" size="small">
