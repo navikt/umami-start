@@ -94,15 +94,14 @@ export const updateGraph = (
 export const createGraph = (
     projectId: number,
     dashboardId: number,
-    name: string,
-    graphType: string,
+    params: { name: string; graphType: string; width?: number },
 ): Promise<GraphDto> =>
     requestJson<GraphDto>(
         `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, graphType }),
+            body: JSON.stringify(params),
         },
     );
 

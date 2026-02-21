@@ -4,6 +4,7 @@ import { MoreVertical, Plus } from 'lucide-react';
 import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
 import EditDashboardDialog from '../../oversikt/ui/dialogs/EditDashboardDialog.tsx';
+import ImportChartDialog from '../../oversikt/ui/dialogs/ImportChartDialog.tsx';
 import { useProjectManager } from '../hooks/useProjectManager.ts';
 import type { ProjectSummary } from '../hooks/useProjectManager.ts';
 import type { DashboardDto, ProjectDto } from '../model/types.ts';
@@ -19,6 +20,8 @@ type FileTableRow = {
     graphId?: number;
 };
 
+type ImportGraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE';
+
 const LAST_PROJECT_STORAGE_KEY = 'projectmanager:lastSelectedProjectId';
 
 const ProjectManager = () => {
@@ -33,6 +36,8 @@ const ProjectManager = () => {
         setNewProjectDescription,
         createProject,
         editProject,
+        createDashboard,
+        importChart,
         deleteProject,
         editDashboard,
         deleteDashboard,
@@ -77,6 +82,12 @@ const ProjectManager = () => {
     const [chartMutationError, setChartMutationError] = useState<string | null>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
+    const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false);
+    const [newDashboardName, setNewDashboardName] = useState('');
+    const [newDashboardDescription, setNewDashboardDescription] = useState('');
+    const [createDashboardError, setCreateDashboardError] = useState<string | null>(null);
+    const [isImportChartOpen, setIsImportChartOpen] = useState(false);
+    const [importChartError, setImportChartError] = useState<string | null>(null);
     const projectNameInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
@@ -183,6 +194,13 @@ const ProjectManager = () => {
         setDeleteDashboardTarget({ id: dashboardId, projectId, name });
     };
 
+    const openCreateDashboard = () => {
+        setCreateDashboardError(null);
+        setNewDashboardName('');
+        setNewDashboardDescription('');
+        setIsCreateDashboardOpen(true);
+    };
+
     const handleSaveDashboard = async (params: { name: string; projectId: number }) => {
         if (!editDashboardTarget) return;
         await editDashboard(editDashboardTarget.projectId, editDashboardTarget.id, params);
@@ -197,6 +215,58 @@ const ProjectManager = () => {
         }
         await deleteDashboard(deleteDashboardTarget.projectId, deleteDashboardTarget.id);
         setDeleteDashboardTarget(null);
+    };
+
+    const handleCreateDashboard = async () => {
+        if (!selectedProject) return;
+        if (!newDashboardName.trim()) {
+            setCreateDashboardError('Dashboardnavn er påkrevd');
+            return;
+        }
+        setCreateDashboardError(null);
+        await createDashboard(
+            selectedProject.project.id,
+            newDashboardName,
+            newDashboardDescription || undefined,
+        );
+        setIsCreateDashboardOpen(false);
+        setNewDashboardName('');
+        setNewDashboardDescription('');
+    };
+
+    const openImportChart = () => {
+        setImportChartError(null);
+        setIsImportChartOpen(true);
+    };
+
+    const handleImportChart = async (params: {
+        dashboardId?: number;
+        name: string;
+        graphType: ImportGraphType;
+        width: string;
+        sqlText: string;
+    }) => {
+        if (!selectedProject) return;
+        if (!params.dashboardId) {
+            setImportChartError('Velg dashboard');
+            return;
+        }
+
+        const parsedWidth = Number(params.width);
+        if (!Number.isFinite(parsedWidth)) {
+            setImportChartError('Bredde må være et tall mellom 1 og 100');
+            return;
+        }
+        const normalizedWidth = Math.max(1, Math.min(100, Math.round(parsedWidth)));
+
+        setImportChartError(null);
+        await importChart(selectedProject.project.id, params.dashboardId, {
+            name: params.name,
+            graphType: params.graphType,
+            width: normalizedWidth,
+            sqlText: params.sqlText,
+        });
+        setIsImportChartOpen(false);
     };
 
     const toggleCreateProject = () => {
@@ -270,6 +340,14 @@ const ProjectManager = () => {
         const dashboard = project.dashboards.find((item) => item.id === deleteDashboardTarget.id);
         return (dashboard?.charts.length ?? 0) > 0;
     }, [projectSummaries, deleteDashboardTarget]);
+
+    const selectedProjectDashboardOptions = useMemo(() => {
+        if (!selectedProject) return [];
+        return selectedProject.dashboards.map((dashboard) => ({
+            id: dashboard.id,
+            name: dashboard.name,
+        }));
+    }, [selectedProject]);
 
     return (
         <>
@@ -382,24 +460,47 @@ const ProjectManager = () => {
                                     </BodyShort>
                                 )}
                             </div>
-                            <ActionMenu>
-                                <ActionMenu.Trigger>
-                                    <Button
-                                        variant="tertiary"
-                                        size="xsmall"
-                                        icon={<MoreVertical aria-hidden />}
-                                        aria-label={`Flere valg for ${selectedProject.project.name}`}
-                                    />
-                                </ActionMenu.Trigger>
-                                <ActionMenu.Content align="end">
-                                    <ActionMenu.Item onClick={() => openEdit(selectedProject)}>
-                                        Rediger
-                                    </ActionMenu.Item>
-                                    <ActionMenu.Item onClick={() => openDelete(selectedProject)}>
-                                        Slett
-                                    </ActionMenu.Item>
-                                </ActionMenu.Content>
-                            </ActionMenu>
+                            <div className="flex items-center gap-1">
+                                <ActionMenu>
+                                    <ActionMenu.Trigger>
+                                        <Button type="button" size="xsmall" variant="secondary">
+                                            + legg til
+                                        </Button>
+                                    </ActionMenu.Trigger>
+                                    <ActionMenu.Content align="end">
+                                        <ActionMenu.Item onClick={openCreateDashboard}>
+                                            Legg til dashboard
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item
+                                            onClick={openImportChart}
+                                            disabled={selectedProjectDashboardOptions.length === 0}
+                                        >
+                                            Importer graf
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item as="a" href="/grafbygger">
+                                            Legg til graf
+                                        </ActionMenu.Item>
+                                    </ActionMenu.Content>
+                                </ActionMenu>
+                                <ActionMenu>
+                                    <ActionMenu.Trigger>
+                                        <Button
+                                            variant="tertiary"
+                                            size="xsmall"
+                                            icon={<MoreVertical aria-hidden />}
+                                            aria-label={`Flere valg for ${selectedProject.project.name}`}
+                                        />
+                                    </ActionMenu.Trigger>
+                                    <ActionMenu.Content align="end">
+                                        <ActionMenu.Item onClick={() => openEdit(selectedProject)}>
+                                            Rediger
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item onClick={() => openDelete(selectedProject)}>
+                                            Slett
+                                        </ActionMenu.Item>
+                                    </ActionMenu.Content>
+                                </ActionMenu>
+                            </div>
                         </div>
                     )}
 
@@ -563,6 +664,64 @@ const ProjectManager = () => {
                 }}
                 onSave={handleSaveDashboard}
             />
+
+            <Modal
+                open={isCreateDashboardOpen}
+                onClose={() => {
+                    setIsCreateDashboardOpen(false);
+                    setCreateDashboardError(null);
+                }}
+                header={{ heading: 'Nytt dashboard' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="space-y-4">
+                        {createDashboardError && <Alert variant="error" size="small">{createDashboardError}</Alert>}
+                        <TextField
+                            label="Dashboardnavn"
+                            size="small"
+                            value={newDashboardName}
+                            onChange={(event) => setNewDashboardName(event.target.value)}
+                        />
+                        <TextField
+                            label="Beskrivelse (valgfri)"
+                            size="small"
+                            value={newDashboardDescription}
+                            onChange={(event) => setNewDashboardDescription(event.target.value)}
+                        />
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleCreateDashboard()} loading={loading}>
+                        Opprett
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setIsCreateDashboardOpen(false);
+                            setCreateDashboardError(null);
+                        }}
+                        disabled={loading}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {isImportChartOpen && (
+                <ImportChartDialog
+                    open={isImportChartOpen}
+                    loading={loading}
+                    error={importChartError}
+                    dashboardOptions={selectedProjectDashboardOptions}
+                    defaultDashboardId={selectedProjectDashboardOptions[0]?.id ?? null}
+                    onClose={() => {
+                        setIsImportChartOpen(false);
+                        setImportChartError(null);
+                    }}
+                    onImport={handleImportChart}
+                />
+            )}
 
             <DeleteDashboardDialog
                 open={!!deleteDashboardTarget}

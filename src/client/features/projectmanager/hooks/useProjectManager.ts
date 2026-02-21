@@ -121,6 +121,18 @@ export const useProjectManager = () => {
         [run, loadProjectSummaries],
     );
 
+    const createDashboard = useCallback(
+        (projectId: number, name: string, description?: string) =>
+            run(async () => {
+                if (!projectId) throw new Error('Velg prosjekt');
+                if (!name.trim()) throw new Error('Dashboardnavn er påkrevd');
+                await api.createDashboard(projectId, name.trim(), description?.trim() || undefined);
+                await loadProjectSummaries();
+                setMessage('Dashboard opprettet');
+            }),
+        [run, loadProjectSummaries],
+    );
+
     const deleteDashboard = useCallback(
         (projectId: number, dashboardId: number) =>
             run(async () => {
@@ -137,6 +149,33 @@ export const useProjectManager = () => {
                 await api.deleteGraph(projectId, dashboardId, graphId);
                 await loadProjectSummaries();
                 setMessage('Graf slettet');
+            }),
+        [run, loadProjectSummaries],
+    );
+
+    const importChart = useCallback(
+        (
+            projectId: number,
+            dashboardId: number,
+            params: { name: string; graphType: string; width: number; sqlText: string },
+        ) =>
+            run(async () => {
+                if (!params.name.trim()) throw new Error('Grafnavn er påkrevd');
+                if (!params.sqlText.trim()) throw new Error('SQL-kode er påkrevd');
+                const createdGraph = await api.createGraph(projectId, dashboardId, {
+                    name: params.name.trim(),
+                    graphType: params.graphType,
+                    width: params.width,
+                });
+                await api.createQuery(
+                    projectId,
+                    dashboardId,
+                    createdGraph.id,
+                    `${params.name.trim()} - query`,
+                    params.sqlText.trim(),
+                );
+                await loadProjectSummaries();
+                setMessage('Graf importert');
             }),
         [run, loadProjectSummaries],
     );
@@ -170,9 +209,11 @@ export const useProjectManager = () => {
         editProject,
         deleteProject,
         editDashboard,
+        createDashboard,
         deleteDashboard,
         deleteChart,
         editChart,
+        importChart,
     };
 };
 

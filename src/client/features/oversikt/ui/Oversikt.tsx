@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
 import { ArrowLeftIcon } from '@navikt/aksel-icons';
-import { Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, Textarea, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
@@ -26,6 +26,7 @@ import DeleteChartDialog from './dialogs/DeleteChartDialog.tsx';
 import EditDashboardDialog from './dialogs/EditDashboardDialog.tsx';
 import DeleteDashboardDialog from './dialogs/DeleteDashboardDialog.tsx';
 import CopyChartDialog from './dialogs/CopyChartDialog.tsx';
+import ImportChartDialog from './dialogs/ImportChartDialog.tsx';
 import { applyWebsiteIdOnly, extractWebsiteId, replaceHardcodedWebsiteId } from '../../sql/utils/sqlProcessing.ts';
 
 const parseChartWidth = (width?: string): number | undefined => {
@@ -91,10 +92,6 @@ const Oversikt = () => {
     const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
     const [stats, setStats] = useState<Record<string, { gb: number; title: string }>>({});
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [importName, setImportName] = useState('');
-    const [importGraphType, setImportGraphType] = useState<GraphType>('TABLE');
-    const [importWidth, setImportWidth] = useState('50');
-    const [importSqlText, setImportSqlText] = useState('');
     const [importingChart, setImportingChart] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
     const chartRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -460,44 +457,35 @@ const Oversikt = () => {
     const openImportModal = () => {
         if (!selectedDashboardId) return;
         setImportError(null);
-        setImportName('');
-        setImportGraphType('TABLE');
-        setImportWidth('50');
-        setImportSqlText('');
         setIsImportModalOpen(true);
     };
 
-    const handleImportChart = async () => {
+    const handleImportChart = async (params: {
+        name: string;
+        graphType: GraphType;
+        width: string;
+        sqlText: string;
+    }) => {
         if (!selectedProjectId || !selectedDashboardId) return;
-        const name = importName.trim();
-        if (!name) {
-            setImportError('Grafnavn er påkrevd');
-            return;
-        }
-        const sqlText = importSqlText.trim();
-        if (!sqlText) {
-            setImportError('SQL-kode er påkrevd');
-            return;
-        }
 
-        const parsedWidth = Number(importWidth);
+        const parsedWidth = Number(params.width);
         if (!Number.isFinite(parsedWidth)) {
             setImportError('Bredde må være et tall mellom 1 og 100');
             return;
         }
         const normalizedWidth = Math.max(1, Math.min(100, Math.round(parsedWidth)));
-        const sqlForSave = sqlText;
+        const sqlForSave = params.sqlText;
 
         setImportError(null);
         setImportingChart(true);
         try {
             const createdGraph = await createGraph(selectedProjectId, selectedDashboardId, {
-                name,
-                graphType: importGraphType,
+                name: params.name,
+                graphType: params.graphType,
                 width: normalizedWidth,
             });
             await createQuery(selectedProjectId, selectedDashboardId, createdGraph.id, {
-                name: `${name} - query`,
+                name: `${params.name} - query`,
                 sqlText: sqlForSave,
             });
             await refreshGraphs();
@@ -865,65 +853,18 @@ const Oversikt = () => {
                 </Modal.Footer>
             </Modal>
 
-            <Modal
-                open={isImportModalOpen}
-                onClose={() => {
-                    if (importingChart) return;
-                    setIsImportModalOpen(false);
-                    setImportError(null);
-                }}
-                header={{ heading: 'Importer graf fra SQL' }}
-                width="medium"
-            >
-                <Modal.Body>
-                    <div className="flex flex-col gap-4">
-                        {importError && <Alert variant="error">{importError}</Alert>}
-                        <TextField
-                            label="Grafnavn"
-                            value={importName}
-                            onChange={(event) => setImportName(event.target.value)}
-                            size="small"
-                        />
-                        <Select
-                            label="Graftype"
-                            value={importGraphType}
-                            onChange={(event) => setImportGraphType(event.target.value as GraphType)}
-                            size="small"
-                        >
-                            <option value="LINE">Linjediagram</option>
-                            <option value="BAR">Stolpediagram</option>
-                            <option value="PIE">Sektordiagram</option>
-                            <option value="TABLE">Tabell</option>
-                        </Select>
-                        <TextField
-                            label="Bredde (%)"
-                            description="Standardbredden er 50%"
-                            value={importWidth}
-                            onChange={(event) => setImportWidth(event.target.value)}
-                            size="small"
-                        />
-                        <Textarea
-                            label="SQL-kode"
-                            description="Lim inn SQL-spørringen du vil importere som graf."
-                            minRows={10}
-                            value={importSqlText}
-                            onChange={(event) => setImportSqlText(event.target.value)}
-                        />
-                    </div>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={() => void handleImportChart()} loading={importingChart}>
-                        Importer graf
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => setIsImportModalOpen(false)}
-                        disabled={importingChart}
-                    >
-                        Avbryt
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+            {isImportModalOpen && (
+                <ImportChartDialog
+                    open={isImportModalOpen}
+                    loading={importingChart}
+                    error={importError}
+                    onClose={() => {
+                        setIsImportModalOpen(false);
+                        setImportError(null);
+                    }}
+                    onImport={handleImportChart}
+                />
+            )}
 
             <EditDashboardDialog
                 key={editDashboardTarget ? `edit-dashboard-${editDashboardTarget.id}-${editDashboardTarget.projectId}` : 'edit-dashboard-dialog'}
