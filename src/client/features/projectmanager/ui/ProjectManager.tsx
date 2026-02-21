@@ -733,6 +733,7 @@ const ProjectManager = () => {
             </Modal>
 
             <EditDashboardDialog
+                key={editDashboardTarget ? `edit-dashboard-${editDashboardTarget.id}-${editDashboardTarget.projectId}` : 'edit-dashboard-dialog'}
                 open={!!editDashboardTarget}
                 dashboard={editDashboardTarget}
                 projects={projectOptions}
