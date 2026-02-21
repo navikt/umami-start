@@ -27,14 +27,15 @@ export const useProjectManager = () => {
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDescription, setNewProjectDescription] = useState('');
 
-    const run = useCallback(async (task: () => Promise<void>) => {
+    const run = useCallback(async <T>(task: () => Promise<T>): Promise<T | undefined> => {
         setLoading(true);
         setError(null);
         setMessage(null);
         try {
-            await task();
+            return await task();
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Ukjent feil');
+            return undefined;
         } finally {
             setLoading(false);
         }
@@ -80,11 +81,12 @@ export const useProjectManager = () => {
         () =>
             run(async () => {
                 if (!newProjectName.trim()) throw new Error('Prosjektnavn er påkrevd');
-                await api.createProject(newProjectName.trim(), newProjectDescription.trim() || undefined);
+                const createdProject = await api.createProject(newProjectName.trim(), newProjectDescription.trim() || undefined);
                 setNewProjectName('');
                 setNewProjectDescription('');
                 await loadProjectSummaries();
                 setMessage('Prosjekt opprettet');
+                return createdProject.id;
             }),
         [run, newProjectName, newProjectDescription, loadProjectSummaries],
     );

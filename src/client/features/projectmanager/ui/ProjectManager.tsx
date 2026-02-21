@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } from '@navikt/aksel-icons';
 import { MoreVertical, Plus } from 'lucide-react';
 import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField, Tooltip } from '@navikt/ds-react';
@@ -101,6 +101,11 @@ const ProjectManager = () => {
     const [createDashboardError, setCreateDashboardError] = useState<string | null>(null);
     const [isImportChartOpen, setIsImportChartOpen] = useState(false);
     const [importChartError, setImportChartError] = useState<string | null>(null);
+    const [showErrorAlert, setShowErrorAlert] = useState(true);
+    const [showMessageAlert, setShowMessageAlert] = useState(true);
+    const [showNoProjectsAlert, setShowNoProjectsAlert] = useState(true);
+    const [showNoSearchResultsAlert, setShowNoSearchResultsAlert] = useState(true);
+    const [showNoSelectedProjectAlert, setShowNoSelectedProjectAlert] = useState(true);
     const projectNameInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
@@ -162,6 +167,26 @@ const ProjectManager = () => {
             return [dashboardRow, ...chartRows];
         });
     }, [selectedProject]);
+
+    useEffect(() => {
+        if (error) setShowErrorAlert(true);
+    }, [error]);
+
+    useEffect(() => {
+        if (message) setShowMessageAlert(true);
+    }, [message]);
+
+    useEffect(() => {
+        setShowNoProjectsAlert(true);
+    }, [projectSummaries.length]);
+
+    useEffect(() => {
+        setShowNoSearchResultsAlert(true);
+    }, [projectSearch, filteredProjectSummaries.length, projectSummaries.length]);
+
+    useEffect(() => {
+        setShowNoSelectedProjectAlert(true);
+    }, [selectedProjectId, projectSummaries.length]);
 
     const openEdit = (summary: ProjectSummary) => {
         setLocalError(null);
@@ -291,6 +316,13 @@ const ProjectManager = () => {
         setTimeout(() => {
             projectNameInputRef.current?.focus();
         }, 0);
+    };
+
+    const handleCreateProject = async () => {
+        const createdProjectId = await createProject();
+        if (createdProjectId == null) return;
+        setSelectedProjectId(createdProjectId);
+        setIsCreateOpen(false);
     };
 
     const getChartIcon = (graphType?: string) => {
@@ -462,6 +494,11 @@ const ProjectManager = () => {
         }));
     }, [selectedProject]);
 
+    const dashboardChartCountById = useMemo(() => {
+        if (!selectedProject) return new Map<number, number>();
+        return new Map(selectedProject.dashboards.map((dashboard) => [dashboard.id, dashboard.charts.length]));
+    }, [selectedProject]);
+
     return (
         <>
             <ProjectManagerLayout
@@ -492,11 +529,15 @@ const ProjectManager = () => {
                             </Tooltip>
                         </form>
 
-                        {projectSummaries.length === 0 && (
-                            <Alert variant="info" size="small">Ingen prosjekter funnet.</Alert>
+                        {projectSummaries.length === 0 && showNoProjectsAlert && (
+                            <Alert variant="info" size="small" closeButton onClose={() => setShowNoProjectsAlert(false)}>
+                                Ingen prosjekter funnet.
+                            </Alert>
                         )}
-                        {projectSummaries.length > 0 && filteredProjectSummaries.length === 0 && (
-                            <Alert variant="info" size="small">Ingen treff for sok.</Alert>
+                        {projectSummaries.length > 0 && filteredProjectSummaries.length === 0 && showNoSearchResultsAlert && (
+                            <Alert variant="info" size="small" closeButton onClose={() => setShowNoSearchResultsAlert(false)}>
+                                Ingen treff for sok.
+                            </Alert>
                         )}
 
                         {filteredProjectSummaries.map((summary) => {
@@ -539,47 +580,37 @@ const ProjectManager = () => {
                                 </div>
                             );
                         })}
+
+                        <div className="pt-2">
+                            <Button
+                                type="button"
+                                size="small"
+                                variant="secondary"
+                                icon={<Plus aria-hidden size={16} />}
+                                onClick={toggleCreateProject}
+                            >
+                                Nytt prosjekt
+                            </Button>
+                        </div>
                     </div>
                 }
             >
                 <div className="space-y-4">
-                    {error && <Alert variant="error">{error}</Alert>}
-                    {message && <Alert variant="success">{message}</Alert>}
-
-                    {isCreateOpen && (
-                        <section className="p-4 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
-                            <Heading level="3" size="xsmall" spacing>Nytt prosjekt</Heading>
-                            <div className="flex flex-col md:flex-row md:items-end gap-3">
-                                <div className="w-full md:w-[320px]">
-                                    <TextField
-                                        label="Prosjektnavn"
-                                        size="small"
-                                        ref={projectNameInputRef}
-                                        value={newProjectName}
-                                        onChange={(event) => setNewProjectName(event.target.value)}
-                                    />
-                                </div>
-                                <div className="w-full md:w-[420px]">
-                                    <TextField
-                                        label="Beskrivelse (valgfri)"
-                                        size="small"
-                                        value={newProjectDescription}
-                                        onChange={(event) => setNewProjectDescription(event.target.value)}
-                                    />
-                                </div>
-                                <Button
-                                    size="small"
-                                    onClick={createProject}
-                                    loading={loading}
-                                >
-                                    Opprett
-                                </Button>
-                            </div>
-                        </section>
+                    {error && showErrorAlert && (
+                        <Alert variant="error" closeButton onClose={() => setShowErrorAlert(false)}>
+                            {error}
+                        </Alert>
+                    )}
+                    {message && showMessageAlert && (
+                        <Alert variant="success" closeButton onClose={() => setShowMessageAlert(false)}>
+                            {message}
+                        </Alert>
                     )}
 
-                    {!selectedProject && (
-                        <Alert variant="info" size="small">Velg et prosjekt for a se dashboards og grafer.</Alert>
+                    {!selectedProject && showNoSelectedProjectAlert && (
+                        <Alert variant="info" size="small" closeButton onClose={() => setShowNoSelectedProjectAlert(false)}>
+                            Velg et prosjekt for a se dashboards og grafer.
+                        </Alert>
                     )}
 
                     {selectedProject && (
@@ -639,7 +670,14 @@ const ProjectManager = () => {
                     )}
 
                     {selectedProject && fileRows.length === 0 && (
-                        <Alert variant="info" size="small">Prosjektet inneholder ingen dashboards eller grafer ennå.</Alert>
+                        <div className="rounded-md border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm text-[var(--ax-text-default)]">Prosjektet er tomt</span>
+                                <Button size="xsmall" variant="secondary" onClick={openCreateDashboard}>
+                                    Opprett første dashboard
+                                </Button>
+                            </div>
+                        </div>
                     )}
 
                     {selectedProject && fileRows.length > 0 && (
@@ -657,93 +695,110 @@ const ProjectManager = () => {
                                 {fileRows.map((row) => {
                                     const isChartRow = row.type === 'chart';
                                     const overviewHref = `/oversikt?projectId=${selectedProject.project.id}&dashboardId=${row.dashboardId}`;
+                                    const isEmptyDashboardRow = row.type === 'dashboard' && (dashboardChartCountById.get(row.dashboardId) ?? 0) === 0;
                                     return (
-                                        <Table.Row key={row.id}>
-                                            <Table.HeaderCell scope="row">
-                                                <span className={`inline-flex items-center gap-2 min-w-0 ${isChartRow ? 'pl-6' : ''}`}>
-                                                    <span className="text-[var(--ax-text-subtle)]">
-                                                        {row.type === 'dashboard' ? (
-                                                            <SquareGridIcon aria-hidden fontSize="1rem" />
-                                                        ) : (
-                                                            getChartIcon(row.graphType)
-                                                        )}
+                                        <Fragment key={row.id}>
+                                            <Table.Row>
+                                                <Table.HeaderCell scope="row">
+                                                    <span className={`inline-flex items-center gap-2 min-w-0 ${isChartRow ? 'pl-6' : ''}`}>
+                                                        <span className="text-[var(--ax-text-subtle)]">
+                                                            {row.type === 'dashboard' ? (
+                                                                <SquareGridIcon aria-hidden fontSize="1rem" />
+                                                            ) : (
+                                                                getChartIcon(row.graphType)
+                                                            )}
+                                                        </span>
+                                                        <Link href={overviewHref}>{row.name}</Link>
                                                     </span>
-                                                    <Link href={overviewHref}>{row.name}</Link>
-                                                </span>
-                                            </Table.HeaderCell>
-                                            <Table.DataCell>
-                                                {row.type === 'dashboard' ? 'Dashboard' : getChartTypeLabel(row.graphType)}
-                                            </Table.DataCell>
-                                            <Table.DataCell>
-                                                <div className="flex justify-end">
-                                                    {row.type === 'chart' ? (
-                                                        <ActionMenu>
-                                                            <ActionMenu.Trigger>
-                                                                <Button
-                                                                    variant="tertiary"
-                                                                    size="xsmall"
-                                                                    icon={<MoreVertical aria-hidden />}
-                                                                    aria-label={`Flere valg for ${row.name}`}
-                                                                />
-                                                            </ActionMenu.Trigger>
-                                                            <ActionMenu.Content align="end">
-                                                                <ActionMenu.Item as="a" href={overviewHref}>
-                                                                    Åpne i dashboard
-                                                                </ActionMenu.Item>
-                                                                {selectedProject && (
-                                                                    <ActionMenu.Item
-                                                                        onClick={() => void openEditChart(selectedProject.project.id, row)}
-                                                                    >
-                                                                        Rediger graf
+                                                </Table.HeaderCell>
+                                                <Table.DataCell>
+                                                    {row.type === 'dashboard' ? 'Dashboard' : getChartTypeLabel(row.graphType)}
+                                                </Table.DataCell>
+                                                <Table.DataCell>
+                                                    <div className="flex justify-end">
+                                                        {row.type === 'chart' ? (
+                                                            <ActionMenu>
+                                                                <ActionMenu.Trigger>
+                                                                    <Button
+                                                                        variant="tertiary"
+                                                                        size="xsmall"
+                                                                        icon={<MoreVertical aria-hidden />}
+                                                                        aria-label={`Flere valg for ${row.name}`}
+                                                                    />
+                                                                </ActionMenu.Trigger>
+                                                                <ActionMenu.Content align="end">
+                                                                    <ActionMenu.Item as="a" href={overviewHref}>
+                                                                        Åpne i dashboard
                                                                     </ActionMenu.Item>
-                                                                )}
-                                                                {selectedProject && (
-                                                                    <ActionMenu.Item
-                                                                        onClick={() => void openCopyChart(selectedProject.project.id, row)}
-                                                                    >
-                                                                        Kopier graf
-                                                                    </ActionMenu.Item>
-                                                                )}
-                                                                {selectedProject && (
-                                                                    <ActionMenu.Item
-                                                                        onClick={() => openDeleteChart(selectedProject.project.id, row)}
-                                                                    >
-                                                                        Slett graf
-                                                                    </ActionMenu.Item>
-                                                                )}
-                                                            </ActionMenu.Content>
-                                                        </ActionMenu>
-                                                    ) : (
-                                                        <ActionMenu>
-                                                            <ActionMenu.Trigger>
-                                                                <Button
-                                                                    variant="tertiary"
-                                                                    size="xsmall"
-                                                                    icon={<MoreVertical aria-hidden />}
-                                                                    aria-label={`Flere valg for ${row.name}`}
-                                                                />
-                                                            </ActionMenu.Trigger>
-                                                            <ActionMenu.Content align="end">
-                                                                {selectedProject && (
-                                                                    <ActionMenu.Item
-                                                                        onClick={() => openEditDashboard(selectedProject.project.id, row.dashboardId, row.name)}
-                                                                    >
-                                                                        Rediger dashboard
-                                                                    </ActionMenu.Item>
-                                                                )}
-                                                                {selectedProject && (
-                                                                    <ActionMenu.Item
-                                                                        onClick={() => openDeleteDashboard(selectedProject.project.id, row.dashboardId, row.name)}
-                                                                    >
-                                                                        Slett dashboard
-                                                                    </ActionMenu.Item>
-                                                                )}
-                                                            </ActionMenu.Content>
-                                                        </ActionMenu>
-                                                    )}
-                                                </div>
-                                            </Table.DataCell>
-                                        </Table.Row>
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => void openEditChart(selectedProject.project.id, row)}
+                                                                        >
+                                                                            Rediger graf
+                                                                        </ActionMenu.Item>
+                                                                    )}
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => void openCopyChart(selectedProject.project.id, row)}
+                                                                        >
+                                                                            Kopier graf
+                                                                        </ActionMenu.Item>
+                                                                    )}
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => openDeleteChart(selectedProject.project.id, row)}
+                                                                        >
+                                                                            Slett graf
+                                                                        </ActionMenu.Item>
+                                                                    )}
+                                                                </ActionMenu.Content>
+                                                            </ActionMenu>
+                                                        ) : (
+                                                            <ActionMenu>
+                                                                <ActionMenu.Trigger>
+                                                                    <Button
+                                                                        variant="tertiary"
+                                                                        size="xsmall"
+                                                                        icon={<MoreVertical aria-hidden />}
+                                                                        aria-label={`Flere valg for ${row.name}`}
+                                                                    />
+                                                                </ActionMenu.Trigger>
+                                                                <ActionMenu.Content align="end">
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => openEditDashboard(selectedProject.project.id, row.dashboardId, row.name)}
+                                                                        >
+                                                                            Rediger dashboard
+                                                                        </ActionMenu.Item>
+                                                                    )}
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => openDeleteDashboard(selectedProject.project.id, row.dashboardId, row.name)}
+                                                                        >
+                                                                            Slett dashboard
+                                                                        </ActionMenu.Item>
+                                                                    )}
+                                                                </ActionMenu.Content>
+                                                            </ActionMenu>
+                                                        )}
+                                                    </div>
+                                                </Table.DataCell>
+                                            </Table.Row>
+                                            {isEmptyDashboardRow && (
+                                                <Table.Row>
+                                                    <Table.HeaderCell scope="row">
+                                                        <span className="inline-flex items-center gap-2 pl-6">
+                                                            <span className="text-[var(--ax-text-subtle)]">
+                                                                <Plus aria-hidden size={14} />
+                                                            </span>
+                                                            <Link href="/grafbygger">Legg til graf med Grafbyggeren</Link>
+                                                        </span>
+                                                    </Table.HeaderCell>
+                                                    <Table.DataCell />
+                                                    <Table.DataCell />
+                                                </Table.Row>
+                                            )}
+                                        </Fragment>
                                     );
                                 })}
                             </Table.Body>
@@ -751,6 +806,39 @@ const ProjectManager = () => {
                     )}
                 </div>
             </ProjectManagerLayout>
+
+            <Modal
+                open={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+                header={{ heading: 'Nytt prosjekt' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="space-y-3">
+                        <TextField
+                            label="Prosjektnavn"
+                            size="small"
+                            ref={projectNameInputRef}
+                            value={newProjectName}
+                            onChange={(event) => setNewProjectName(event.target.value)}
+                        />
+                        <TextField
+                            label="Beskrivelse (valgfri)"
+                            size="small"
+                            value={newProjectDescription}
+                            onChange={(event) => setNewProjectDescription(event.target.value)}
+                        />
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button size="small" onClick={() => void handleCreateProject()} loading={loading}>
+                        Opprett
+                    </Button>
+                    <Button size="small" variant="secondary" onClick={() => setIsCreateOpen(false)}>
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <Modal
                 open={!!editTarget}
