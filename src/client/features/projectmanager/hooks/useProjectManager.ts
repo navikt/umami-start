@@ -3,6 +3,10 @@ import type { ProjectDto } from '../model/types.ts';
 import * as api from '../api/backendApi.ts';
 import { applyWebsiteIdOnly, replaceHardcodedWebsiteId } from '../../sql/utils/sqlProcessing.ts';
 
+const COLUMN_TOO_LONG_RE = /too long for the column/i;
+const stripTrailingSemicolon = (sql: string): string => sql.trim().replace(/;+\s*$/, '').trim();
+const compactSqlForStorage = (sql: string): string => sql.replace(/\s+/g, ' ').trim();
+
 type ProjectSummary = {
     project: ProjectDto;
     dashboardCount: number;
@@ -174,25 +178,50 @@ export const useProjectManager = () => {
                     if (!params.sqlText.trim()) {
                         return { ok: false, error: 'SQL-kode er påkrevd' };
                     }
+                    const normalizedSqlText = stripTrailingSemicolon(params.sqlText);
                     const createdGraph = await api.createGraph(projectId, dashboardId, {
                         name: params.name.trim(),
                         graphType: params.graphType,
                         width: params.width,
                     });
                     createdGraphId = createdGraph.id;
-                    await api.createQuery(
-                        projectId,
-                        dashboardId,
-                        createdGraph.id,
-                        `${params.name.trim()} - query`,
-                        params.sqlText.trim(),
-                    );
+                    const sqlCandidates = Array.from(new Set([
+                        normalizedSqlText,
+                        compactSqlForStorage(normalizedSqlText),
+                    ])).filter(Boolean);
+
+                    let queryCreated = false;
+                    for (const sqlText of sqlCandidates) {
+                        try {
+                            await api.createQuery(
+                                projectId,
+                                dashboardId,
+                                createdGraph.id,
+                                `${params.name.trim()} - query`,
+                                sqlText,
+                            );
+                            queryCreated = true;
+                            break;
+                        } catch (candidateErr: unknown) {
+                            const candidateMessage = candidateErr instanceof Error ? candidateErr.message : '';
+                            if (!COLUMN_TOO_LONG_RE.test(candidateMessage)) {
+                                throw candidateErr;
+                            }
+                        }
+                    }
+
+                    if (!queryCreated) {
+                        throw new Error(
+                            `Backend avviste SQL-lengde (${normalizedSqlText.length} tegn; komprimert ${compactSqlForStorage(normalizedSqlText).length} tegn).`,
+                        );
+                    }
                     await loadProjectSummaries();
                     setMessage('Graf importert');
                     return { ok: true };
                 } catch (err: unknown) {
                     const rawMessage = err instanceof Error ? err.message.trim() : '';
                     const isGenericStatusError = /^Forespørsel feilet \(\d+\)$/.test(rawMessage);
+                    const isBadRequest = /\bBAD_REQUEST\b/i.test(rawMessage);
                     let rollbackFailed = false;
                     if (createdGraphId != null) {
                         try {
@@ -203,9 +232,11 @@ export const useProjectManager = () => {
                         }
                     }
 
-                    const baseMessage = rawMessage && !isGenericStatusError
-                        ? `Import feilet: ${rawMessage}`
-                        : 'Import feilet. Sjekk at SQL-spørringen er gyldig, og at dashboardet fortsatt finnes.';
+                    const baseMessage = isBadRequest
+                        ? 'Import feilet: SQL-spørringen ble avvist (BAD_REQUEST). Sjekk syntaks, tabell-/feltnavn og at SQL returnerer gyldige resultater.'
+                        : rawMessage && !isGenericStatusError
+                            ? `Import feilet: ${rawMessage}`
+                            : 'Import feilet. Sjekk at SQL-spørringen er gyldig, og at dashboardet fortsatt finnes.';
                     const rollbackMessage = rollbackFailed
                         ? ' Grafen ble opprettet uten SQL. Slett grafen manuelt eller legg til query via redigering.'
                         : '';

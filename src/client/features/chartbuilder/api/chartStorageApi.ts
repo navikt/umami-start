@@ -18,6 +18,7 @@ type SaveChartResult = {
 };
 
 const COLUMN_TOO_LONG_RE = /too long for the column/i;
+const stripTrailingSemicolon = (sql: string): string => sql.trim().replace(/;+\s*$/, '').trim();
 
 
 const findByName = <T extends { name: string }>(items: T[], name: string): T | undefined => {
@@ -91,9 +92,10 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
     }),
   });
 
+  const normalizedSqlText = stripTrailingSemicolon(params.sqlText);
   const sqlCandidates = Array.from(new Set([
-    params.sqlText,
-    compactSqlForStorage(params.sqlText),
+    normalizedSqlText,
+    compactSqlForStorage(normalizedSqlText),
   ])).filter(Boolean);
 
   let query: QueryDto | null = null;
@@ -118,8 +120,8 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
   }
 
   if (!query) {
-    const originalLen = params.sqlText.length;
-    const compactLen = compactSqlForStorage(params.sqlText).length;
+    const originalLen = normalizedSqlText.length;
+    const compactLen = compactSqlForStorage(normalizedSqlText).length;
     throw new Error(
       `Backend rejected query length (${originalLen} chars; compact ${compactLen}). ` +
       `Please shorten the query or increase backend column size for stored SQL.`,

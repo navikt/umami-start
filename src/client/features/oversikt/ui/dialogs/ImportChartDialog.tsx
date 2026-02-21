@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Modal, Select, Textarea, TextField } from '@navikt/ds-react';
 
 type GraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE';
@@ -44,6 +44,14 @@ const ImportChartDialog = ({
     const [sqlText, setSqlText] = useState('');
     const [dashboardId, setDashboardId] = useState<number | null>(initialDashboardId);
     const [localError, setLocalError] = useState<string | null>(null);
+    const displayError = localError ?? error;
+    const errorRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!open || !displayError) return;
+        errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        errorRef.current?.focus();
+    }, [open, displayError]);
 
     const handleImport = async () => {
         if (!name.trim()) {
@@ -80,9 +88,6 @@ const ImportChartDialog = ({
         >
             <Modal.Body>
                 <div className="flex flex-col gap-4">
-                    {localError && <Alert variant="error">{localError}</Alert>}
-                    {error && <Alert variant="error">{error}</Alert>}
-
                     {dashboardOptions && dashboardOptions.length > 0 && (
                         <Select
                             label="Dashboard"
@@ -130,6 +135,19 @@ const ImportChartDialog = ({
                         value={sqlText}
                         onChange={(event) => setSqlText(event.target.value)}
                     />
+
+                    {displayError && (
+                        <Alert variant="error">
+                            <div ref={errorRef} tabIndex={-1} className="space-y-1 focus:outline-none">
+                                <div>{displayError}</div>
+                                {!localError && (
+                                    <div className="text-sm text-[var(--ax-text-subtle)]">
+                                        Tips: Kontroller SQL-syntaks, felt/tabellnavn, og at spørringen returnerer data.
+                                    </div>
+                                )}
+                            </div>
+                        </Alert>
+                    )}
                 </div>
             </Modal.Body>
             <Modal.Footer>
