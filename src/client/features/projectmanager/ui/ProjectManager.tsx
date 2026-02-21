@@ -4,6 +4,7 @@ import { MoreVertical, Plus } from 'lucide-react';
 import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
 import CopyChartDialog from '../../oversikt/ui/dialogs/CopyChartDialog.tsx';
+import EditChartDialog from '../../oversikt/ui/dialogs/EditChartDialog.tsx';
 import EditDashboardDialog from '../../oversikt/ui/dialogs/EditDashboardDialog.tsx';
 import ImportChartDialog from '../../oversikt/ui/dialogs/ImportChartDialog.tsx';
 import * as api from '../api/backendApi.ts';
@@ -12,6 +13,7 @@ import type { ProjectSummary } from '../hooks/useProjectManager.ts';
 import type { DashboardDto, ProjectDto } from '../model/types.ts';
 import ProjectManagerLayout from './ProjectManagerLayout.tsx';
 import { extractWebsiteId } from '../../sql/utils/sqlProcessing.ts';
+import type { GraphType, OversiktChart } from '../../oversikt/model/types.ts';
 
 type FileTableRow = {
     id: string;
@@ -24,6 +26,12 @@ type FileTableRow = {
 };
 
 type ImportGraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE';
+type ProjectManagerEditChartTarget = {
+    projectId: number;
+    dashboardId: number;
+    chart: OversiktChart;
+    defaultWebsiteId?: string;
+};
 
 const LAST_PROJECT_STORAGE_KEY = 'projectmanager:lastSelectedProjectId';
 
@@ -69,14 +77,7 @@ const ProjectManager = () => {
     const [editDashboardTarget, setEditDashboardTarget] = useState<DashboardDto | null>(null);
     const [deleteDashboardTarget, setDeleteDashboardTarget] = useState<DashboardDto | null>(null);
     const [dashboardMutationError, setDashboardMutationError] = useState<string | null>(null);
-    const [editChartTarget, setEditChartTarget] = useState<{
-        projectId: number;
-        dashboardId: number;
-        graphId: number;
-        graphType: string;
-        name: string;
-    } | null>(null);
-    const [editChartName, setEditChartName] = useState('');
+    const [editChartTarget, setEditChartTarget] = useState<ProjectManagerEditChartTarget | null>(null);
     const [deleteChartTarget, setDeleteChartTarget] = useState<{
         projectId: number;
         dashboardId: number;
@@ -307,17 +308,45 @@ const ProjectManager = () => {
         return 'Graf';
     };
 
-    const openEditChart = (projectId: number, row: FileTableRow) => {
+    const normalizeGraphType = (graphType?: string): GraphType => {
+        if (graphType === 'LINE' || graphType === 'BAR' || graphType === 'PIE' || graphType === 'TABLE') return graphType;
+        return 'TABLE';
+    };
+
+    const openEditChart = async (projectId: number, row: FileTableRow) => {
         if (!row.graphId) return;
         setChartMutationError(null);
-        setEditChartTarget({
-            projectId,
-            dashboardId: row.dashboardId,
-            graphId: row.graphId,
-            graphType: row.graphType ?? 'TABLE',
-            name: row.name,
-        });
-        setEditChartName(row.name);
+        try {
+            const [queryItems, graphItems] = await Promise.all([
+                api.fetchQueries(projectId, row.dashboardId, row.graphId),
+                api.fetchGraphs(projectId, row.dashboardId),
+            ]);
+            const query = queryItems[0];
+            if (!query) {
+                setChartMutationError('Grafen mangler SQL og kan ikke redigeres');
+                return;
+            }
+            const graph = graphItems.find((item) => item.id === row.graphId);
+            const chart: OversiktChart = {
+                id: `projectmanager-${row.graphId}`,
+                title: row.name,
+                type: 'table',
+                sql: query.sqlText,
+                width: graph?.width ? String(graph.width) : '50',
+                graphId: row.graphId,
+                graphType: normalizeGraphType(row.graphType ?? graph?.graphType),
+                queryId: query.id,
+                queryName: query.name,
+            };
+            setEditChartTarget({
+                projectId,
+                dashboardId: row.dashboardId,
+                chart,
+                defaultWebsiteId: extractWebsiteId(query.sqlText),
+            });
+        } catch (err: unknown) {
+            setChartMutationError(err instanceof Error ? err.message : 'Kunne ikke hente grafdata');
+        }
     };
 
     const openDeleteChart = (projectId: number, row: FileTableRow) => {
@@ -352,17 +381,30 @@ const ProjectManager = () => {
         });
     };
 
-    const handleSaveChart = async () => {
+    const handleSaveChart = async (params: {
+        name: string;
+        graphType: GraphType;
+        sqlText: string;
+        width: number;
+        websiteId?: string;
+        dashboardId?: number;
+    }) => {
         if (!editChartTarget) return;
-        if (!editChartName.trim()) {
-            setChartMutationError('Grafnavn er påkrevd');
+        setChartMutationError(null);
+        const result = await editChart(editChartTarget.projectId, editChartTarget.dashboardId, editChartTarget.chart.graphId, {
+            name: params.name,
+            graphType: params.graphType,
+            width: params.width,
+            sqlText: params.sqlText,
+            queryId: editChartTarget.chart.queryId,
+            queryName: editChartTarget.chart.queryName,
+            websiteId: params.websiteId,
+            targetDashboardId: params.dashboardId,
+        });
+        if (!result.ok) {
+            setChartMutationError(result.error);
             return;
         }
-        setChartMutationError(null);
-        await editChart(editChartTarget.projectId, editChartTarget.dashboardId, editChartTarget.graphId, {
-            name: editChartName.trim(),
-            graphType: editChartTarget.graphType,
-        });
         setEditChartTarget(null);
     };
 
@@ -629,7 +671,7 @@ const ProjectManager = () => {
                                                                 </ActionMenu.Item>
                                                                 {selectedProject && (
                                                                     <ActionMenu.Item
-                                                                        onClick={() => openEditChart(selectedProject.project.id, row)}
+                                                                        onClick={() => void openEditChart(selectedProject.project.id, row)}
                                                                     >
                                                                         Rediger graf
                                                                     </ActionMenu.Item>
@@ -834,42 +876,21 @@ const ProjectManager = () => {
                 onConfirm={handleDeleteDashboard}
             />
 
-            <Modal
+            <EditChartDialog
+                key={editChartTarget ? `edit-chart-${editChartTarget.chart.graphId}` : 'edit-chart-dialog'}
                 open={!!editChartTarget}
+                chart={editChartTarget?.chart ?? null}
+                defaultWebsiteId={editChartTarget?.defaultWebsiteId}
+                dashboardOptions={selectedProjectDashboardOptions}
+                defaultDashboardId={editChartTarget?.dashboardId ?? null}
+                loading={loading}
+                error={chartMutationError}
                 onClose={() => {
                     setEditChartTarget(null);
                     setChartMutationError(null);
                 }}
-                header={{ heading: 'Rediger graf' }}
-                width="small"
-            >
-                <Modal.Body>
-                    <div className="space-y-4">
-                        {chartMutationError && <Alert variant="error" size="small">{chartMutationError}</Alert>}
-                        <TextField
-                            label="Grafnavn"
-                            size="small"
-                            value={editChartName}
-                            onChange={(event) => setEditChartName(event.target.value)}
-                        />
-                    </div>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={() => void handleSaveChart()} loading={loading}>
-                        Lagre
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            setEditChartTarget(null);
-                            setChartMutationError(null);
-                        }}
-                        disabled={loading}
-                    >
-                        Avbryt
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+                onSave={handleSaveChart}
+            />
 
             <Modal
                 open={!!deleteChartTarget}

@@ -8,10 +8,19 @@ type EditChartDialogProps = {
     open: boolean;
     chart: OversiktChart | null;
     defaultWebsiteId?: string;
+    dashboardOptions?: Array<{ id: number; name: string }>;
+    defaultDashboardId?: number | null;
     loading?: boolean;
     error?: string | null;
     onClose: () => void;
-    onSave: (params: { name: string; graphType: GraphType; sqlText: string; width: number; websiteId?: string }) => Promise<void>;
+    onSave: (params: {
+        name: string;
+        graphType: GraphType;
+        sqlText: string;
+        width: number;
+        websiteId?: string;
+        dashboardId?: number;
+    }) => Promise<void>;
 };
 
 const widthToPercent = (width?: OversiktChart['width']): number => {
@@ -22,7 +31,24 @@ const widthToPercent = (width?: OversiktChart['width']): number => {
     return Math.round(parsed);
 };
 
-const EditChartDialog = ({ open, chart, defaultWebsiteId, loading = false, error, onClose, onSave }: EditChartDialogProps) => {
+const EditChartDialog = ({
+    open,
+    chart,
+    defaultWebsiteId,
+    dashboardOptions,
+    defaultDashboardId = null,
+    loading = false,
+    error,
+    onClose,
+    onSave,
+}: EditChartDialogProps) => {
+    const initialDashboardId = dashboardOptions && dashboardOptions.length > 0
+        ? (defaultDashboardId !== null
+            && defaultDashboardId !== undefined
+            && dashboardOptions.some((item) => item.id === defaultDashboardId)
+            ? defaultDashboardId
+            : dashboardOptions[0].id)
+        : null;
     const [name, setName] = useState(chart?.title ?? '');
     const [graphType, setGraphType] = useState<GraphType>(chart?.graphType ?? 'TABLE');
     const [width, setWidth] = useState(String(widthToPercent(chart?.width)));
@@ -30,6 +56,7 @@ const EditChartDialog = ({ open, chart, defaultWebsiteId, loading = false, error
     const [showSql, setShowSql] = useState(false);
     const [websites, setWebsites] = useState<Website[]>([]);
     const [websiteId, setWebsiteId] = useState(defaultWebsiteId ?? '');
+    const [dashboardId, setDashboardId] = useState<number | null>(initialDashboardId);
     const [localError, setLocalError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -51,6 +78,10 @@ const EditChartDialog = ({ open, chart, defaultWebsiteId, loading = false, error
             setLocalError('Grafnavn er påkrevd');
             return;
         }
+        if (dashboardOptions && dashboardOptions.length > 0 && !dashboardId) {
+            setLocalError('Velg dashboard');
+            return;
+        }
         if (showSql && !sqlText.trim()) {
             setLocalError('SQL-kode kan ikke være tom når SQL-visning er aktiv');
             return;
@@ -69,6 +100,7 @@ const EditChartDialog = ({ open, chart, defaultWebsiteId, loading = false, error
             width: normalizedWidth,
             sqlText: showSql ? sqlText : (chart.sql ?? ''),
             websiteId: websiteId || undefined,
+            dashboardId: dashboardId ?? undefined,
         });
     };
 
@@ -116,6 +148,21 @@ const EditChartDialog = ({ open, chart, defaultWebsiteId, loading = false, error
                             </option>
                         ))}
                     </Select>
+                    {dashboardOptions && dashboardOptions.length > 0 && (
+                        <Select
+                            label="Dashboard"
+                            value={dashboardId ? String(dashboardId) : ''}
+                            onChange={(event) => setDashboardId(Number(event.target.value))}
+                            size="small"
+                        >
+                            <option value="">Velg dashboard</option>
+                            {dashboardOptions.map((dashboard) => (
+                                <option key={dashboard.id} value={dashboard.id}>
+                                    {dashboard.name}
+                                </option>
+                            ))}
+                        </Select>
+                    )}
                     <Switch checked={showSql} onChange={(event) => setShowSql(event.target.checked)}>
                         Vis SQL kode
                     </Switch>

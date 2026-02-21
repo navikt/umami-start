@@ -315,14 +315,74 @@ export const useProjectManager = () => {
     );
 
     const editChart = useCallback(
-        (projectId: number, dashboardId: number, graphId: number, params: { name: string; graphType: string }) =>
-            run(async () => {
-                if (!params.name.trim()) throw new Error('Grafnavn er påkrevd');
-                await api.updateGraph(projectId, dashboardId, graphId, { name: params.name.trim(), graphType: params.graphType });
+        async (
+            projectId: number,
+            dashboardId: number,
+            graphId: number,
+            params: {
+                name: string;
+                graphType: string;
+                width: number;
+                sqlText: string;
+                queryId: number;
+                queryName: string;
+                websiteId?: string;
+                targetDashboardId?: number;
+            },
+        ): Promise<{ ok: true } | { ok: false; error: string }> => {
+            setLoading(true);
+            setError(null);
+            setMessage(null);
+            try {
+                if (!params.name.trim()) {
+                    return { ok: false, error: 'Grafnavn er påkrevd' };
+                }
+                if (!params.sqlText.trim()) {
+                    return { ok: false, error: 'SQL-kode er påkrevd' };
+                }
+                const sqlForSave = rewriteSqlWebsiteId(params.sqlText, params.websiteId);
+                const shouldMove = !!params.targetDashboardId && params.targetDashboardId !== dashboardId;
+                if (shouldMove) {
+                    const createdGraph = await api.createGraph(projectId, params.targetDashboardId, {
+                        name: params.name.trim(),
+                        graphType: params.graphType,
+                        width: params.width,
+                    });
+                    await api.createQuery(
+                        projectId,
+                        params.targetDashboardId,
+                        createdGraph.id,
+                        params.queryName,
+                        sqlForSave,
+                    );
+                    await api.deleteGraph(projectId, dashboardId, graphId);
+                } else {
+                    await api.updateGraph(projectId, dashboardId, graphId, {
+                        name: params.name.trim(),
+                        graphType: params.graphType,
+                        width: params.width,
+                    });
+                    await api.updateQuery(
+                        projectId,
+                        dashboardId,
+                        graphId,
+                        params.queryId,
+                        params.queryName,
+                        sqlForSave,
+                    );
+                }
                 await loadProjectSummaries();
                 setMessage('Graf oppdatert');
-            }),
-        [run, loadProjectSummaries],
+                return { ok: true };
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Kunne ikke oppdatere graf';
+                setError(errorMessage);
+                return { ok: false, error: errorMessage };
+            } finally {
+                setLoading(false);
+            }
+        },
+        [loadProjectSummaries, rewriteSqlWebsiteId],
     );
 
     const projectSummaryById = useMemo(() => {
