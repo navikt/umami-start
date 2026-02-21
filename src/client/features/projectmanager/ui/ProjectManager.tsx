@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } from '@navikt/aksel-icons';
 import { MoreVertical, Plus } from 'lucide-react';
-import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField } from '@navikt/ds-react';
+import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField, Tooltip } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
 import CopyChartDialog from '../../oversikt/ui/dialogs/CopyChartDialog.tsx';
 import EditChartDialog from '../../oversikt/ui/dialogs/EditChartDialog.tsx';
@@ -480,14 +480,16 @@ const ProjectManager = () => {
                                     size="small"
                                 />
                             </div>
-                            <Button
-                                type="button"
-                                size="small"
-                                variant="secondary"
-                                icon={<Plus aria-hidden size={16} />}
-                                aria-label={isCreateOpen ? 'Lukk nytt prosjekt' : 'Nytt prosjekt'}
-                                onClick={toggleCreateProject}
-                            />
+                            <Tooltip content={isCreateOpen ? 'Lukk nytt prosjekt' : 'Nytt prosjekt'} describesChild>
+                                <Button
+                                    type="button"
+                                    size="small"
+                                    variant="secondary"
+                                    icon={<Plus aria-hidden size={16} />}
+                                    aria-label={isCreateOpen ? 'Lukk nytt prosjekt' : 'Nytt prosjekt'}
+                                    onClick={toggleCreateProject}
+                                />
+                            </Tooltip>
                         </form>
 
                         {projectSummaries.length === 0 && (
@@ -512,9 +514,26 @@ const ProjectManager = () => {
                                         className="w-full text-left px-0.5"
                                         onClick={() => setSelectedProjectId(summary.project.id)}
                                     >
-                                        <div className="font-medium text-sm truncate">{summary.project.name}</div>
-                                        <div className="text-xs text-[var(--ax-text-subtle)] mt-1">
-                                            {summary.dashboardCount} dashboards | {summary.chartCount} grafer
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="font-medium text-sm truncate">{summary.project.name}</div>
+                                            <div className="flex items-center gap-3 text-xs text-[var(--ax-text-subtle)] shrink-0">
+                                                <span
+                                                    className="inline-flex items-center gap-1"
+                                                    title={`${summary.dashboardCount} dashboards`}
+                                                >
+                                                    <SquareGridIcon aria-hidden fontSize="0.9rem" />
+                                                    {summary.dashboardCount}
+                                                    <span className="sr-only"> dashboards</span>
+                                                </span>
+                                                <span
+                                                    className="inline-flex items-center gap-1"
+                                                    title={`${summary.chartCount} grafer`}
+                                                >
+                                                    <BarChartIcon aria-hidden fontSize="0.9rem" />
+                                                    {summary.chartCount}
+                                                    <span className="sr-only"> grafer</span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </button>
                                 </div>
@@ -575,11 +594,13 @@ const ProjectManager = () => {
                             </div>
                             <div className="flex items-center gap-1">
                                 <ActionMenu>
-                                    <ActionMenu.Trigger>
-                                        <Button type="button" size="xsmall" variant="secondary">
-                                            + legg til
-                                        </Button>
-                                    </ActionMenu.Trigger>
+                                    <Tooltip content="Legg til dashboard eller graf" describesChild>
+                                        <ActionMenu.Trigger>
+                                            <Button type="button" size="xsmall" variant="secondary">
+                                                + legg til
+                                            </Button>
+                                        </ActionMenu.Trigger>
+                                    </Tooltip>
                                     <ActionMenu.Content align="end">
                                         <ActionMenu.Item onClick={openCreateDashboard}>
                                             Legg til dashboard
