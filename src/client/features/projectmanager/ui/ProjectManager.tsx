@@ -260,12 +260,16 @@ const ProjectManager = () => {
         const normalizedWidth = Math.max(1, Math.min(100, Math.round(parsedWidth)));
 
         setImportChartError(null);
-        await importChart(selectedProject.project.id, params.dashboardId, {
+        const result = await importChart(selectedProject.project.id, params.dashboardId, {
             name: params.name,
             graphType: params.graphType,
             width: normalizedWidth,
             sqlText: params.sqlText,
         });
+        if (!result.ok) {
+            setImportChartError(result.error);
+            return;
+        }
         setIsImportChartOpen(false);
     };
 
@@ -281,6 +285,14 @@ const ProjectManager = () => {
         if (graphType === 'BAR') return <BarChartIcon aria-hidden fontSize="1rem" />;
         if (graphType === 'PIE') return <PieChartIcon aria-hidden fontSize="1rem" />;
         return <TableIcon aria-hidden fontSize="1rem" />;
+    };
+
+    const getChartTypeLabel = (graphType?: string) => {
+        if (graphType === 'LINE') return 'Linjediagram';
+        if (graphType === 'BAR') return 'Stolpediagram';
+        if (graphType === 'PIE') return 'Sektordiagram';
+        if (graphType === 'TABLE') return 'Tabell';
+        return 'Graf';
     };
 
     const openEditChart = (projectId: number, row: FileTableRow) => {
@@ -537,7 +549,9 @@ const ProjectManager = () => {
                                                     <Link href={overviewHref}>{row.name}</Link>
                                                 </span>
                                             </Table.HeaderCell>
-                                            <Table.DataCell>{row.type === 'dashboard' ? 'Dashboard' : 'Graf'}</Table.DataCell>
+                                            <Table.DataCell>
+                                                {row.type === 'dashboard' ? 'Dashboard' : getChartTypeLabel(row.graphType)}
+                                            </Table.DataCell>
                                             <Table.DataCell>
                                                 <div className="flex justify-end">
                                                     {row.type === 'chart' ? (

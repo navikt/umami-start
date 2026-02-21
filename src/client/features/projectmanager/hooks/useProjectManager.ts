@@ -158,26 +158,42 @@ export const useProjectManager = () => {
             projectId: number,
             dashboardId: number,
             params: { name: string; graphType: string; width: number; sqlText: string },
-        ) =>
-            run(async () => {
-                if (!params.name.trim()) throw new Error('Grafnavn er påkrevd');
-                if (!params.sqlText.trim()) throw new Error('SQL-kode er påkrevd');
-                const createdGraph = await api.createGraph(projectId, dashboardId, {
-                    name: params.name.trim(),
-                    graphType: params.graphType,
-                    width: params.width,
-                });
-                await api.createQuery(
-                    projectId,
-                    dashboardId,
-                    createdGraph.id,
-                    `${params.name.trim()} - query`,
-                    params.sqlText.trim(),
-                );
-                await loadProjectSummaries();
-                setMessage('Graf importert');
-            }),
-        [run, loadProjectSummaries],
+        ): Promise<{ ok: true } | { ok: false; error: string }> =>
+            (async () => {
+                setLoading(true);
+                setError(null);
+                setMessage(null);
+                try {
+                    if (!params.name.trim()) {
+                        return { ok: false, error: 'Grafnavn er påkrevd' };
+                    }
+                    if (!params.sqlText.trim()) {
+                        return { ok: false, error: 'SQL-kode er påkrevd' };
+                    }
+                    const createdGraph = await api.createGraph(projectId, dashboardId, {
+                        name: params.name.trim(),
+                        graphType: params.graphType,
+                        width: params.width,
+                    });
+                    await api.createQuery(
+                        projectId,
+                        dashboardId,
+                        createdGraph.id,
+                        `${params.name.trim()} - query`,
+                        params.sqlText.trim(),
+                    );
+                    await loadProjectSummaries();
+                    setMessage('Graf importert');
+                    return { ok: true };
+                } catch (err: unknown) {
+                    const errorMessage = err instanceof Error ? err.message : 'Ukjent feil';
+                    setError(errorMessage);
+                    return { ok: false, error: errorMessage };
+                } finally {
+                    setLoading(false);
+                }
+            })(),
+        [loadProjectSummaries],
     );
 
     const editChart = useCallback(
