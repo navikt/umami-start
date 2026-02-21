@@ -355,7 +355,7 @@ const ProjectManager = () => {
             ]);
             const query = queryItems[0];
             if (!query) {
-                setChartMutationError('Grafen mangler SQL og kan ikke redigeres');
+                setChartMutationError('Grafen mangler SQL/query og kan ikke redigeres. Dette skjer ofte hvis import feilet under lagring.');
                 return;
             }
             const graph = graphItems.find((item) => item.id === row.graphId);
@@ -613,6 +613,11 @@ const ProjectManager = () => {
                     {message && showMessageAlert && (
                         <Alert variant="success" closeButton onClose={() => setShowMessageAlert(false)}>
                             {message}
+                        </Alert>
+                    )}
+                    {chartMutationError && !editChartTarget && !deleteChartTarget && (
+                        <Alert variant="error" closeButton onClose={() => setChartMutationError(null)}>
+                            {chartMutationError}
                         </Alert>
                     )}
 

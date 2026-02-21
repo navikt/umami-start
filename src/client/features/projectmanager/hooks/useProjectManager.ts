@@ -166,6 +166,7 @@ export const useProjectManager = () => {
                 setLoading(true);
                 setError(null);
                 setMessage(null);
+                let createdGraphId: number | null = null;
                 try {
                     if (!params.name.trim()) {
                         return { ok: false, error: 'Grafnavn er påkrevd' };
@@ -178,6 +179,7 @@ export const useProjectManager = () => {
                         graphType: params.graphType,
                         width: params.width,
                     });
+                    createdGraphId = createdGraph.id;
                     await api.createQuery(
                         projectId,
                         dashboardId,
@@ -189,9 +191,25 @@ export const useProjectManager = () => {
                     setMessage('Graf importert');
                     return { ok: true };
                 } catch (err: unknown) {
-                    const errorMessage = err instanceof Error ? err.message : 'Ukjent feil';
-                    setError(errorMessage);
-                    return { ok: false, error: errorMessage };
+                    const rawMessage = err instanceof Error ? err.message.trim() : '';
+                    const isGenericStatusError = /^Forespørsel feilet \(\d+\)$/.test(rawMessage);
+                    let rollbackFailed = false;
+                    if (createdGraphId != null) {
+                        try {
+                            await api.deleteGraph(projectId, dashboardId, createdGraphId);
+                            await loadProjectSummaries();
+                        } catch {
+                            rollbackFailed = true;
+                        }
+                    }
+
+                    const baseMessage = rawMessage && !isGenericStatusError
+                        ? `Import feilet: ${rawMessage}`
+                        : 'Import feilet. Sjekk at SQL-spørringen er gyldig, og at dashboardet fortsatt finnes.';
+                    const rollbackMessage = rollbackFailed
+                        ? ' Grafen ble opprettet uten SQL. Slett grafen manuelt eller legg til query via redigering.'
+                        : '';
+                    return { ok: false, error: `${baseMessage}${rollbackMessage}` };
                 } finally {
                     setLoading(false);
                 }
