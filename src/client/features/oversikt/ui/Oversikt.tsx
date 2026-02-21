@@ -1,7 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
-import { Alert, Button, Label, Link, Loader, Modal, Select, Textarea, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, Textarea, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
@@ -90,6 +90,7 @@ const Oversikt = () => {
     const [dropTargetGraphId, setDropTargetGraphId] = useState<number | null>(null);
     const [reorderAnnouncement, setReorderAnnouncement] = useState('');
     const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+    const [stats, setStats] = useState<Record<string, { gb: number; title: string }>>({});
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importName, setImportName] = useState('');
     const [importGraphType, setImportGraphType] = useState<GraphType>('TABLE');
@@ -99,6 +100,20 @@ const Oversikt = () => {
     const [importError, setImportError] = useState<string | null>(null);
     const chartRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const chartPositionsRef = useRef<Map<number, DOMRect>>(new Map());
+    const totalGb = Object.values(stats).reduce((acc, curr) => acc + curr.gb, 0);
+
+    useEffect(() => {
+        setStats({});
+    }, [selectedDashboardId, activeWebsiteId, activeFilters]);
+
+    useEffect(() => {
+        const chartIds = new Set(charts.map((chart) => chart.id));
+        setStats((prev) => {
+            const nextEntries = Object.entries(prev).filter(([id]) => chartIds.has(id));
+            if (nextEntries.length === Object.keys(prev).length) return prev;
+            return Object.fromEntries(nextEntries);
+        });
+    }, [charts]);
 
     useLayoutEffect(() => {
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -489,6 +504,13 @@ const Oversikt = () => {
         }
     };
 
+    const handleDataLoaded = (data: { id: string; gb: number; title: string }) => {
+        setStats((prev) => ({
+            ...prev,
+            [data.id]: { gb: data.gb, title: data.title },
+        }));
+    };
+
     const filters = (
         <>
             <div className="w-full md:w-[20rem]">
@@ -739,6 +761,7 @@ const Oversikt = () => {
                                     chart={chart}
                                     websiteId={activeWebsiteId}
                                     filters={activeFilters}
+                                    onDataLoaded={handleDataLoaded}
                                     selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
                                     dashboardTitle={selectedDashboard.name}
                                     onEditChart={openEditDialog}
@@ -771,6 +794,22 @@ const Oversikt = () => {
                             </div>
                         ))}
                     </div>
+
+                    {Object.keys(stats).length > 0 && (
+                        <div className="mt-5">
+                            <ReadMore header={`${Math.round(totalGb)} GB prosessert`} size="small">
+                                <div className="text-sm text-[var(--ax-text-subtle)]">
+                                    <ul className="list-disc pl-5">
+                                        {Object.entries(stats).map(([id, stat]) => (
+                                            <li key={id}>
+                                                <span className="font-medium">{Math.round(stat.gb)} GB</span> - {stat.title}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </ReadMore>
+                        </div>
+                    )}
 
                     {charts.length > 4 && (
                         <div className="flex justify-end mt-4 pb-6">
