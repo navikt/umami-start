@@ -33,6 +33,7 @@ export const useOversikt = () => {
     const [tempMetricType, setTempMetricType] = useState<MetricType>('visitors');
     const [comboInputValue, setComboInputValue] = useState('');
     const isSelectingRef = useRef(false);
+    const hasResolvedInitialProjectRef = useRef(false);
 
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [selectedDashboardId, setSelectedDashboardId] = useState<number | null>(null);
@@ -249,8 +250,10 @@ export const useOversikt = () => {
                     ?? null;
 
                 setSelectedProjectId(nextProject?.id ?? null);
+                hasResolvedInitialProjectRef.current = true;
             } catch (err: unknown) {
                 setError(err instanceof Error ? err.message : 'Klarte ikke laste prosjekter');
+                hasResolvedInitialProjectRef.current = true;
             } finally {
                 setLoadingProjects(false);
             }
@@ -278,9 +281,10 @@ export const useOversikt = () => {
             const fromUrlDashboardId = parseId(searchParams.get('dashboardId'));
             const fromStorage = fromUrlDashboardId ? null : getLastOversiktDashboardId();
             const fromState = preferredDashboardId ?? selectedDashboardId;
+            const fromMatchingUrl = fromUrlProjectId === projectId ? fromUrlDashboardId : null;
 
             const resolvedPreferredDashboardId =
-                fromState ?? (fromUrlProjectId === projectId ? fromUrlDashboardId : fromStorage);
+                fromMatchingUrl ?? fromState ?? fromStorage;
 
             const nextDashboard =
                 (resolvedPreferredDashboardId ? dashboardItems.find((item) => item.id === resolvedPreferredDashboardId) : null)
@@ -371,6 +375,9 @@ export const useOversikt = () => {
     );
 
     useEffect(() => {
+        if (!hasResolvedInitialProjectRef.current) return;
+        if (loadingProjects || loadingDashboards) return;
+
         const currentProjectId = searchParams.get('projectId');
         const currentDashboardId = searchParams.get('dashboardId');
         const nextProjectId = selectedProjectId ? String(selectedProjectId) : null;
@@ -385,7 +392,7 @@ export const useOversikt = () => {
         else nextParams.delete('dashboardId');
 
         setSearchParams(nextParams, { replace: true });
-    }, [searchParams, selectedProjectId, selectedDashboardId, setSearchParams]);
+    }, [searchParams, selectedProjectId, selectedDashboardId, setSearchParams, loadingProjects, loadingDashboards]);
 
     useEffect(() => {
         if (!selectedWebsite) return;
