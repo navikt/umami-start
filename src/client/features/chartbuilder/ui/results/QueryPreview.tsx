@@ -164,6 +164,7 @@ const QueryPreview = ({
   });
 
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
   const [savingChart, setSavingChart] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -839,6 +840,7 @@ const QueryPreview = ({
       saveLastProjectId(saved.project.id);
       saveLastDashboardId(saved.dashboard.id);
       setShowSaveModal(false);
+      setShowSaveSuccessModal(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Klarte ikke lagre grafen';
       setSaveError(message);
@@ -859,6 +861,16 @@ const QueryPreview = ({
 
   const selectedProjectLabel = projectOptions.find((option) => option.value === selectedProjectOption)?.label;
   const selectedDashboardLabel = dashboardOptions.find((option) => option.value === selectedDashboardOption)?.label;
+  const savedDashboardUrl = savedLocation
+    ? `/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`
+    : '';
+
+  const handleGoToSavedDashboard = () => {
+    if (!savedDashboardUrl) return;
+    if (typeof window !== 'undefined') {
+      window.location.href = savedDashboardUrl;
+    }
+  };
 
   // Show loading message after 10 seconds
   useEffect(() => {
@@ -1165,8 +1177,8 @@ const QueryPreview = ({
 
               {saveSuccess && savedLocation && (
                 <Alert variant="success" size="small">
-                  <Link href={`/oversikt?projectId=${savedLocation.projectId}&dashboardId=${savedLocation.dashboardId}`}>
-                    Graf lagret i dashboard "{savedLocation.dashboardName}" i prosjekt "{savedLocation.projectName}". Åpne i Oversikt
+                  <Link href={savedDashboardUrl}>
+                    Grafen er lagret i "{savedLocation.dashboardName}". Åpne i Oversikt.
                   </Link>
                 </Alert>
               )}
@@ -1380,6 +1392,29 @@ const QueryPreview = ({
           </Button>
           <Button variant="secondary" onClick={() => setShowSaveModal(false)} disabled={savingChart}>
             Avbryt
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        open={showSaveSuccessModal && !!savedLocation}
+        onClose={() => setShowSaveSuccessModal(false)}
+        header={{ heading: 'Graf lagret' }}
+        width="small"
+      >
+        <Modal.Body>
+          {savedLocation && (
+            <p>
+              Grafen er lagret i "{savedLocation.dashboardName}". Hva vil du gjøre nå?
+            </p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button onClick={handleGoToSavedDashboard}>
+            Gå til dashboard
+          </Button>
+          <Button variant="secondary" onClick={() => setShowSaveSuccessModal(false)}>
+            Bli her
           </Button>
         </Modal.Footer>
       </Modal>
