@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } from '@navikt/aksel-icons';
 import { MoreVertical, Plus } from 'lucide-react';
-import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField, Tooltip } from '@navikt/ds-react';
+import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Loader, Modal, Search, Table, TextField, Tooltip } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
 import CopyChartDialog from '../../oversikt/ui/dialogs/CopyChartDialog.tsx';
 import EditChartDialog from '../../oversikt/ui/dialogs/EditChartDialog.tsx';
@@ -499,6 +499,8 @@ const ProjectManager = () => {
         return new Map(selectedProject.dashboards.map((dashboard) => [dashboard.id, dashboard.charts.length]));
     }, [selectedProject]);
 
+    const isInitialLoading = loading && projectSummaries.length === 0 && !error;
+
     return (
         <>
             <ProjectManagerLayout
@@ -529,18 +531,23 @@ const ProjectManager = () => {
                             </Tooltip>
                         </form>
 
-                        {projectSummaries.length === 0 && showNoProjectsAlert && (
+                        {isInitialLoading && (
+                            <div className="py-4 flex justify-center">
+                                <Loader size="medium" title="Laster prosjekter" />
+                            </div>
+                        )}
+                        {!isInitialLoading && projectSummaries.length === 0 && showNoProjectsAlert && (
                             <Alert variant="info" size="small" closeButton onClose={() => setShowNoProjectsAlert(false)}>
                                 Ingen prosjekter funnet.
                             </Alert>
                         )}
-                        {projectSummaries.length > 0 && filteredProjectSummaries.length === 0 && showNoSearchResultsAlert && (
+                        {!isInitialLoading && projectSummaries.length > 0 && filteredProjectSummaries.length === 0 && showNoSearchResultsAlert && (
                             <Alert variant="info" size="small" closeButton onClose={() => setShowNoSearchResultsAlert(false)}>
                                 Ingen treff for sok.
                             </Alert>
                         )}
 
-                        {filteredProjectSummaries.map((summary) => {
+                        {!isInitialLoading && filteredProjectSummaries.map((summary) => {
                             const isActive = summary.project.id === selectedProjectId;
                             return (
                                 <div
@@ -581,7 +588,8 @@ const ProjectManager = () => {
                             );
                         })}
 
-                        <div className="pt-2">
+                        {!isInitialLoading && (
+                            <div className="pt-2">
                             <Button
                                 type="button"
                                 size="small"
@@ -591,7 +599,8 @@ const ProjectManager = () => {
                             >
                                 Nytt prosjekt
                             </Button>
-                        </div>
+                            </div>
+                        )}
                     </div>
                 }
             >
@@ -607,13 +616,19 @@ const ProjectManager = () => {
                         </Alert>
                     )}
 
-                    {!selectedProject && showNoSelectedProjectAlert && (
+                    {isInitialLoading && (
+                        <div className="py-8 flex justify-center">
+                            <Loader size="xlarge" title="Laster prosjekter og dashboards" />
+                        </div>
+                    )}
+
+                    {!isInitialLoading && !selectedProject && showNoSelectedProjectAlert && (
                         <Alert variant="info" size="small" closeButton onClose={() => setShowNoSelectedProjectAlert(false)}>
                             Velg et prosjekt for a se dashboards og grafer.
                         </Alert>
                     )}
 
-                    {selectedProject && (
+                    {!isInitialLoading && selectedProject && (
                         <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1 min-w-0">
                                 <Heading level="2" size="small">{selectedProject.project.name}</Heading>
@@ -669,7 +684,7 @@ const ProjectManager = () => {
                         </div>
                     )}
 
-                    {selectedProject && fileRows.length === 0 && (
+                    {!isInitialLoading && selectedProject && fileRows.length === 0 && (
                         <div className="rounded-md border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] px-3 py-2">
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm text-[var(--ax-text-default)]">Prosjektet er tomt</span>
@@ -680,7 +695,7 @@ const ProjectManager = () => {
                         </div>
                     )}
 
-                    {selectedProject && fileRows.length > 0 && (
+                    {!isInitialLoading && selectedProject && fileRows.length > 0 && (
                         <Table size="small">
                             <Table.Header>
                                 <Table.Row>
