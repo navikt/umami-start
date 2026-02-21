@@ -343,16 +343,17 @@ export const useProjectManager = () => {
                     return { ok: false, error: 'SQL-kode er påkrevd' };
                 }
                 const sqlForSave = rewriteSqlWebsiteId(params.sqlText, params.websiteId);
-                const shouldMove = !!params.targetDashboardId && params.targetDashboardId !== dashboardId;
+                const targetDashboardId = params.targetDashboardId;
+                const shouldMove = targetDashboardId != null && targetDashboardId !== dashboardId;
                 if (shouldMove) {
-                    const createdGraph = await api.createGraph(projectId, params.targetDashboardId, {
+                    const createdGraph = await api.createGraph(projectId, targetDashboardId, {
                         name: params.name.trim(),
                         graphType: params.graphType,
                         width: params.width,
                     });
                     await api.createQuery(
                         projectId,
-                        params.targetDashboardId,
+                        targetDashboardId,
                         createdGraph.id,
                         params.queryName,
                         sqlForSave,
