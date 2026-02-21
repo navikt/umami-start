@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '@navikt/ds-react';
-import { ZoomPlusIcon, DownloadIcon, FileCodeIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
+import { ZoomPlusIcon, DownloadIcon, LinkIcon, CheckmarkIcon } from '@navikt/aksel-icons';
 import { Copy, Pencil, Trash2 } from 'lucide-react';
 import type { ChartActionModalProps } from '../model/types.ts';
-import { generateShareUrl, buildEditorUrl, downloadChartCsv } from '../utils/chartActions.ts';
+import { generateShareUrl, downloadChartCsv } from '../utils/chartActions.ts';
 
 const ChartActionModal: React.FC<ChartActionModalProps> = ({
     open,
@@ -35,11 +35,6 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
         } catch (err) {
             console.error('Failed to copy', err);
         }
-    };
-
-    const handleOpenInEditor = () => {
-        window.open(buildEditorUrl(chart, websiteId, filters, domain), '_blank');
-        onClose();
     };
 
     const handleDownloadCsv = () => {
@@ -97,16 +92,6 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                                         {copyFeedback ? <CheckmarkIcon aria-hidden /> : <LinkIcon aria-hidden />}
                                     </span>
                                     <span>{copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}</span>
-                                </span>
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={handleOpenInEditor}
-                                className={actionButtonClass}
-                            >
-                                <span className="inline-flex items-center gap-2">
-                                    <span className={iconSlotClass}><FileCodeIcon aria-hidden /></span>
-                                    <span>Åpne i SQL-editor</span>
                                 </span>
                             </Button>
                             {data && data.length > 0 && (
