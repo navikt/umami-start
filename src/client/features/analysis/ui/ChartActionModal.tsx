@@ -17,10 +17,11 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     onEditChart,
     onDeleteChart,
     onCopyChart,
+    hideUsageActions = false,
 }) => {
     const [copyFeedback, setCopyFeedback] = useState(false);
 
-    if (!chart.sql) return null;
+    if (!chart.sql && !hideUsageActions) return null;
 
     const handleOpenInNewTab = () => {
         window.open(generateShareUrl(chart, websiteId, filters, domain, dashboardTitle), '_blank');
@@ -69,44 +70,46 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                         <p className="text-sm text-[var(--ax-text-subtle)]">Valgt graf</p>
                         <p className="text-base font-medium text-[var(--ax-text-default)]">{chart.title}</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ax-text-subtle)]">Bruk og del</p>
-                            <Button
-                                variant="secondary"
-                                onClick={handleOpenInNewTab}
-                                className={actionButtonClass}
-                            >
-                                <span className="inline-flex items-center gap-2">
-                                    <span className={iconSlotClass}><ZoomPlusIcon aria-hidden /></span>
-                                    <span>Utforsk grafen</span>
-                                </span>
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={handleCopyLink}
-                                className={actionButtonClass}
-                            >
-                                <span className="inline-flex items-center gap-2">
-                                    <span className={iconSlotClass}>
-                                        {copyFeedback ? <CheckmarkIcon aria-hidden /> : <LinkIcon aria-hidden />}
-                                    </span>
-                                    <span>{copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}</span>
-                                </span>
-                            </Button>
-                            {data && data.length > 0 && (
+                    <div className={`grid grid-cols-1 ${hideUsageActions ? '' : 'md:grid-cols-2'} gap-4`}>
+                        {!hideUsageActions && (
+                            <div className="flex flex-col gap-2">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ax-text-subtle)]">Bruk og del</p>
                                 <Button
                                     variant="secondary"
-                                    onClick={handleDownloadCsv}
+                                    onClick={handleOpenInNewTab}
                                     className={actionButtonClass}
                                 >
                                     <span className="inline-flex items-center gap-2">
-                                        <span className={iconSlotClass}><DownloadIcon aria-hidden /></span>
-                                        <span>Last ned CSV</span>
+                                        <span className={iconSlotClass}><ZoomPlusIcon aria-hidden /></span>
+                                        <span>Utforsk grafen</span>
                                     </span>
                                 </Button>
-                            )}
-                        </div>
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleCopyLink}
+                                    className={actionButtonClass}
+                                >
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className={iconSlotClass}>
+                                            {copyFeedback ? <CheckmarkIcon aria-hidden /> : <LinkIcon aria-hidden />}
+                                        </span>
+                                        <span>{copyFeedback ? 'Lenke kopiert!' : 'Del grafen'}</span>
+                                    </span>
+                                </Button>
+                                {data && data.length > 0 && (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleDownloadCsv}
+                                        className={actionButtonClass}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            <span className={iconSlotClass}><DownloadIcon aria-hidden /></span>
+                                            <span>Last ned CSV</span>
+                                        </span>
+                                    </Button>
+                                )}
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-2">
                             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ax-text-subtle)]">Administrer</p>

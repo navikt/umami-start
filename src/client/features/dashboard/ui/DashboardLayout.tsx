@@ -6,7 +6,7 @@ import { PageHeader } from '../../../shared/ui/theme/PageHeader/PageHeader.tsx';
 interface DashboardLayoutProps {
     title: string;
     subtitle?: string; // e.g. Domain or ID
-    description?: string;
+    description?: React.ReactNode;
     filters?: React.ReactNode;
     children: React.ReactNode;
 }
@@ -43,4 +43,3 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 };
 
 export default DashboardLayout;
-

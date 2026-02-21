@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
+import { ArrowLeftIcon } from '@navikt/aksel-icons';
 import { Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, Textarea, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
@@ -49,12 +50,10 @@ type CopySuccessState = {
 
 const Oversikt = () => {
     const {
-        selectedProject, selectedDashboard,
+        selectedDashboard,
         selectedProjectId, selectedDashboardId,
         setSelectedProjectId, setSelectedDashboardId,
-        projectOptions, dashboardOptions,
         projects,
-        selectedProjectLabel, selectedDashboardLabel,
         selectedWebsite, setSelectedWebsite,
         activeWebsite, activeWebsiteId,
         tempPathOperator, setTempPathOperator,
@@ -64,8 +63,8 @@ const Oversikt = () => {
         comboInputValue,
         activeFilters,
         charts, supportsStandardFilters, hasChanges,
-        isLoading, loadingProjects, loadingDashboards, error,
-        handleUpdate, handleProjectSelected, handleDashboardSelected,
+        isLoading, error,
+        handleUpdate,
         handleUrlToggleSelected, handleComboChange,
         handleReorderCharts,
         refreshGraphs, refreshDashboards,
@@ -105,6 +104,12 @@ const Oversikt = () => {
     useEffect(() => {
         setStats({});
     }, [selectedDashboardId, activeWebsiteId, activeFilters]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (!selectedProjectId) return;
+        window.localStorage.setItem('projectmanager:lastSelectedProjectId', String(selectedProjectId));
+    }, [selectedProjectId]);
 
     useEffect(() => {
         const chartIds = new Set(charts.map((chart) => chart.id));
@@ -513,38 +518,6 @@ const Oversikt = () => {
 
     const filters = (
         <>
-            <div className="w-full md:w-[20rem]">
-                <UNSAFE_Combobox
-                    label="Prosjekt"
-                    options={projectOptions}
-                    selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
-                    onToggleSelected={(option, isSelected) => {
-                        void handleProjectSelected(option, isSelected);
-                    }}
-                    isMultiSelect={false}
-                    allowNewValues
-                    size="small"
-                    clearButton
-                    disabled={loadingProjects}
-                />
-            </div>
-
-            <div className="w-full md:w-[22rem] flex items-end gap-2">
-                <UNSAFE_Combobox
-                    label="Dashboard"
-                    options={dashboardOptions}
-                    selectedOptions={selectedDashboardLabel ? [selectedDashboardLabel] : []}
-                    onToggleSelected={(option, isSelected) => {
-                        void handleDashboardSelected(option, isSelected);
-                    }}
-                    isMultiSelect={false}
-                    allowNewValues
-                    size="small"
-                    clearButton
-                    disabled={!selectedProject || loadingDashboards}
-                />
-            </div>
-
             {supportsStandardFilters && (
                 <>
                     <div className="w-full md:w-[18rem]">
@@ -625,7 +598,16 @@ const Oversikt = () => {
     return (
         <DashboardLayout
             title={selectedDashboard ? `Dashboard: ${selectedDashboard.name}` : 'Dashboard'}
-            filters={filters}
+            description={(
+                <Link
+                    href={selectedProjectId ? `/prosjekter?projectId=${selectedProjectId}` : '/prosjekter'}
+                    className="inline-flex items-center gap-1"
+                >
+                    <ArrowLeftIcon aria-hidden fontSize="1rem" />
+                    <span>Tilbake til Prosjekter</span>
+                </Link>
+            )}
+            filters={supportsStandardFilters ? filters : undefined}
         >
             {error && <Alert variant="error">{error}</Alert>}
             <p className="sr-only" aria-live="polite" aria-atomic="true">
@@ -713,14 +695,6 @@ const Oversikt = () => {
                                     disabled={!selectedDashboard}
                                 >
                                     Importer graf
-                                </Button>
-                                <Button
-                                    as="a"
-                                    href="/prosjekter"
-                                    variant="tertiary"
-                                    size="small"
-                                >
-                                    Administrer prosjekt
                                 </Button>
                             </div>
                         </section>

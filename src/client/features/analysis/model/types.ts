@@ -205,6 +205,7 @@ export interface ChartActionModalProps {
     onEditChart?: () => void;
     onDeleteChart?: () => void;
     onCopyChart?: () => void;
+    hideUsageActions?: boolean;
 }
 
 // ===== ChartLayout types =====

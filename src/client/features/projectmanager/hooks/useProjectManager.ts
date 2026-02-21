@@ -12,6 +12,7 @@ type ProjectSummary = {
         charts: Array<{
             id: number;
             name: string;
+            graphType?: string;
         }>;
     }>;
 };
@@ -51,6 +52,7 @@ export const useProjectManager = () => {
                     charts: graphs.map((graph) => ({
                         id: graph.id,
                         name: graph.name,
+                        graphType: graph.graphType,
                     })),
                 };
             }));
@@ -107,6 +109,49 @@ export const useProjectManager = () => {
         [run, loadProjectSummaries],
     );
 
+    const editDashboard = useCallback(
+        (projectId: number, dashboardId: number, params: { name: string; projectId: number }) =>
+            run(async () => {
+                if (!params.name.trim()) throw new Error('Dashboardnavn er påkrevd');
+                if (!params.projectId) throw new Error('Velg prosjekt');
+                await api.updateDashboard(projectId, dashboardId, { name: params.name.trim(), projectId: params.projectId });
+                await loadProjectSummaries();
+                setMessage('Dashboard oppdatert');
+            }),
+        [run, loadProjectSummaries],
+    );
+
+    const deleteDashboard = useCallback(
+        (projectId: number, dashboardId: number) =>
+            run(async () => {
+                await api.deleteDashboard(projectId, dashboardId);
+                await loadProjectSummaries();
+                setMessage('Dashboard slettet');
+            }),
+        [run, loadProjectSummaries],
+    );
+
+    const deleteChart = useCallback(
+        (projectId: number, dashboardId: number, graphId: number) =>
+            run(async () => {
+                await api.deleteGraph(projectId, dashboardId, graphId);
+                await loadProjectSummaries();
+                setMessage('Graf slettet');
+            }),
+        [run, loadProjectSummaries],
+    );
+
+    const editChart = useCallback(
+        (projectId: number, dashboardId: number, graphId: number, params: { name: string; graphType: string }) =>
+            run(async () => {
+                if (!params.name.trim()) throw new Error('Grafnavn er påkrevd');
+                await api.updateGraph(projectId, dashboardId, graphId, { name: params.name.trim(), graphType: params.graphType });
+                await loadProjectSummaries();
+                setMessage('Graf oppdatert');
+            }),
+        [run, loadProjectSummaries],
+    );
+
     const projectSummaryById = useMemo(() => {
         return new Map(projectSummaries.map((item) => [item.project.id, item]));
     }, [projectSummaries]);
@@ -124,6 +169,10 @@ export const useProjectManager = () => {
         createProject,
         editProject,
         deleteProject,
+        editDashboard,
+        deleteDashboard,
+        deleteChart,
+        editChart,
     };
 };
 

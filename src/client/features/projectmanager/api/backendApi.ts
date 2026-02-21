@@ -45,11 +45,50 @@ export const createDashboard = (
         body: JSON.stringify({ name, description }),
     });
 
+export const updateDashboard = (
+    projectId: number,
+    dashboardId: number,
+    params: { name: string; projectId?: number; description?: string },
+): Promise<DashboardDto> =>
+    requestJson<DashboardDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+    });
+
+export const deleteDashboard = (projectId: number, dashboardId: number): Promise<void> =>
+    requestJson<void>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}`, {
+        method: 'DELETE',
+    });
+
 // ── Graphs ──
 
 export const fetchGraphs = (projectId: number, dashboardId: number): Promise<GraphDto[]> =>
     requestJson<GraphDto[]>(
         `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs`,
+    );
+
+export const deleteGraph = (projectId: number, dashboardId: number, graphId: number): Promise<void> =>
+    requestJson<void>(
+        `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}`,
+        {
+            method: 'DELETE',
+        },
+    );
+
+export const updateGraph = (
+    projectId: number,
+    dashboardId: number,
+    graphId: number,
+    params: { name: string; graphType: string },
+): Promise<GraphDto> =>
+    requestJson<GraphDto>(
+        `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}`,
+        {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params),
+        },
     );
 
 export const createGraph = (
