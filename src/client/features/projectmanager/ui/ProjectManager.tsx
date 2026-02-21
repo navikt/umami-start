@@ -3,12 +3,15 @@ import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } 
 import { MoreVertical, Plus } from 'lucide-react';
 import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Modal, Search, Table, TextField } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
+import CopyChartDialog from '../../oversikt/ui/dialogs/CopyChartDialog.tsx';
 import EditDashboardDialog from '../../oversikt/ui/dialogs/EditDashboardDialog.tsx';
 import ImportChartDialog from '../../oversikt/ui/dialogs/ImportChartDialog.tsx';
+import * as api from '../api/backendApi.ts';
 import { useProjectManager } from '../hooks/useProjectManager.ts';
 import type { ProjectSummary } from '../hooks/useProjectManager.ts';
 import type { DashboardDto, ProjectDto } from '../model/types.ts';
 import ProjectManagerLayout from './ProjectManagerLayout.tsx';
+import { extractWebsiteId } from '../../sql/utils/sqlProcessing.ts';
 
 type FileTableRow = {
     id: string;
@@ -43,6 +46,7 @@ const ProjectManager = () => {
         deleteDashboard,
         deleteChart,
         editChart,
+        copyChart,
     } = useProjectManager();
 
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
@@ -80,6 +84,14 @@ const ProjectManager = () => {
         name: string;
     } | null>(null);
     const [chartMutationError, setChartMutationError] = useState<string | null>(null);
+    const [copyChartTarget, setCopyChartTarget] = useState<{
+        projectId: number;
+        dashboardId: number;
+        graphId: number;
+        name: string;
+        sourceWebsiteId?: string;
+    } | null>(null);
+    const [copyChartError, setCopyChartError] = useState<string | null>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
     const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false);
@@ -319,6 +331,27 @@ const ProjectManager = () => {
         });
     };
 
+    const openCopyChart = async (projectId: number, row: FileTableRow) => {
+        if (!row.graphId) return;
+        setCopyChartError(null);
+        let sourceWebsiteId: string | undefined;
+        try {
+            const sourceQueries = await api.fetchQueries(projectId, row.dashboardId, row.graphId);
+            const sourceSql = sourceQueries[0]?.sqlText;
+            sourceWebsiteId = sourceSql ? extractWebsiteId(sourceSql) : undefined;
+        } catch {
+            sourceWebsiteId = undefined;
+        }
+
+        setCopyChartTarget({
+            projectId,
+            dashboardId: row.dashboardId,
+            graphId: row.graphId,
+            name: row.name,
+            sourceWebsiteId,
+        });
+    };
+
     const handleSaveChart = async () => {
         if (!editChartTarget) return;
         if (!editChartName.trim()) {
@@ -338,6 +371,32 @@ const ProjectManager = () => {
         setChartMutationError(null);
         await deleteChart(deleteChartTarget.projectId, deleteChartTarget.dashboardId, deleteChartTarget.graphId);
         setDeleteChartTarget(null);
+    };
+
+    const handleCopyChart = async (params: {
+        projectId: number;
+        projectName: string;
+        dashboardId: number;
+        dashboardName: string;
+        chartName: string;
+        websiteId?: string;
+    }) => {
+        if (!copyChartTarget) return;
+        setCopyChartError(null);
+        const result = await copyChart({
+            sourceProjectId: copyChartTarget.projectId,
+            sourceDashboardId: copyChartTarget.dashboardId,
+            sourceGraphId: copyChartTarget.graphId,
+            targetProjectId: params.projectId,
+            targetDashboardId: params.dashboardId,
+            chartName: params.chartName,
+            websiteId: params.websiteId,
+        });
+        if (!result.ok) {
+            setCopyChartError(result.error);
+            return;
+        }
+        setCopyChartTarget(null);
     };
 
     const projectOptions: ProjectDto[] = useMemo(
@@ -577,6 +636,13 @@ const ProjectManager = () => {
                                                                 )}
                                                                 {selectedProject && (
                                                                     <ActionMenu.Item
+                                                                        onClick={() => void openCopyChart(selectedProject.project.id, row)}
+                                                                    >
+                                                                        Kopier graf
+                                                                    </ActionMenu.Item>
+                                                                )}
+                                                                {selectedProject && (
+                                                                    <ActionMenu.Item
                                                                         onClick={() => openDeleteChart(selectedProject.project.id, row)}
                                                                     >
                                                                         Slett graf
@@ -736,6 +802,23 @@ const ProjectManager = () => {
                     onImport={handleImportChart}
                 />
             )}
+
+            <CopyChartDialog
+                open={!!copyChartTarget}
+                chart={copyChartTarget ? { title: copyChartTarget.name } : null}
+                projects={projectOptions}
+                selectedProjectId={selectedProjectId}
+                selectedDashboardId={copyChartTarget?.dashboardId ?? null}
+                sourceWebsiteId={copyChartTarget?.sourceWebsiteId}
+                loading={loading}
+                error={copyChartError}
+                onClose={() => {
+                    setCopyChartTarget(null);
+                    setCopyChartError(null);
+                }}
+                loadDashboards={api.fetchDashboards}
+                onCopy={handleCopyChart}
+            />
 
             <DeleteDashboardDialog
                 open={!!deleteDashboardTarget}

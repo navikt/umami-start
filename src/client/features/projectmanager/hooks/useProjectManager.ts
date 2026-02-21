@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProjectDto } from '../model/types.ts';
 import * as api from '../api/backendApi.ts';
+import { applyWebsiteIdOnly, replaceHardcodedWebsiteId } from '../../sql/utils/sqlProcessing.ts';
 
 type ProjectSummary = {
     project: ProjectDto;
@@ -196,6 +197,123 @@ export const useProjectManager = () => {
         [loadProjectSummaries],
     );
 
+    const rewriteSqlWebsiteId = useCallback((sql: string, targetWebsiteId?: string): string => {
+        if (!targetWebsiteId) return sql;
+        const withPlaceholderApplied = applyWebsiteIdOnly(sql, targetWebsiteId);
+        return replaceHardcodedWebsiteId(withPlaceholderApplied, targetWebsiteId);
+    }, []);
+
+    const copyChart = useCallback(
+        async (params: {
+            sourceProjectId: number;
+            sourceDashboardId: number;
+            sourceGraphId: number;
+            targetProjectId: number;
+            targetDashboardId: number;
+            chartName: string;
+            websiteId?: string;
+        }): Promise<{ ok: true } | { ok: false; error: string }> => {
+            setLoading(true);
+            setError(null);
+            setMessage(null);
+            try {
+                const sourceGraphs = await api.fetchGraphs(params.sourceProjectId, params.sourceDashboardId);
+                const sourceGraph = sourceGraphs.find((item) => item.id === params.sourceGraphId);
+                if (!sourceGraph) {
+                    return { ok: false, error: 'Fant ikke grafen som skal kopieres' };
+                }
+
+                const sourceQueries = await api.fetchQueries(
+                    params.sourceProjectId,
+                    params.sourceDashboardId,
+                    params.sourceGraphId,
+                );
+                const sourceQuery = sourceQueries[0];
+                if (!sourceQuery?.sqlText?.trim()) {
+                    return { ok: false, error: 'Grafen mangler SQL og kan ikke kopieres' };
+                }
+
+                const targetName = params.chartName.trim();
+                if (!targetName) {
+                    return { ok: false, error: 'Grafnavn er påkrevd' };
+                }
+
+                const sqlForCopy = rewriteSqlWebsiteId(sourceQuery.sqlText.trim(), params.websiteId);
+                const targetGraphs = await api.fetchGraphs(params.targetProjectId, params.targetDashboardId);
+                const targetNameLower = targetName.toLowerCase();
+                const isSameDashboard =
+                    params.sourceProjectId === params.targetProjectId
+                    && params.sourceDashboardId === params.targetDashboardId;
+                const existingTarget = targetGraphs.find((graph) => {
+                    if (isSameDashboard && graph.id === params.sourceGraphId) return false;
+                    return graph.name.trim().toLowerCase() === targetNameLower;
+                });
+
+                const sourceGraphType = sourceGraph.graphType ?? 'TABLE';
+                const sourceWidth = sourceGraph.width;
+                const queryName = sourceQuery.name?.trim() || `${targetName} - query`;
+
+                if (existingTarget) {
+                    await api.updateGraph(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        existingTarget.id,
+                        { name: targetName, graphType: sourceGraphType, width: sourceWidth },
+                    );
+
+                    const existingQueries = await api.fetchQueries(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        existingTarget.id,
+                    );
+                    const firstTargetQuery = existingQueries[0];
+                    if (firstTargetQuery) {
+                        await api.updateQuery(
+                            params.targetProjectId,
+                            params.targetDashboardId,
+                            existingTarget.id,
+                            firstTargetQuery.id,
+                            queryName,
+                            sqlForCopy,
+                        );
+                    } else {
+                        await api.createQuery(
+                            params.targetProjectId,
+                            params.targetDashboardId,
+                            existingTarget.id,
+                            queryName,
+                            sqlForCopy,
+                        );
+                    }
+                } else {
+                    const createdGraph = await api.createGraph(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        { name: targetName, graphType: sourceGraphType, width: sourceWidth },
+                    );
+                    await api.createQuery(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        createdGraph.id,
+                        queryName,
+                        sqlForCopy,
+                    );
+                }
+
+                await loadProjectSummaries();
+                setMessage('Graf kopiert');
+                return { ok: true };
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Kunne ikke kopiere graf';
+                setError(errorMessage);
+                return { ok: false, error: errorMessage };
+            } finally {
+                setLoading(false);
+            }
+        },
+        [loadProjectSummaries, rewriteSqlWebsiteId],
+    );
+
     const editChart = useCallback(
         (projectId: number, dashboardId: number, graphId: number, params: { name: string; graphType: string }) =>
             run(async () => {
@@ -230,6 +348,7 @@ export const useProjectManager = () => {
         deleteChart,
         editChart,
         importChart,
+        copyChart,
     };
 };
 

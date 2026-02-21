@@ -80,7 +80,7 @@ export const updateGraph = (
     projectId: number,
     dashboardId: number,
     graphId: number,
-    params: { name: string; graphType: string },
+    params: { name: string; graphType: string; width?: number },
 ): Promise<GraphDto> =>
     requestJson<GraphDto>(
         `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}`,
@@ -141,6 +141,23 @@ export const createQuery = (
         `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries`,
         {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, sqlText }),
+        },
+    );
+
+export const updateQuery = (
+    projectId: number,
+    dashboardId: number,
+    graphId: number,
+    queryId: number,
+    name: string,
+    sqlText: string,
+): Promise<QueryDto> =>
+    requestJson<QueryDto>(
+        `/api/backend/projects/${projectId}/dashboards/${dashboardId}/graphs/${graphId}/queries/${queryId}`,
+        {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, sqlText }),
         },

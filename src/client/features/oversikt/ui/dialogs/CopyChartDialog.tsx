@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Modal, Select, TextField } from '@navikt/ds-react';
-import type { DashboardDto, OversiktChart, ProjectDto } from '../../model/types.ts';
+import type { DashboardDto, ProjectDto } from '../../model/types.ts';
 import type { Website } from '../../../../shared/types/website.ts';
 import { fetchWebsites } from '../../../../shared/api/websiteApi.ts';
 
 type CopyChartDialogProps = {
     open: boolean;
-    chart: OversiktChart | null;
+    chart: { title: string } | null;
     projects: ProjectDto[];
     selectedProjectId: number | null;
     selectedDashboardId: number | null;
