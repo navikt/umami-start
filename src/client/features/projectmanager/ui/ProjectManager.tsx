@@ -823,7 +823,7 @@ const ProjectManager = () => {
                                                                 </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="start">
                                                                     <ActionMenu.Item as="a" href="/grafbygger">
-                                                                        Legg til graf
+                                                                        Legg til ny graf
                                                                     </ActionMenu.Item>
                                                                     <ActionMenu.Item onClick={() => openImportChart(row.dashboardId)}>
                                                                         Importer graf
