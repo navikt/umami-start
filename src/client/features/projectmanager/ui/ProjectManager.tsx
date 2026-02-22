@@ -509,7 +509,7 @@ const ProjectManager = () => {
         <>
             <ProjectManagerLayout
                 title="Arbeidsområder"
-                description="Samling av dashboards og grafer."
+                description="Samling med områder, dashboards og grafer."
                 sidebar={
                     <div className="space-y-2">
                         <form role="search" className="mb-3 flex items-end gap-2">
