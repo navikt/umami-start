@@ -695,7 +695,7 @@ const Oversikt = () => {
                                     </ActionMenu.Trigger>
                                     <ActionMenu.Content align="start">
                                         <ActionMenu.Item as="a" href="/grafbygger">
-                                            Legg til graf
+                                            Legg til ny graf
                                         </ActionMenu.Item>
                                         <ActionMenu.Item onClick={openImportModal}>
                                             Importer graf
