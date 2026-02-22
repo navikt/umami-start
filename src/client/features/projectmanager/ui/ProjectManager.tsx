@@ -217,7 +217,7 @@ const ProjectManager = () => {
     const handleDeleteConfirm = async () => {
         if (!deleteTarget) return;
         if (deleteTarget.dashboardCount > 0 || deleteTarget.chartCount > 0) {
-            setLocalError('Prosjekt med dashboards eller grafer kan ikke slettes');
+            setLocalError('Prosjekt med dashboard eller grafer kan ikke slettes');
             return;
         }
         setLocalError(null);
@@ -509,7 +509,7 @@ const ProjectManager = () => {
         <>
             <ProjectManagerLayout
                 title="Arbeidsområder"
-                description="Samling med områder, dashboards og grafer."
+                description="Samling med områder, dashboard og grafer."
                 sidebar={
                     <div className="space-y-2">
                         <form role="search" className="mb-3 flex items-end gap-2">
@@ -1094,7 +1094,7 @@ const ProjectManager = () => {
                         </BodyShort>
                         {(deleteTarget?.dashboardCount ?? 0) > 0 || (deleteTarget?.chartCount ?? 0) > 0 ? (
                             <Alert variant="warning" size="small">
-                                Prosjekt med dashboards eller grafer kan ikke slettes.
+                                Prosjekt med dashboard eller grafer kan ikke slettes.
                             </Alert>
                         ) : (
                             <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
