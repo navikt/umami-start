@@ -592,7 +592,7 @@ const Oversikt = () => {
                     className="inline-flex items-center gap-1"
                 >
                     <ArrowLeftIcon aria-hidden fontSize="1rem" />
-                    <span>Prosjekter</span>
+                    <span>Arbeidsområder</span>
                 </Link>
             )}
             filters={supportsStandardFilters ? filters : undefined}

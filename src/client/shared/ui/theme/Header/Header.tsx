@@ -252,7 +252,7 @@ export default function Header({ theme }: HeaderProps) {
                       href="/prosjekter"
                       className="no-underline"
                     >
-                      <span className="whitespace-nowrap">Prosjekter</span>
+                      <span className="whitespace-nowrap">Arbeidsområder</span>
                     </Dropdown.Menu.List.Item>
                     <Dropdown.Menu.List.Item
                       as="button"
@@ -290,7 +290,7 @@ export default function Header({ theme }: HeaderProps) {
                   className={linkButton}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="whitespace-nowrap">Prosjekter</span>
+                    <span className="whitespace-nowrap">Arbeidsområder</span>
                   </div>
                 </Button>
                 {setupMenu}

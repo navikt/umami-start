@@ -504,14 +504,14 @@ const ProjectManager = () => {
     return (
         <>
             <ProjectManagerLayout
-                title="Prosjekter"
-                description="Prosjekter, dashboards og grafer."
+                title="Arbeidsområder"
+                description="Samling av dashboards og grafer."
                 sidebar={
                     <div className="space-y-2">
                         <form role="search" className="mb-3 flex items-end gap-2">
                             <div className="flex-1">
                                 <Search
-                                    label="Søk prosjekter"
+                                    label="Søk arbeidsområder"
                                     variant="simple"
                                     value={projectSearch}
                                     onChange={setProjectSearch}
@@ -519,13 +519,13 @@ const ProjectManager = () => {
                                     size="small"
                                 />
                             </div>
-                            <Tooltip content={isCreateOpen ? 'Lukk nytt prosjekt' : 'Nytt prosjekt'} describesChild>
+                            <Tooltip content={isCreateOpen ? 'Lukk nytt arbeidsområde' : 'Nytt arbeidsområde'} describesChild>
                                 <Button
                                     type="button"
                                     size="small"
                                     variant="secondary"
                                     icon={<Plus aria-hidden size={16} />}
-                                    aria-label={isCreateOpen ? 'Lukk nytt prosjekt' : 'Nytt prosjekt'}
+                                    aria-label={isCreateOpen ? 'Lukk nytt arbeidsområde' : 'Nytt arbeidsområde'}
                                     onClick={toggleCreateProject}
                                 />
                             </Tooltip>
@@ -533,12 +533,12 @@ const ProjectManager = () => {
 
                         {isInitialLoading && (
                             <div className="py-4 flex justify-center">
-                                <Loader size="medium" title="Laster prosjekter" />
+                                <Loader size="medium" title="Laster arbeidsområder" />
                             </div>
                         )}
                         {!isInitialLoading && projectSummaries.length === 0 && showNoProjectsAlert && (
                             <Alert variant="info" size="small" closeButton onClose={() => setShowNoProjectsAlert(false)}>
-                                Ingen prosjekter funnet.
+                                Ingen arbeidsområder funnet.
                             </Alert>
                         )}
                         {!isInitialLoading && projectSummaries.length > 0 && filteredProjectSummaries.length === 0 && showNoSearchResultsAlert && (
@@ -597,7 +597,7 @@ const ProjectManager = () => {
                                 icon={<Plus aria-hidden size={16} />}
                                 onClick={toggleCreateProject}
                             >
-                                Nytt prosjekt
+                                Nytt arbeidsområde
                             </Button>
                             </div>
                         )}
@@ -623,13 +623,13 @@ const ProjectManager = () => {
 
                     {isInitialLoading && (
                         <div className="py-8 flex justify-center">
-                            <Loader size="xlarge" title="Laster prosjekter og dashboards" />
+                            <Loader size="xlarge" title="Laster arbeidsområder og dashboards" />
                         </div>
                     )}
 
                     {!isInitialLoading && !selectedProject && showNoSelectedProjectAlert && (
                         <Alert variant="info" size="small" closeButton onClose={() => setShowNoSelectedProjectAlert(false)}>
-                            Velg et prosjekt for a se dashboards og grafer.
+                            Velg et arbeidsområde for a se dashboards og grafer.
                         </Alert>
                     )}
 
@@ -830,7 +830,7 @@ const ProjectManager = () => {
             <Modal
                 open={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
-                header={{ heading: 'Nytt prosjekt' }}
+                header={{ heading: 'Nytt arbeidsområde' }}
                 width="small"
             >
                 <Modal.Body>
@@ -866,7 +866,7 @@ const ProjectManager = () => {
                     setEditTarget(null);
                     setLocalError(null);
                 }}
-                header={{ heading: 'Rediger prosjekt' }}
+                header={{ heading: 'Rediger arbeidsområde' }}
                 width="small"
             >
                 <Modal.Body>
@@ -1064,14 +1064,14 @@ const ProjectManager = () => {
                     setDeleteTarget(null);
                     setLocalError(null);
                 }}
-                header={{ heading: 'Slett prosjekt' }}
+                header={{ heading: 'Slett arbeidsområde' }}
                 width="small"
             >
                 <Modal.Body>
                     <div className="space-y-4">
                         {localError && <Alert variant="error" size="small">{localError}</Alert>}
                         <BodyShort>
-                            Er du sikker på at du vil slette prosjektet <strong>{deleteTarget?.project.name}</strong>?
+                            Er du sikker på at du vil slette arbeidsområdet <strong>{deleteTarget?.project.name}</strong>?
                         </BodyShort>
                         {(deleteTarget?.dashboardCount ?? 0) > 0 || (deleteTarget?.chartCount ?? 0) > 0 ? (
                             <Alert variant="warning" size="small">
@@ -1087,7 +1087,7 @@ const ProjectManager = () => {
                 <Modal.Footer>
                     {(deleteTarget?.dashboardCount ?? 0) === 0 && (deleteTarget?.chartCount ?? 0) === 0 && (
                         <Button variant="danger" onClick={() => void handleDeleteConfirm()} loading={loading}>
-                            Slett prosjekt
+                            Slett arbeidsområde
                         </Button>
                     )}
                     <Button
