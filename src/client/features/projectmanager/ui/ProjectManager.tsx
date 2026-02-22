@@ -101,6 +101,7 @@ const ProjectManager = () => {
     const [createDashboardError, setCreateDashboardError] = useState<string | null>(null);
     const [isImportChartOpen, setIsImportChartOpen] = useState(false);
     const [importChartError, setImportChartError] = useState<string | null>(null);
+    const [importChartDefaultDashboardId, setImportChartDefaultDashboardId] = useState<number | null>(null);
     const [showErrorAlert, setShowErrorAlert] = useState(true);
     const [showMessageAlert, setShowMessageAlert] = useState(true);
     const [showNoProjectsAlert, setShowNoProjectsAlert] = useState(true);
@@ -272,8 +273,9 @@ const ProjectManager = () => {
         setNewDashboardDescription('');
     };
 
-    const openImportChart = () => {
+    const openImportChart = (defaultDashboardId?: number) => {
         setImportChartError(null);
+        setImportChartDefaultDashboardId(defaultDashboardId ?? null);
         setIsImportChartOpen(true);
     };
 
@@ -807,12 +809,26 @@ const ProjectManager = () => {
                                             {isEmptyDashboardRow && (
                                                 <Table.Row>
                                                     <Table.HeaderCell scope="row">
-                                                        <span className="inline-flex items-center gap-2 pl-6">
+                                                        <div className="inline-flex items-center gap-2 pl-6">
                                                             <span className="text-[var(--ax-text-subtle)]">
                                                                 <Plus aria-hidden size={14} />
                                                             </span>
-                                                            <Link href="/grafbygger">Legg til graf med Grafbyggeren</Link>
-                                                        </span>
+                                                            <ActionMenu>
+                                                                <ActionMenu.Trigger>
+                                                                    <Button size="xsmall" variant="tertiary">
+                                                                        Legg til
+                                                                    </Button>
+                                                                </ActionMenu.Trigger>
+                                                                <ActionMenu.Content align="start">
+                                                                    <ActionMenu.Item onClick={() => openImportChart(row.dashboardId)}>
+                                                                        Importer graf
+                                                                    </ActionMenu.Item>
+                                                                    <ActionMenu.Item as="a" href="/grafbygger">
+                                                                        Legg til graf
+                                                                    </ActionMenu.Item>
+                                                                </ActionMenu.Content>
+                                                            </ActionMenu>
+                                                        </div>
                                                     </Table.HeaderCell>
                                                     <Table.DataCell />
                                                     <Table.DataCell />
@@ -966,10 +982,11 @@ const ProjectManager = () => {
                     loading={loading}
                     error={importChartError}
                     dashboardOptions={selectedProjectDashboardOptions}
-                    defaultDashboardId={selectedProjectDashboardOptions[0]?.id ?? null}
+                    defaultDashboardId={importChartDefaultDashboardId ?? selectedProjectDashboardOptions[0]?.id ?? null}
                     onClose={() => {
                         setIsImportChartOpen(false);
                         setImportChartError(null);
+                        setImportChartDefaultDashboardId(null);
                     }}
                     onImport={handleImportChart}
                 />
