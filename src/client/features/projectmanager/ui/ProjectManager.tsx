@@ -660,14 +660,14 @@ const ProjectManager = () => {
                                         <ActionMenu.Item onClick={openCreateDashboard}>
                                             Legg til dashboard
                                         </ActionMenu.Item>
+                                        <ActionMenu.Item as="a" href="/grafbygger">
+                                            Legg til graf
+                                        </ActionMenu.Item>
                                         <ActionMenu.Item
                                             onClick={openImportChart}
                                             disabled={selectedProjectDashboardOptions.length === 0}
                                         >
                                             Importer graf
-                                        </ActionMenu.Item>
-                                        <ActionMenu.Item as="a" href="/grafbygger">
-                                            Legg til graf
                                         </ActionMenu.Item>
                                     </ActionMenu.Content>
                                 </ActionMenu>
@@ -822,11 +822,11 @@ const ProjectManager = () => {
                                                                     </Button>
                                                                 </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="start">
-                                                                    <ActionMenu.Item onClick={() => openImportChart(row.dashboardId)}>
-                                                                        Importer graf
-                                                                    </ActionMenu.Item>
                                                                     <ActionMenu.Item as="a" href="/grafbygger">
                                                                         Legg til graf
+                                                                    </ActionMenu.Item>
+                                                                    <ActionMenu.Item onClick={() => openImportChart(row.dashboardId)}>
+                                                                        Importer graf
                                                                     </ActionMenu.Item>
                                                                 </ActionMenu.Content>
                                                             </ActionMenu>

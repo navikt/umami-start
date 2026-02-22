@@ -83,27 +83,11 @@ const ImportChartDialog = ({
                 if (loading) return;
                 onClose();
             }}
-            header={{ heading: 'Importer graf fra SQL' }}
+            header={{ heading: 'Importer graf' }}
             width="medium"
         >
             <Modal.Body>
                 <div className="flex flex-col gap-4">
-                    {dashboardOptions && dashboardOptions.length > 0 && (
-                        <Select
-                            label="Dashboard"
-                            value={dashboardId ? String(dashboardId) : ''}
-                            onChange={(event) => setDashboardId(Number(event.target.value))}
-                            size="small"
-                        >
-                            <option value="">Velg dashboard</option>
-                            {dashboardOptions.map((dashboard) => (
-                                <option key={dashboard.id} value={dashboard.id}>
-                                    {dashboard.name}
-                                </option>
-                            ))}
-                        </Select>
-                    )}
-
                     <TextField
                         label="Grafnavn"
                         value={name}
@@ -128,6 +112,21 @@ const ImportChartDialog = ({
                         onChange={(event) => setWidth(event.target.value)}
                         size="small"
                     />
+                    {dashboardOptions && dashboardOptions.length > 0 && (
+                        <Select
+                            label="Dashboard"
+                            value={dashboardId ? String(dashboardId) : ''}
+                            onChange={(event) => setDashboardId(Number(event.target.value))}
+                            size="small"
+                        >
+                            <option value="">Velg dashboard</option>
+                            {dashboardOptions.map((dashboard) => (
+                                <option key={dashboard.id} value={dashboard.id}>
+                                    {dashboard.name}
+                                </option>
+                            ))}
+                        </Select>
+                    )}
                     <Textarea
                         label="SQL-kode"
                         description="Lim inn SQL-spørringen du vil importere som graf."

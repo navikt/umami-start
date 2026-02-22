@@ -652,11 +652,11 @@ const Oversikt = () => {
                                 </Button>
                             </ActionMenu.Trigger>
                             <ActionMenu.Content align="end">
-                                <ActionMenu.Item onClick={openImportModal}>
-                                    Importer graf
-                                </ActionMenu.Item>
                                 <ActionMenu.Item as="a" href="/grafbygger">
                                     Legg til graf
+                                </ActionMenu.Item>
+                                <ActionMenu.Item onClick={openImportModal}>
+                                    Importer graf
                                 </ActionMenu.Item>
                             </ActionMenu.Content>
                         </ActionMenu>
@@ -682,6 +682,28 @@ const Oversikt = () => {
                                 </Button>
                             </div>
                         </section>
+                    )}
+                    {charts.length === 0 && (
+                        <div className="rounded-md border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] px-3 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm text-[var(--ax-text-default)]">Dashboardet er tomt</span>
+                                <ActionMenu>
+                                    <ActionMenu.Trigger>
+                                        <Button type="button" variant="secondary" size="xsmall">
+                                            + legg til graf
+                                        </Button>
+                                    </ActionMenu.Trigger>
+                                    <ActionMenu.Content align="start">
+                                        <ActionMenu.Item as="a" href="/grafbygger">
+                                            Legg til graf
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item onClick={openImportModal}>
+                                            Importer graf
+                                        </ActionMenu.Item>
+                                    </ActionMenu.Content>
+                                </ActionMenu>
+                            </div>
+                        </div>
                     )}
                     {charts.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
@@ -780,11 +802,11 @@ const Oversikt = () => {
                                     </Button>
                                 </ActionMenu.Trigger>
                                 <ActionMenu.Content align="end">
-                                    <ActionMenu.Item onClick={openImportModal}>
-                                        Importer graf
-                                    </ActionMenu.Item>
                                     <ActionMenu.Item as="a" href="/grafbygger">
                                         Legg til graf
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={openImportModal}>
+                                        Importer graf
                                     </ActionMenu.Item>
                                 </ActionMenu.Content>
                             </ActionMenu>
