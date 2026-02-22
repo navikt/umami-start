@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
 import { ArrowLeftIcon } from '@navikt/aksel-icons';
-import { Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, UNSAFE_Combobox } from '@navikt/ds-react';
+import { ActionMenu, Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
@@ -611,7 +611,7 @@ const Oversikt = () => {
             {!isLoading && !selectedDashboard && (
                 <div className="w-fit">
                     <Alert variant="info" size="small">
-                        Velg prosjekt og dashboard for å vise grafer.
+                        Velg arbeidsområde og dashboard for å vise grafer.
                     </Alert>
                 </div>
             )}
@@ -624,15 +624,7 @@ const Oversikt = () => {
                 </div>
             )}
 
-            {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && charts.length === 0 && (
-                <div className="w-fit">
-                    <Alert variant="info" size="small">
-                        Gå til <Link href="/grafbygger">Grafbyggeren</Link> for å legge til din første graf.
-                    </Alert>
-                </div>
-            )}
-
-            {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && charts.length > 0 && (
+            {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && (
                 <>
                     <div className="flex justify-end gap-2 mb-4">
                         <Button
@@ -653,9 +645,21 @@ const Oversikt = () => {
                         >
                             {isEditPanelOpen ? 'Lukk' : 'Rediger'}
                         </Button>
-                        <Button as="a" href="/grafbygger" variant="secondary" size="small">
-                            Legg til ny graf
-                        </Button>
+                        <ActionMenu>
+                            <ActionMenu.Trigger>
+                                <Button type="button" variant="secondary" size="small">
+                                    + legg til
+                                </Button>
+                            </ActionMenu.Trigger>
+                            <ActionMenu.Content align="end">
+                                <ActionMenu.Item onClick={openImportModal}>
+                                    Importer graf
+                                </ActionMenu.Item>
+                                <ActionMenu.Item as="a" href="/grafbygger">
+                                    Legg til graf
+                                </ActionMenu.Item>
+                            </ActionMenu.Content>
+                        </ActionMenu>
                     </div>
                     {isEditPanelOpen && (
                         <section className="mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
@@ -666,7 +670,7 @@ const Oversikt = () => {
                                     onClick={openEditDashboardDialog}
                                     disabled={!selectedDashboard}
                                 >
-                                    Rediger navn / plassering
+                                    Rediger dashboard detaljer
                                 </Button>
                                 <Button
                                     variant="secondary"
@@ -676,86 +680,80 @@ const Oversikt = () => {
                                 >
                                     Slett dashboard
                                 </Button>
-                                <Button
-                                    variant="secondary"
-                                    size="small"
-                                    onClick={openImportModal}
-                                    disabled={!selectedDashboard}
-                                >
-                                    Importer graf
-                                </Button>
                             </div>
                         </section>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
-                        {charts.map((chart, index) => (
-                            <div
-                                key={chart.id}
-                                className={`relative ${getSpanClass(chart.width)}`}
-                                ref={(element) => {
-                                    if (element) chartRefs.current.set(chart.graphId, element);
-                                    else chartRefs.current.delete(chart.graphId);
-                                }}
-                                onDragOver={(event) => {
-                                    if (!isEditPanelOpen || draggedGraphId === null) return;
-                                    event.preventDefault();
-                                    event.dataTransfer.dropEffect = 'move';
-                                }}
-                                onDragEnter={() => {
-                                    if (!isEditPanelOpen || draggedGraphId === null || draggedGraphId === chart.graphId) return;
-                                    setDropTargetGraphId(chart.graphId);
-                                }}
-                                onDragLeave={() => {
-                                    if (dropTargetGraphId === chart.graphId) {
-                                        setDropTargetGraphId(null);
-                                    }
-                                }}
-                                onDrop={(event) => {
-                                    void handleDropOnChart(event, chart.graphId);
-                                }}
-                                style={{
-                                    opacity: draggedGraphId === chart.graphId ? 0.65 : 1,
-                                    outline: dropTargetGraphId === chart.graphId ? '2px dashed var(--ax-border-accent)' : 'none',
-                                    outlineOffset: dropTargetGraphId === chart.graphId ? '4px' : undefined,
-                                }}
-                            >
-                                <DashboardWidget
-                                    chart={chart}
-                                    websiteId={activeWebsiteId}
-                                    filters={activeFilters}
-                                    onDataLoaded={handleDataLoaded}
-                                    selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
-                                    dashboardTitle={selectedDashboard.name}
-                                    onEditChart={openEditDialog}
-                                    onDeleteChart={openDeleteDialog}
-                                    onCopyChart={openCopyDialog}
-                                    titlePrefix={isEditPanelOpen && charts.length > 1 ? (
-                                        <Button
-                                            variant="secondary"
-                                            size="xsmall"
-                                            icon={<GripVertical aria-hidden />}
-                                            title={grabbedGraphId === chart.graphId ? 'Slipp graf' : 'Flytt graf'}
-                                            aria-label={`${grabbedGraphId === chart.graphId ? 'Slipp' : 'Flytt'} ${chart.title}. Plass ${index + 1} av ${charts.length}.`}
-                                            aria-pressed={grabbedGraphId === chart.graphId}
-                                            disabled={reorderingGraphId !== null}
-                                            loading={reorderingGraphId === chart.graphId}
-                                            draggable={reorderingGraphId === null}
-                                            onKeyDown={(event) => {
-                                                void handleMoveHandleKeyDown(event, chart.graphId, chart.title);
-                                            }}
-                                            onDragStart={(event) => handleDragStart(event, chart.graphId, chart.title)}
-                                            onDragEnd={() => {
-                                                setDraggedGraphId(null);
-                                                setDropTargetGraphId(null);
-                                            }}
-                                        >
-                                            Flytt
-                                        </Button>
-                                    ) : undefined}
-                                />
-                            </div>
-                        ))}
-                    </div>
+                    {charts.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-20 gap-6">
+                            {charts.map((chart, index) => (
+                                <div
+                                    key={chart.id}
+                                    className={`relative ${getSpanClass(chart.width)}`}
+                                    ref={(element) => {
+                                        if (element) chartRefs.current.set(chart.graphId, element);
+                                        else chartRefs.current.delete(chart.graphId);
+                                    }}
+                                    onDragOver={(event) => {
+                                        if (!isEditPanelOpen || draggedGraphId === null) return;
+                                        event.preventDefault();
+                                        event.dataTransfer.dropEffect = 'move';
+                                    }}
+                                    onDragEnter={() => {
+                                        if (!isEditPanelOpen || draggedGraphId === null || draggedGraphId === chart.graphId) return;
+                                        setDropTargetGraphId(chart.graphId);
+                                    }}
+                                    onDragLeave={() => {
+                                        if (dropTargetGraphId === chart.graphId) {
+                                            setDropTargetGraphId(null);
+                                        }
+                                    }}
+                                    onDrop={(event) => {
+                                        void handleDropOnChart(event, chart.graphId);
+                                    }}
+                                    style={{
+                                        opacity: draggedGraphId === chart.graphId ? 0.65 : 1,
+                                        outline: dropTargetGraphId === chart.graphId ? '2px dashed var(--ax-border-accent)' : 'none',
+                                        outlineOffset: dropTargetGraphId === chart.graphId ? '4px' : undefined,
+                                    }}
+                                >
+                                    <DashboardWidget
+                                        chart={chart}
+                                        websiteId={activeWebsiteId}
+                                        filters={activeFilters}
+                                        onDataLoaded={handleDataLoaded}
+                                        selectedWebsite={activeWebsite ? { ...activeWebsite } : undefined}
+                                        dashboardTitle={selectedDashboard.name}
+                                        onEditChart={openEditDialog}
+                                        onDeleteChart={openDeleteDialog}
+                                        onCopyChart={openCopyDialog}
+                                        titlePrefix={isEditPanelOpen && charts.length > 1 ? (
+                                            <Button
+                                                variant="secondary"
+                                                size="xsmall"
+                                                icon={<GripVertical aria-hidden />}
+                                                title={grabbedGraphId === chart.graphId ? 'Slipp graf' : 'Flytt graf'}
+                                                aria-label={`${grabbedGraphId === chart.graphId ? 'Slipp' : 'Flytt'} ${chart.title}. Plass ${index + 1} av ${charts.length}.`}
+                                                aria-pressed={grabbedGraphId === chart.graphId}
+                                                disabled={reorderingGraphId !== null}
+                                                loading={reorderingGraphId === chart.graphId}
+                                                draggable={reorderingGraphId === null}
+                                                onKeyDown={(event) => {
+                                                    void handleMoveHandleKeyDown(event, chart.graphId, chart.title);
+                                                }}
+                                                onDragStart={(event) => handleDragStart(event, chart.graphId, chart.title)}
+                                                onDragEnd={() => {
+                                                    setDraggedGraphId(null);
+                                                    setDropTargetGraphId(null);
+                                                }}
+                                            >
+                                                Flytt
+                                            </Button>
+                                        ) : undefined}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {Object.keys(stats).length > 0 && (
                         <div className="mt-5">
@@ -775,9 +773,21 @@ const Oversikt = () => {
 
                     {charts.length > 4 && (
                         <div className="flex justify-end mt-4 pb-6">
-                            <Button as="a" href="/grafbygger" variant="secondary" size="small">
-                                Legg til ny graf
-                            </Button>
+                            <ActionMenu>
+                                <ActionMenu.Trigger>
+                                    <Button type="button" variant="secondary" size="small">
+                                        + legg til
+                                    </Button>
+                                </ActionMenu.Trigger>
+                                <ActionMenu.Content align="end">
+                                    <ActionMenu.Item onClick={openImportModal}>
+                                        Importer graf
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item as="a" href="/grafbygger">
+                                        Legg til graf
+                                    </ActionMenu.Item>
+                                </ActionMenu.Content>
+                            </ActionMenu>
                         </div>
                     )}
                 </>
