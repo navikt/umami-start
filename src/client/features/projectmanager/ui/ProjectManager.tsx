@@ -818,7 +818,7 @@ const ProjectManager = () => {
                                                             <ActionMenu>
                                                                 <ActionMenu.Trigger>
                                                                     <Button size="xsmall" variant="tertiary">
-                                                                        Legg til
+                                                                        Legg til graf
                                                                     </Button>
                                                                 </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="start">
