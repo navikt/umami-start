@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Website } from '../model/types.ts';
 import { fetchWebsites } from '../api/bigquery.ts';
+import { PROD_TEAM_ID } from '../../settings/model/constants.ts';
 
 interface UrlSearchFormProps {
     children?: React.ReactNode;
@@ -17,6 +18,9 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
     const [hasLoadedData, setHasLoadedData] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchError, setSearchError] = useState<string | null>(null);
+    const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+    const isDevEnvironment = hostname.includes(".dev.nav.no");
+    const isProdEnvironment = hostname.includes(".nav.no") && !isDevEnvironment;
     const normalizedAkselSearchQuery = akselSearchQuery.trim().toLowerCase();
     const visibleWebsites = filteredData?.filter((item) => {
         if (!normalizedAkselSearchQuery) return true;
@@ -53,28 +57,20 @@ function UrlSearchForm({ children }: UrlSearchFormProps) {
         try {
             const websitesData = await fetchWebsites();
 
-            // Filter for prod websites (Team ResearchOps and maybe others if needed)
-            // Umami.jsx looks for:
-            // aa113c34-e213-4ed6-a4f0-0aea8a503e6b (Team ResearchOps?)
-            // bceb3300-a2fb-4f73-8cec-7e3673072b30 (Another team?)
+            const environmentFilteredWebsites = websitesData.filter((website: Website) => {
+                if (isProdEnvironment) {
+                    return website.teamId === PROD_TEAM_ID;
+                }
 
-            const isDevEnvironment =
-                typeof window !== "undefined" &&
-                window.location.hostname.includes(".dev.nav.no");
+                if (isDevEnvironment) {
+                    return website.teamId !== PROD_TEAM_ID;
+                }
 
-            const relevantTeams = isDevEnvironment
-                ? ['1937013f-f915-4e73-a12a-fc325b23c7fc']
-                : [
-                    'aa113c34-e213-4ed6-a4f0-0aea8a503e6b',
-                    'bceb3300-a2fb-4f73-8cec-7e3673072b30'
-                ];
-
-            const prodWebsites = websitesData.filter((website: Website) =>
-                relevantTeams.includes(website.teamId)
-            );
+                return true;
+            });
 
             // Filter out exactly "nav.no" if desired, though logic below handles matching
-            const filteredItems = prodWebsites.filter((item: Website) => item.domain !== "nav.no");
+            const filteredItems = environmentFilteredWebsites.filter((item: Website) => item.domain !== "nav.no");
 
             // Deduplicate by domain
             const uniqueWebsites = filteredItems.filter((website: Website, index: number, self: Website[]) =>
