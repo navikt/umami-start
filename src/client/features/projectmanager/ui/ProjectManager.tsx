@@ -664,7 +664,7 @@ const ProjectManager = () => {
                                             Legg til graf
                                         </ActionMenu.Item>
                                         <ActionMenu.Item
-                                            onClick={openImportChart}
+                                            onClick={() => openImportChart()}
                                             disabled={selectedProjectDashboardOptions.length === 0}
                                         >
                                             Importer graf
