@@ -135,12 +135,14 @@ const ProjectManager = () => {
 
     const filteredProjectSummaries = useMemo(() => {
         const query = projectSearch.trim().toLowerCase();
-        if (!query) return projectSummaries;
-        return projectSummaries.filter((summary) => {
+        const filtered = !query
+            ? projectSummaries
+            : projectSummaries.filter((summary) => {
             const name = summary.project.name.toLowerCase();
             const description = (summary.project.description ?? '').toLowerCase();
             return name.includes(query) || description.includes(query);
         });
+        return [...filtered].sort((a, b) => a.project.name.localeCompare(b.project.name, 'nb', { sensitivity: 'base' }));
     }, [projectSummaries, projectSearch]);
 
     const fileRows = useMemo<FileTableRow[]>(() => {
