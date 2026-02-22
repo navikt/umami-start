@@ -106,7 +106,7 @@ const CopyChartDialog = ({
     const handleCopy = async () => {
         if (!chart) return;
         if (!projectId) {
-            setLocalError('Velg prosjekt');
+            setLocalError('Velg arbeidsområde');
             return;
         }
         if (!dashboardId) {
@@ -119,7 +119,7 @@ const CopyChartDialog = ({
         }
 
         setLocalError(null);
-        const selectedProjectName = projects.find((project) => project.id === projectId)?.name ?? `Prosjekt ${projectId}`;
+        const selectedProjectName = projects.find((project) => project.id === projectId)?.name ?? `Arbeidsområde ${projectId}`;
         const selectedDashboardName = dashboards.find((dashboard) => dashboard.id === dashboardId)?.name ?? `Dashboard ${dashboardId}`;
         await onCopy({
             projectId,
@@ -143,7 +143,7 @@ const CopyChartDialog = ({
                     {localError && <Alert variant="error">{localError}</Alert>}
                     {error && <Alert variant="error">{error}</Alert>}
                     <Select
-                        label="Prosjekt"
+                        label="Arbeidsområde"
                         value={projectId ? String(projectId) : ''}
                         onChange={(event) => {
                             setProjectId(Number(event.target.value));
@@ -151,7 +151,7 @@ const CopyChartDialog = ({
                         }}
                         size="small"
                     >
-                        <option value="">Velg prosjekt</option>
+                        <option value="">Velg arbeidsområde</option>
                         {projects.map((project) => (
                             <option key={project.id} value={project.id}>
                                 {project.name}

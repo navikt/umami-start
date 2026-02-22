@@ -854,7 +854,7 @@ const ProjectManager = () => {
                 <Modal.Body>
                     <div className="space-y-3">
                         <TextField
-                            label="Prosjektnavn"
+                            label="Navn"
                             size="small"
                             ref={projectNameInputRef}
                             value={newProjectName}
