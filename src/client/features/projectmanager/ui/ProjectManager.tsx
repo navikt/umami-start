@@ -698,7 +698,7 @@ const ProjectManager = () => {
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm text-[var(--ax-text-default)]">Prosjektet er tomt</span>
                                 <Button size="xsmall" variant="secondary" onClick={openCreateDashboard}>
-                                    Opprett første dashboard
+                                    Lag nytt dashboard
                                 </Button>
                             </div>
                         </div>
