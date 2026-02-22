@@ -708,7 +708,7 @@ const ProjectManager = () => {
                         <Table size="small">
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.HeaderCell scope="col">Navn</Table.HeaderCell>
+                                    <Table.HeaderCell scope="col">Dashboard</Table.HeaderCell>
                                     <Table.HeaderCell scope="col">Type</Table.HeaderCell>
                                     <Table.HeaderCell scope="col" className="w-0">
                                         <span className="sr-only">Handlinger</span>
