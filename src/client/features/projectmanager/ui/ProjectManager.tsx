@@ -571,11 +571,11 @@ const ProjectManager = () => {
                                             <div className="flex items-center gap-3 text-xs text-[var(--ax-text-subtle)] shrink-0">
                                                 <span
                                                     className="inline-flex items-center gap-1"
-                                                    title={`${summary.dashboardCount} dashboards`}
+                                                    title={`${summary.dashboardCount} dashboard`}
                                                 >
                                                     <SquareGridIcon aria-hidden fontSize="0.9rem" />
                                                     {summary.dashboardCount}
-                                                    <span className="sr-only"> dashboards</span>
+                                                    <span className="sr-only"> dashboard</span>
                                                 </span>
                                                 <span
                                                     className="inline-flex items-center gap-1"
@@ -627,13 +627,13 @@ const ProjectManager = () => {
 
                     {isInitialLoading && (
                         <div className="py-8 flex justify-center">
-                            <Loader size="xlarge" title="Laster arbeidsområder og dashboards" />
+                            <Loader size="xlarge" title="Laster arbeidsområder og dashboard" />
                         </div>
                     )}
 
                     {!isInitialLoading && !selectedProject && showNoSelectedProjectAlert && (
                         <Alert variant="info" size="small" closeButton onClose={() => setShowNoSelectedProjectAlert(false)}>
-                            Velg et arbeidsområde for a se dashboards og grafer.
+                            Velg et arbeidsområde for a se dashboard og grafer.
                         </Alert>
                     )}
 
@@ -682,10 +682,10 @@ const ProjectManager = () => {
                                     </ActionMenu.Trigger>
                                     <ActionMenu.Content align="end">
                                         <ActionMenu.Item onClick={() => openEdit(selectedProject)}>
-                                            Rediger
+                                            Rediger arbeidsområde
                                         </ActionMenu.Item>
                                         <ActionMenu.Item onClick={() => openDelete(selectedProject)}>
-                                            Slett
+                                            Slett arbeidsområde
                                         </ActionMenu.Item>
                                     </ActionMenu.Content>
                                 </ActionMenu>
