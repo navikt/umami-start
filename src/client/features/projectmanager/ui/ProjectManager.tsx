@@ -815,12 +815,12 @@ const ProjectManager = () => {
                                                             <span className="text-[var(--ax-text-subtle)]">
                                                                 <Plus aria-hidden size={14} />
                                                             </span>
-                                                            <ActionMenu>
-                                                                <ActionMenu.Trigger>
-                                                                    <Button size="xsmall" variant="tertiary">
+                                                                <ActionMenu>
+                                                                    <ActionMenu.Trigger>
+                                                                        <Button size="xsmall" variant="secondary">
                                                                         Legg til graf
-                                                                    </Button>
-                                                                </ActionMenu.Trigger>
+                                                                        </Button>
+                                                                    </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="start">
                                                                     <ActionMenu.Item as="a" href="/grafbygger">
                                                                         Legg til ny graf
