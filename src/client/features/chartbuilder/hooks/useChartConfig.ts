@@ -41,7 +41,7 @@ export function useChartConfig() {
   const [dateRangeReady, setDateRangeReady] = useState<boolean>(false);
   const [maxDaysAvailable, setMaxDaysAvailable] = useState<number>(0);
 
-  const [dateRangeInDays, setDateRangeInDays] = useState<number>(14);
+  const [dateRangeInDays, setDateRangeInDays] = useState<number>(7);
 
   const [forceReload] = useState<boolean>(false);
   const [resetIncludeParams, setResetIncludeParams] = useState<boolean>(false);
@@ -411,7 +411,29 @@ export function useChartConfig() {
     if (!debouncedConfig.website || !debouncedConfig.website.id) {
       return '-- Please select a website to generate SQL';
     }
-    return generateSQLCore(debouncedConfig, filters, parameters);
+
+    // EventFilter adds the default "last 7 days" filter after mount, but SQL can be
+    // generated before that effect runs. Apply the same default at generation time.
+    const hasDateFilter = filters.some(f => f.column === 'created_at');
+    const sqlFilters = hasDateFilter
+      ? filters
+      : [
+        ...filters,
+        {
+          column: 'created_at',
+          operator: '>=',
+          value: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
+          dateRangeType: 'dynamic'
+        },
+        {
+          column: 'created_at',
+          operator: '<=',
+          value: 'CURRENT_TIMESTAMP()',
+          dateRangeType: 'dynamic'
+        }
+      ];
+
+    return generateSQLCore(debouncedConfig, sqlFilters, parameters);
   }, [debouncedConfig, filters, parameters]);
 
   const setOrderBy = (column: string, direction: 'ASC' | 'DESC') => {
@@ -549,4 +571,3 @@ export function useChartConfig() {
     handleEventsLoad,
   };
 }
-
