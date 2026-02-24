@@ -60,7 +60,7 @@ const ChartsPage = () => {
   return (
     <ChartLayout
       title="Grafbyggeren"
-      description="Grafbyggeren lar deg skreddersy grafer og tabeller, som kan deles og legges til i Metabase."
+      description="Lag tilpassede grafer og tabeller."
       currentPage="grafbygger"
       wideSidebar={true}
       filters={

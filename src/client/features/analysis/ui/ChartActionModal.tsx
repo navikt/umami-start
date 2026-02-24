@@ -17,6 +17,7 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     onEditChart,
     onDeleteChart,
     onCopyChart,
+    onMoveChart,
     hideUsageActions = false,
 }) => {
     const [copyFeedback, setCopyFeedback] = useState(false);
@@ -57,6 +58,11 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
     const handleCopy = () => {
         onClose();
         onCopyChart?.();
+    };
+
+    const handleMove = () => {
+        onClose();
+        onMoveChart?.();
     };
 
     const actionButtonClass = '!w-full !justify-start';
@@ -134,6 +140,18 @@ const ChartActionModal: React.FC<ChartActionModalProps> = ({
                                     <span className="inline-flex items-center gap-2">
                                         <span className={iconSlotClass}><Pencil aria-hidden size={16} /></span>
                                         <span>Rediger graf</span>
+                                    </span>
+                                </Button>
+                            )}
+                            {onMoveChart && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleMove}
+                                    className={actionButtonClass}
+                                >
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className={iconSlotClass}><Copy aria-hidden size={16} /></span>
+                                        <span>Flytt til annen fane</span>
                                     </span>
                                 </Button>
                             )}

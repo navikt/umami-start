@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { GripVertical } from 'lucide-react';
 import { ArrowLeftIcon } from '@navikt/aksel-icons';
-import { ActionMenu, Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, UNSAFE_Combobox } from '@navikt/ds-react';
+import { ActionMenu, Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, Tabs, TextField, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
 import { DashboardWidget } from '../../dashboard';
@@ -13,6 +13,7 @@ import {
     createGraph,
     createQuery,
     createCategory,
+    deleteCategory,
     deleteDashboard,
     deleteGraph,
     fetchCategories,
@@ -20,6 +21,7 @@ import {
     fetchGraphs,
     fetchQueries,
     updateDashboard,
+    updateCategory,
     updateGraph,
     updateQuery,
 } from '../api/oversiktApi.ts';
@@ -43,6 +45,13 @@ const rewriteSqlWebsiteId = (sql: string, targetWebsiteId?: string): string => {
     return replaceHardcodedWebsiteId(withPlaceholderApplied, targetWebsiteId);
 };
 
+const getCategoryDisplayName = (name?: string): string => {
+    const trimmed = name?.trim() ?? '';
+    if (!trimmed) return 'Fane 1';
+    if (trimmed.toLowerCase() === 'general') return 'Fane 1';
+    return trimmed;
+};
+
 type CopySuccessState = {
     projectId: number;
     projectName: string;
@@ -57,6 +66,9 @@ const Oversikt = () => {
         selectedProjectId, selectedDashboardId,
         setSelectedProjectId, setSelectedDashboardId,
         projects,
+        categories,
+        activeCategoryId,
+        setActiveCategoryId,
         selectedWebsite, setSelectedWebsite,
         activeWebsite, activeWebsiteId,
         tempPathOperator, setTempPathOperator,
@@ -70,13 +82,16 @@ const Oversikt = () => {
         handleUpdate,
         handleUrlToggleSelected, handleComboChange,
         handleReorderCharts,
-        refreshGraphs, refreshDashboards,
+        refreshCategories, refreshGraphs, refreshDashboards,
     } = useOversikt();
     const [editChart, setEditChart] = useState<OversiktChart | null>(null);
     const [deleteChartTarget, setDeleteChartTarget] = useState<OversiktChart | null>(null);
+    const [moveChartTarget, setMoveChartTarget] = useState<OversiktChart | null>(null);
+    const [moveTargetCategoryId, setMoveTargetCategoryId] = useState<string>('');
     const [mutationError, setMutationError] = useState<string | null>(null);
     const [savingEdit, setSavingEdit] = useState(false);
     const [deletingChart, setDeletingChart] = useState(false);
+    const [movingChart, setMovingChart] = useState(false);
     const [dashboardMutationError, setDashboardMutationError] = useState<string | null>(null);
     const [editDashboardTarget, setEditDashboardTarget] = useState<DashboardDto | null>(null);
     const [deleteDashboardTarget, setDeleteDashboardTarget] = useState<DashboardDto | null>(null);
@@ -96,9 +111,18 @@ const Oversikt = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importingChart, setImportingChart] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
+    const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
+    const [isRenameTabModalOpen, setIsRenameTabModalOpen] = useState(false);
+    const [newTabName, setNewTabName] = useState('');
+    const [renameTabName, setRenameTabName] = useState('');
+    const [categoryMutationError, setCategoryMutationError] = useState<string | null>(null);
+    const [savingCategory, setSavingCategory] = useState(false);
+    const [deletingCategory, setDeletingCategory] = useState(false);
     const chartRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const chartPositionsRef = useRef<Map<number, DOMRect>>(new Map());
     const totalGb = Object.values(stats).reduce((acc, curr) => acc + curr.gb, 0);
+    const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? null;
+    const hasMultipleTabs = categories.length > 1;
 
     useEffect(() => {
         setStats({});
@@ -183,6 +207,16 @@ const Oversikt = () => {
         setCopyChartTarget({ chart, sourceWebsiteId: resolvedSourceWebsiteId });
     };
 
+    const openMoveDialog = (chartId?: string) => {
+        if (!chartId) return;
+        const chart = charts.find((item) => item.id === chartId) ?? null;
+        if (!chart) return;
+        setMutationError(null);
+        setMoveChartTarget(chart);
+        const defaultTarget = categories.find((category) => category.id !== chart.categoryId);
+        setMoveTargetCategoryId(defaultTarget ? String(defaultTarget.id) : '');
+    };
+
     const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string; width: number; websiteId?: string }) => {
         if (!editChart || !selectedProjectId || !selectedDashboardId) return;
         setSavingEdit(true);
@@ -198,7 +232,7 @@ const Oversikt = () => {
                 name: editChart.queryName,
                 sqlText: sqlForSave,
             });
-            await refreshGraphs();
+            await refreshGraphs(editChart.categoryId);
             setEditChart(null);
         } catch (err: unknown) {
             setMutationError(err instanceof Error ? err.message : 'Kunne ikke oppdatere graf');
@@ -213,12 +247,83 @@ const Oversikt = () => {
         setMutationError(null);
         try {
             await deleteGraph(selectedProjectId, selectedDashboardId, deleteChartTarget.categoryId, deleteChartTarget.graphId);
-            await refreshGraphs();
+            await refreshGraphs(deleteChartTarget.categoryId);
             setDeleteChartTarget(null);
         } catch (err: unknown) {
             setMutationError(err instanceof Error ? err.message : 'Kunne ikke slette graf');
         } finally {
             setDeletingChart(false);
+        }
+    };
+
+    const handleMoveChartToTab = async () => {
+        if (!moveChartTarget || !selectedProjectId || !selectedDashboardId) return;
+        const targetCategoryId = Number(moveTargetCategoryId);
+        if (!Number.isFinite(targetCategoryId)) {
+            setMutationError('Velg en fane');
+            return;
+        }
+        if (targetCategoryId === moveChartTarget.categoryId) {
+            setMutationError('Grafen er allerede i denne fanen');
+            return;
+        }
+
+        setMovingChart(true);
+        setMutationError(null);
+        try {
+            const targetGraphs = await fetchGraphs(selectedProjectId, selectedDashboardId, targetCategoryId);
+            const targetName = moveChartTarget.title.trim();
+            if (!targetName) {
+                setMutationError('Grafnavn mangler og grafen kan ikke flyttes');
+                setMovingChart(false);
+                return;
+            }
+
+            const existingTarget = targetGraphs.find(
+                (graph) => graph.name.trim().toLowerCase() === targetName.toLowerCase(),
+            );
+
+            const width = parseChartWidth(moveChartTarget.width);
+            if (existingTarget) {
+                await updateGraph(selectedProjectId, selectedDashboardId, targetCategoryId, existingTarget.id, {
+                    name: targetName,
+                    graphType: moveChartTarget.graphType,
+                    width,
+                });
+
+                const existingQueries = await fetchQueries(selectedProjectId, selectedDashboardId, targetCategoryId, existingTarget.id);
+                const firstQuery = existingQueries[0];
+                if (firstQuery) {
+                    await updateQuery(selectedProjectId, selectedDashboardId, targetCategoryId, existingTarget.id, firstQuery.id, {
+                        name: moveChartTarget.queryName,
+                        sqlText: moveChartTarget.sql ?? '',
+                    });
+                } else {
+                    await createQuery(selectedProjectId, selectedDashboardId, targetCategoryId, existingTarget.id, {
+                        name: moveChartTarget.queryName,
+                        sqlText: moveChartTarget.sql ?? '',
+                    });
+                }
+            } else {
+                const createdGraph = await createGraph(selectedProjectId, selectedDashboardId, targetCategoryId, {
+                    name: targetName,
+                    graphType: moveChartTarget.graphType,
+                    width,
+                });
+                await createQuery(selectedProjectId, selectedDashboardId, targetCategoryId, createdGraph.id, {
+                    name: moveChartTarget.queryName,
+                    sqlText: moveChartTarget.sql ?? '',
+                });
+            }
+
+            await deleteGraph(selectedProjectId, selectedDashboardId, moveChartTarget.categoryId, moveChartTarget.graphId);
+            await refreshCategories(activeCategoryId ?? moveChartTarget.categoryId);
+            await refreshGraphs(moveChartTarget.categoryId);
+            setMoveChartTarget(null);
+        } catch (err: unknown) {
+            setMutationError(err instanceof Error ? err.message : 'Kunne ikke flytte graf til valgt fane');
+        } finally {
+            setMovingChart(false);
         }
     };
 
@@ -248,18 +353,22 @@ const Oversikt = () => {
             // Resolve target category (use first existing or create default)
             let targetCategoryId: number;
             const targetCategories = await fetchCategories(params.projectId, params.dashboardId);
-            if (targetCategories.length > 0) {
+            const isSameDashboard =
+                selectedProjectId === params.projectId && selectedDashboardId === params.dashboardId;
+            const preferredSameDashboardCategoryId = isSameDashboard ? activeCategoryId : null;
+
+            if (preferredSameDashboardCategoryId && targetCategories.some((category) => category.id === preferredSameDashboardCategoryId)) {
+                targetCategoryId = preferredSameDashboardCategoryId;
+            } else if (targetCategories.length > 0) {
                 targetCategoryId = targetCategories[0].id;
             } else {
-                const created = await createCategory(params.projectId, params.dashboardId, 'Standard');
+                const created = await createCategory(params.projectId, params.dashboardId, 'Fane 1');
                 targetCategoryId = created.id;
             }
 
             const graphItems = await fetchGraphs(params.projectId, params.dashboardId, targetCategoryId);
             const sourceName = params.chartName.trim();
             const sourceNameLower = sourceName.toLowerCase();
-            const isSameDashboard =
-                selectedProjectId === params.projectId && selectedDashboardId === params.dashboardId;
             const existingGraph = graphItems.find((graph) => {
                 if (isSameDashboard && graph.id === copyChartTarget.chart.graphId) return false;
                 return graph.name.trim().toLowerCase() === sourceNameLower;
@@ -300,7 +409,8 @@ const Oversikt = () => {
             }
 
             if (isSameDashboard) {
-                await refreshGraphs();
+                await refreshCategories(targetCategoryId);
+                await refreshGraphs(targetCategoryId);
             }
 
             setCopyChartTarget(null);
@@ -337,6 +447,94 @@ const Oversikt = () => {
         setDeleteDashboardTarget(selectedDashboard);
     };
 
+    const openCreateTabModal = () => {
+        if (!selectedDashboardId) return;
+        setCategoryMutationError(null);
+        setIsCreateTabModalOpen(true);
+    };
+
+    const openRenameTabModal = () => {
+        if (!activeCategory) return;
+        setCategoryMutationError(null);
+        setRenameTabName(getCategoryDisplayName(activeCategory.name));
+        setIsRenameTabModalOpen(true);
+    };
+
+    const handleCreateTab = async () => {
+        if (!selectedProjectId || !selectedDashboardId) return;
+        const trimmedName = newTabName.trim();
+        if (!trimmedName) {
+            setCategoryMutationError('Fanenavn er påkrevd');
+            return;
+        }
+
+        setSavingCategory(true);
+        setCategoryMutationError(null);
+        try {
+            const createdCategory = await createCategory(selectedProjectId, selectedDashboardId, trimmedName);
+            const categoryResult = await refreshCategories(createdCategory.id);
+            await refreshGraphs(categoryResult.activeCategoryId ?? createdCategory.id);
+            setNewTabName('');
+            setIsCreateTabModalOpen(false);
+        } catch (err: unknown) {
+            setCategoryMutationError(err instanceof Error ? err.message : 'Kunne ikke opprette fane');
+        } finally {
+            setSavingCategory(false);
+        }
+    };
+
+    const handleDeleteActiveTab = async () => {
+        if (!selectedProjectId || !selectedDashboardId || !activeCategory) return;
+        if (categories.length <= 1) {
+            setCategoryMutationError('Kan ikke slette siste fane');
+            return;
+        }
+        if (charts.length > 0) {
+            setCategoryMutationError('Faner som inneholder grafer kan ikke slettes');
+            return;
+        }
+
+        setDeletingCategory(true);
+        setCategoryMutationError(null);
+        try {
+            await deleteCategory(selectedProjectId, selectedDashboardId, activeCategory.id);
+            const categoryResult = await refreshCategories();
+            await refreshGraphs(categoryResult.activeCategoryId);
+        } catch (err: unknown) {
+            setCategoryMutationError(err instanceof Error ? err.message : 'Kunne ikke slette fane');
+        } finally {
+            setDeletingCategory(false);
+        }
+    };
+
+    const handleRenameActiveTab = async () => {
+        if (!selectedProjectId || !selectedDashboardId || !activeCategory) return;
+        const trimmedName = renameTabName.trim();
+        if (!trimmedName) {
+            setCategoryMutationError('Fanenavn er påkrevd');
+            return;
+        }
+
+        setSavingCategory(true);
+        setCategoryMutationError(null);
+        try {
+            await updateCategory(selectedProjectId, selectedDashboardId, activeCategory.id, { name: trimmedName });
+            await refreshCategories(activeCategory.id);
+            setIsRenameTabModalOpen(false);
+        } catch (err: unknown) {
+            setCategoryMutationError(err instanceof Error ? err.message : 'Kunne ikke endre navn på fane');
+        } finally {
+            setSavingCategory(false);
+        }
+    };
+
+    const handleCategoryTabChange = (value: string) => {
+        const nextCategoryId = Number(value);
+        if (!Number.isFinite(nextCategoryId)) return;
+        setCategoryMutationError(null);
+        setActiveCategoryId(nextCategoryId);
+    };
+
     const handleSaveDashboard = async (params: { name: string; projectId: number }) => {
         if (!editDashboardTarget || !selectedProjectId) return;
         setSavingDashboard(true);
@@ -363,14 +561,18 @@ const Oversikt = () => {
 
     const handleDeleteDashboard = async () => {
         if (!deleteDashboardTarget || !selectedProjectId) return;
-        if (charts.length > 0) {
-            setDashboardMutationError('Dashboard med grafer kan ikke slettes');
-            return;
-        }
-
         setDeletingDashboard(true);
         setDashboardMutationError(null);
         try {
+            const dashboardCategories = await fetchCategories(selectedProjectId, deleteDashboardTarget.id);
+            for (const category of dashboardCategories) {
+                const categoryGraphs = await fetchGraphs(selectedProjectId, deleteDashboardTarget.id, category.id);
+                if (categoryGraphs.length > 0) {
+                    setDashboardMutationError('Dashboard med grafer kan ikke slettes');
+                    setDeletingDashboard(false);
+                    return;
+                }
+            }
             await deleteDashboard(selectedProjectId, deleteDashboardTarget.id);
             await refreshDashboards(selectedProjectId, null);
             setDeleteDashboardTarget(null);
@@ -468,6 +670,7 @@ const Oversikt = () => {
 
     const openImportModal = () => {
         if (!selectedDashboardId) return;
+        setCategoryMutationError(null);
         setImportError(null);
         setIsImportModalOpen(true);
     };
@@ -493,11 +696,13 @@ const Oversikt = () => {
         try {
             // Resolve a category (use first existing or create default)
             let categoryId: number;
-            const categories = await fetchCategories(selectedProjectId, selectedDashboardId);
-            if (categories.length > 0) {
-                categoryId = categories[0].id;
+            const dashboardCategories = await fetchCategories(selectedProjectId, selectedDashboardId);
+            if (activeCategoryId && dashboardCategories.some((category) => category.id === activeCategoryId)) {
+                categoryId = activeCategoryId;
+            } else if (dashboardCategories.length > 0) {
+                categoryId = dashboardCategories[0].id;
             } else {
-                const created = await createCategory(selectedProjectId, selectedDashboardId, 'Standard');
+                const created = await createCategory(selectedProjectId, selectedDashboardId, 'Fane 1');
                 categoryId = created.id;
             }
 
@@ -510,7 +715,8 @@ const Oversikt = () => {
                 name: `${params.name} - query`,
                 sqlText: sqlForSave,
             });
-            await refreshGraphs();
+            await refreshCategories(categoryId);
+            await refreshGraphs(categoryId);
             setIsImportModalOpen(false);
         } catch (err: unknown) {
             setImportError(err instanceof Error ? err.message : 'Kunne ikke importere graf');
@@ -680,6 +886,9 @@ const Oversikt = () => {
                                 <ActionMenu.Item onClick={openImportModal}>
                                     Importer graf
                                 </ActionMenu.Item>
+                                <ActionMenu.Item onClick={openCreateTabModal}>
+                                    Legg til fane
+                                </ActionMenu.Item>
                             </ActionMenu.Content>
                         </ActionMenu>
                     </div>
@@ -703,12 +912,63 @@ const Oversikt = () => {
                                     Slett dashboard
                                 </Button>
                             </div>
+                            <div className="mt-3 flex flex-wrap items-end gap-2">
+                                {categories.length > 1 && (
+                                    <Button
+                                        variant="secondary"
+                                        size="small"
+                                        onClick={openRenameTabModal}
+                                        disabled={!activeCategory}
+                                    >
+                                        Gi nytt navn til fane
+                                    </Button>
+                                )}
+                                {categories.length > 1 && (
+                                    <Button
+                                        variant="secondary"
+                                        size="small"
+                                        onClick={() => void handleDeleteActiveTab()}
+                                        loading={deletingCategory}
+                                        disabled={!activeCategory || charts.length > 0}
+                                        title={charts.length > 0 ? 'Tøm fanen for grafer før du sletter den' : undefined}
+                                    >
+                                        Slett aktiv fane
+                                    </Button>
+                                )}
+                            </div>
+                            {categoryMutationError && (
+                                <div className="mt-3">
+                                    <Alert variant="error" size="small">{categoryMutationError}</Alert>
+                                </div>
+                            )}
                         </section>
+                    )}
+                    {hasMultipleTabs && (
+                        <div className="mb-4">
+                            <Tabs value={activeCategoryId ? String(activeCategoryId) : undefined} onChange={handleCategoryTabChange}>
+                                <Tabs.List>
+                                    {categories.map((category) => (
+                                        <Tabs.Tab
+                                            key={category.id}
+                                            value={String(category.id)}
+                                            label={getCategoryDisplayName(category.name)}
+                                        />
+                                    ))}
+                                </Tabs.List>
+                            </Tabs>
+                        </div>
                     )}
                     {charts.length === 0 && (
                         <div className="rounded-md border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] px-3 py-3">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm text-[var(--ax-text-default)]">Dashboardet er tomt</span>
+                                <span className="text-sm text-[var(--ax-text-default)]">
+                                    {activeCategory ? `Fanen "${getCategoryDisplayName(activeCategory.name)}" er tom` : 'Dashboardet er tomt'}
+                                </span>
+                                {hasMultipleTabs && (
+                                    <span className="text-sm text-[var(--ax-text-subtle)]">
+                                        Du kan flytte grafer hit fra handlingsmenyen på en graf i en annen fane.
+                                    </span>
+                                )}
                                 <ActionMenu>
                                     <ActionMenu.Trigger>
                                         <Button type="button" variant="secondary" size="xsmall">
@@ -721,6 +981,9 @@ const Oversikt = () => {
                                         </ActionMenu.Item>
                                         <ActionMenu.Item onClick={openImportModal}>
                                             Importer graf
+                                        </ActionMenu.Item>
+                                        <ActionMenu.Item onClick={openCreateTabModal}>
+                                            Legg til fane
                                         </ActionMenu.Item>
                                     </ActionMenu.Content>
                                 </ActionMenu>
@@ -770,6 +1033,7 @@ const Oversikt = () => {
                                         onEditChart={openEditDialog}
                                         onDeleteChart={openDeleteDialog}
                                         onCopyChart={openCopyDialog}
+                                        onMoveChart={categories.length > 1 ? openMoveDialog : undefined}
                                         titlePrefix={isEditPanelOpen && charts.length > 1 ? (
                                             <Button
                                                 variant="secondary"
@@ -867,6 +1131,62 @@ const Oversikt = () => {
                 onConfirm={handleDeleteChart}
             />
 
+            <Modal
+                open={!!moveChartTarget}
+                onClose={() => {
+                    setMoveChartTarget(null);
+                    setMutationError(null);
+                }}
+                header={{ heading: 'Flytt graf til fane' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="space-y-3">
+                        <p className="text-sm text-[var(--ax-text-subtle)]">
+                            {moveChartTarget ? `Velg hvilken fane "${moveChartTarget.title}" skal flyttes til.` : 'Velg mål-fane.'}
+                        </p>
+                        <Select
+                            label="Mål-fane"
+                            value={moveTargetCategoryId}
+                            onChange={(event) => {
+                                setMoveTargetCategoryId(event.target.value);
+                                setMutationError(null);
+                            }}
+                        >
+                            <option value="">Velg fane</option>
+                            {categories
+                                .filter((category) => category.id !== moveChartTarget?.categoryId)
+                                .map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {getCategoryDisplayName(category.name)}
+                                    </option>
+                                ))}
+                        </Select>
+                        {mutationError && (
+                            <Alert variant="error" size="small">{mutationError}</Alert>
+                        )}
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        onClick={() => void handleMoveChartToTab()}
+                        loading={movingChart}
+                        disabled={!moveChartTarget || !moveTargetCategoryId}
+                    >
+                        Flytt til annen fane
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setMoveChartTarget(null);
+                            setMutationError(null);
+                        }}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
             <CopyChartDialog
                 open={!!copyChartTarget}
                 chart={copyChartTarget?.chart ?? null}
@@ -883,6 +1203,90 @@ const Oversikt = () => {
                 loadDashboards={fetchDashboards}
                 onCopy={handleCopyChart}
             />
+
+            <Modal
+                open={isCreateTabModalOpen}
+                onClose={() => {
+                    setIsCreateTabModalOpen(false);
+                    setCategoryMutationError(null);
+                }}
+                header={{ heading: 'Opprett fane' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <TextField
+                        label="Fanenavn"
+                        value={newTabName}
+                        onChange={(event) => setNewTabName(event.target.value)}
+                        placeholder="F.eks. Konvertering"
+                    />
+                    {categoryMutationError && (
+                        <div className="mt-3">
+                            <Alert variant="error" size="small">{categoryMutationError}</Alert>
+                        </div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        onClick={() => void handleCreateTab()}
+                        loading={savingCategory}
+                        disabled={!selectedDashboard}
+                    >
+                        Opprett fane
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setIsCreateTabModalOpen(false);
+                            setCategoryMutationError(null);
+                        }}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
+                open={isRenameTabModalOpen}
+                onClose={() => {
+                    setIsRenameTabModalOpen(false);
+                    setCategoryMutationError(null);
+                }}
+                header={{ heading: 'Endre navn på fane' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <TextField
+                        label="Fanenavn"
+                        value={renameTabName}
+                        onChange={(event) => setRenameTabName(event.target.value)}
+                        placeholder="F.eks. Konvertering"
+                    />
+                    {categoryMutationError && (
+                        <div className="mt-3">
+                            <Alert variant="error" size="small">{categoryMutationError}</Alert>
+                        </div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        onClick={() => void handleRenameActiveTab()}
+                        loading={savingCategory}
+                        disabled={!activeCategory}
+                    >
+                        Lagre navn
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setIsRenameTabModalOpen(false);
+                            setCategoryMutationError(null);
+                        }}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <Modal
                 open={!!copySuccess}

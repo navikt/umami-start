@@ -200,7 +200,7 @@ export async function updateGraph(
   dashboardId: number,
   categoryId: number,
   graphId: number,
-  params: { name: string; graphType: GraphType; width?: number },
+  params: { name: string; graphType: GraphType; width?: number; categoryId?: number },
 ): Promise<GraphDto> {
   return requestJson<GraphDto>(
     `/api/backend/projects/${projectId}/dashboards/${dashboardId}/categories/${categoryId}/graphs/${graphId}`,

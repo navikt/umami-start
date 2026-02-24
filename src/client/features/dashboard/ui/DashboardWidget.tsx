@@ -46,6 +46,7 @@ interface DashboardWidgetProps {
     onEditChart?: (chartId?: string) => void;
     onDeleteChart?: (chartId?: string) => void;
     onCopyChart?: (chartId?: string, sourceWebsiteId?: string) => void;
+    onMoveChart?: (chartId?: string) => void;
     titlePrefix?: ReactNode;
 }
 
@@ -62,6 +63,7 @@ export const DashboardWidget = ({
     onEditChart,
     onDeleteChart,
     onCopyChart,
+    onMoveChart,
     titlePrefix,
 }: DashboardWidgetProps) => {
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
@@ -288,6 +290,7 @@ export const DashboardWidget = ({
                 onEditChart={onEditChart ? () => onEditChart(chart.id) : undefined}
                 onDeleteChart={onDeleteChart ? () => onDeleteChart(chart.id) : undefined}
                 onCopyChart={onCopyChart ? () => onCopyChart(chart.id, websiteId) : undefined}
+                onMoveChart={onMoveChart ? () => onMoveChart(chart.id) : undefined}
             />
         </>
     );

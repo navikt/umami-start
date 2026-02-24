@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { normalizeUrlToPath } from '../../../shared/lib/utils.ts';
 import type { Website } from '../../dashboard/model/types.ts';
 import type {
-    ProjectDto, DashboardDto, GraphWithQueries, FilterState, MetricType,
+    ProjectDto, DashboardDto, GraphCategoryDto, GraphWithQueries, FilterState, MetricType,
     OversiktChart, OversiktSelectOption,
 } from '../model/types.ts';
 import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchCategories, fetchGraphs, fetchQueries, updateGraphOrdering } from '../api/oversiktApi.ts';
@@ -23,6 +23,7 @@ export const useOversikt = () => {
 
     const [projects, setProjects] = useState<ProjectDto[]>([]);
     const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
+    const [categories, setCategories] = useState<GraphCategoryDto[]>([]);
     const [graphs, setGraphs] = useState<GraphWithQueries[]>([]);
     const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
     const [activeWebsite, setActiveWebsite] = useState<Website | null>(null);
@@ -37,6 +38,7 @@ export const useOversikt = () => {
 
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [selectedDashboardId, setSelectedDashboardId] = useState<number | null>(null);
+    const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
 
     const [activeFilters, setActiveFilters] = useState<FilterState>({
         pathOperator: 'equals',
@@ -47,6 +49,7 @@ export const useOversikt = () => {
 
     const [loadingProjects, setLoadingProjects] = useState(false);
     const [loadingDashboards, setLoadingDashboards] = useState(false);
+    const [loadingCategories, setLoadingCategories] = useState(false);
     const [loadingGraphs, setLoadingGraphs] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +112,7 @@ export const useOversikt = () => {
         || tempMetricType !== activeFilters.metricType
         || (selectedWebsite?.id ?? null) !== (activeWebsite?.id ?? null);
 
-    const isLoading = loadingProjects || loadingDashboards || loadingGraphs;
+    const isLoading = loadingProjects || loadingDashboards || loadingCategories || loadingGraphs;
 
     // ── Handlers ──
 
@@ -267,7 +270,9 @@ export const useOversikt = () => {
     const refreshDashboards = useCallback(async (projectId: number | null, preferredDashboardId?: number | null) => {
         if (!projectId) {
             setDashboards([]);
+            setCategories([]);
             setSelectedDashboardId(null);
+            setActiveCategoryId(null);
             setGraphs([]);
             return;
         }
@@ -305,8 +310,55 @@ export const useOversikt = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProjectId]);
 
-    const refreshGraphs = useCallback(async () => {
+    const refreshCategories = useCallback(async (preferredCategoryId?: number | null) => {
         if (!selectedProjectId || !selectedDashboardId) {
+            setCategories([]);
+            setActiveCategoryId(null);
+            setGraphs([]);
+            return { categories: [] as GraphCategoryDto[], activeCategoryId: null as number | null };
+        }
+
+        setLoadingCategories(true);
+        setError(null);
+        try {
+            const categoryItems = await fetchCategories(selectedProjectId, selectedDashboardId);
+            const sortedCategories = [...categoryItems].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0));
+            setCategories(sortedCategories);
+            const fromUrlCategoryId = parseId(searchParams.get('categoryId'));
+
+            const nextActiveCategoryId =
+                (preferredCategoryId && sortedCategories.some((category) => category.id === preferredCategoryId)
+                    ? preferredCategoryId
+                    : null)
+                ?? (fromUrlCategoryId && sortedCategories.some((category) => category.id === fromUrlCategoryId)
+                    ? fromUrlCategoryId
+                    : null)
+                ?? (activeCategoryId && sortedCategories.some((category) => category.id === activeCategoryId)
+                    ? activeCategoryId
+                    : null)
+                ?? sortedCategories[0]?.id
+                ?? null;
+
+            setActiveCategoryId(nextActiveCategoryId);
+            if (!nextActiveCategoryId) {
+                setGraphs([]);
+            }
+
+            return { categories: sortedCategories, activeCategoryId: nextActiveCategoryId };
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Klarte ikke laste faner');
+            setCategories([]);
+            setActiveCategoryId(null);
+            setGraphs([]);
+            return { categories: [] as GraphCategoryDto[], activeCategoryId: null as number | null };
+        } finally {
+            setLoadingCategories(false);
+        }
+    }, [selectedProjectId, selectedDashboardId, activeCategoryId, searchParams]);
+
+    const refreshGraphs = useCallback(async (categoryIdOverride?: number | null) => {
+        const categoryIdToLoad = categoryIdOverride ?? activeCategoryId;
+        if (!selectedProjectId || !selectedDashboardId || !categoryIdToLoad) {
             setGraphs([]);
             return;
         }
@@ -314,26 +366,36 @@ export const useOversikt = () => {
         setLoadingGraphs(true);
         setError(null);
         try {
-            const categories = await fetchCategories(selectedProjectId, selectedDashboardId);
-            const allGraphsWithQueries = await Promise.all(
-                categories.flatMap((category) =>
-                    fetchGraphs(selectedProjectId, selectedDashboardId, category.id).then((graphItems) =>
-                        Promise.all(
-                            graphItems.map(async (graph) => ({
-                                graph,
-                                queries: await fetchQueries(selectedProjectId, selectedDashboardId, category.id, graph.id),
-                                categoryId: category.id,
-                            })),
-                        ),
-                    ),
-                ),
+            const graphItems = await fetchGraphs(selectedProjectId, selectedDashboardId, categoryIdToLoad);
+            const graphsWithQueries = await Promise.all(
+                graphItems.map(async (graph) => ({
+                    graph,
+                    queries: await fetchQueries(selectedProjectId, selectedDashboardId, categoryIdToLoad, graph.id),
+                    categoryId: categoryIdToLoad,
+                })),
             );
-            setGraphs(allGraphsWithQueries.flat());
+            setGraphs(graphsWithQueries);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Klarte ikke laste grafer');
         } finally {
             setLoadingGraphs(false);
         }
+    }, [selectedProjectId, selectedDashboardId, activeCategoryId]);
+
+    useEffect(() => {
+        if (!selectedProjectId || !selectedDashboardId) {
+            setCategories([]);
+            setActiveCategoryId(null);
+            setGraphs([]);
+            return;
+        }
+
+        setCategories([]);
+        setActiveCategoryId(null);
+        setGraphs([]);
+        void refreshCategories();
+        // Intentionally only run when dashboard changes, not when active tab changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProjectId, selectedDashboardId]);
 
     useEffect(() => {
@@ -385,23 +447,27 @@ export const useOversikt = () => {
 
     useEffect(() => {
         if (!hasResolvedInitialProjectRef.current) return;
-        if (loadingProjects || loadingDashboards) return;
+        if (loadingProjects || loadingDashboards || loadingCategories) return;
 
         const currentProjectId = searchParams.get('projectId');
         const currentDashboardId = searchParams.get('dashboardId');
+        const currentCategoryId = searchParams.get('categoryId');
         const nextProjectId = selectedProjectId ? String(selectedProjectId) : null;
         const nextDashboardId = selectedDashboardId ? String(selectedDashboardId) : null;
+        const nextCategoryId = selectedDashboardId && activeCategoryId ? String(activeCategoryId) : null;
 
-        if (currentProjectId === nextProjectId && currentDashboardId === nextDashboardId) return;
+        if (currentProjectId === nextProjectId && currentDashboardId === nextDashboardId && currentCategoryId === nextCategoryId) return;
 
         const nextParams = new URLSearchParams(searchParams);
         if (nextProjectId) nextParams.set('projectId', nextProjectId);
         else nextParams.delete('projectId');
         if (nextDashboardId) nextParams.set('dashboardId', nextDashboardId);
         else nextParams.delete('dashboardId');
+        if (nextCategoryId) nextParams.set('categoryId', nextCategoryId);
+        else nextParams.delete('categoryId');
 
         setSearchParams(nextParams, { replace: true });
-    }, [searchParams, selectedProjectId, selectedDashboardId, setSearchParams, loadingProjects, loadingDashboards]);
+    }, [searchParams, selectedProjectId, selectedDashboardId, activeCategoryId, setSearchParams, loadingProjects, loadingDashboards, loadingCategories]);
 
     useEffect(() => {
         if (!selectedWebsite) return;
@@ -429,6 +495,12 @@ export const useOversikt = () => {
         dashboardOptions,
         selectedProjectLabel,
         selectedDashboardLabel,
+
+        // Tabs / categories
+        categories,
+        activeCategoryId,
+        setActiveCategoryId,
+        refreshCategories,
 
         // Website
         selectedWebsite,
