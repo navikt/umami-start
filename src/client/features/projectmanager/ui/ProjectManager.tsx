@@ -1193,12 +1193,13 @@ const ProjectManager = () => {
             >
                 <Modal.Body>
                     <div className="space-y-4">
-                        <div className="h-3" aria-hidden />
                         {moveChartError && <Alert variant="error" size="small">{moveChartError}</Alert>}
                         {moveChartTarget && (
-                            <BodyShort size="small">
-                                Graf: <strong>{moveChartTarget.name}</strong>
-                            </BodyShort>
+                            <div className="pb-2">
+                                <BodyShort size="small">
+                                    Graf: <strong>{moveChartTarget.name}</strong>
+                                </BodyShort>
+                            </div>
                         )}
                         <Select
                             label="Arbeidsområde"
