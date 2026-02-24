@@ -3,12 +3,6 @@ run-name: "Deploy Prod (Latest Dev)"
 
 on:
   workflow_dispatch:
-    inputs:
-      force_redeploy:
-        description: "Allow redeploy even if this version was already promoted to prod"
-        required: true
-        default: false
-        type: boolean
 
 concurrency:
   group: "deploy-prod-manual"
@@ -79,18 +73,13 @@ jobs:
       - name: "Check for duplicate prod deployment"
         env:
           VERSION: ${{ steps.resolve-dev.outputs.version }}
-          FORCE_REDEPLOY: ${{ github.event.inputs.force_redeploy }}
         run: |
           MATCHING_TAG="$(git for-each-ref refs/tags/prod-* --format='%(refname:short)|%(subject)' | awk -F'|' -v msg="Production deployment of ${VERSION}" '$2==msg { print $1; exit }')"
 
-          if [ -n "$MATCHING_TAG" ] && [ "$FORCE_REDEPLOY" != "true" ]; then
+          if [ -n "$MATCHING_TAG" ]; then
             echo "Version ${VERSION} was already deployed to prod (tag: ${MATCHING_TAG})."
-            echo "Stopping before deploy. Re-run with force_redeploy=true only if you really want to redeploy the same version."
+            echo "Stopping before deploy."
             exit 1
-          fi
-
-          if [ -n "$MATCHING_TAG" ] && [ "$FORCE_REDEPLOY" = "true" ]; then
-            echo "Version ${VERSION} was already deployed to prod (tag: ${MATCHING_TAG}), but force_redeploy=true so continuing."
           fi
 
           if [ -z "$MATCHING_TAG" ]; then
