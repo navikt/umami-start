@@ -614,7 +614,7 @@ const Oversikt = () => {
                     className="inline-flex items-center gap-1"
                 >
                     <ArrowLeftIcon aria-hidden fontSize="1rem" />
-                    <span>Arbeidsområder</span>
+                    <span>Alle dashboard</span>
                 </Link>
             )}
             filters={supportsStandardFilters ? filters : undefined}

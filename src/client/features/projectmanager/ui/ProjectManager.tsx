@@ -225,7 +225,7 @@ const ProjectManager = () => {
     const handleEditSave = async () => {
         if (!editTarget) return;
         if (!editName.trim()) {
-            setLocalError('Prosjektnavn er påkrevd');
+            setLocalError('Teamnavnnavn er påkrevd');
             return;
         }
         setLocalError(null);
@@ -236,7 +236,7 @@ const ProjectManager = () => {
     const handleDeleteConfirm = async () => {
         if (!deleteTarget) return;
         if (deleteTarget.dashboardCount > 0 || deleteTarget.chartCount > 0) {
-            setLocalError('Prosjekt med dashboard eller grafer kan ikke slettes');
+            setLocalError('Team med dashboard eller grafer kan ikke slettes');
             return;
         }
         setLocalError(null);
@@ -589,7 +589,7 @@ const ProjectManager = () => {
     const handleMoveChart = async () => {
         if (!moveChartTarget) return;
         if (!moveChartTargetProjectId) {
-            setMoveChartError('Velg arbeidsområde');
+            setMoveChartError('Velg team');
             return;
         }
         if (!moveChartTargetDashboardId) {
@@ -600,7 +600,7 @@ const ProjectManager = () => {
             moveChartTargetProjectId === moveChartTarget.projectId
             && moveChartTargetDashboardId === moveChartTarget.dashboardId
         ) {
-            setMoveChartError('Velg et annet dashboard eller arbeidsområde for flytting');
+            setMoveChartError('Velg et annet dashboard eller team for flytting');
             return;
         }
 
@@ -670,28 +670,29 @@ const ProjectManager = () => {
     return (
         <>
             <ProjectManagerLayout
-                title="Arbeidsområder"
-                description="Samling med områder, dashboard og grafer."
+                title="Dashboard"
+                description="Oversikt over dashboard og grafer."
                 sidebar={
                     <div className="space-y-2">
                         <form role="search" className="mb-3 flex items-end gap-2">
                             <div className="flex-1">
                                 <Search
-                                    label="Søk arbeidsområder"
+                                    label="Finn team"
                                     variant="simple"
+                                    hideLabel={false}
                                     value={projectSearch}
                                     onChange={setProjectSearch}
                                     onClear={() => setProjectSearch('')}
                                     size="small"
                                 />
                             </div>
-                            <Tooltip content={isCreateOpen ? 'Lukk nytt arbeidsområde' : 'Nytt arbeidsområde'} describesChild>
+                            <Tooltip content={isCreateOpen ? 'Lukk nytt team' : 'Nytt team'} describesChild>
                                 <Button
                                     type="button"
                                     size="small"
                                     variant="secondary"
                                     icon={<Plus aria-hidden size={16} />}
-                                    aria-label={isCreateOpen ? 'Lukk nytt arbeidsområde' : 'Nytt arbeidsområde'}
+                                    aria-label={isCreateOpen ? 'Lukk nytt team' : 'Nytt team'}
                                     onClick={toggleCreateProject}
                                 />
                             </Tooltip>
@@ -699,12 +700,12 @@ const ProjectManager = () => {
 
                         {isInitialLoading && (
                             <div className="py-4 flex justify-center">
-                                <Loader size="medium" title="Laster arbeidsområder" />
+                                <Loader size="medium" title="Laster team" />
                             </div>
                         )}
                         {!isInitialLoading && projectSummaries.length === 0 && showNoProjectsAlert && (
                             <Alert variant="info" size="small" closeButton onClose={() => setShowNoProjectsAlert(false)}>
-                                Ingen arbeidsområder funnet.
+                                Ingen team funnet.
                             </Alert>
                         )}
                         {!isInitialLoading && projectSummaries.length > 0 && filteredProjectSummaries.length === 0 && showNoSearchResultsAlert && (
@@ -763,7 +764,7 @@ const ProjectManager = () => {
                                 icon={<Plus aria-hidden size={16} />}
                                 onClick={toggleCreateProject}
                             >
-                                Nytt arbeidsområde
+                                Nytt team
                             </Button>
                             </div>
                         )}
@@ -789,13 +790,13 @@ const ProjectManager = () => {
 
                     {isInitialLoading && (
                         <div className="py-8 flex justify-center">
-                            <Loader size="xlarge" title="Laster arbeidsområder og dashboard" />
+                            <Loader size="xlarge" title="Laster team og dashboard" />
                         </div>
                     )}
 
                     {!isInitialLoading && !selectedProject && showNoSelectedProjectAlert && (
                         <Alert variant="info" size="small" closeButton onClose={() => setShowNoSelectedProjectAlert(false)}>
-                            Velg et arbeidsområde for a se dashboard og grafer.
+                            Velg et team for a se dashboard og grafer.
                         </Alert>
                     )}
 
@@ -844,10 +845,10 @@ const ProjectManager = () => {
                                     </ActionMenu.Trigger>
                                     <ActionMenu.Content align="end">
                                         <ActionMenu.Item onClick={() => openEdit(selectedProject)}>
-                                            Rediger arbeidsområde
+                                            Rediger team
                                         </ActionMenu.Item>
                                         <ActionMenu.Item onClick={() => openDelete(selectedProject)}>
-                                            Slett arbeidsområde
+                                            Slett team
                                         </ActionMenu.Item>
                                     </ActionMenu.Content>
                                 </ActionMenu>
@@ -858,7 +859,7 @@ const ProjectManager = () => {
                     {!isInitialLoading && selectedProject && fileRows.length === 0 && (
                         <div className="rounded-md border border-[var(--ax-border-neutral-subtle)] bg-[var(--ax-bg-neutral-soft)] px-3 py-2">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm text-[var(--ax-text-default)]">Prosjektet er tomt</span>
+                                <span className="text-sm text-[var(--ax-text-default)]">Teamet er tomt</span>
                                 <Button size="xsmall" variant="secondary" onClick={openCreateDashboard}>
                                     Lag nytt dashboard
                                 </Button>
@@ -1017,7 +1018,7 @@ const ProjectManager = () => {
             <Modal
                 open={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
-                header={{ heading: 'Nytt arbeidsområde' }}
+                header={{ heading: 'Nytt team' }}
                 width="small"
             >
                 <Modal.Body>
@@ -1053,14 +1054,14 @@ const ProjectManager = () => {
                     setEditTarget(null);
                     setLocalError(null);
                 }}
-                header={{ heading: 'Rediger arbeidsområde' }}
+                header={{ heading: 'Rediger team' }}
                 width="small"
             >
                 <Modal.Body>
                     <div className="space-y-4 pt-2">
                         {localError && <Alert variant="error" size="small">{localError}</Alert>}
                         <TextField
-                            label="Prosjektnavn"
+                            label="Teamnavn"
                             size="small"
                             value={editName}
                             onChange={(event) => setEditName(event.target.value)}
@@ -1202,7 +1203,7 @@ const ProjectManager = () => {
                             </div>
                         )}
                         <Select
-                            label="Arbeidsområde"
+                            label="Team"
                             value={moveChartTargetProjectId ? String(moveChartTargetProjectId) : ''}
                             onChange={(event) => {
                                 setMoveChartTargetProjectId(Number(event.target.value));
@@ -1210,7 +1211,7 @@ const ProjectManager = () => {
                             }}
                             size="small"
                         >
-                            <option value="">Velg arbeidsområde</option>
+                            <option value="">Velg team</option>
                             {projectOptions.map((project) => (
                                 <option key={project.id} value={project.id}>
                                     {project.name}
@@ -1236,7 +1237,7 @@ const ProjectManager = () => {
                         </Select>
                         {moveChartTargetProjectId > 0 && moveChartDashboardOptions.length === 0 && (
                             <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
-                                Valgt arbeidsområde har ingen dashboard.
+                                Valgt team har ingen dashboard.
                             </BodyShort>
                         )}
                     </div>
@@ -1332,7 +1333,7 @@ const ProjectManager = () => {
                     setDeleteTarget(null);
                     setLocalError(null);
                 }}
-                header={{ heading: 'Slett arbeidsområde' }}
+                header={{ heading: 'Slett team' }}
                 width="small"
             >
                 <Modal.Body>
@@ -1343,7 +1344,7 @@ const ProjectManager = () => {
                         </BodyShort>
                         {(deleteTarget?.dashboardCount ?? 0) > 0 || (deleteTarget?.chartCount ?? 0) > 0 ? (
                             <Alert variant="warning" size="small">
-                                Prosjekt med dashboard eller grafer kan ikke slettes.
+                                Team med dashboard eller grafer kan ikke slettes.
                             </Alert>
                         ) : (
                             <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
@@ -1355,7 +1356,7 @@ const ProjectManager = () => {
                 <Modal.Footer>
                     {(deleteTarget?.dashboardCount ?? 0) === 0 && (deleteTarget?.chartCount ?? 0) === 0 && (
                         <Button variant="danger" onClick={() => void handleDeleteConfirm()} loading={loading}>
-                            Slett arbeidsområde
+                            Slett team
                         </Button>
                     )}
                     <Button
