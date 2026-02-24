@@ -399,6 +399,126 @@ export const useProjectManager = () => {
         [loadProjectSummaries, rewriteSqlWebsiteId],
     );
 
+    const moveChart = useCallback(
+        async (params: {
+            sourceProjectId: number;
+            sourceDashboardId: number;
+            sourceCategoryId: number;
+            sourceGraphId: number;
+            targetProjectId: number;
+            targetDashboardId: number;
+            targetCategoryId: number;
+        }): Promise<{ ok: true } | { ok: false; error: string }> => {
+            setLoading(true);
+            setError(null);
+            setMessage(null);
+            try {
+                const sourceGraphs = await api.fetchGraphs(params.sourceProjectId, params.sourceDashboardId, params.sourceCategoryId);
+                const sourceGraph = sourceGraphs.find((item) => item.id === params.sourceGraphId);
+                if (!sourceGraph) {
+                    return { ok: false, error: 'Fant ikke grafen som skal flyttes' };
+                }
+
+                const sourceQueries = await api.fetchQueries(
+                    params.sourceProjectId,
+                    params.sourceDashboardId,
+                    params.sourceCategoryId,
+                    params.sourceGraphId,
+                );
+                const sourceQuery = sourceQueries[0];
+                if (!sourceQuery?.sqlText?.trim()) {
+                    return { ok: false, error: 'Grafen mangler SQL og kan ikke flyttes' };
+                }
+
+                const targetName = sourceGraph.name.trim();
+                if (!targetName) {
+                    return { ok: false, error: 'Grafnavn mangler og grafen kan ikke flyttes' };
+                }
+
+                const targetGraphs = await api.fetchGraphs(params.targetProjectId, params.targetDashboardId, params.targetCategoryId);
+                const targetNameLower = targetName.toLowerCase();
+                const isSameDashboard =
+                    params.sourceProjectId === params.targetProjectId
+                    && params.sourceDashboardId === params.targetDashboardId
+                    && params.sourceCategoryId === params.targetCategoryId;
+                const existingTarget = targetGraphs.find((graph) => {
+                    if (isSameDashboard && graph.id === params.sourceGraphId) return false;
+                    return graph.name.trim().toLowerCase() === targetNameLower;
+                });
+
+                const sourceGraphType = sourceGraph.graphType ?? 'TABLE';
+                const sourceWidth = sourceGraph.width;
+                const queryName = sourceQuery.name?.trim() || `${targetName} - query`;
+                const sqlForMove = sourceQuery.sqlText.trim();
+
+                if (existingTarget) {
+                    await api.updateGraph(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        params.targetCategoryId,
+                        existingTarget.id,
+                        { name: targetName, graphType: sourceGraphType, width: sourceWidth },
+                    );
+
+                    const existingQueries = await api.fetchQueries(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        params.targetCategoryId,
+                        existingTarget.id,
+                    );
+                    const firstTargetQuery = existingQueries[0];
+                    if (firstTargetQuery) {
+                        await api.updateQuery(
+                            params.targetProjectId,
+                            params.targetDashboardId,
+                            params.targetCategoryId,
+                            existingTarget.id,
+                            firstTargetQuery.id,
+                            queryName,
+                            sqlForMove,
+                        );
+                    } else {
+                        await api.createQuery(
+                            params.targetProjectId,
+                            params.targetDashboardId,
+                            params.targetCategoryId,
+                            existingTarget.id,
+                            queryName,
+                            sqlForMove,
+                        );
+                    }
+                } else {
+                    const createdGraph = await api.createGraph(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        params.targetCategoryId,
+                        { name: targetName, graphType: sourceGraphType, width: sourceWidth },
+                    );
+                    await api.createQuery(
+                        params.targetProjectId,
+                        params.targetDashboardId,
+                        params.targetCategoryId,
+                        createdGraph.id,
+                        queryName,
+                        sqlForMove,
+                    );
+                }
+
+                await api.deleteGraph(params.sourceProjectId, params.sourceDashboardId, params.sourceCategoryId, params.sourceGraphId);
+                await loadProjectSummaries();
+                setMessage('Graf flyttet');
+                return { ok: true };
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Kunne ikke flytte graf';
+                setError(errorMessage);
+                return { ok: false, error: errorMessage };
+            } finally {
+                setLoading(false);
+            }
+        },
+        [loadProjectSummaries],
+    );
+
     const editChart = useCallback(
         async (
             projectId: number,
@@ -502,6 +622,7 @@ export const useProjectManager = () => {
         editChart,
         importChart,
         copyChart,
+        moveChart,
     };
 };
 

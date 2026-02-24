@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } from '@navikt/aksel-icons';
 import { MoreVertical, Plus } from 'lucide-react';
-import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Loader, Modal, Search, Table, TextField, Tooltip } from '@navikt/ds-react';
+import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Loader, Modal, Search, Select, Table, TextField, Tooltip } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
 import CopyChartDialog from '../../oversikt/ui/dialogs/CopyChartDialog.tsx';
 import EditChartDialog from '../../oversikt/ui/dialogs/EditChartDialog.tsx';
@@ -34,6 +34,15 @@ type ProjectManagerEditChartTarget = {
     chart: OversiktChart;
     defaultWebsiteId?: string;
 };
+type ProjectManagerMoveChartTarget = {
+    projectId: number;
+    projectName: string;
+    dashboardId: number;
+    dashboardName: string;
+    categoryId: number;
+    graphId: number;
+    name: string;
+};
 
 const LAST_PROJECT_STORAGE_KEY = 'projectmanager:lastSelectedProjectId';
 
@@ -57,6 +66,7 @@ const ProjectManager = () => {
         deleteChart,
         editChart,
         copyChart,
+        moveChart,
     } = useProjectManager();
 
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
@@ -97,6 +107,9 @@ const ProjectManager = () => {
         sourceWebsiteId?: string;
     } | null>(null);
     const [copyChartError, setCopyChartError] = useState<string | null>(null);
+    const [moveChartTarget, setMoveChartTarget] = useState<ProjectManagerMoveChartTarget | null>(null);
+    const [moveChartTargetProjectId, setMoveChartTargetProjectId] = useState<number>(0);
+    const [moveChartError, setMoveChartError] = useState<string | null>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
     const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false);
@@ -442,6 +455,21 @@ const ProjectManager = () => {
         });
     };
 
+    const openMoveChart = (projectId: number, projectName: string, row: FileTableRow) => {
+        if (!row.graphId || !row.categoryId) return;
+        setMoveChartError(null);
+        setMoveChartTargetProjectId(0);
+        setMoveChartTarget({
+            projectId,
+            projectName,
+            dashboardId: row.dashboardId,
+            dashboardName: row.dashboardName,
+            categoryId: row.categoryId,
+            graphId: row.graphId,
+            name: row.name,
+        });
+    };
+
     const handleSaveChart = async (params: {
         name: string;
         graphType: GraphType;
@@ -518,6 +546,82 @@ const ProjectManager = () => {
             return;
         }
         setCopyChartTarget(null);
+    };
+
+    const moveChartTargetProjectSummary = useMemo(() => {
+        if (!moveChartTargetProjectId) return null;
+        return projectSummaries.find((item) => item.project.id === moveChartTargetProjectId) ?? null;
+    }, [projectSummaries, moveChartTargetProjectId]);
+
+    const moveChartResolvedDashboard = useMemo(() => {
+        if (!moveChartTarget || !moveChartTargetProjectSummary) return null;
+        const sourceDashboardName = moveChartTarget.dashboardName.trim().toLowerCase();
+        const sameNameDashboard = moveChartTargetProjectSummary.dashboards.find(
+            (dashboard) => dashboard.name.trim().toLowerCase() === sourceDashboardName,
+        );
+        if (sameNameDashboard) {
+            return {
+                id: sameNameDashboard.id,
+                name: sameNameDashboard.name,
+                matchedByName: true,
+            };
+        }
+        const fallbackDashboard = moveChartTargetProjectSummary.dashboards[0];
+        if (!fallbackDashboard) return null;
+        return {
+            id: fallbackDashboard.id,
+            name: fallbackDashboard.name,
+            matchedByName: false,
+        };
+    }, [moveChartTarget, moveChartTargetProjectSummary]);
+
+    const handleMoveChart = async () => {
+        if (!moveChartTarget) return;
+        if (!moveChartTargetProjectId) {
+            setMoveChartError('Velg arbeidsområde');
+            return;
+        }
+        if (moveChartTargetProjectId === moveChartTarget.projectId) {
+            setMoveChartError('Velg et annet arbeidsområde for flytting');
+            return;
+        }
+        if (!moveChartResolvedDashboard) {
+            setMoveChartError('Valgt arbeidsområde har ingen dashboard. Opprett et dashboard først.');
+            return;
+        }
+
+        setMoveChartError(null);
+
+        let targetCategoryId: number;
+        try {
+            const categories = await api.fetchCategories(moveChartTargetProjectId, moveChartResolvedDashboard.id);
+            if (categories.length > 0) {
+                targetCategoryId = categories[0].id;
+            } else {
+                const created = await api.createCategory(moveChartTargetProjectId, moveChartResolvedDashboard.id, 'Standard');
+                targetCategoryId = created.id;
+            }
+        } catch (err: unknown) {
+            setMoveChartError(err instanceof Error ? err.message : 'Kunne ikke hente eller opprette kategori');
+            return;
+        }
+
+        const result = await moveChart({
+            sourceProjectId: moveChartTarget.projectId,
+            sourceDashboardId: moveChartTarget.dashboardId,
+            sourceCategoryId: moveChartTarget.categoryId,
+            sourceGraphId: moveChartTarget.graphId,
+            targetProjectId: moveChartTargetProjectId,
+            targetDashboardId: moveChartResolvedDashboard.id,
+            targetCategoryId,
+        });
+        if (!result.ok) {
+            setMoveChartError(result.error);
+            return;
+        }
+
+        setMoveChartTarget(null);
+        setMoveChartTargetProjectId(0);
     };
 
     const projectOptions: ProjectDto[] = useMemo(
@@ -662,7 +766,7 @@ const ProjectManager = () => {
                             {message}
                         </Alert>
                     )}
-                    {chartMutationError && !editChartTarget && !deleteChartTarget && (
+                    {chartMutationError && !editChartTarget && !deleteChartTarget && !moveChartTarget && (
                         <Alert variant="error" closeButton onClose={() => setChartMutationError(null)}>
                             {chartMutationError}
                         </Alert>
@@ -809,6 +913,13 @@ const ProjectManager = () => {
                                                                             onClick={() => void openCopyChart(selectedProject.project.id, row)}
                                                                         >
                                                                             Kopier graf
+                                                                        </ActionMenu.Item>
+                                                                    )}
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => openMoveChart(selectedProject.project.id, selectedProject.project.name, row)}
+                                                                        >
+                                                                            Flytt graf
                                                                         </ActionMenu.Item>
                                                                     )}
                                                                     {selectedProject && (
@@ -1053,6 +1164,72 @@ const ProjectManager = () => {
                 loadDashboards={api.fetchDashboards}
                 onCopy={handleCopyChart}
             />
+
+            <Modal
+                open={!!moveChartTarget}
+                onClose={() => {
+                    setMoveChartTarget(null);
+                    setMoveChartTargetProjectId(0);
+                    setMoveChartError(null);
+                }}
+                header={{ heading: moveChartTarget ? `Flytt graf: ${moveChartTarget.name}` : 'Flytt graf' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="space-y-4">
+                        {moveChartError && <Alert variant="error" size="small">{moveChartError}</Alert>}
+                        <Select
+                            label="Nytt arbeidsområde"
+                            value={moveChartTargetProjectId ? String(moveChartTargetProjectId) : ''}
+                            onChange={(event) => {
+                                setMoveChartTargetProjectId(Number(event.target.value));
+                                setMoveChartError(null);
+                            }}
+                            size="small"
+                        >
+                            <option value="">Velg arbeidsområde</option>
+                            {projectOptions
+                                .filter((project) => project.id !== moveChartTarget?.projectId)
+                                .map((project) => (
+                                    <option key={project.id} value={project.id}>
+                                        {project.name}
+                                    </option>
+                                ))}
+                        </Select>
+
+                        {moveChartTarget && (
+                            <div className="space-y-1">
+                                <BodyShort size="small">
+                                    Fra: <strong>{moveChartTarget.projectName}</strong> / {moveChartTarget.dashboardName}
+                                </BodyShort>
+                                {moveChartTargetProjectId > 0 && (
+                                    <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
+                                        {moveChartResolvedDashboard
+                                            ? `Grafen flyttes til dashboard "${moveChartResolvedDashboard.name}" i valgt arbeidsområde${moveChartResolvedDashboard.matchedByName ? ' (samme dashboardnavn funnet).' : ' (første tilgjengelige dashboard).'}` 
+                                            : 'Valgt arbeidsområde mangler dashboard.'}
+                                    </BodyShort>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleMoveChart()} loading={loading}>
+                        Flytt graf
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setMoveChartTarget(null);
+                            setMoveChartTargetProjectId(0);
+                            setMoveChartError(null);
+                        }}
+                        disabled={loading}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <DeleteDashboardDialog
                 open={!!deleteDashboardTarget}
