@@ -5,15 +5,17 @@ import { ArrowLeftIcon } from '@navikt/aksel-icons';
 import { ActionMenu, Alert, Button, Label, Link, Loader, Modal, ReadMore, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import DashboardLayout from '../../dashboard/ui/DashboardLayout.tsx';
 import DashboardWebsitePicker from '../../dashboard/ui/DashboardWebsitePicker.tsx';
-import { DashboardWidget } from '../../dashboard/ui/DashboardWidget.tsx';
-import { getSpanClass } from '../../dashboard/utils/widgetUtils.ts';
+import { DashboardWidget } from '../../dashboard';
+import { getSpanClass } from '../../dashboard';
 import { useOversikt } from '../hooks/useOversikt.ts';
 import type { DashboardDto, GraphType, OversiktChart } from '../model/types.ts';
 import {
     createGraph,
     createQuery,
+    createCategory,
     deleteDashboard,
     deleteGraph,
+    fetchCategories,
     fetchDashboards,
     fetchGraphs,
     fetchQueries,
@@ -187,12 +189,12 @@ const Oversikt = () => {
         setMutationError(null);
         try {
             const sqlForSave = rewriteSqlWebsiteId(params.sqlText, params.websiteId);
-            await updateGraph(selectedProjectId, selectedDashboardId, editChart.graphId, {
+            await updateGraph(selectedProjectId, selectedDashboardId, editChart.categoryId, editChart.graphId, {
                 name: params.name,
                 graphType: params.graphType,
                 width: params.width,
             });
-            await updateQuery(selectedProjectId, selectedDashboardId, editChart.graphId, editChart.queryId, {
+            await updateQuery(selectedProjectId, selectedDashboardId, editChart.categoryId, editChart.graphId, editChart.queryId, {
                 name: editChart.queryName,
                 sqlText: sqlForSave,
             });
@@ -210,7 +212,7 @@ const Oversikt = () => {
         setDeletingChart(true);
         setMutationError(null);
         try {
-            await deleteGraph(selectedProjectId, selectedDashboardId, deleteChartTarget.graphId);
+            await deleteGraph(selectedProjectId, selectedDashboardId, deleteChartTarget.categoryId, deleteChartTarget.graphId);
             await refreshGraphs();
             setDeleteChartTarget(null);
         } catch (err: unknown) {
@@ -243,7 +245,17 @@ const Oversikt = () => {
         setCopyingChart(true);
         setCopyMutationError(null);
         try {
-            const graphItems = await fetchGraphs(params.projectId, params.dashboardId);
+            // Resolve target category (use first existing or create default)
+            let targetCategoryId: number;
+            const targetCategories = await fetchCategories(params.projectId, params.dashboardId);
+            if (targetCategories.length > 0) {
+                targetCategoryId = targetCategories[0].id;
+            } else {
+                const created = await createCategory(params.projectId, params.dashboardId, 'Standard');
+                targetCategoryId = created.id;
+            }
+
+            const graphItems = await fetchGraphs(params.projectId, params.dashboardId, targetCategoryId);
             const sourceName = params.chartName.trim();
             const sourceNameLower = sourceName.toLowerCase();
             const isSameDashboard =
@@ -255,33 +267,33 @@ const Oversikt = () => {
 
             const width = parseChartWidth(copyChartTarget.chart.width);
             if (existingGraph) {
-                await updateGraph(params.projectId, params.dashboardId, existingGraph.id, {
+                await updateGraph(params.projectId, params.dashboardId, targetCategoryId, existingGraph.id, {
                     name: sourceName,
                     graphType: copyChartTarget.chart.graphType,
                     width,
                 });
 
-                const existingQueries = await fetchQueries(params.projectId, params.dashboardId, existingGraph.id);
+                const existingQueries = await fetchQueries(params.projectId, params.dashboardId, targetCategoryId, existingGraph.id);
                 const firstQuery = existingQueries[0];
                 if (firstQuery) {
-                    await updateQuery(params.projectId, params.dashboardId, existingGraph.id, firstQuery.id, {
+                    await updateQuery(params.projectId, params.dashboardId, targetCategoryId, existingGraph.id, firstQuery.id, {
                         name: copyChartTarget.chart.queryName,
                         sqlText: sqlForCopy,
                     });
                 } else {
-                    await createQuery(params.projectId, params.dashboardId, existingGraph.id, {
+                    await createQuery(params.projectId, params.dashboardId, targetCategoryId, existingGraph.id, {
                         name: copyChartTarget.chart.queryName,
                         sqlText: sqlForCopy,
                     });
                 }
             } else {
-                const createdGraph = await createGraph(params.projectId, params.dashboardId, {
+                const createdGraph = await createGraph(params.projectId, params.dashboardId, targetCategoryId, {
                     name: sourceName,
                     graphType: copyChartTarget.chart.graphType,
                     width,
                 });
 
-                await createQuery(params.projectId, params.dashboardId, createdGraph.id, {
+                await createQuery(params.projectId, params.dashboardId, targetCategoryId, createdGraph.id, {
                     name: copyChartTarget.chart.queryName,
                     sqlText: sqlForCopy,
                 });
@@ -479,12 +491,22 @@ const Oversikt = () => {
         setImportError(null);
         setImportingChart(true);
         try {
-            const createdGraph = await createGraph(selectedProjectId, selectedDashboardId, {
+            // Resolve a category (use first existing or create default)
+            let categoryId: number;
+            const categories = await fetchCategories(selectedProjectId, selectedDashboardId);
+            if (categories.length > 0) {
+                categoryId = categories[0].id;
+            } else {
+                const created = await createCategory(selectedProjectId, selectedDashboardId, 'Standard');
+                categoryId = created.id;
+            }
+
+            const createdGraph = await createGraph(selectedProjectId, selectedDashboardId, categoryId, {
                 name: params.name,
                 graphType: params.graphType,
                 width: normalizedWidth,
             });
-            await createQuery(selectedProjectId, selectedDashboardId, createdGraph.id, {
+            await createQuery(selectedProjectId, selectedDashboardId, categoryId, createdGraph.id, {
                 name: `${params.name} - query`,
                 sqlText: sqlForSave,
             });

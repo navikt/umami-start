@@ -13,7 +13,7 @@ import type { ProjectSummary } from '../hooks/useProjectManager.ts';
 import type { DashboardDto, ProjectDto } from '../model/types.ts';
 import ProjectManagerLayout from './ProjectManagerLayout.tsx';
 import { extractWebsiteId } from '../../sql/utils/sqlProcessing.ts';
-import type { GraphType, OversiktChart } from '../../oversikt/model/types.ts';
+import type { GraphType, OversiktChart } from '../../oversikt';
 
 type FileTableRow = {
     id: string;
@@ -21,6 +21,7 @@ type FileTableRow = {
     name: string;
     dashboardId: number;
     dashboardName: string;
+    categoryId?: number;
     graphType?: string;
     graphId?: number;
 };
@@ -29,6 +30,7 @@ type ImportGraphType = 'LINE' | 'BAR' | 'PIE' | 'TABLE';
 type ProjectManagerEditChartTarget = {
     projectId: number;
     dashboardId: number;
+    categoryId: number;
     chart: OversiktChart;
     defaultWebsiteId?: string;
 };
@@ -81,6 +83,7 @@ const ProjectManager = () => {
     const [deleteChartTarget, setDeleteChartTarget] = useState<{
         projectId: number;
         dashboardId: number;
+        categoryId: number;
         graphId: number;
         name: string;
     } | null>(null);
@@ -88,6 +91,7 @@ const ProjectManager = () => {
     const [copyChartTarget, setCopyChartTarget] = useState<{
         projectId: number;
         dashboardId: number;
+        categoryId: number;
         graphId: number;
         name: string;
         sourceWebsiteId?: string;
@@ -163,6 +167,7 @@ const ProjectManager = () => {
                 name: chart.name,
                 dashboardId: dashboard.id,
                 dashboardName: dashboard.name,
+                categoryId: chart.categoryId,
                 graphType: chart.graphType,
                 graphId: chart.id,
             }));
@@ -302,7 +307,23 @@ const ProjectManager = () => {
         const normalizedWidth = Math.max(1, Math.min(100, Math.round(parsedWidth)));
 
         setImportChartError(null);
-        const result = await importChart(selectedProject.project.id, params.dashboardId, {
+
+        // Resolve a category for the target dashboard (use first existing or create a default)
+        let categoryId: number;
+        try {
+            const categories = await api.fetchCategories(selectedProject.project.id, params.dashboardId);
+            if (categories.length > 0) {
+                categoryId = categories[0].id;
+            } else {
+                const created = await api.createCategory(selectedProject.project.id, params.dashboardId, 'Standard');
+                categoryId = created.id;
+            }
+        } catch (err: unknown) {
+            setImportChartError(err instanceof Error ? err.message : 'Kunne ikke hente eller opprette kategori');
+            return;
+        }
+
+        const result = await importChart(selectedProject.project.id, params.dashboardId, categoryId, {
             name: params.name,
             graphType: params.graphType,
             width: normalizedWidth,
@@ -350,12 +371,12 @@ const ProjectManager = () => {
     };
 
     const openEditChart = async (projectId: number, row: FileTableRow) => {
-        if (!row.graphId) return;
+        if (!row.graphId || !row.categoryId) return;
         setChartMutationError(null);
         try {
             const [queryItems, graphItems] = await Promise.all([
-                api.fetchQueries(projectId, row.dashboardId, row.graphId),
-                api.fetchGraphs(projectId, row.dashboardId),
+                api.fetchQueries(projectId, row.dashboardId, row.categoryId, row.graphId),
+                api.fetchGraphs(projectId, row.dashboardId, row.categoryId),
             ]);
             const query = queryItems[0];
             if (!query) {
@@ -373,10 +394,12 @@ const ProjectManager = () => {
                 graphType: normalizeGraphType(row.graphType ?? graph?.graphType),
                 queryId: query.id,
                 queryName: query.name,
+                categoryId: row.categoryId!,
             };
             setEditChartTarget({
                 projectId,
                 dashboardId: row.dashboardId,
+                categoryId: row.categoryId!,
                 chart,
                 defaultWebsiteId: extractWebsiteId(query.sqlText),
             });
@@ -386,22 +409,23 @@ const ProjectManager = () => {
     };
 
     const openDeleteChart = (projectId: number, row: FileTableRow) => {
-        if (!row.graphId) return;
+        if (!row.graphId || !row.categoryId) return;
         setChartMutationError(null);
         setDeleteChartTarget({
             projectId,
             dashboardId: row.dashboardId,
+            categoryId: row.categoryId,
             graphId: row.graphId,
             name: row.name,
         });
     };
 
     const openCopyChart = async (projectId: number, row: FileTableRow) => {
-        if (!row.graphId) return;
+        if (!row.graphId || !row.categoryId) return;
         setCopyChartError(null);
         let sourceWebsiteId: string | undefined;
         try {
-            const sourceQueries = await api.fetchQueries(projectId, row.dashboardId, row.graphId);
+            const sourceQueries = await api.fetchQueries(projectId, row.dashboardId, row.categoryId, row.graphId);
             const sourceSql = sourceQueries[0]?.sqlText;
             sourceWebsiteId = sourceSql ? extractWebsiteId(sourceSql) : undefined;
         } catch {
@@ -411,6 +435,7 @@ const ProjectManager = () => {
         setCopyChartTarget({
             projectId,
             dashboardId: row.dashboardId,
+            categoryId: row.categoryId,
             graphId: row.graphId,
             name: row.name,
             sourceWebsiteId,
@@ -427,7 +452,7 @@ const ProjectManager = () => {
     }) => {
         if (!editChartTarget) return;
         setChartMutationError(null);
-        const result = await editChart(editChartTarget.projectId, editChartTarget.dashboardId, editChartTarget.chart.graphId, {
+        const result = await editChart(editChartTarget.projectId, editChartTarget.dashboardId, editChartTarget.categoryId, editChartTarget.chart.graphId, {
             name: params.name,
             graphType: params.graphType,
             width: params.width,
@@ -447,7 +472,7 @@ const ProjectManager = () => {
     const handleDeleteChart = async () => {
         if (!deleteChartTarget) return;
         setChartMutationError(null);
-        await deleteChart(deleteChartTarget.projectId, deleteChartTarget.dashboardId, deleteChartTarget.graphId);
+        await deleteChart(deleteChartTarget.projectId, deleteChartTarget.dashboardId, deleteChartTarget.categoryId, deleteChartTarget.graphId);
         setDeleteChartTarget(null);
     };
 
@@ -461,12 +486,30 @@ const ProjectManager = () => {
     }) => {
         if (!copyChartTarget) return;
         setCopyChartError(null);
+
+        // Resolve a target category (use first existing or create a default)
+        let targetCategoryId: number;
+        try {
+            const categories = await api.fetchCategories(params.projectId, params.dashboardId);
+            if (categories.length > 0) {
+                targetCategoryId = categories[0].id;
+            } else {
+                const created = await api.createCategory(params.projectId, params.dashboardId, 'Standard');
+                targetCategoryId = created.id;
+            }
+        } catch (err: unknown) {
+            setCopyChartError(err instanceof Error ? err.message : 'Kunne ikke hente eller opprette kategori');
+            return;
+        }
+
         const result = await copyChart({
             sourceProjectId: copyChartTarget.projectId,
             sourceDashboardId: copyChartTarget.dashboardId,
+            sourceCategoryId: copyChartTarget.categoryId,
             sourceGraphId: copyChartTarget.graphId,
             targetProjectId: params.projectId,
             targetDashboardId: params.dashboardId,
+            targetCategoryId,
             chartName: params.chartName,
             websiteId: params.websiteId,
         });

@@ -1,6 +1,6 @@
 /**
  * Shared DTO types for the /api/backend REST endpoints
- * (projects, dashboards, graphs, queries).
+ * (projects, dashboards, graph categories, graphs, queries).
  */
 
 export type ProjectDto = {
@@ -18,9 +18,22 @@ export type DashboardDto = {
     updatedAt?: string;
 };
 
-export type GraphDto = {
+export type GraphCategoryDto = {
     id: number;
     dashboardId: number;
+    name: string;
+    ordering?: number;
+    updatedAt?: string;
+};
+
+export type GraphCategoryOrderingEntry = {
+    id: number;
+    ordering: number;
+};
+
+export type GraphDto = {
+    id: number;
+    categoryId: number;
     name: string;
     graphType?: string;
     width?: number;

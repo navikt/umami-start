@@ -14,10 +14,21 @@ type ProjectSummary = {
     dashboards: Array<{
         id: number;
         name: string;
+        categories: Array<{
+            id: number;
+            name: string;
+            charts: Array<{
+                id: number;
+                name: string;
+                graphType?: string;
+                categoryId: number;
+            }>;
+        }>;
         charts: Array<{
             id: number;
             name: string;
             graphType?: string;
+            categoryId: number;
         }>;
     }>;
 };
@@ -50,25 +61,36 @@ export const useProjectManager = () => {
 
         const summaryItems = await Promise.all(projectItems.map(async (project) => {
             const dashboards = await api.fetchDashboards(project.id);
-            const chartListByDashboard = await Promise.all(dashboards.map(async (dashboard) => {
-                const graphs = await api.fetchGraphs(project.id, dashboard.id);
+            const dashboardData = await Promise.all(dashboards.map(async (dashboard) => {
+                const categories = await api.fetchCategories(project.id, dashboard.id);
+                const categoryData = await Promise.all(categories.map(async (category) => {
+                    const graphs = await api.fetchGraphs(project.id, dashboard.id, category.id);
+                    return {
+                        id: category.id,
+                        name: category.name,
+                        charts: graphs.map((graph) => ({
+                            id: graph.id,
+                            name: graph.name,
+                            graphType: graph.graphType,
+                            categoryId: category.id,
+                        })),
+                    };
+                }));
+                const allCharts = categoryData.flatMap((cat) => cat.charts);
                 return {
                     id: dashboard.id,
                     name: dashboard.name,
-                    charts: graphs.map((graph) => ({
-                        id: graph.id,
-                        name: graph.name,
-                        graphType: graph.graphType,
-                    })),
+                    categories: categoryData,
+                    charts: allCharts,
                 };
             }));
-            const chartCount = chartListByDashboard.reduce((sum, dashboard) => sum + dashboard.charts.length, 0);
+            const chartCount = dashboardData.reduce((sum, dashboard) => sum + dashboard.charts.length, 0);
 
             return {
                 project,
                 dashboardCount: dashboards.length,
                 chartCount,
-                dashboards: chartListByDashboard,
+                dashboards: dashboardData,
             };
         }));
 
@@ -151,9 +173,9 @@ export const useProjectManager = () => {
     );
 
     const deleteChart = useCallback(
-        (projectId: number, dashboardId: number, graphId: number) =>
+        (projectId: number, dashboardId: number, categoryId: number, graphId: number) =>
             run(async () => {
-                await api.deleteGraph(projectId, dashboardId, graphId);
+                await api.deleteGraph(projectId, dashboardId, categoryId, graphId);
                 await loadProjectSummaries();
                 setMessage('Graf slettet');
             }),
@@ -164,6 +186,7 @@ export const useProjectManager = () => {
         (
             projectId: number,
             dashboardId: number,
+            categoryId: number,
             params: { name: string; graphType: string; width: number; sqlText: string },
         ): Promise<{ ok: true } | { ok: false; error: string }> =>
             (async () => {
@@ -179,7 +202,7 @@ export const useProjectManager = () => {
                         return { ok: false, error: 'SQL-kode er påkrevd' };
                     }
                     const normalizedSqlText = stripTrailingSemicolon(params.sqlText);
-                    const createdGraph = await api.createGraph(projectId, dashboardId, {
+                    const createdGraph = await api.createGraph(projectId, dashboardId, categoryId, {
                         name: params.name.trim(),
                         graphType: params.graphType,
                         width: params.width,
@@ -196,6 +219,7 @@ export const useProjectManager = () => {
                             await api.createQuery(
                                 projectId,
                                 dashboardId,
+                                categoryId,
                                 createdGraph.id,
                                 `${params.name.trim()} - query`,
                                 sqlText,
@@ -225,7 +249,7 @@ export const useProjectManager = () => {
                     let rollbackFailed = false;
                     if (createdGraphId != null) {
                         try {
-                            await api.deleteGraph(projectId, dashboardId, createdGraphId);
+                            await api.deleteGraph(projectId, dashboardId, categoryId, createdGraphId);
                             await loadProjectSummaries();
                         } catch {
                             rollbackFailed = true;
@@ -258,9 +282,11 @@ export const useProjectManager = () => {
         async (params: {
             sourceProjectId: number;
             sourceDashboardId: number;
+            sourceCategoryId: number;
             sourceGraphId: number;
             targetProjectId: number;
             targetDashboardId: number;
+            targetCategoryId: number;
             chartName: string;
             websiteId?: string;
         }): Promise<{ ok: true } | { ok: false; error: string }> => {
@@ -268,7 +294,7 @@ export const useProjectManager = () => {
             setError(null);
             setMessage(null);
             try {
-                const sourceGraphs = await api.fetchGraphs(params.sourceProjectId, params.sourceDashboardId);
+                const sourceGraphs = await api.fetchGraphs(params.sourceProjectId, params.sourceDashboardId, params.sourceCategoryId);
                 const sourceGraph = sourceGraphs.find((item) => item.id === params.sourceGraphId);
                 if (!sourceGraph) {
                     return { ok: false, error: 'Fant ikke grafen som skal kopieres' };
@@ -277,6 +303,7 @@ export const useProjectManager = () => {
                 const sourceQueries = await api.fetchQueries(
                     params.sourceProjectId,
                     params.sourceDashboardId,
+                    params.sourceCategoryId,
                     params.sourceGraphId,
                 );
                 const sourceQuery = sourceQueries[0];
@@ -290,11 +317,12 @@ export const useProjectManager = () => {
                 }
 
                 const sqlForCopy = rewriteSqlWebsiteId(sourceQuery.sqlText.trim(), params.websiteId);
-                const targetGraphs = await api.fetchGraphs(params.targetProjectId, params.targetDashboardId);
+                const targetGraphs = await api.fetchGraphs(params.targetProjectId, params.targetDashboardId, params.targetCategoryId);
                 const targetNameLower = targetName.toLowerCase();
                 const isSameDashboard =
                     params.sourceProjectId === params.targetProjectId
-                    && params.sourceDashboardId === params.targetDashboardId;
+                    && params.sourceDashboardId === params.targetDashboardId
+                    && params.sourceCategoryId === params.targetCategoryId;
                 const existingTarget = targetGraphs.find((graph) => {
                     if (isSameDashboard && graph.id === params.sourceGraphId) return false;
                     return graph.name.trim().toLowerCase() === targetNameLower;
@@ -308,6 +336,7 @@ export const useProjectManager = () => {
                     await api.updateGraph(
                         params.targetProjectId,
                         params.targetDashboardId,
+                        params.targetCategoryId,
                         existingTarget.id,
                         { name: targetName, graphType: sourceGraphType, width: sourceWidth },
                     );
@@ -315,6 +344,7 @@ export const useProjectManager = () => {
                     const existingQueries = await api.fetchQueries(
                         params.targetProjectId,
                         params.targetDashboardId,
+                        params.targetCategoryId,
                         existingTarget.id,
                     );
                     const firstTargetQuery = existingQueries[0];
@@ -322,6 +352,7 @@ export const useProjectManager = () => {
                         await api.updateQuery(
                             params.targetProjectId,
                             params.targetDashboardId,
+                            params.targetCategoryId,
                             existingTarget.id,
                             firstTargetQuery.id,
                             queryName,
@@ -331,6 +362,7 @@ export const useProjectManager = () => {
                         await api.createQuery(
                             params.targetProjectId,
                             params.targetDashboardId,
+                            params.targetCategoryId,
                             existingTarget.id,
                             queryName,
                             sqlForCopy,
@@ -340,11 +372,13 @@ export const useProjectManager = () => {
                     const createdGraph = await api.createGraph(
                         params.targetProjectId,
                         params.targetDashboardId,
+                        params.targetCategoryId,
                         { name: targetName, graphType: sourceGraphType, width: sourceWidth },
                     );
                     await api.createQuery(
                         params.targetProjectId,
                         params.targetDashboardId,
+                        params.targetCategoryId,
                         createdGraph.id,
                         queryName,
                         sqlForCopy,
@@ -369,6 +403,7 @@ export const useProjectManager = () => {
         async (
             projectId: number,
             dashboardId: number,
+            categoryId: number,
             graphId: number,
             params: {
                 name: string;
@@ -379,6 +414,7 @@ export const useProjectManager = () => {
                 queryName: string;
                 websiteId?: string;
                 targetDashboardId?: number;
+                targetCategoryId?: number;
             },
         ): Promise<{ ok: true } | { ok: false; error: string }> => {
             setLoading(true);
@@ -393,23 +429,27 @@ export const useProjectManager = () => {
                 }
                 const sqlForSave = rewriteSqlWebsiteId(params.sqlText, params.websiteId);
                 const targetDashboardId = params.targetDashboardId;
-                const shouldMove = targetDashboardId != null && targetDashboardId !== dashboardId;
+                const targetCategoryId = params.targetCategoryId ?? categoryId;
+                const shouldMove = (targetDashboardId != null && targetDashboardId !== dashboardId)
+                    || (targetCategoryId !== categoryId);
                 if (shouldMove) {
-                    const createdGraph = await api.createGraph(projectId, targetDashboardId, {
+                    const moveDashboardId = targetDashboardId ?? dashboardId;
+                    const createdGraph = await api.createGraph(projectId, moveDashboardId, targetCategoryId, {
                         name: params.name.trim(),
                         graphType: params.graphType,
                         width: params.width,
                     });
                     await api.createQuery(
                         projectId,
-                        targetDashboardId,
+                        moveDashboardId,
+                        targetCategoryId,
                         createdGraph.id,
                         params.queryName,
                         sqlForSave,
                     );
-                    await api.deleteGraph(projectId, dashboardId, graphId);
+                    await api.deleteGraph(projectId, dashboardId, categoryId, graphId);
                 } else {
-                    await api.updateGraph(projectId, dashboardId, graphId, {
+                    await api.updateGraph(projectId, dashboardId, categoryId, graphId, {
                         name: params.name.trim(),
                         graphType: params.graphType,
                         width: params.width,
@@ -417,6 +457,7 @@ export const useProjectManager = () => {
                     await api.updateQuery(
                         projectId,
                         dashboardId,
+                        categoryId,
                         graphId,
                         params.queryId,
                         params.queryName,

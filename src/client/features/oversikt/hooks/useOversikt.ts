@@ -6,7 +6,7 @@ import type {
     ProjectDto, DashboardDto, GraphWithQueries, FilterState, MetricType,
     OversiktChart, OversiktSelectOption,
 } from '../model/types.ts';
-import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchGraphs, fetchQueries, updateGraphOrdering } from '../api/oversiktApi.ts';
+import { createDashboard, createProject, fetchProjects, fetchDashboards, fetchCategories, fetchGraphs, fetchQueries, updateGraphOrdering } from '../api/oversiktApi.ts';
 import {
     parseId,
     arraysEqual,
@@ -90,6 +90,7 @@ export const useOversikt = () => {
                     graphType: normalizeGraphType(item.graph.graphType),
                     queryId: primaryQuery.id,
                     queryName: primaryQuery.name,
+                    categoryId: item.categoryId,
                 };
             });
     }, [graphs]);
@@ -313,14 +314,21 @@ export const useOversikt = () => {
         setLoadingGraphs(true);
         setError(null);
         try {
-            const graphItems = await fetchGraphs(selectedProjectId, selectedDashboardId);
-            const graphWithQueries = await Promise.all(
-                graphItems.map(async (graph) => ({
-                    graph,
-                    queries: await fetchQueries(selectedProjectId, selectedDashboardId, graph.id),
-                })),
+            const categories = await fetchCategories(selectedProjectId, selectedDashboardId);
+            const allGraphsWithQueries = await Promise.all(
+                categories.flatMap((category) =>
+                    fetchGraphs(selectedProjectId, selectedDashboardId, category.id).then((graphItems) =>
+                        Promise.all(
+                            graphItems.map(async (graph) => ({
+                                graph,
+                                queries: await fetchQueries(selectedProjectId, selectedDashboardId, category.id, graph.id),
+                                categoryId: category.id,
+                            })),
+                        ),
+                    ),
+                ),
             );
-            setGraphs(graphWithQueries);
+            setGraphs(allGraphsWithQueries.flat());
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Klarte ikke laste grafer');
         } finally {
@@ -362,7 +370,8 @@ export const useOversikt = () => {
             });
 
             try {
-                await updateGraphOrdering(selectedProjectId, selectedDashboardId, ordering);
+                // Use the categoryId from the moved chart
+                await updateGraphOrdering(selectedProjectId, selectedDashboardId, moved.categoryId, ordering);
                 return true;
             } catch (err: unknown) {
                 setError(err instanceof Error ? err.message : 'Kunne ikke oppdatere rekkefølge');
