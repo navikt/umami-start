@@ -795,6 +795,46 @@ const Oversikt = () => {
 
     const filters = (
         <>
+            {selectedDashboard && (
+                <div className="w-full flex justify-end gap-2 mb-3">
+                    <Button
+                        variant={isEditPanelOpen ? 'primary' : 'secondary'}
+                        size="small"
+                        onClick={() => {
+                            setIsEditPanelOpen((prev) => {
+                                const next = !prev;
+                                if (!next) {
+                                    setGrabbedGraphId(null);
+                                    setDraggedGraphId(null);
+                                    setDropTargetGraphId(null);
+                                    setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
+                                }
+                                return next;
+                            });
+                        }}
+                    >
+                        {isEditPanelOpen ? 'Lukk' : 'Rediger'}
+                    </Button>
+                    <ActionMenu>
+                        <ActionMenu.Trigger>
+                            <Button type="button" variant="secondary" size="small">
+                                + legg til
+                            </Button>
+                        </ActionMenu.Trigger>
+                        <ActionMenu.Content align="end">
+                            <ActionMenu.Item as="a" href="/grafbygger">
+                                Legg til graf
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={openImportModal}>
+                                Importer graf
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={openCreateTabModal}>
+                                Legg til fane
+                            </ActionMenu.Item>
+                        </ActionMenu.Content>
+                    </ActionMenu>
+                </div>
+            )}
             {supportsStandardFilters && (
                 <>
                     <div className="w-full md:w-[18rem]">
@@ -915,50 +955,52 @@ const Oversikt = () => {
 
             {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && (
                 <>
-                    <div className="flex justify-end gap-2 mb-4">
-                        <Button
-                            variant={isEditPanelOpen ? 'primary' : 'secondary'}
-                            size="small"
-                            onClick={() => {
-                                setIsEditPanelOpen((prev) => {
-                                    const next = !prev;
-                                    if (!next) {
-                                        setGrabbedGraphId(null);
-                                        setDraggedGraphId(null);
-                                        setDropTargetGraphId(null);
-                                        setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
-                                    }
-                                    return next;
-                                });
-                            }}
-                        >
-                            {isEditPanelOpen ? 'Lukk' : 'Rediger'}
-                        </Button>
-                        <ActionMenu>
-                            <ActionMenu.Trigger>
-                                <Button type="button" variant="secondary" size="small">
-                                    + legg til
-                                </Button>
-                            </ActionMenu.Trigger>
-                            <ActionMenu.Content align="end">
-                                <ActionMenu.Item as="a" href="/grafbygger">
-                                    Legg til graf
-                                </ActionMenu.Item>
-                                <ActionMenu.Item onClick={openImportModal}>
-                                    Importer graf
-                                </ActionMenu.Item>
-                                <ActionMenu.Item onClick={openCreateTabModal}>
-                                    Legg til fane
-                                </ActionMenu.Item>
-                            </ActionMenu.Content>
-                        </ActionMenu>
-                    </div>
+                    {!supportsStandardFilters && (
+                        <div className="flex justify-end gap-2 mb-4">
+                            <Button
+                                variant={isEditPanelOpen ? 'primary' : 'secondary'}
+                                size="small"
+                                onClick={() => {
+                                    setIsEditPanelOpen((prev) => {
+                                        const next = !prev;
+                                        if (!next) {
+                                            setGrabbedGraphId(null);
+                                            setDraggedGraphId(null);
+                                            setDropTargetGraphId(null);
+                                            setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
+                                        }
+                                        return next;
+                                    });
+                                }}
+                            >
+                                {isEditPanelOpen ? 'Lukk' : 'Rediger'}
+                            </Button>
+                            <ActionMenu>
+                                <ActionMenu.Trigger>
+                                    <Button type="button" variant="secondary" size="small">
+                                        + legg til
+                                    </Button>
+                                </ActionMenu.Trigger>
+                                <ActionMenu.Content align="end">
+                                    <ActionMenu.Item as="a" href="/grafbygger">
+                                        Legg til graf
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={openImportModal}>
+                                        Importer graf
+                                    </ActionMenu.Item>
+                                    <ActionMenu.Item onClick={openCreateTabModal}>
+                                        Legg til fane
+                                    </ActionMenu.Item>
+                                </ActionMenu.Content>
+                            </ActionMenu>
+                        </div>
+                    )}
                     {isEditPanelOpen && (
                         <section className="mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
                                 <Button
                                     variant="secondary"
-                                    size="small"
+                                    size="xsmall"
                                     onClick={openEditDashboardDialog}
                                     disabled={!selectedDashboard}
                                 >
@@ -966,18 +1008,16 @@ const Oversikt = () => {
                                 </Button>
                                 <Button
                                     variant="secondary"
-                                    size="small"
+                                    size="xsmall"
                                     onClick={openDeleteDashboardDialog}
                                     disabled={!selectedDashboard}
                                 >
                                     Slett dashboard
                                 </Button>
-                            </div>
-                            <div className="mt-3 flex flex-wrap items-end gap-2">
                                 {categories.length > 1 && (
                                     <Button
                                         variant="secondary"
-                                        size="small"
+                                        size="xsmall"
                                         onClick={openRenameTabModal}
                                         disabled={!activeCategory}
                                     >
@@ -987,7 +1027,7 @@ const Oversikt = () => {
                                 {categories.length > 1 && (
                                     <Button
                                         variant="secondary"
-                                        size="small"
+                                        size="xsmall"
                                         onClick={() => void handleDeleteActiveTab()}
                                         loading={deletingCategory}
                                         disabled={!activeCategory || charts.length > 0}
