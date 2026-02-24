@@ -1,4 +1,4 @@
-import type { ProjectDto, DashboardDto, GraphDto, QueryDto } from '../../../shared/types/backend.ts';
+import type { ProjectDto, DashboardDto, GraphCategoryDto, GraphDto, QueryDto } from '../../../shared/types/backend.ts';
 import { requestJson } from '../../../shared/lib/apiClient.ts';
 
 type SaveChartParams = {
@@ -8,6 +8,7 @@ type SaveChartParams = {
   queryName: string;
   graphType: string;
   sqlText: string;
+  categoryId?: number;
 };
 
 type SaveChartResult = {
@@ -58,6 +59,18 @@ export async function createDashboard(projectId: number, name: string, descripti
   });
 }
 
+export async function fetchCategories(projectId: number, dashboardId: number): Promise<GraphCategoryDto[]> {
+  return requestJson<GraphCategoryDto[]>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/categories`);
+}
+
+export async function createCategory(projectId: number, dashboardId: number, name: string): Promise<GraphCategoryDto> {
+  return requestJson<GraphCategoryDto>(`/api/backend/projects/${projectId}/dashboards/${dashboardId}/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name.trim() }),
+  });
+}
+
 export async function saveChartToBackend(params: SaveChartParams): Promise<SaveChartResult> {
   const projects = await fetchProjects();
   const existingProject = findByName(projects, params.projectName);
@@ -83,7 +96,13 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
     }),
   });
 
-  const graph = await requestJson<GraphDto>(`/api/backend/projects/${project.id}/dashboards/${dashboard.id}/graphs`, {
+  const categories = await fetchCategories(project.id, dashboard.id);
+  const resolvedCategory =
+    (params.categoryId ? categories.find((category) => category.id === params.categoryId) : null)
+    ?? categories[0]
+    ?? await createCategory(project.id, dashboard.id, 'Fane 1');
+
+  const graph = await requestJson<GraphDto>(`/api/backend/projects/${project.id}/dashboards/${dashboard.id}/categories/${resolvedCategory.id}/graphs`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -102,7 +121,7 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
 
   for (const sqlText of sqlCandidates) {
     try {
-      query = await requestJson<QueryDto>(`/api/backend/projects/${project.id}/dashboards/${dashboard.id}/graphs/${graph.id}/queries`, {
+      query = await requestJson<QueryDto>(`/api/backend/projects/${project.id}/dashboards/${dashboard.id}/categories/${resolvedCategory.id}/graphs/${graph.id}/queries`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -131,4 +150,4 @@ export async function saveChartToBackend(params: SaveChartParams): Promise<SaveC
   return {project, dashboard, graph, query};
 }
 
-export type { ProjectDto, DashboardDto, SaveChartParams, SaveChartResult };
+export type { ProjectDto, DashboardDto, GraphCategoryDto, SaveChartParams, SaveChartResult };

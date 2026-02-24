@@ -6,8 +6,8 @@ import { subDays, format, isEqual } from 'date-fns';
 import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
-import { createDashboard, createProject, fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
-import type { DashboardDto, ProjectDto } from '../../api/chartStorageApi.ts';
+import { createDashboard, createProject, fetchCategories, fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
+import type { DashboardDto, GraphCategoryDto, ProjectDto } from '../../api/chartStorageApi.ts';
 
 type JsonPrimitive = string | number | boolean | null;
 interface JsonObject {
@@ -180,8 +180,10 @@ const QueryPreview = ({
   const [graphType, setGraphType] = useState('TABLE');
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
+  const [categories, setCategories] = useState<GraphCategoryDto[]>([]);
   const [selectedProjectOption, setSelectedProjectOption] = useState<string | null>(null);
   const [selectedDashboardOption, setSelectedDashboardOption] = useState<string | null>(null);
+  const [selectedCategoryOption, setSelectedCategoryOption] = useState<string | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
   const [showMetabaseInstructions, setShowMetabaseInstructions] = useState(false);
@@ -707,10 +709,21 @@ const QueryPreview = ({
 
           setSelectedDashboardOption(selectedDashboard ? String(selectedDashboard.id) : null);
           setDashboardName(selectedDashboard?.name ?? dashboardName);
+          if (selectedDashboard) {
+            const categoryItems = await fetchCategories(selectedProject.id, selectedDashboard.id);
+            const sortedCategories = [...categoryItems].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0));
+            setCategories(sortedCategories);
+            setSelectedCategoryOption(sortedCategories[0] ? String(sortedCategories[0].id) : null);
+          } else {
+            setCategories([]);
+            setSelectedCategoryOption(null);
+          }
         } else {
           setSelectedProjectOption(null);
           setDashboards([]);
+          setCategories([]);
           setSelectedDashboardOption(null);
+          setSelectedCategoryOption(null);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Klarte ikke laste team og dashboards';
@@ -728,8 +741,10 @@ const QueryPreview = ({
       setProjectName('');
       saveLastProjectId(null);
       setDashboards([]);
+      setCategories([]);
       setDashboardName('');
       setSelectedDashboardOption(null);
+      setSelectedCategoryOption(null);
       saveLastDashboardId(null);
       return;
     }
@@ -738,6 +753,8 @@ const QueryPreview = ({
       setSaveError(null);
       setDashboardName('');
       setSelectedDashboardOption(null);
+      setCategories([]);
+      setSelectedCategoryOption(null);
 
       const selectedProjectById = projects.find((project) => String(project.id) === option);
       const selectedProjectByName = projects.find((project) => project.name.trim().toLowerCase() === option.trim().toLowerCase());
@@ -773,6 +790,8 @@ const QueryPreview = ({
     if (!isSelected) {
       setSelectedDashboardOption(null);
       setDashboardName('');
+      setCategories([]);
+      setSelectedCategoryOption(null);
       saveLastDashboardId(null);
       return;
     }
@@ -802,6 +821,10 @@ const QueryPreview = ({
       setSelectedDashboardOption(String(dashboardToUse.id));
       setDashboardName(dashboardToUse.name);
       saveLastDashboardId(dashboardToUse.id);
+      const categoryItems = await fetchCategories(Number(selectedProjectOption), dashboardToUse.id);
+      const sortedCategories = [...categoryItems].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0));
+      setCategories(sortedCategories);
+      setSelectedCategoryOption(sortedCategories[0] ? String(sortedCategories[0].id) : null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Klarte ikke velge eller opprette dashboard';
       setSaveError(message);
@@ -828,6 +851,7 @@ const QueryPreview = ({
         queryName: `${graphName.trim()} - query`,
         graphType: graphType.trim(),
         sqlText: getProcessedSql({ preserveMetabasePlaceholders: true }),
+        categoryId: selectedCategoryOption ? Number(selectedCategoryOption) : undefined,
       });
 
       setSaveSuccess('Lagret');
@@ -857,6 +881,10 @@ const QueryPreview = ({
   const dashboardOptions = dashboards.map((dashboard) => ({
     label: dashboard.name,
     value: String(dashboard.id),
+  }));
+  const categoryOptions = categories.map((category) => ({
+    label: category.name?.trim() ? (category.name.trim().toLowerCase() === 'general' ? 'Fane 1' : category.name) : 'Fane 1',
+    value: String(category.id),
   }));
 
   const selectedProjectLabel = projectOptions.find((option) => option.value === selectedProjectOption)?.label;
@@ -1361,6 +1389,22 @@ const QueryPreview = ({
               clearButton
               disabled={!selectedProjectOption || isCreatingProject || isCreatingDashboard || savingChart}
             />
+            {categories.length > 1 && (
+              <Select
+                label="Fane"
+                value={selectedCategoryOption ?? ''}
+                onChange={(e) => setSelectedCategoryOption(e.target.value || null)}
+                size="small"
+                disabled={savingChart}
+              >
+                <option value="">Velg fane</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </Select>
+            )}
             <TextField
               label="Grafnavn"
               value={graphName}
