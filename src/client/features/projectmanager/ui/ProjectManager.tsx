@@ -109,6 +109,7 @@ const ProjectManager = () => {
     const [copyChartError, setCopyChartError] = useState<string | null>(null);
     const [moveChartTarget, setMoveChartTarget] = useState<ProjectManagerMoveChartTarget | null>(null);
     const [moveChartTargetProjectId, setMoveChartTargetProjectId] = useState<number>(0);
+    const [moveChartTargetDashboardId, setMoveChartTargetDashboardId] = useState<number>(0);
     const [moveChartError, setMoveChartError] = useState<string | null>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
@@ -458,7 +459,8 @@ const ProjectManager = () => {
     const openMoveChart = (projectId: number, projectName: string, row: FileTableRow) => {
         if (!row.graphId || !row.categoryId) return;
         setMoveChartError(null);
-        setMoveChartTargetProjectId(0);
+        setMoveChartTargetProjectId(projectId);
+        setMoveChartTargetDashboardId(row.dashboardId);
         setMoveChartTarget({
             projectId,
             projectName,
@@ -553,27 +555,36 @@ const ProjectManager = () => {
         return projectSummaries.find((item) => item.project.id === moveChartTargetProjectId) ?? null;
     }, [projectSummaries, moveChartTargetProjectId]);
 
-    const moveChartResolvedDashboard = useMemo(() => {
-        if (!moveChartTarget || !moveChartTargetProjectSummary) return null;
-        const sourceDashboardName = moveChartTarget.dashboardName.trim().toLowerCase();
-        const sameNameDashboard = moveChartTargetProjectSummary.dashboards.find(
-            (dashboard) => dashboard.name.trim().toLowerCase() === sourceDashboardName,
-        );
-        if (sameNameDashboard) {
-            return {
-                id: sameNameDashboard.id,
-                name: sameNameDashboard.name,
-                matchedByName: true,
-            };
+    const moveChartDashboardOptions = useMemo(() => {
+        if (!moveChartTargetProjectSummary) return [];
+        return moveChartTargetProjectSummary.dashboards.map((dashboard) => ({
+            id: dashboard.id,
+            name: dashboard.name,
+        }));
+    }, [moveChartTargetProjectSummary]);
+
+    useEffect(() => {
+        if (!moveChartTarget) return;
+        if (!moveChartTargetProjectId) {
+            setMoveChartTargetDashboardId(0);
+            return;
         }
-        const fallbackDashboard = moveChartTargetProjectSummary.dashboards[0];
-        if (!fallbackDashboard) return null;
-        return {
-            id: fallbackDashboard.id,
-            name: fallbackDashboard.name,
-            matchedByName: false,
-        };
-    }, [moveChartTarget, moveChartTargetProjectSummary]);
+
+        const targetProject = projectSummaries.find((item) => item.project.id === moveChartTargetProjectId);
+        const dashboards = targetProject?.dashboards ?? [];
+        if (dashboards.length === 0) {
+            setMoveChartTargetDashboardId(0);
+            return;
+        }
+
+        setMoveChartTargetDashboardId((prev) => {
+            if (prev && dashboards.some((dashboard) => dashboard.id === prev)) return prev;
+            const sameNameDashboard = dashboards.find(
+                (dashboard) => dashboard.name.trim().toLowerCase() === moveChartTarget.dashboardName.trim().toLowerCase(),
+            );
+            return sameNameDashboard?.id ?? dashboards[0].id;
+        });
+    }, [projectSummaries, moveChartTarget, moveChartTargetProjectId]);
 
     const handleMoveChart = async () => {
         if (!moveChartTarget) return;
@@ -581,12 +592,15 @@ const ProjectManager = () => {
             setMoveChartError('Velg arbeidsområde');
             return;
         }
-        if (moveChartTargetProjectId === moveChartTarget.projectId) {
-            setMoveChartError('Velg et annet arbeidsområde for flytting');
+        if (!moveChartTargetDashboardId) {
+            setMoveChartError('Velg dashboard');
             return;
         }
-        if (!moveChartResolvedDashboard) {
-            setMoveChartError('Valgt arbeidsområde har ingen dashboard. Opprett et dashboard først.');
+        if (
+            moveChartTargetProjectId === moveChartTarget.projectId
+            && moveChartTargetDashboardId === moveChartTarget.dashboardId
+        ) {
+            setMoveChartError('Velg et annet dashboard eller arbeidsområde for flytting');
             return;
         }
 
@@ -594,11 +608,11 @@ const ProjectManager = () => {
 
         let targetCategoryId: number;
         try {
-            const categories = await api.fetchCategories(moveChartTargetProjectId, moveChartResolvedDashboard.id);
+            const categories = await api.fetchCategories(moveChartTargetProjectId, moveChartTargetDashboardId);
             if (categories.length > 0) {
                 targetCategoryId = categories[0].id;
             } else {
-                const created = await api.createCategory(moveChartTargetProjectId, moveChartResolvedDashboard.id, 'Standard');
+                const created = await api.createCategory(moveChartTargetProjectId, moveChartTargetDashboardId, 'Standard');
                 targetCategoryId = created.id;
             }
         } catch (err: unknown) {
@@ -612,7 +626,7 @@ const ProjectManager = () => {
             sourceCategoryId: moveChartTarget.categoryId,
             sourceGraphId: moveChartTarget.graphId,
             targetProjectId: moveChartTargetProjectId,
-            targetDashboardId: moveChartResolvedDashboard.id,
+            targetDashboardId: moveChartTargetDashboardId,
             targetCategoryId,
         });
         if (!result.ok) {
@@ -622,6 +636,7 @@ const ProjectManager = () => {
 
         setMoveChartTarget(null);
         setMoveChartTargetProjectId(0);
+        setMoveChartTargetDashboardId(0);
     };
 
     const projectOptions: ProjectDto[] = useMemo(
@@ -1170,16 +1185,22 @@ const ProjectManager = () => {
                 onClose={() => {
                     setMoveChartTarget(null);
                     setMoveChartTargetProjectId(0);
+                    setMoveChartTargetDashboardId(0);
                     setMoveChartError(null);
                 }}
-                header={{ heading: moveChartTarget ? `Flytt graf: ${moveChartTarget.name}` : 'Flytt graf' }}
+                header={{ heading: 'Flytt graf' }}
                 width="small"
             >
                 <Modal.Body>
                     <div className="space-y-4">
                         {moveChartError && <Alert variant="error" size="small">{moveChartError}</Alert>}
+                        {moveChartTarget && (
+                            <BodyShort size="small">
+                                Graf: <strong>{moveChartTarget.name}</strong>
+                            </BodyShort>
+                        )}
                         <Select
-                            label="Nytt arbeidsområde"
+                            label="Arbeidsområde"
                             value={moveChartTargetProjectId ? String(moveChartTargetProjectId) : ''}
                             onChange={(event) => {
                                 setMoveChartTargetProjectId(Number(event.target.value));
@@ -1196,20 +1217,27 @@ const ProjectManager = () => {
                                     </option>
                                 ))}
                         </Select>
-
-                        {moveChartTarget && (
-                            <div className="space-y-1">
-                                <BodyShort size="small">
-                                    Fra: <strong>{moveChartTarget.projectName}</strong> / {moveChartTarget.dashboardName}
-                                </BodyShort>
-                                {moveChartTargetProjectId > 0 && (
-                                    <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
-                                        {moveChartResolvedDashboard
-                                            ? `Grafen flyttes til dashboard "${moveChartResolvedDashboard.name}" i valgt arbeidsområde${moveChartResolvedDashboard.matchedByName ? ' (samme dashboardnavn funnet).' : ' (første tilgjengelige dashboard).'}` 
-                                            : 'Valgt arbeidsområde mangler dashboard.'}
-                                    </BodyShort>
-                                )}
-                            </div>
+                        <Select
+                            label="Dashboard"
+                            value={moveChartTargetDashboardId ? String(moveChartTargetDashboardId) : ''}
+                            onChange={(event) => {
+                                setMoveChartTargetDashboardId(Number(event.target.value));
+                                setMoveChartError(null);
+                            }}
+                            size="small"
+                            disabled={!moveChartTargetProjectId || moveChartDashboardOptions.length === 0}
+                        >
+                            <option value="">Velg dashboard</option>
+                            {moveChartDashboardOptions.map((dashboard) => (
+                                <option key={dashboard.id} value={dashboard.id}>
+                                    {dashboard.name}
+                                </option>
+                            ))}
+                        </Select>
+                        {moveChartTargetProjectId > 0 && moveChartDashboardOptions.length === 0 && (
+                            <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
+                                Valgt arbeidsområde har ingen dashboard.
+                            </BodyShort>
                         )}
                     </div>
                 </Modal.Body>
@@ -1222,6 +1250,7 @@ const ProjectManager = () => {
                         onClick={() => {
                             setMoveChartTarget(null);
                             setMoveChartTargetProjectId(0);
+                            setMoveChartTargetDashboardId(0);
                             setMoveChartError(null);
                         }}
                         disabled={loading}
