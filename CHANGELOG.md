@@ -69,5 +69,6 @@ All notable changes to this project will be documented in this file.
 - Lagre og vise grafer (#119)
 - Validate and max bill bigquery
 - Graph ordering (#122)
+- Ingress innblikk
 
 
