@@ -21,6 +21,7 @@ import {
     fetchGraphs,
     fetchQueries,
     updateDashboard,
+    updateCategoryOrdering,
     updateCategory,
     updateGraph,
     updateQuery,
@@ -105,6 +106,9 @@ const Oversikt = () => {
     const [grabbedGraphId, setGrabbedGraphId] = useState<number | null>(null);
     const [draggedGraphId, setDraggedGraphId] = useState<number | null>(null);
     const [dropTargetGraphId, setDropTargetGraphId] = useState<number | null>(null);
+    const [reorderingCategoryId, setReorderingCategoryId] = useState<number | null>(null);
+    const [draggedCategoryId, setDraggedCategoryId] = useState<number | null>(null);
+    const [dropTargetCategoryId, setDropTargetCategoryId] = useState<number | null>(null);
     const [reorderAnnouncement, setReorderAnnouncement] = useState('');
     const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
     const [stats, setStats] = useState<Record<string, { gb: number; title: string }>>({});
@@ -601,6 +605,38 @@ const Oversikt = () => {
         return success;
     };
 
+    const getCategoryIndex = (categoryId: number) => categories.findIndex((item) => item.id === categoryId);
+
+    const handleMoveCategory = async (fromIndex: number, toIndex: number): Promise<boolean> => {
+        if (!selectedProjectId || !selectedDashboardId) return false;
+        if (fromIndex === toIndex) return true;
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= categories.length || toIndex >= categories.length) return false;
+
+        const reordered = [...categories];
+        const [moved] = reordered.splice(fromIndex, 1);
+        if (!moved) return false;
+        reordered.splice(toIndex, 0, moved);
+
+        setReorderingCategoryId(moved.id);
+        setCategoryMutationError(null);
+        try {
+            await updateCategoryOrdering(
+                selectedProjectId,
+                selectedDashboardId,
+                reordered.map((category, index) => ({ id: category.id, ordering: index })),
+            );
+            await refreshCategories(activeCategoryId ?? moved.id);
+            setReorderAnnouncement(`${getCategoryDisplayName(moved.name)} flyttet til plass ${toIndex + 1} av ${categories.length}.`);
+            return true;
+        } catch (err: unknown) {
+            setCategoryMutationError(err instanceof Error ? err.message : 'Kunne ikke endre rekkefølge på faner');
+            setReorderAnnouncement(`Kunne ikke flytte fane. Prøv igjen.`);
+            return false;
+        } finally {
+            setReorderingCategoryId(null);
+        }
+    };
+
     const getChartIndex = (graphId: number) => charts.findIndex((item) => item.graphId === graphId);
 
     const handleMoveHandleKeyDown = async (event: KeyboardEvent<HTMLButtonElement>, graphId: number, title: string) => {
@@ -666,6 +702,31 @@ const Oversikt = () => {
         await handleMoveChart(fromIndex, toIndex);
         setDraggedGraphId(null);
         setDropTargetGraphId(null);
+    };
+
+    const handleCategoryDragStart = (event: DragEvent<HTMLSpanElement>, categoryId: number, name: string) => {
+        if (!isEditPanelOpen || categories.length <= 1) return;
+        setDraggedCategoryId(categoryId);
+        setDropTargetCategoryId(null);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(categoryId));
+        const index = getCategoryIndex(categoryId);
+        if (index >= 0) {
+            setReorderAnnouncement(`${getCategoryDisplayName(name)} valgt for flytting. Plass ${index + 1} av ${categories.length}.`);
+        }
+    };
+
+    const handleDropOnCategory = async (event: DragEvent<HTMLSpanElement>, targetCategoryId: number) => {
+        if (!isEditPanelOpen || categories.length <= 1) return;
+        event.preventDefault();
+        const sourceCategoryId = draggedCategoryId ?? Number(event.dataTransfer.getData('text/plain'));
+        if (!Number.isFinite(sourceCategoryId)) return;
+        const fromIndex = getCategoryIndex(sourceCategoryId);
+        const toIndex = getCategoryIndex(targetCategoryId);
+        if (fromIndex < 0 || toIndex < 0) return;
+        await handleMoveCategory(fromIndex, toIndex);
+        setDraggedCategoryId(null);
+        setDropTargetCategoryId(null);
     };
 
     const openImportModal = () => {
@@ -951,7 +1012,38 @@ const Oversikt = () => {
                                         <Tabs.Tab
                                             key={category.id}
                                             value={String(category.id)}
-                                            label={getCategoryDisplayName(category.name)}
+                                            label={(
+                                                <span
+                                                    className={`inline-flex items-center gap-2 rounded ${dropTargetCategoryId === category.id ? 'outline outline-2 outline-[var(--ax-border-accent)] outline-offset-2' : ''}`}
+                                                    draggable={isEditPanelOpen && categories.length > 1 && reorderingCategoryId === null}
+                                                    onDragStart={(event) => handleCategoryDragStart(event, category.id, category.name)}
+                                                    onDragEnd={() => {
+                                                        setDraggedCategoryId(null);
+                                                        setDropTargetCategoryId(null);
+                                                    }}
+                                                    onDragOver={(event) => {
+                                                        if (!isEditPanelOpen || draggedCategoryId === null) return;
+                                                        event.preventDefault();
+                                                        event.dataTransfer.dropEffect = 'move';
+                                                    }}
+                                                    onDragEnter={() => {
+                                                        if (!isEditPanelOpen || draggedCategoryId === null || draggedCategoryId === category.id) return;
+                                                        setDropTargetCategoryId(category.id);
+                                                    }}
+                                                    onDragLeave={() => {
+                                                        if (dropTargetCategoryId === category.id) setDropTargetCategoryId(null);
+                                                    }}
+                                                    onDrop={(event) => {
+                                                        void handleDropOnCategory(event, category.id);
+                                                    }}
+                                                    style={{ opacity: draggedCategoryId === category.id ? 0.65 : 1 }}
+                                                >
+                                                    {isEditPanelOpen && categories.length > 1 && (
+                                                        <GripVertical aria-hidden size={14} />
+                                                    )}
+                                                    <span>{getCategoryDisplayName(category.name)}</span>
+                                                </span>
+                                            )}
                                         />
                                     ))}
                                 </Tabs.List>
