@@ -1,4 +1,4 @@
-import { subDays, format } from 'date-fns';
+import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from 'date-fns';
 
 declare global {
     interface Window {
@@ -74,13 +74,49 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
     if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
         startDate = filters.customStartDate;
         endDate = filters.customEndDate;
-    } else if (filters.dateRange === 'current_month') {
-        startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-    } else if (filters.dateRange === 'last_month') {
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
     } else {
-        startDate = subDays(now, 30);
+        switch (filters.dateRange) {
+            case 'today':
+                startDate = now;
+                endDate = now;
+                break;
+            case 'yesterday':
+                startDate = subDays(now, 1);
+                endDate = subDays(now, 1);
+                break;
+            case 'this_week':
+                startDate = startOfWeek(now, { weekStartsOn: 1 });
+                endDate = now;
+                break;
+            case 'last_7_days':
+                startDate = subDays(now, 6);
+                endDate = now;
+                break;
+            case 'last_week': {
+                const lastWeekDate = subWeeks(now, 1);
+                startDate = startOfWeek(lastWeekDate, { weekStartsOn: 1 });
+                endDate = endOfWeek(lastWeekDate, { weekStartsOn: 1 });
+                break;
+            }
+            case 'last_28_days':
+                startDate = subDays(now, 27);
+                endDate = now;
+                break;
+            case 'current_month':
+                startDate = startOfMonth(now);
+                endDate = now;
+                break;
+            case 'last_month': {
+                const lastMonthDate = subMonths(now, 1);
+                startDate = startOfMonth(lastMonthDate);
+                endDate = endOfMonth(lastMonthDate);
+                break;
+            }
+            default:
+                startDate = subDays(now, 30);
+                endDate = now;
+                break;
+        }
     }
 
     const fromSql = `TIMESTAMP('${format(startDate, 'yyyy-MM-dd')}', '${timezone}')`;
@@ -122,4 +158,3 @@ export const processDashboardSql = (sql: string, websiteId: string, filters: Fil
 
     return processedSql;
 };
-

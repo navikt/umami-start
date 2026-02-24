@@ -30,7 +30,7 @@ export const useOversikt = () => {
 
     const [tempPathOperator, setTempPathOperator] = useState('equals');
     const [tempUrlPaths, setTempUrlPaths] = useState<string[]>([]);
-    const [tempDateRange, setTempDateRange] = useState('current_month');
+    const [tempDateRange, setTempDateRange] = useState('last_7_days');
     const [tempMetricType, setTempMetricType] = useState<MetricType>('visitors');
     const [comboInputValue, setComboInputValue] = useState('');
     const isSelectingRef = useRef(false);
@@ -43,7 +43,7 @@ export const useOversikt = () => {
     const [activeFilters, setActiveFilters] = useState<FilterState>({
         pathOperator: 'equals',
         urlFilters: [],
-        dateRange: 'current_month',
+        dateRange: 'last_7_days',
         metricType: 'visitors',
     });
 

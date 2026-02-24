@@ -1014,9 +1014,14 @@ const Oversikt = () => {
                             value={tempDateRange}
                             onChange={(e) => setTempDateRange(e.target.value)}
                         >
+                            <option value="today">I dag</option>
+                            <option value="yesterday">I går</option>
+                            <option value="this_week">Denne uken</option>
+                            <option value="last_7_days">Siste 7 dager</option>
+                            <option value="last_week">Forrige uke</option>
+                            <option value="last_28_days">Siste 28 dager</option>
                             <option value="current_month">Denne måneden</option>
                             <option value="last_month">Forrige måned</option>
-                            <option value="last_30_days">Siste 30 dager</option>
                         </Select>
                     </div>
 
