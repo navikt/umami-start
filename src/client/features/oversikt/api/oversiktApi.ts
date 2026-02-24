@@ -230,6 +230,21 @@ export async function updateQuery(
   );
 }
 
+export async function deleteQuery(
+  projectId: number,
+  dashboardId: number,
+  categoryId: number,
+  graphId: number,
+  queryId: number,
+): Promise<void> {
+  await requestJson<unknown>(
+    `/api/backend/projects/${projectId}/dashboards/${dashboardId}/categories/${categoryId}/graphs/${graphId}/queries/${queryId}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
 export async function deleteGraph(
   projectId: number,
   dashboardId: number,

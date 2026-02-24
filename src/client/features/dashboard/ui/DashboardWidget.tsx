@@ -48,6 +48,7 @@ interface DashboardWidgetProps {
     onCopyChart?: (chartId?: string, sourceWebsiteId?: string) => void;
     onMoveChart?: (chartId?: string) => void;
     titlePrefix?: ReactNode;
+    titleBelow?: ReactNode;
 }
 
 export const DashboardWidget = ({
@@ -65,6 +66,7 @@ export const DashboardWidget = ({
     onCopyChart,
     onMoveChart,
     titlePrefix,
+    titleBelow,
 }: DashboardWidgetProps) => {
     const [loading, setLoading] = useState(shouldWaitForBatch ?? false);
     const [error, setError] = useState<string | null>(null);
@@ -89,10 +91,10 @@ export const DashboardWidget = ({
         }
     }, [prefetchedData]);
 
-    // Reset fetch flag when filters change (to allow refetch with new params)
+    // Reset fetch flag when filters or SQL changes (to allow variant/refetch updates)
     useEffect(() => {
         setHasFetchedIndividually(false);
-    }, [websiteId, filters]);
+    }, [websiteId, filters, chart.sql]);
 
     useEffect(() => {
         // Skip if we already have batch data
@@ -257,6 +259,11 @@ export const DashboardWidget = ({
                             />
                         )}
                     </div>
+                    {titleBelow && (
+                        <div className="mt-2">
+                            {titleBelow}
+                        </div>
+                    )}
                     {tableTotalValue !== null && (
                         <p className="text-lg text-[var(--ax-text-default)] mt-1">
                             {tableTotalValue.toLocaleString('nb-NO')} {filters.metricType === 'pageviews' ? 'sidevisninger totalt' : filters.metricType === 'visits' ? 'økter totalt' : 'besøk totalt'}

@@ -33,6 +33,11 @@ export type OversiktChart = SavedChart & {
     queryId: number;
     queryName: string;
     categoryId: number;
+    variants?: Array<{
+        queryId: number;
+        queryName: string;
+        sql: string;
+    }>;
 };
 
 export type { SavedChart };

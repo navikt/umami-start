@@ -94,6 +94,11 @@ export const useOversikt = () => {
                     queryId: primaryQuery.id,
                     queryName: primaryQuery.name,
                     categoryId: item.categoryId,
+                    variants: item.queries.map((query) => ({
+                        queryId: query.id,
+                        queryName: query.name,
+                        sql: query.sqlText,
+                    })),
                 };
             });
     }, [graphs]);

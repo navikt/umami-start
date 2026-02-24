@@ -16,6 +16,7 @@ import {
     deleteCategory,
     deleteDashboard,
     deleteGraph,
+    deleteQuery,
     fetchCategories,
     fetchDashboards,
     fetchGraphs,
@@ -50,6 +51,14 @@ const getCategoryDisplayName = (name?: string): string => {
     const trimmed = name?.trim() ?? '';
     if (!trimmed) return 'Fane 1';
     if (trimmed.toLowerCase() === 'general') return 'Fane 1';
+    return trimmed;
+};
+
+const getVariantDisplayName = (name?: string, index = 0): string => {
+    const trimmed = name?.trim() ?? '';
+    if (!trimmed) return `Variant ${index + 1}`;
+    if (trimmed.toLowerCase() === 'query') return `Variant ${index + 1}`;
+    if (/\s-\squery$/i.test(trimmed)) return `Variant ${index + 1}`;
     return trimmed;
 };
 
@@ -122,6 +131,7 @@ const Oversikt = () => {
     const [categoryMutationError, setCategoryMutationError] = useState<string | null>(null);
     const [savingCategory, setSavingCategory] = useState(false);
     const [deletingCategory, setDeletingCategory] = useState(false);
+    const [selectedVariantByGraphId, setSelectedVariantByGraphId] = useState<Record<number, number>>({});
     const chartRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const chartPositionsRef = useRef<Map<number, DOMRect>>(new Map());
     const totalGb = Object.values(stats).reduce((acc, curr) => acc + curr.gb, 0);
@@ -146,6 +156,47 @@ const Oversikt = () => {
             return Object.fromEntries(nextEntries);
         });
     }, [charts]);
+
+    useEffect(() => {
+        setSelectedVariantByGraphId((prev) => {
+            let changed = false;
+            const next: Record<number, number> = {};
+
+            for (const chart of charts) {
+                const variants = chart.variants ?? [];
+                const selectedQueryId = prev[chart.graphId];
+                const resolved =
+                    (selectedQueryId && variants.some((variant) => variant.queryId === selectedQueryId)
+                        ? selectedQueryId
+                        : chart.queryId);
+
+                next[chart.graphId] = resolved;
+                if (prev[chart.graphId] !== resolved) changed = true;
+            }
+
+            if (!changed && Object.keys(prev).length === Object.keys(next).length) return prev;
+            return next;
+        });
+    }, [charts]);
+
+    const getChartWithSelectedVariant = (chart: OversiktChart): OversiktChart => {
+        const variants = chart.variants ?? [];
+        if (variants.length <= 1) return chart;
+
+        const selectedQueryId = selectedVariantByGraphId[chart.graphId];
+        const selectedVariant =
+            variants.find((variant) => variant.queryId === selectedQueryId)
+            ?? variants[0];
+
+        if (!selectedVariant) return chart;
+
+        return {
+            ...chart,
+            sql: selectedVariant.sql,
+            queryId: selectedVariant.queryId,
+            queryName: selectedVariant.queryName,
+        };
+    };
 
     useLayoutEffect(() => {
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -185,7 +236,8 @@ const Oversikt = () => {
 
     const openEditDialog = (chartId?: string) => {
         if (!chartId) return;
-        const chart = charts.find((item) => item.id === chartId) ?? null;
+        const baseChart = charts.find((item) => item.id === chartId) ?? null;
+        const chart = baseChart ? getChartWithSelectedVariant(baseChart) : null;
         if (!chart) return;
         setMutationError(null);
         setEditChart(chart);
@@ -193,7 +245,8 @@ const Oversikt = () => {
 
     const openDeleteDialog = (chartId?: string) => {
         if (!chartId) return;
-        const chart = charts.find((item) => item.id === chartId) ?? null;
+        const baseChart = charts.find((item) => item.id === chartId) ?? null;
+        const chart = baseChart ? getChartWithSelectedVariant(baseChart) : null;
         if (!chart) return;
         setMutationError(null);
         setDeleteChartTarget(chart);
@@ -201,7 +254,8 @@ const Oversikt = () => {
 
     const openCopyDialog = (chartId?: string, sourceWebsiteId?: string) => {
         if (!chartId) return;
-        const chart = charts.find((item) => item.id === chartId) ?? null;
+        const baseChart = charts.find((item) => item.id === chartId) ?? null;
+        const chart = baseChart ? getChartWithSelectedVariant(baseChart) : null;
         if (!chart) return;
         const resolvedSourceWebsiteId =
             sourceWebsiteId
@@ -213,7 +267,8 @@ const Oversikt = () => {
 
     const openMoveDialog = (chartId?: string) => {
         if (!chartId) return;
-        const chart = charts.find((item) => item.id === chartId) ?? null;
+        const baseChart = charts.find((item) => item.id === chartId) ?? null;
+        const chart = baseChart ? getChartWithSelectedVariant(baseChart) : null;
         if (!chart) return;
         setMutationError(null);
         setMoveChartTarget(chart);
@@ -221,7 +276,17 @@ const Oversikt = () => {
         setMoveTargetCategoryId(defaultTarget ? String(defaultTarget.id) : '');
     };
 
-    const handleSaveChart = async (params: { name: string; graphType: GraphType; sqlText: string; width: number; websiteId?: string }) => {
+    const handleSaveChart = async (params: {
+        name: string;
+        graphType: GraphType;
+        sqlText: string;
+        width: number;
+        websiteId?: string;
+        addAsVariant?: boolean;
+        variantName?: string;
+        targetQueryId?: number;
+        targetQueryName?: string;
+    }) => {
         if (!editChart || !selectedProjectId || !selectedDashboardId) return;
         setSavingEdit(true);
         setMutationError(null);
@@ -232,14 +297,108 @@ const Oversikt = () => {
                 graphType: params.graphType,
                 width: params.width,
             });
-            await updateQuery(selectedProjectId, selectedDashboardId, editChart.categoryId, editChart.graphId, editChart.queryId, {
-                name: editChart.queryName,
-                sqlText: sqlForSave,
-            });
+            if (params.addAsVariant) {
+                await createQuery(selectedProjectId, selectedDashboardId, editChart.categoryId, editChart.graphId, {
+                    name: params.variantName?.trim() || `${params.name} - variant`,
+                    sqlText: sqlForSave,
+                });
+            } else {
+                await updateQuery(
+                    selectedProjectId,
+                    selectedDashboardId,
+                    editChart.categoryId,
+                    editChart.graphId,
+                    params.targetQueryId ?? editChart.queryId,
+                    {
+                    name: params.targetQueryName ?? editChart.queryName,
+                    sqlText: sqlForSave,
+                    },
+                );
+            }
             await refreshGraphs(editChart.categoryId);
             setEditChart(null);
         } catch (err: unknown) {
             setMutationError(err instanceof Error ? err.message : 'Kunne ikke oppdatere graf');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleRenameChartVariant = async (params: { queryId: number; name: string }) => {
+        if (!editChart || !selectedProjectId || !selectedDashboardId) throw new Error('Ingen graf valgt');
+        const activeVariant = (editChart.variants ?? []).find((variant) => variant.queryId === params.queryId);
+        if (!activeVariant) throw new Error('Fant ikke variant');
+
+        setSavingEdit(true);
+        setMutationError(null);
+        try {
+            await updateQuery(
+                selectedProjectId,
+                selectedDashboardId,
+                editChart.categoryId,
+                editChart.graphId,
+                params.queryId,
+                {
+                    name: params.name.trim(),
+                    sqlText: activeVariant.sql,
+                },
+            );
+            setEditChart((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    queryName: prev.queryId === params.queryId ? params.name.trim() : prev.queryName,
+                    variants: (prev.variants ?? []).map((variant, index) => (
+                        variant.queryId === params.queryId
+                            ? { ...variant, queryName: params.name.trim() || `Variant ${index + 1}` }
+                            : variant
+                    )),
+                };
+            });
+            await refreshGraphs(editChart.categoryId);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Kunne ikke endre navn på variant';
+            setMutationError(message);
+            throw (err instanceof Error ? err : new Error(message));
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleDeleteChartVariant = async (params: { queryId: number }) => {
+        if (!editChart || !selectedProjectId || !selectedDashboardId) throw new Error('Ingen graf valgt');
+        const variants = editChart.variants ?? [];
+        if (variants.length <= 1) throw new Error('Du kan ikke slette siste variant');
+
+        setSavingEdit(true);
+        setMutationError(null);
+        try {
+            await deleteQuery(
+                selectedProjectId,
+                selectedDashboardId,
+                editChart.categoryId,
+                editChart.graphId,
+                params.queryId,
+            );
+
+            const nextVariants = variants.filter((variant) => variant.queryId !== params.queryId);
+            const fallbackVariant = nextVariants[0] ?? null;
+            setEditChart((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    queryId: fallbackVariant?.queryId ?? prev.queryId,
+                    queryName: fallbackVariant?.queryName ?? prev.queryName,
+                    sql: fallbackVariant?.sql ?? prev.sql,
+                    variants: nextVariants,
+                };
+            });
+
+            await refreshGraphs(editChart.categoryId);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Kunne ikke slette variant';
+            setMutationError(message);
+            throw (err instanceof Error ? err : new Error(message));
         } finally {
             setSavingEdit(false);
         }
@@ -793,48 +952,21 @@ const Oversikt = () => {
         }));
     };
 
+    const toggleEditPanel = () => {
+        setIsEditPanelOpen((prev) => {
+            const next = !prev;
+            if (!next) {
+                setGrabbedGraphId(null);
+                setDraggedGraphId(null);
+                setDropTargetGraphId(null);
+                setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
+            }
+            return next;
+        });
+    };
+
     const filters = (
         <>
-            {selectedDashboard && (
-                <div className="w-full flex justify-end gap-2 mb-3">
-                    <Button
-                        variant={isEditPanelOpen ? 'primary' : 'secondary'}
-                        size="small"
-                        onClick={() => {
-                            setIsEditPanelOpen((prev) => {
-                                const next = !prev;
-                                if (!next) {
-                                    setGrabbedGraphId(null);
-                                    setDraggedGraphId(null);
-                                    setDropTargetGraphId(null);
-                                    setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
-                                }
-                                return next;
-                            });
-                        }}
-                    >
-                        {isEditPanelOpen ? 'Lukk' : 'Rediger'}
-                    </Button>
-                    <ActionMenu>
-                        <ActionMenu.Trigger>
-                            <Button type="button" variant="secondary" size="small">
-                                + legg til
-                            </Button>
-                        </ActionMenu.Trigger>
-                        <ActionMenu.Content align="end">
-                            <ActionMenu.Item as="a" href="/grafbygger">
-                                Legg til graf
-                            </ActionMenu.Item>
-                            <ActionMenu.Item onClick={openImportModal}>
-                                Importer graf
-                            </ActionMenu.Item>
-                            <ActionMenu.Item onClick={openCreateTabModal}>
-                                Legg til fane
-                            </ActionMenu.Item>
-                        </ActionMenu.Content>
-                    </ActionMenu>
-                </div>
-            )}
             {supportsStandardFilters && (
                 <>
                     <div className="w-full md:w-[18rem]">
@@ -931,6 +1063,36 @@ const Oversikt = () => {
                 {reorderAnnouncement}
             </p>
 
+            {selectedDashboard && (
+                <div className="flex justify-end gap-2 mb-4">
+                    <Button
+                        variant={isEditPanelOpen ? 'primary' : 'secondary'}
+                        size="small"
+                        onClick={toggleEditPanel}
+                    >
+                        {isEditPanelOpen ? 'Lukk' : 'Rediger'}
+                    </Button>
+                    <ActionMenu>
+                        <ActionMenu.Trigger>
+                            <Button type="button" variant="secondary" size="small">
+                                + legg til
+                            </Button>
+                        </ActionMenu.Trigger>
+                        <ActionMenu.Content align="end">
+                            <ActionMenu.Item as="a" href="/grafbygger">
+                                Legg til graf
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={openImportModal}>
+                                Importer graf
+                            </ActionMenu.Item>
+                            <ActionMenu.Item onClick={openCreateTabModal}>
+                                Legg til fane
+                            </ActionMenu.Item>
+                        </ActionMenu.Content>
+                    </ActionMenu>
+                </div>
+            )}
+
             {isLoading && (
                 <div className="flex justify-center p-8">
                     <Loader />
@@ -955,46 +1117,6 @@ const Oversikt = () => {
 
             {!isLoading && selectedDashboard && (!supportsStandardFilters || activeWebsiteId) && (
                 <>
-                    {!supportsStandardFilters && (
-                        <div className="flex justify-end gap-2 mb-4">
-                            <Button
-                                variant={isEditPanelOpen ? 'primary' : 'secondary'}
-                                size="small"
-                                onClick={() => {
-                                    setIsEditPanelOpen((prev) => {
-                                        const next = !prev;
-                                        if (!next) {
-                                            setGrabbedGraphId(null);
-                                            setDraggedGraphId(null);
-                                            setDropTargetGraphId(null);
-                                            setReorderAnnouncement('Rekkefølge-redigering avsluttet.');
-                                        }
-                                        return next;
-                                    });
-                                }}
-                            >
-                                {isEditPanelOpen ? 'Lukk' : 'Rediger'}
-                            </Button>
-                            <ActionMenu>
-                                <ActionMenu.Trigger>
-                                    <Button type="button" variant="secondary" size="small">
-                                        + legg til
-                                    </Button>
-                                </ActionMenu.Trigger>
-                                <ActionMenu.Content align="end">
-                                    <ActionMenu.Item as="a" href="/grafbygger">
-                                        Legg til graf
-                                    </ActionMenu.Item>
-                                    <ActionMenu.Item onClick={openImportModal}>
-                                        Importer graf
-                                    </ActionMenu.Item>
-                                    <ActionMenu.Item onClick={openCreateTabModal}>
-                                        Legg til fane
-                                    </ActionMenu.Item>
-                                </ActionMenu.Content>
-                            </ActionMenu>
-                        </div>
-                    )}
                     {isEditPanelOpen && (
                         <section className="mb-4 p-3 border border-[var(--ax-border-neutral-subtle)] rounded-md bg-[var(--ax-bg-default)]">
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -1156,7 +1278,7 @@ const Oversikt = () => {
                                     }}
                                 >
                                     <DashboardWidget
-                                        chart={chart}
+                                        chart={getChartWithSelectedVariant(chart)}
                                         websiteId={activeWebsiteId}
                                         filters={activeFilters}
                                         onDataLoaded={handleDataLoaded}
@@ -1166,6 +1288,30 @@ const Oversikt = () => {
                                         onDeleteChart={openDeleteDialog}
                                         onCopyChart={openCopyDialog}
                                         onMoveChart={categories.length > 1 ? openMoveDialog : undefined}
+                                        titleBelow={(chart.variants?.length ?? 0) > 1 ? (
+                                            <Tabs
+                                                size="small"
+                                                value={String(selectedVariantByGraphId[chart.graphId] ?? chart.queryId)}
+                                                onChange={(value) => {
+                                                    const nextQueryId = Number(value);
+                                                    if (!Number.isFinite(nextQueryId)) return;
+                                                    setSelectedVariantByGraphId((prev) => ({
+                                                        ...prev,
+                                                        [chart.graphId]: nextQueryId,
+                                                    }));
+                                                }}
+                                            >
+                                                <Tabs.List>
+                                                    {(chart.variants ?? []).map((variant, variantIndex) => (
+                                                        <Tabs.Tab
+                                                            key={variant.queryId}
+                                                            value={String(variant.queryId)}
+                                                            label={getVariantDisplayName(variant.queryName, variantIndex)}
+                                                        />
+                                                    ))}
+                                                </Tabs.List>
+                                            </Tabs>
+                                        ) : undefined}
                                         titlePrefix={isEditPanelOpen && charts.length > 1 ? (
                                             <Button
                                                 variant="secondary"
@@ -1249,6 +1395,8 @@ const Oversikt = () => {
                     setMutationError(null);
                 }}
                 onSave={handleSaveChart}
+                onRenameVariant={handleRenameChartVariant}
+                onDeleteVariant={handleDeleteChartVariant}
             />
 
             <DeleteChartDialog
