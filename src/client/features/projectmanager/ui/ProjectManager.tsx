@@ -1192,10 +1192,10 @@ const ProjectManager = () => {
                 width="small"
             >
                 <Modal.Body>
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-1">
                         {moveChartError && <Alert variant="error" size="small">{moveChartError}</Alert>}
                         {moveChartTarget && (
-                            <BodyShort size="small">
+                            <BodyShort size="small" className="mt-2">
                                 Graf: <strong>{moveChartTarget.name}</strong>
                             </BodyShort>
                         )}
