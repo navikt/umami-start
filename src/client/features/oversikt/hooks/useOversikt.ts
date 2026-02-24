@@ -103,12 +103,17 @@ export const useOversikt = () => {
             });
     }, [graphs]);
 
-    const supportsStandardFilters = useMemo(() => {
-        return charts.some((chart) => {
+    const filterCapabilities = useMemo(() => {
+        return charts.reduce((acc, chart) => {
             const sql = chart.sql ?? '';
-            return sql.includes('{{website_id}}') || sql.includes('{{url_sti}}') || sql.includes('{{created_at}}');
-        });
+            if (sql.includes('{{website_id}}')) acc.website = true;
+            if (sql.includes('{{url_sti}}')) acc.url = true;
+            if (sql.includes('{{created_at}}')) acc.date = true;
+            return acc;
+        }, { website: false, url: false, date: false });
     }, [charts]);
+
+    const supportsStandardFilters = filterCapabilities.website || filterCapabilities.url || filterCapabilities.date;
 
     const hasChanges =
         tempDateRange !== activeFilters.dateRange
@@ -528,6 +533,7 @@ export const useOversikt = () => {
 
         // Derived
         charts,
+        filterCapabilities,
         supportsStandardFilters,
         hasChanges,
         isLoading,
