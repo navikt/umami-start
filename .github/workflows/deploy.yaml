@@ -44,7 +44,7 @@ jobs:
     needs: build
     runs-on: "ubuntu-latest"
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: "actions/checkout@v6"
@@ -54,6 +54,16 @@ jobs:
           CLUSTER: "dev-gcp"
           RESOURCE: .nais/dev/nais-dev.yaml
           VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
+      - name: "Create dev deployment tag"
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TAG_NAME="dev-$(date -u +'%Y.%m.%d-%H%M%S')"
+          git tag -a "$TAG_NAME" \
+            -m "Development deployment of ${{ github.sha }}" \
+            -m "Image: ${{ needs.build.outputs.image }}"
+          git push origin "$TAG_NAME"
 
   deploy-prod:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'

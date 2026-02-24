@@ -1,17 +1,9 @@
 name: "Deploy Prod (Manual)"
-run-name: "Deploy Prod (${{ github.event.inputs.version }})"
+run-name: "Deploy Prod (Latest Dev)"
 
 on:
   workflow_dispatch:
     inputs:
-      image:
-        description: "Existing image to deploy (from dev build)"
-        required: true
-        type: string
-      version:
-        description: "Version/commit sha to record (usually same sha as dev deploy)"
-        required: true
-        type: string
       force_redeploy:
         description: "Allow redeploy even if this version was already promoted to prod"
         required: true
@@ -19,7 +11,7 @@ on:
         type: boolean
 
 concurrency:
-  group: "deploy-prod-${{ github.event.inputs.version }}"
+  group: "deploy-prod-manual"
   cancel-in-progress: false
 
 jobs:
@@ -42,18 +34,53 @@ jobs:
     if: github.ref_name == 'main'
     needs: ensure-main
     runs-on: "ubuntu-latest"
+    outputs:
+      image: ${{ steps.resolve-dev.outputs.image }}
+      version: ${{ steps.resolve-dev.outputs.version }}
+      source_tag: ${{ steps.resolve-dev.outputs.source_tag }}
     steps:
       - uses: "actions/checkout@v6"
         with:
           fetch-depth: 0
 
-      - name: "Check for duplicate prod deployment"
-        env:
-          VERSION: ${{ github.event.inputs.version }}
-          FORCE_REDEPLOY: ${{ github.event.inputs.force_redeploy }}
+      - name: "Resolve latest dev deployment metadata"
+        id: resolve-dev
         run: |
           git fetch --tags --force
 
+          DEV_TAG="$(git for-each-ref --sort=-creatordate refs/tags/dev-* --format='%(refname:short)' | head -n1)"
+          if [ -z "$DEV_TAG" ]; then
+            echo "No dev deployment tag found. Deploy to dev first so prod can reuse the built image."
+            exit 1
+          fi
+
+          DEV_SUBJECT="$(git for-each-ref "refs/tags/${DEV_TAG}" --format='%(subject)')"
+          DEV_BODY="$(git for-each-ref "refs/tags/${DEV_TAG}" --format='%(body)')"
+          VERSION="$(printf '%s\n' "$DEV_SUBJECT" | sed -n 's/^Development deployment of //p')"
+          IMAGE="$(printf '%s\n' "$DEV_BODY" | sed -n 's/^Image: //p' | head -n1)"
+
+          if [ -z "$VERSION" ] || [ -z "$IMAGE" ]; then
+            echo "Latest dev tag (${DEV_TAG}) is missing version/image metadata."
+            echo "Subject: $DEV_SUBJECT"
+            echo "Body: $DEV_BODY"
+            exit 1
+          fi
+
+          echo "Using dev deployment tag: ${DEV_TAG}"
+          echo "Resolved version: ${VERSION}"
+          echo "Resolved image: ${IMAGE}"
+
+          {
+            echo "source_tag=${DEV_TAG}"
+            echo "version=${VERSION}"
+            echo "image=${IMAGE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: "Check for duplicate prod deployment"
+        env:
+          VERSION: ${{ steps.resolve-dev.outputs.version }}
+          FORCE_REDEPLOY: ${{ github.event.inputs.force_redeploy }}
+        run: |
           MATCHING_TAG="$(git for-each-ref refs/tags/prod-* --format='%(refname:short)|%(subject)' | awk -F'|' -v msg="Production deployment of ${VERSION}" '$2==msg { print $1; exit }')"
 
           if [ -n "$MATCHING_TAG" ] && [ "$FORCE_REDEPLOY" != "true" ]; then
@@ -86,12 +113,17 @@ jobs:
         env:
           CLUSTER: "prod-gcp"
           RESOURCE: .nais/prod/nais-prod.yaml
-          VAR: image=${{ github.event.inputs.image }},version=${{ github.event.inputs.version }}
+          VAR: image=${{ needs.preflight.outputs.image }},version=${{ needs.preflight.outputs.version }}
+      - name: "Show promoted artifact"
+        run: |
+          echo "Promoted dev tag: ${{ needs.preflight.outputs.source_tag }}"
+          echo "Image: ${{ needs.preflight.outputs.image }}"
+          echo "Version: ${{ needs.preflight.outputs.version }}"
       - name: "Create deployment tag"
         if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           TAG_NAME="prod-$(date -u +'%Y.%m.%d-%H%M%S')"
-          git tag -a "$TAG_NAME" -m "Production deployment of ${{ github.event.inputs.version }}"
+          git tag -a "$TAG_NAME" -m "Production deployment of ${{ needs.preflight.outputs.version }}"
           git push origin "$TAG_NAME"
