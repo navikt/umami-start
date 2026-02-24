@@ -1,0 +1,69 @@
+name: "Deploy Prod (Manual)"
+run-name: "Deploy Prod"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ensure-main:
+    name: "Ensure main branch"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Fail if not main"
+        if: github.ref_name != 'main'
+        run: |
+          echo "This workflow can only run from the main branch."
+          echo "Triggered from: ${GITHUB_REF_NAME}"
+          exit 1
+      - name: "Confirm main"
+        if: github.ref_name == 'main'
+        run: echo "Running from main"
+
+  build:
+    if: github.ref_name == 'main'
+    name: "build"
+    needs: ensure-main
+    runs-on: "ubuntu-latest"
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: "actions/checkout@v6"
+
+      - name: "Build and push"
+        uses: nais/docker-build-push@v0
+        id: docker-build-push
+        with:
+          team: team-researchops
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          build_secrets: |
+            "NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+
+    outputs:
+      image: ${{ steps.docker-build-push.outputs.image }}
+
+  deploy-prod:
+    if: github.ref_name == 'main'
+    needs: build
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: "actions/checkout@v6"
+      - name: "Deploy to Prod"
+        uses: "nais/deploy/actions/deploy@v2"
+        env:
+          CLUSTER: "prod-gcp"
+          RESOURCE: .nais/prod/nais-prod.yaml
+          VAR: image=${{ needs.build.outputs.image }},version=${{ github.sha }}
+      - name: "Create deployment tag"
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TAG_NAME="prod-$(date -u +'%Y.%m.%d-%H%M%S')"
+          git tag -a "$TAG_NAME" -m "Production deployment of ${{ github.sha }}"
+          git push origin "$TAG_NAME"
