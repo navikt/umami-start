@@ -70,5 +70,6 @@ All notable changes to this project will be documented in this file.
 - Validate and max bill bigquery
 - Graph ordering (#122)
 - Ingress innblikk
+- Graph category
 
 
