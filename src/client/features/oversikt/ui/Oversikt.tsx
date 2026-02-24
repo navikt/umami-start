@@ -944,7 +944,7 @@ const Oversikt = () => {
                         </section>
                     )}
                     {hasMultipleTabs && (
-                        <div className="mb-4">
+                        <div className="mb-6">
                             <Tabs value={activeCategoryId ? String(activeCategoryId) : undefined} onChange={handleCategoryTabChange}>
                                 <Tabs.List>
                                     {categories.map((category) => (
