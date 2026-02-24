@@ -1057,7 +1057,7 @@ const ProjectManager = () => {
                 width="small"
             >
                 <Modal.Body>
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-2">
                         {localError && <Alert variant="error" size="small">{localError}</Alert>}
                         <TextField
                             label="Prosjektnavn"
@@ -1209,13 +1209,11 @@ const ProjectManager = () => {
                             size="small"
                         >
                             <option value="">Velg arbeidsområde</option>
-                            {projectOptions
-                                .filter((project) => project.id !== moveChartTarget?.projectId)
-                                .map((project) => (
-                                    <option key={project.id} value={project.id}>
-                                        {project.name}
-                                    </option>
-                                ))}
+                            {projectOptions.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                    {project.name}
+                                </option>
+                            ))}
                         </Select>
                         <Select
                             label="Dashboard"
