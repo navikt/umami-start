@@ -26,6 +26,10 @@ spec:
     cpuThresholdPercentage: 80
   ingresses:
     - https://startumami.ansatt.nav.no
+    - https://innblikk.ansatt.nav.no
+  redirects:
+    - from: https://startumami.ansatt.nav.no
+      to: https://innblikk.ansatt.nav.no
   accessPolicy:
     outbound:
       rules:
