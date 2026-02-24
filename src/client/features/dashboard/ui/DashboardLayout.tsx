@@ -7,6 +7,7 @@ interface DashboardLayoutProps {
     title: string;
     subtitle?: string; // e.g. Domain or ID
     description?: React.ReactNode;
+    filtersTop?: React.ReactNode;
     filters?: React.ReactNode;
     children: React.ReactNode;
 }
@@ -15,6 +16,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     title,
     subtitle,
     description,
+    filtersTop,
     filters,
     children
 }) => {
@@ -27,6 +29,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             />
 
             <Page.Block width="xl" gutters className="pb-16">
+                {filtersTop && (
+                    <div className="mb-4">
+                        {filtersTop}
+                    </div>
+                )}
+
                 {filters && (
                     <div className="flex flex-wrap items-end gap-4 p-4 mb-8 bg-[var(--ax-bg-accent-soft)] rounded-lg border border-[var(--ax-border-neutral-subtle)] shadow-sm transition-all">
                         {filters}

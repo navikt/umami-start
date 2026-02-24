@@ -1056,15 +1056,8 @@ const Oversikt = () => {
                     <span>Alle dashboard</span>
                 </Link>
             )}
-            filters={supportsStandardFilters ? filters : undefined}
-        >
-            {error && <Alert variant="error">{error}</Alert>}
-            <p className="sr-only" aria-live="polite" aria-atomic="true">
-                {reorderAnnouncement}
-            </p>
-
-            {selectedDashboard && (
-                <div className="flex justify-end gap-2 mb-4">
+            filtersTop={selectedDashboard ? (
+                <div className="flex justify-end gap-2">
                     <Button
                         variant={isEditPanelOpen ? 'primary' : 'secondary'}
                         size="small"
@@ -1091,7 +1084,13 @@ const Oversikt = () => {
                         </ActionMenu.Content>
                     </ActionMenu>
                 </div>
-            )}
+            ) : undefined}
+            filters={supportsStandardFilters ? filters : undefined}
+        >
+            {error && <Alert variant="error">{error}</Alert>}
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
+                {reorderAnnouncement}
+            </p>
 
             {isLoading && (
                 <div className="flex justify-center p-8">
