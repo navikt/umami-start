@@ -1218,7 +1218,6 @@ const Oversikt = () => {
                         label="Fanenavn"
                         value={newTabName}
                         onChange={(event) => setNewTabName(event.target.value)}
-                        placeholder="F.eks. Konvertering"
                     />
                     {categoryMutationError && (
                         <div className="mt-3">

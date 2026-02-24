@@ -162,6 +162,46 @@ export const useProjectManager = () => {
         [run, loadProjectSummaries],
     );
 
+    const createCategory = useCallback(
+        (projectId: number, dashboardId: number, name: string) =>
+            run(async () => {
+                if (!projectId) throw new Error('Velg prosjekt');
+                if (!dashboardId) throw new Error('Velg dashboard');
+                if (!name.trim()) throw new Error('Fanenavn er påkrevd');
+                await api.createCategory(projectId, dashboardId, name.trim());
+                await loadProjectSummaries();
+                setMessage('Fane opprettet');
+            }),
+        [run, loadProjectSummaries],
+    );
+
+    const updateCategory = useCallback(
+        (projectId: number, dashboardId: number, categoryId: number, name: string) =>
+            run(async () => {
+                if (!projectId) throw new Error('Velg prosjekt');
+                if (!dashboardId) throw new Error('Velg dashboard');
+                if (!categoryId) throw new Error('Velg fane');
+                if (!name.trim()) throw new Error('Fanenavn er påkrevd');
+                await api.updateCategory(projectId, dashboardId, categoryId, { name: name.trim() });
+                await loadProjectSummaries();
+                setMessage('Fane oppdatert');
+            }),
+        [run, loadProjectSummaries],
+    );
+
+    const deleteCategory = useCallback(
+        (projectId: number, dashboardId: number, categoryId: number) =>
+            run(async () => {
+                if (!projectId) throw new Error('Velg prosjekt');
+                if (!dashboardId) throw new Error('Velg dashboard');
+                if (!categoryId) throw new Error('Velg fane');
+                await api.deleteCategory(projectId, dashboardId, categoryId);
+                await loadProjectSummaries();
+                setMessage('Fane slettet');
+            }),
+        [run, loadProjectSummaries],
+    );
+
     const deleteDashboard = useCallback(
         (projectId: number, dashboardId: number) =>
             run(async () => {
@@ -617,6 +657,9 @@ export const useProjectManager = () => {
         deleteProject,
         editDashboard,
         createDashboard,
+        createCategory,
+        updateCategory,
+        deleteCategory,
         deleteDashboard,
         deleteChart,
         editChart,

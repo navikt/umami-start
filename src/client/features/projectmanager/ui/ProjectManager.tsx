@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon } from '@navikt/aksel-icons';
+import { BarChartIcon, LineGraphIcon, PieChartIcon, SquareGridIcon, TableIcon, TabsIcon } from '@navikt/aksel-icons';
 import { MoreVertical, Plus } from 'lucide-react';
 import { ActionMenu, Alert, BodyShort, Button, Heading, Link, Loader, Modal, Search, Select, Table, TextField, Tooltip } from '@navikt/ds-react';
 import DeleteDashboardDialog from '../../oversikt/ui/dialogs/DeleteDashboardDialog.tsx';
@@ -17,10 +17,11 @@ import type { GraphType, OversiktChart } from '../../oversikt';
 
 type FileTableRow = {
     id: string;
-    type: 'dashboard' | 'chart';
+    type: 'dashboard' | 'category' | 'chart';
     name: string;
     dashboardId: number;
     dashboardName: string;
+    categoryName?: string;
     categoryId?: number;
     graphType?: string;
     graphId?: number;
@@ -59,10 +60,13 @@ const ProjectManager = () => {
         createProject,
         editProject,
         createDashboard,
+        createCategory,
+        updateCategory,
         importChart,
         deleteProject,
         editDashboard,
         deleteDashboard,
+        deleteCategory,
         deleteChart,
         editChart,
         copyChart,
@@ -110,6 +114,7 @@ const ProjectManager = () => {
     const [moveChartTarget, setMoveChartTarget] = useState<ProjectManagerMoveChartTarget | null>(null);
     const [moveChartTargetProjectId, setMoveChartTargetProjectId] = useState<number>(0);
     const [moveChartTargetDashboardId, setMoveChartTargetDashboardId] = useState<number>(0);
+    const [moveChartTargetCategoryId, setMoveChartTargetCategoryId] = useState<number>(0);
     const [moveChartError, setMoveChartError] = useState<string | null>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
@@ -117,6 +122,14 @@ const ProjectManager = () => {
     const [newDashboardName, setNewDashboardName] = useState('');
     const [newDashboardDescription, setNewDashboardDescription] = useState('');
     const [createDashboardError, setCreateDashboardError] = useState<string | null>(null);
+    const [createTabTarget, setCreateTabTarget] = useState<{ dashboardId: number; dashboardName: string } | null>(null);
+    const [newTabName, setNewTabName] = useState('');
+    const [createTabError, setCreateTabError] = useState<string | null>(null);
+    const [renameTabTarget, setRenameTabTarget] = useState<{ projectId: number; dashboardId: number; categoryId: number; dashboardName: string; tabName: string } | null>(null);
+    const [renameTabName, setRenameTabName] = useState('');
+    const [renameTabError, setRenameTabError] = useState<string | null>(null);
+    const [deleteTabTarget, setDeleteTabTarget] = useState<{ projectId: number; dashboardId: number; categoryId: number; dashboardName: string; tabName: string; chartCount: number; categoryCount: number } | null>(null);
+    const [deleteTabError, setDeleteTabError] = useState<string | null>(null);
     const [isImportChartOpen, setIsImportChartOpen] = useState(false);
     const [importChartError, setImportChartError] = useState<string | null>(null);
     const [importChartDefaultDashboardId, setImportChartDefaultDashboardId] = useState<number | null>(null);
@@ -175,20 +188,71 @@ const ProjectManager = () => {
                 dashboardName: dashboard.name,
             };
 
-            const chartRows: FileTableRow[] = dashboard.charts.map((chart) => ({
-                id: `chart-${chart.id}`,
-                type: 'chart',
-                name: chart.name,
-                dashboardId: dashboard.id,
-                dashboardName: dashboard.name,
-                categoryId: chart.categoryId,
-                graphType: chart.graphType,
-                graphId: chart.id,
-            }));
+            const hasMultipleCategories = dashboard.categories.length > 1;
 
-            return [dashboardRow, ...chartRows];
+            const rows: FileTableRow[] = [dashboardRow];
+            if (!hasMultipleCategories) {
+                rows.push(...dashboard.charts.map((chart) => ({
+                    id: `chart-${chart.id}`,
+                    type: 'chart' as const,
+                    name: chart.name,
+                    dashboardId: dashboard.id,
+                    dashboardName: dashboard.name,
+                    categoryId: chart.categoryId,
+                    graphType: chart.graphType,
+                    graphId: chart.id,
+                })));
+                return rows;
+            }
+
+            dashboard.categories.forEach((category) => {
+                rows.push({
+                    id: `category-${dashboard.id}-${category.id}`,
+                    type: 'category',
+                    name: category.name,
+                    categoryName: category.name,
+                    dashboardId: dashboard.id,
+                    dashboardName: dashboard.name,
+                    categoryId: category.id,
+                });
+
+                rows.push(...category.charts.map((chart) => ({
+                    id: `chart-${chart.id}`,
+                    type: 'chart' as const,
+                    name: chart.name,
+                    dashboardId: dashboard.id,
+                    dashboardName: dashboard.name,
+                    categoryId: chart.categoryId,
+                    categoryName: category.name,
+                    graphType: chart.graphType,
+                    graphId: chart.id,
+                })));
+            });
+
+            return rows;
         });
     }, [selectedProject]);
+
+    const getCategoryDisplayName = (name?: string) => {
+        const trimmed = name?.trim() ?? '';
+        if (!trimmed) return 'Fane 1';
+        if (trimmed.toLowerCase() === 'general') return 'Fane 1';
+        return trimmed;
+    };
+
+    const getCategoryMeta = (dashboardId: number, categoryId?: number) => {
+        if (!selectedProject || !categoryId) return null;
+        const dashboard = selectedProject.dashboards.find((item) => item.id === dashboardId);
+        if (!dashboard) return null;
+        const category = dashboard.categories.find((item) => item.id === categoryId);
+        if (!category) return null;
+        return {
+            dashboard,
+            category,
+            chartCount: category.charts.length,
+            categoryCount: dashboard.categories.length,
+        };
+    };
 
     useEffect(() => {
         if (error) setShowErrorAlert(true);
@@ -292,6 +356,83 @@ const ProjectManager = () => {
         setIsCreateDashboardOpen(false);
         setNewDashboardName('');
         setNewDashboardDescription('');
+    };
+
+    const openCreateDashboardTab = (dashboardId: number) => {
+        if (!selectedProject) return;
+        const dashboard = selectedProject.dashboards.find((item) => item.id === dashboardId);
+        if (!dashboard) return;
+        setCreateTabError(null);
+        setNewTabName('');
+        setCreateTabTarget({ dashboardId: dashboard.id, dashboardName: dashboard.name });
+    };
+
+    const handleCreateDashboardTab = async () => {
+        if (!selectedProject || !createTabTarget) return;
+        if (!newTabName.trim()) {
+            setCreateTabError('Fanenavn er påkrevd');
+            return;
+        }
+        setCreateTabError(null);
+        await createCategory(selectedProject.project.id, createTabTarget.dashboardId, newTabName.trim());
+        setCreateTabTarget(null);
+        setNewTabName('');
+    };
+
+    const openRenameDashboardTab = (row: FileTableRow) => {
+        if (!selectedProject || row.type !== 'category' || !row.categoryId) return;
+        setRenameTabError(null);
+        setRenameTabName(getCategoryDisplayName(row.name));
+        setRenameTabTarget({
+            projectId: selectedProject.project.id,
+            dashboardId: row.dashboardId,
+            categoryId: row.categoryId,
+            dashboardName: row.dashboardName,
+            tabName: getCategoryDisplayName(row.name),
+        });
+    };
+
+    const handleRenameDashboardTab = async () => {
+        if (!renameTabTarget) return;
+        if (!renameTabName.trim()) {
+            setRenameTabError('Fanenavn er påkrevd');
+            return;
+        }
+        setRenameTabError(null);
+        await updateCategory(renameTabTarget.projectId, renameTabTarget.dashboardId, renameTabTarget.categoryId, renameTabName);
+        setRenameTabTarget(null);
+        setRenameTabName('');
+    };
+
+    const openDeleteDashboardTab = (row: FileTableRow) => {
+        if (!selectedProject || row.type !== 'category' || !row.categoryId) return;
+        const meta = getCategoryMeta(row.dashboardId, row.categoryId);
+        if (!meta) return;
+        setDeleteTabError(null);
+        setDeleteTabTarget({
+            projectId: selectedProject.project.id,
+            dashboardId: row.dashboardId,
+            categoryId: row.categoryId,
+            dashboardName: row.dashboardName,
+            tabName: getCategoryDisplayName(row.name),
+            chartCount: meta.chartCount,
+            categoryCount: meta.categoryCount,
+        });
+    };
+
+    const handleDeleteDashboardTab = async () => {
+        if (!deleteTabTarget) return;
+        if (deleteTabTarget.categoryCount <= 1) {
+            setDeleteTabError('Kan ikke slette siste fane');
+            return;
+        }
+        if (deleteTabTarget.chartCount > 0) {
+            setDeleteTabError('Faner som inneholder grafer kan ikke slettes');
+            return;
+        }
+        setDeleteTabError(null);
+        await deleteCategory(deleteTabTarget.projectId, deleteTabTarget.dashboardId, deleteTabTarget.categoryId);
+        setDeleteTabTarget(null);
     };
 
     const openImportChart = (defaultDashboardId?: number) => {
@@ -461,6 +602,7 @@ const ProjectManager = () => {
         setMoveChartError(null);
         setMoveChartTargetProjectId(projectId);
         setMoveChartTargetDashboardId(row.dashboardId);
+        setMoveChartTargetCategoryId(row.categoryId);
         setMoveChartTarget({
             projectId,
             projectName,
@@ -563,10 +705,24 @@ const ProjectManager = () => {
         }));
     }, [moveChartTargetProjectSummary]);
 
+    const moveChartTargetDashboardSummary = useMemo(() => {
+        if (!moveChartTargetProjectSummary || !moveChartTargetDashboardId) return null;
+        return moveChartTargetProjectSummary.dashboards.find((dashboard) => dashboard.id === moveChartTargetDashboardId) ?? null;
+    }, [moveChartTargetProjectSummary, moveChartTargetDashboardId]);
+
+    const moveChartCategoryOptions = useMemo(() => {
+        if (!moveChartTargetDashboardSummary) return [];
+        return moveChartTargetDashboardSummary.categories.map((category) => ({
+            id: category.id,
+            name: getCategoryDisplayName(category.name),
+        }));
+    }, [moveChartTargetDashboardSummary]);
+
     useEffect(() => {
         if (!moveChartTarget) return;
         if (!moveChartTargetProjectId) {
             setMoveChartTargetDashboardId(0);
+            setMoveChartTargetCategoryId(0);
             return;
         }
 
@@ -574,6 +730,7 @@ const ProjectManager = () => {
         const dashboards = targetProject?.dashboards ?? [];
         if (dashboards.length === 0) {
             setMoveChartTargetDashboardId(0);
+            setMoveChartTargetCategoryId(0);
             return;
         }
 
@@ -586,6 +743,25 @@ const ProjectManager = () => {
         });
     }, [projectSummaries, moveChartTarget, moveChartTargetProjectId]);
 
+    useEffect(() => {
+        if (!moveChartTargetDashboardSummary) {
+            setMoveChartTargetCategoryId(0);
+            return;
+        }
+        const categories = moveChartTargetDashboardSummary.categories;
+        if (categories.length === 0) {
+            setMoveChartTargetCategoryId(0);
+            return;
+        }
+        setMoveChartTargetCategoryId((prev) => {
+            if (prev && categories.some((category) => category.id === prev)) return prev;
+            const sameCategory = moveChartTarget
+                ? categories.find((category) => category.id === moveChartTarget.categoryId)
+                : null;
+            return sameCategory?.id ?? categories[0].id;
+        });
+    }, [moveChartTargetDashboardSummary, moveChartTarget]);
+
     const handleMoveChart = async () => {
         if (!moveChartTarget) return;
         if (!moveChartTargetProjectId) {
@@ -596,11 +772,16 @@ const ProjectManager = () => {
             setMoveChartError('Velg dashboard');
             return;
         }
+        if (!moveChartTargetCategoryId && (moveChartTargetDashboardSummary?.categories.length ?? 0) > 0) {
+            setMoveChartError('Velg fane');
+            return;
+        }
         if (
             moveChartTargetProjectId === moveChartTarget.projectId
             && moveChartTargetDashboardId === moveChartTarget.dashboardId
+            && moveChartTargetCategoryId === moveChartTarget.categoryId
         ) {
-            setMoveChartError('Velg et annet dashboard eller team for flytting');
+            setMoveChartError('Velg en annen fane, dashboard eller team for flytting');
             return;
         }
 
@@ -609,10 +790,12 @@ const ProjectManager = () => {
         let targetCategoryId: number;
         try {
             const categories = await api.fetchCategories(moveChartTargetProjectId, moveChartTargetDashboardId);
-            if (categories.length > 0) {
+            if (moveChartTargetCategoryId && categories.some((category) => category.id === moveChartTargetCategoryId)) {
+                targetCategoryId = moveChartTargetCategoryId;
+            } else if (categories.length > 0) {
                 targetCategoryId = categories[0].id;
             } else {
-                const created = await api.createCategory(moveChartTargetProjectId, moveChartTargetDashboardId, 'Standard');
+                const created = await api.createCategory(moveChartTargetProjectId, moveChartTargetDashboardId, 'Fane 1');
                 targetCategoryId = created.id;
             }
         } catch (err: unknown) {
@@ -637,6 +820,7 @@ const ProjectManager = () => {
         setMoveChartTarget(null);
         setMoveChartTargetProjectId(0);
         setMoveChartTargetDashboardId(0);
+        setMoveChartTargetCategoryId(0);
     };
 
     const projectOptions: ProjectDto[] = useMemo(
@@ -881,25 +1065,30 @@ const ProjectManager = () => {
                             <Table.Body>
                                 {fileRows.map((row) => {
                                     const isChartRow = row.type === 'chart';
-                                    const overviewHref = `/oversikt?projectId=${selectedProject.project.id}&dashboardId=${row.dashboardId}`;
+                                    const isCategoryRow = row.type === 'category';
+                                    const overviewHref = `/oversikt?projectId=${selectedProject.project.id}&dashboardId=${row.dashboardId}${row.categoryId ? `&categoryId=${row.categoryId}` : ''}`;
                                     const isEmptyDashboardRow = row.type === 'dashboard' && (dashboardChartCountById.get(row.dashboardId) ?? 0) === 0;
                                     return (
                                         <Fragment key={row.id}>
                                             <Table.Row>
                                                 <Table.HeaderCell scope="row">
-                                                    <span className={`inline-flex items-center gap-2 min-w-0 ${isChartRow ? 'pl-6' : ''}`}>
+                                                    <span className={`inline-flex items-center gap-2 min-w-0 ${isChartRow ? 'pl-12' : isCategoryRow ? 'pl-6' : ''}`}>
                                                         <span className="text-[var(--ax-text-subtle)]">
                                                             {row.type === 'dashboard' ? (
                                                                 <SquareGridIcon aria-hidden fontSize="1rem" />
+                                                            ) : row.type === 'category' ? (
+                                                                <TabsIcon aria-hidden fontSize="0.9rem" />
                                                             ) : (
                                                                 getChartIcon(row.graphType)
                                                             )}
                                                         </span>
-                                                        <Link href={overviewHref}>{row.name}</Link>
+                                                        <Link href={overviewHref}>
+                                                            {row.type === 'category' ? getCategoryDisplayName(row.name) : row.name}
+                                                        </Link>
                                                     </span>
                                                 </Table.HeaderCell>
                                                 <Table.DataCell>
-                                                    {row.type === 'dashboard' ? 'Dashboard' : getChartTypeLabel(row.graphType)}
+                                                    {row.type === 'dashboard' ? 'Dashboard' : row.type === 'category' ? 'Fane' : getChartTypeLabel(row.graphType)}
                                                 </Table.DataCell>
                                                 <Table.DataCell>
                                                     <div className="flex justify-end">
@@ -947,7 +1136,7 @@ const ProjectManager = () => {
                                                                     )}
                                                                 </ActionMenu.Content>
                                                             </ActionMenu>
-                                                        ) : (
+                                                        ) : row.type === 'dashboard' ? (
                                                             <ActionMenu>
                                                                 <ActionMenu.Trigger>
                                                                     <Button
@@ -958,6 +1147,13 @@ const ProjectManager = () => {
                                                                     />
                                                                 </ActionMenu.Trigger>
                                                                 <ActionMenu.Content align="end">
+                                                                    {selectedProject && (
+                                                                        <ActionMenu.Item
+                                                                            onClick={() => openCreateDashboardTab(row.dashboardId)}
+                                                                        >
+                                                                            Legg til fane
+                                                                        </ActionMenu.Item>
+                                                                    )}
                                                                     {selectedProject && (
                                                                         <ActionMenu.Item
                                                                             onClick={() => openEditDashboard(selectedProject.project.id, row.dashboardId, row.name)}
@@ -974,7 +1170,29 @@ const ProjectManager = () => {
                                                                     )}
                                                                 </ActionMenu.Content>
                                                             </ActionMenu>
-                                                        )}
+                                                        ) : row.type === 'category' ? (
+                                                            <ActionMenu>
+                                                                <ActionMenu.Trigger>
+                                                                    <Button
+                                                                        variant="tertiary"
+                                                                        size="xsmall"
+                                                                        icon={<MoreVertical aria-hidden />}
+                                                                        aria-label={`Flere valg for ${getCategoryDisplayName(row.name)}`}
+                                                                    />
+                                                                </ActionMenu.Trigger>
+                                                                <ActionMenu.Content align="end">
+                                                                    <ActionMenu.Item as="a" href={overviewHref}>
+                                                                        Åpne fane i dashboard
+                                                                    </ActionMenu.Item>
+                                                                    <ActionMenu.Item onClick={() => openRenameDashboardTab(row)}>
+                                                                        Gi nytt navn til fane
+                                                                    </ActionMenu.Item>
+                                                                    <ActionMenu.Item onClick={() => openDeleteDashboardTab(row)}>
+                                                                        Slett fane
+                                                                    </ActionMenu.Item>
+                                                                </ActionMenu.Content>
+                                                            </ActionMenu>
+                                                        ) : null}
                                                     </div>
                                                 </Table.DataCell>
                                             </Table.Row>
@@ -1106,6 +1324,146 @@ const ProjectManager = () => {
             />
 
             <Modal
+                open={!!createTabTarget}
+                onClose={() => {
+                    setCreateTabTarget(null);
+                    setCreateTabError(null);
+                }}
+                header={{ heading: 'Legg til fane' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="space-y-4">
+                        {createTabError && <Alert variant="error" size="small">{createTabError}</Alert>}
+                        {createTabTarget && (
+                            <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
+                                Dashboard: <strong>{createTabTarget.dashboardName}</strong>
+                            </BodyShort>
+                        )}
+                        <div className="pt-2">
+                            <TextField
+                                label="Fanenavn"
+                                size="small"
+                                value={newTabName}
+                                onChange={(event) => setNewTabName(event.target.value)}
+                            />
+                        </div>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleCreateDashboardTab()} loading={loading}>
+                        Opprett fane
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setCreateTabTarget(null);
+                            setCreateTabError(null);
+                        }}
+                        disabled={loading}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
+                open={!!renameTabTarget}
+                onClose={() => {
+                    setRenameTabTarget(null);
+                    setRenameTabName('');
+                    setRenameTabError(null);
+                }}
+                header={{ heading: 'Gi nytt navn til fane' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="space-y-4">
+                        {renameTabError && <Alert variant="error" size="small">{renameTabError}</Alert>}
+                        {renameTabTarget && (
+                            <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
+                                Dashboard: <strong>{renameTabTarget.dashboardName}</strong>
+                            </BodyShort>
+                        )}
+                        <TextField
+                            label="Fanenavn"
+                            size="small"
+                            value={renameTabName}
+                            onChange={(event) => setRenameTabName(event.target.value)}
+                        />
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={() => void handleRenameDashboardTab()} loading={loading}>
+                        Lagre navn
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setRenameTabTarget(null);
+                            setRenameTabName('');
+                            setRenameTabError(null);
+                        }}
+                        disabled={loading}
+                    >
+                        Avbryt
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
+                open={!!deleteTabTarget}
+                onClose={() => {
+                    setDeleteTabTarget(null);
+                    setDeleteTabError(null);
+                }}
+                header={{ heading: 'Slett fane' }}
+                width="small"
+            >
+                <Modal.Body>
+                    <div className="flex flex-col gap-4">
+                        {deleteTabError && <Alert variant="error">{deleteTabError}</Alert>}
+                        <BodyShort>
+                            Er du sikker på at du vil slette fanen <strong>{deleteTabTarget?.tabName}</strong>?
+                        </BodyShort>
+                        {deleteTabTarget && (deleteTabTarget.chartCount > 0 || deleteTabTarget.categoryCount <= 1) ? (
+                            <Alert variant="warning" size="small">
+                                {deleteTabTarget.chartCount > 0
+                                    ? `Fanen inneholder ${deleteTabTarget.chartCount} graf(er) og kan ikke slettes. Flytt eller slett grafene først.`
+                                    : 'Siste fane kan ikke slettes. Opprett en ny fane først.'}
+                            </Alert>
+                        ) : (
+                            <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
+                                Denne handlingen kan ikke angres.
+                            </BodyShort>
+                        )}
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    {!deleteTabTarget || ((deleteTabTarget.chartCount ?? 0) <= 0 && (deleteTabTarget.categoryCount ?? 0) > 1) ? (
+                        <Button
+                            variant="danger"
+                            onClick={() => void handleDeleteDashboardTab()}
+                            loading={loading}
+                            disabled={loading}
+                        >
+                            Slett fane
+                        </Button>
+                    ) : null}
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setDeleteTabTarget(null);
+                            setDeleteTabError(null);
+                        }}
+                        disabled={loading}
+                    >
+                        Lukk
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
                 open={isCreateDashboardOpen}
                 onClose={() => {
                     setIsCreateDashboardOpen(false);
@@ -1187,6 +1545,7 @@ const ProjectManager = () => {
                     setMoveChartTarget(null);
                     setMoveChartTargetProjectId(0);
                     setMoveChartTargetDashboardId(0);
+                    setMoveChartTargetCategoryId(0);
                     setMoveChartError(null);
                 }}
                 header={{ heading: 'Flytt graf' }}
@@ -1235,9 +1594,31 @@ const ProjectManager = () => {
                                 </option>
                             ))}
                         </Select>
+                        <Select
+                            label="Fane"
+                            value={moveChartTargetCategoryId ? String(moveChartTargetCategoryId) : ''}
+                            onChange={(event) => {
+                                setMoveChartTargetCategoryId(Number(event.target.value));
+                                setMoveChartError(null);
+                            }}
+                            size="small"
+                            disabled={!moveChartTargetDashboardId || moveChartCategoryOptions.length === 0}
+                        >
+                            <option value="">Velg fane</option>
+                            {moveChartCategoryOptions.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </Select>
                         {moveChartTargetProjectId > 0 && moveChartDashboardOptions.length === 0 && (
                             <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
                                 Valgt team har ingen dashboard.
+                            </BodyShort>
+                        )}
+                        {moveChartTargetDashboardId > 0 && moveChartCategoryOptions.length === 0 && (
+                            <BodyShort size="small" className="text-[var(--ax-text-subtle)]">
+                                Valgt dashboard har ingen faner ennå. Det opprettes en fane automatisk ved flytting.
                             </BodyShort>
                         )}
                     </div>
@@ -1252,6 +1633,7 @@ const ProjectManager = () => {
                             setMoveChartTarget(null);
                             setMoveChartTargetProjectId(0);
                             setMoveChartTargetDashboardId(0);
+                            setMoveChartTargetCategoryId(0);
                             setMoveChartError(null);
                         }}
                         disabled={loading}
