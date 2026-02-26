@@ -158,6 +158,7 @@ const MetricSelector = forwardRef(({
   const isShortcutMetric = (metric: Metric): boolean => {
     const shortcutMetrics = [
       { function: 'distinct', column: 'session_id' },
+      { function: 'distinct', column: 'visit_id' },
       { function: 'count', column: 'session_id' },
       { function: 'count', column: undefined, alias: 'Antall_sidevisninger' },
       { function: 'count', column: undefined, alias: 'Antall_hendelser' },
@@ -197,6 +198,9 @@ const MetricSelector = forwardRef(({
   const getMetricDisplayName = (metric: Metric): string => {
     if (metric.function === 'distinct' && metric.column === 'session_id') {
       return 'Antall unike besøkende';
+    }
+    if (metric.function === 'distinct' && metric.column === 'visit_id') {
+      return 'Økter / besøk';
     }
 
     if (metric.function === 'count' && metric.alias === 'Antall_sidevisninger') {
@@ -295,6 +299,15 @@ const MetricSelector = forwardRef(({
                         disabled={isMetricAdded('distinct', 'session_id')}
                       >
                         Antall unike besøkende
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => addConfiguredMetric('distinct', 'visit_id', 'Okter_besok')}
+                        icon={<Users size={16} />}
+                        disabled={isMetricAdded('distinct', 'visit_id')}
+                      >
+                        Økter / besøk
                       </Button>
                       <Button
                         variant="secondary"
