@@ -2,7 +2,6 @@ import { CogIcon, ExternalLinkIcon, MenuHamburgerIcon, ThemeIcon } from "@navikt
 import { ActionMenu, Button, Dropdown, Link, Page, Tooltip } from "@navikt/ds-react";
 import { useEffect, useState } from "react";
 import "../../../../tailwind.css";
-import { ThemeButton } from "../ThemeButton/ThemeButton.tsx";
 
 interface HeaderProps {
   theme: "light" | "dark";
@@ -160,6 +159,15 @@ export default function Header({ theme }: HeaderProps) {
             </ActionMenu.Group>
           </>
         )}
+        <ActionMenu.Divider />
+        <ActionMenu.Group label="Innstillinger">
+          <ActionMenu.Item onClick={toggleTheme}>
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <ThemeIcon aria-hidden fontSize="1rem" />
+              Bytt til {theme === "dark" ? "lyst" : "mørkt"} tema
+            </span>
+          </ActionMenu.Item>
+        </ActionMenu.Group>
       </ActionMenu.Content>
     </ActionMenu>
   );
@@ -254,16 +262,6 @@ export default function Header({ theme }: HeaderProps) {
                     >
                       <span className="whitespace-nowrap">Dashboard</span>
                     </Dropdown.Menu.List.Item>
-                    <Dropdown.Menu.List.Item
-                      as="button"
-                      onClick={toggleTheme}
-                      className="w-full text-left"
-                    >
-                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                        <ThemeIcon aria-hidden fontSize="1rem" />
-                        Bytt til {theme === "dark" ? "lyst" : "mørkt"} tema
-                      </span>
-                    </Dropdown.Menu.List.Item>
                   </Dropdown.Menu.List>
                 </Dropdown.Menu>
               </Dropdown>
@@ -294,7 +292,6 @@ export default function Header({ theme }: HeaderProps) {
                   </div>
                 </Button>
                 {setupMenu}
-                <ThemeButton />
               </div>
             </div>
           )}
