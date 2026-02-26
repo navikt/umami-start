@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Heading, Link, Button, Alert, Modal, DatePicker, TextField, Select, UNSAFE_Combobox } from '@navikt/ds-react';
+import { Heading, Link, Button, Alert, Modal, TextField, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
-import { subDays, format, isEqual } from 'date-fns';
+import { subDays, format, isEqual, startOfWeek, startOfMonth } from 'date-fns';
 import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
@@ -58,6 +58,41 @@ interface QueryPreviewProps {
   isEventsLoading?: boolean;
   websiteId?: string;
 }
+
+type DatePreset = 'today' | 'yesterday' | 'this_week' | 'last_7_days' | 'last_week' | 'last_28_days' | 'current_month' | 'last_month';
+
+const DEFAULT_DATE_PRESET: DatePreset = 'last_7_days';
+
+const getDateRangeFromPreset = (preset: DatePreset): { from: Date; to: Date } => {
+  const now = new Date();
+
+  switch (preset) {
+    case 'today':
+      return { from: now, to: now };
+    case 'yesterday': {
+      const yesterday = subDays(now, 1);
+      return { from: yesterday, to: yesterday };
+    }
+    case 'this_week':
+      return { from: startOfWeek(now, { weekStartsOn: 1 }), to: now };
+    case 'last_week': {
+      const startThisWeek = startOfWeek(now, { weekStartsOn: 1 });
+      return { from: subDays(startThisWeek, 7), to: subDays(startThisWeek, 1) };
+    }
+    case 'last_28_days':
+      return { from: subDays(now, 28), to: now };
+    case 'current_month':
+      return { from: startOfMonth(now), to: now };
+    case 'last_month':
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: new Date(now.getFullYear(), now.getMonth(), 0)
+      };
+    case 'last_7_days':
+    default:
+      return { from: subDays(now, 7), to: now };
+  }
+};
 
 const API_TIMEOUT_MS = 60000; // timeout
 const getHostPrefix = () => (typeof window === 'undefined' ? 'server' : window.location.hostname.replace(/\./g, '_'));
@@ -120,6 +155,7 @@ const QueryPreview = ({
   isEventsLoading = false,
   websiteId
 }: QueryPreviewProps) => {
+  const initialDateRange = getDateRangeFromPreset(DEFAULT_DATE_PRESET);
   const [copied, setCopied] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [wasManuallyOpened, setWasManuallyOpened] = useState(false);
@@ -140,9 +176,10 @@ const QueryPreview = ({
   const [hasEventNameFilter, setHasEventNameFilter] = useState(false);
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to?: Date | undefined }>({
-    from: subDays(new Date(), 30),
-    to: new Date(),
+    from: initialDateRange.from,
+    to: initialDateRange.to,
   });
+  const [datePreset, setDatePreset] = useState<DatePreset>(DEFAULT_DATE_PRESET);
   const [urlPath, setUrlPath] = useState<string>('');
   const [eventName, setEventName] = useState<string>('');
   const isDevEnvironment =
@@ -158,7 +195,7 @@ const QueryPreview = ({
     urlPath: string;
     eventName: string;
   }>({
-    dateRange: { from: subDays(new Date(), 30), to: new Date() },
+    dateRange: { from: initialDateRange.from, to: initialDateRange.to },
     urlPath: '',
     eventName: ''
   });
@@ -1034,7 +1071,7 @@ const QueryPreview = ({
         ) : (
           <div>
             {/* Results Section with Integrated Date Filter */}
-            <div>
+            <div className="pb-4">
               {/* Header with Reset Button */}
               {onResetAll && activeStep > 1 && (
                 <div className="flex justify-end mb-2">
@@ -1044,11 +1081,13 @@ const QueryPreview = ({
                     onClick={() => {
                       onResetAll();
                       // Reset local filter states
-                      setDateRange({ from: subDays(new Date(), 30), to: new Date() });
+                      const resetDateRange = getDateRangeFromPreset(DEFAULT_DATE_PRESET);
+                      setDatePreset(DEFAULT_DATE_PRESET);
+                      setDateRange({ from: resetDateRange.from, to: resetDateRange.to });
                       setUrlPath('');
                       setEventName('');
                       setExecutedParams({
-                        dateRange: { from: subDays(new Date(), 30), to: new Date() },
+                        dateRange: { from: resetDateRange.from, to: resetDateRange.to },
                         urlPath: '',
                         eventName: ''
                       });
@@ -1071,7 +1110,7 @@ const QueryPreview = ({
                 </div>
               )}
 
-              <Heading level="2" size="small" className="mb-3">Vis resultater</Heading>
+              <Heading level="2" size="small" className="mb-4">Vis resultater</Heading>
 
               {/* Success Alert for Reset */}
               {showAlert && (
@@ -1084,37 +1123,32 @@ const QueryPreview = ({
 
               {/* Metabase Parameters Filter */}
               {(hasMetabaseDateFilter || hasUrlPathFilter || hasEventNameFilter) && (
-                <div className="mb-3">
+                <div className="pt-2 mb-3">
                   <div className="flex flex-wrap gap-4 items-end">
                     {/* Date Filter */}
                     {hasMetabaseDateFilter && (
-                      <DatePicker
-                        mode="range"
-                        selected={dateRange}
-                        onSelect={(range: { from?: Date; to?: Date } | undefined) =>
-                          setDateRange(range ? { from: range.from, to: range.to } : { from: undefined, to: undefined })
-                        }
-                        showWeekNumber
-                      >
-                        <div className="flex flex-wrap items-end gap-4">
-                          <div>
-                            <DatePicker.Input
-                              label="Fra dato"
-                              id="preview-date-from"
-                              value={dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''}
-                              size="small"
-                            />
-                          </div>
-                          <div>
-                            <DatePicker.Input
-                              label="Til dato"
-                              id="preview-date-to"
-                              value={dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : ''}
-                              size="small"
-                            />
-                          </div>
-                        </div>
-                      </DatePicker>
+                      <div className="w-full sm:w-auto min-w-[180px]">
+                        <Select
+                          label="Datoperiode"
+                          size="small"
+                          value={datePreset}
+                          onChange={(e) => {
+                            const preset = e.target.value as DatePreset;
+                            const nextRange = getDateRangeFromPreset(preset);
+                            setDatePreset(preset);
+                            setDateRange({ from: nextRange.from, to: nextRange.to });
+                          }}
+                        >
+                          <option value="today">I dag</option>
+                          <option value="yesterday">I går</option>
+                          <option value="this_week">Denne uken</option>
+                          <option value="last_7_days">Siste 7 dager</option>
+                          <option value="last_week">Forrige uke</option>
+                          <option value="last_28_days">Siste 28 dager</option>
+                          <option value="current_month">Denne måneden</option>
+                          <option value="last_month">Forrige måned</option>
+                        </Select>
+                      </div>
                     )}
 
                     {/* URL Path Filter */}
