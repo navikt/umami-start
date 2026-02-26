@@ -10,6 +10,7 @@ import type {
   Filter
 } from '../../../../shared/types/chart.ts';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx'; // Import AlertWithCloseButton
+import DateRangeSelector from './DateRangeSelector.tsx';
 
 interface DisplayOptionsProps {
   groupByFields: string[];
@@ -31,9 +32,13 @@ interface DisplayOptionsProps {
   setLimit: (limit: number | null) => void;
   metrics: Metric[];
   filters: Filter[];
+  setFilters: (filters: Filter[]) => void;
+  maxDaysAvailable: number;
   onEnableCustomEvents?: () => void;
   hideHeader?: boolean;
   isEventsLoading?: boolean;
+  interactiveMode: boolean;
+  setInteractiveMode: (mode: boolean) => void;
 }
 
 const GroupingOptions = forwardRef(({
@@ -55,9 +60,13 @@ const GroupingOptions = forwardRef(({
   setLimit,
   metrics,
   filters,
+  setFilters,
+  maxDaysAvailable,
   onEnableCustomEvents,
   hideHeader = false,
-  isEventsLoading = false
+  isEventsLoading = false,
+  interactiveMode,
+  setInteractiveMode
 }: DisplayOptionsProps, ref) => {
   const [activeGroupingsTab, setActiveGroupingsTab] = useState<string>('basic');
   const [showCustomSort, setShowCustomSort] = useState<boolean>(false);
@@ -73,9 +82,12 @@ const GroupingOptions = forwardRef(({
   const [limitInput, setLimitInput] = useState<string>('');
   const [eventNameWarning, setEventNameWarning] = useState<boolean>(false);
   const [isLoadingParams, setIsLoadingParams] = useState<boolean>(false);
+  const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, { amount: string, unit: string }>>({});
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('last7days');
 
   // Add a ref to store the timeout ID
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dateRangePickerRef = useRef<{ clearDateRange: () => void }>(null);
 
   // Add a ref to store the event name warning timeout
   const eventNameWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -665,6 +677,31 @@ const GroupingOptions = forwardRef(({
             Visningsvalg
           </Heading>
           <div className="flex flex-col gap-4 pb-4">
+            <Switch
+              size="small"
+              description={interactiveMode
+                ? 'Standard: mottaker velger selv'
+                : 'Bruk valgt tidsperiode fra grafbyggeren som standard'}
+              checked={!interactiveMode}
+              onChange={(e) => setInteractiveMode(!e.target.checked)}
+            >
+              Tving egendefinert tidsperiode
+            </Switch>
+
+            <div className={interactiveMode ? 'hidden' : undefined}>
+              <DateRangeSelector
+                ref={dateRangePickerRef}
+                filters={filters}
+                setFilters={setFilters}
+                maxDaysAvailable={maxDaysAvailable}
+                selectedDateRange={selectedDateRange}
+                setSelectedDateRange={setSelectedDateRange}
+                customPeriodInputs={customPeriodInputs}
+                setCustomPeriodInputs={setCustomPeriodInputs}
+                interactiveMode={interactiveMode}
+              />
+            </div>
+
             <Switch
               className="mt-1"
               size="small"

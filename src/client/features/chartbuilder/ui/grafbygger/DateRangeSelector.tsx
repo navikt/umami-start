@@ -1,4 +1,4 @@
-import { Heading, DatePicker, Tabs, ExpansionCard, Button, Alert, Chips } from '@navikt/ds-react';
+import { Heading, DatePicker, Tabs, Button, Alert, Chips } from '@navikt/ds-react';
 import { format, startOfMonth, subMonths, startOfYear, subDays } from 'date-fns';
 import type { Filter } from '../../../../shared/types/chart.ts';
 import { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
@@ -183,7 +183,6 @@ interface DateRangePickerProps {
   customPeriodInputs: Record<number, { amount: string, unit: string }>;
   setCustomPeriodInputs: (inputs: Record<number, { amount: string, unit: string }>) => void;
   interactiveMode: boolean;
-  setInteractiveMode: (mode: boolean) => void;
 }
 
 interface DateRange {
@@ -199,12 +198,11 @@ const DateRangeSelector = forwardRef(({
   selectedDateRange,
   setSelectedDateRange,
   interactiveMode,
-  setInteractiveMode,
 }: DateRangePickerProps, ref) => {
   // Calculate available date range
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
   // Add state for date mode (fixed vs dynamic)
-  const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed' | 'interactive'>('frequent');
+  const [dateMode, setDateMode] = useState<'frequent' | 'dynamic' | 'fixed'>('frequent');
   const [relativeMode, setRelativeMode] = useState<'current' | 'previous'>('previous');
   const [selectedUnit, setSelectedUnit] = useState('day');
   // Change default value to 30 instead of 1
@@ -378,10 +376,7 @@ const DateRangeSelector = forwardRef(({
     }
   };
 
-  // Add function to handle interactive mode toggle
-  const handleInteractiveModeToggle = (checked: boolean) => {
-    setInteractiveMode(checked);
-
+  const syncInteractiveModeFilters = (checked: boolean) => {
     if (checked) {
       // Remove existing date filters
       const filtersWithoutDate = filters.filter(f => f.column !== 'created_at');
@@ -439,6 +434,11 @@ const DateRangeSelector = forwardRef(({
     }
   }, [hasDateFilter, selectedRange]);
 
+  useEffect(() => {
+    syncInteractiveModeFilters(interactiveMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interactiveMode]);
+
   // Get message about available data range
   const getStartDateDisplay = (): string => {
     if (!maxDaysAvailable) return 'Velg nettside for å se tilgjengelig data.';
@@ -472,21 +472,8 @@ const DateRangeSelector = forwardRef(({
     }
   }));
 
-  // Add function to handle tab changes that automatically toggles interactive mode
   const handleTabChange = (value: string) => {
-    const newDateMode = value as 'frequent' | 'dynamic' | 'fixed' | 'interactive';
-    setDateMode(newDateMode);
-
-    // Automatically toggle interactive mode based on tab selection
-    if (newDateMode === 'interactive') {
-      // Turn ON interactive mode when interactive tab is selected
-      if (!interactiveMode) {
-        handleInteractiveModeToggle(true);
-      }
-    } else if (interactiveMode) {
-      // Turn OFF interactive mode when any other tab is selected
-      handleInteractiveModeToggle(false);
-    }
+    setDateMode(value as 'frequent' | 'dynamic' | 'fixed');
   };
 
   // Add function to handle relative filter removal
@@ -517,17 +504,23 @@ const DateRangeSelector = forwardRef(({
       </Heading>
 
       <div className="mt-3 bg-[var(--ax-bg-default)] p-4 rounded-md border shadow-inner">
-        <Tabs
-          value={dateMode}
-          onChange={handleTabChange}
-          size="small"
-        >
-          <Tabs.List>
-            <Tabs.Tab value="frequent" label="Ofte brukte" />
-            <Tabs.Tab value="dynamic" label="Relative" />
-            <Tabs.Tab value="fixed" label="Bestemte" />
-            <Tabs.Tab value="interactive" label="Mottaker velger" />
-          </Tabs.List>
+        {interactiveMode && (
+          <Alert variant="info" size="small" className="mb-4">
+            Mottaker velger datoperiode i Metabase. Slå av i Visningsvalg for å sette en fast standard her.
+          </Alert>
+        )}
+
+        <fieldset disabled={interactiveMode} className={interactiveMode ? "opacity-60" : undefined}>
+          <Tabs
+            value={dateMode}
+            onChange={handleTabChange}
+            size="small"
+          >
+            <Tabs.List>
+              <Tabs.Tab value="frequent" label="Ofte brukte" />
+              <Tabs.Tab value="dynamic" label="Relative" />
+              <Tabs.Tab value="fixed" label="Bestemte" />
+            </Tabs.List>
 
           {/* Frequent dates panel */}
           <Tabs.Panel value="frequent" className="pt-6">
@@ -766,62 +759,10 @@ const DateRangeSelector = forwardRef(({
             </DatePicker>
           </Tabs.Panel>
 
-          {/* Interactive panel - completely revised */}
-          <Tabs.Panel value="interactive" className="pt-6">
-            <div className="text-sm text-[var(--ax-text-subtle)] p-4 rounded border border-green-200 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      className="text-green-600"
-                    >
-                      <path
-                        d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium mb-1">Filtervalg i Metabase for datofilter er aktivert</p>
-                  <p className="text-[var(--ax-text-subtle)]">Datoperiode kan velges via filtervalg i Metabase-dashbord</p>
-                </div>
-              </div>
-            </div>
+          </Tabs>
+        </fieldset>
 
-            <ExpansionCard aria-label="Guide for Metabase-integrasjon" size="small">
-              <ExpansionCard.Header>
-                <ExpansionCard.Title size="small">Slik kobler du til datofilteret i Metabase</ExpansionCard.Title>
-              </ExpansionCard.Header>
-              <ExpansionCard.Content>
-                <div className="space-y-3">
-                  <ol className="list-decimal pl-5 space-y-2">
-                    <li>Klikk på variabel-ikonet <code>{'{x}'}</code> i Metabase</li>
-                    <li>Finn variabel med navn <code>created_at</code></li>
-                    <li>Velg <strong>Felt filter</strong> som variabeltype</li>
-                    <li>Under "Felt å koble til":
-                      <ul className="list-disc pl-5 mt-1">
-                        <li>Tabell: <code>umami_views.event</code></li>
-                        <li>Kolonne: <code>created_at</code></li>
-                      </ul>
-                    </li>
-                    <li>Velg ønsket datoformat under "Filter type"</li>
-                    <li>Valgfritt: Legg til en beskrivende etikett og standardverdi (f.eks. "Siste 30 dager")</li>
-                  </ol>
-                  <p className="text-md text-[var(--ax-text-subtle)] mt-2">
-                    Etter oppsett kan du teste filteret direkte i dashbordet.
-                  </p>
-                </div>
-              </ExpansionCard.Content>
-            </ExpansionCard>
-          </Tabs.Panel>
-        </Tabs>
-
-        {dateMode !== 'interactive' && (
+        {!interactiveMode && (
           <div className="mt-5 text-sm text-[var(--ax-text-subtle)]">
             {getStartDateDisplay()}
           </div>

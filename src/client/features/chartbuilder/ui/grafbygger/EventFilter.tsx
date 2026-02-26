@@ -2,7 +2,6 @@ import { Button, Heading } from '@navikt/ds-react';
 import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import type { Filter, Parameter } from '../../../../shared/types/chart.ts';
 import { FILTER_COLUMNS, OPERATORS } from '../../../../shared/lib/constants.ts';
-import DateRangeSelector from './DateRangeSelector.tsx';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx';
 import EventSelector from './EventSelector.tsx';
 
@@ -34,7 +33,6 @@ interface ChartFiltersProps {
   parameters: Parameter[];
   setFilters: (filters: Filter[]) => void;
   availableEvents?: string[];
-  maxDaysAvailable?: number; // Added this prop to receive date range info
   onEnableCustomEvents?: (withParams?: boolean) => void;
   hideHeader?: boolean;
   isEventsLoading?: boolean;
@@ -45,17 +43,12 @@ const EventFilter = forwardRef(({
   parameters,
   setFilters,
   availableEvents = [],
-  maxDaysAvailable = 365, // Default to a year if not provided
   onEnableCustomEvents,
   hideHeader = false,
   isEventsLoading = false
 }: ChartFiltersProps, ref) => {
-  // Add state for custom period inputs
-  const [customPeriodInputs, setCustomPeriodInputs] = useState<Record<number, { amount: string, unit: string }>>({});
   // Change to store array instead of single string
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(['pageviews']);
-  // Add state for selected date range - default to last 7 days
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('last7days');
   // Add state to track custom events selection
   const [customEvents, setCustomEvents] = useState<string[]>([]);
   // Add state to track selected URL paths
@@ -86,7 +79,6 @@ const EventFilter = forwardRef(({
   // Add a ref for staging alert timeout
   const stagingAlertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didInitPageviewsRef = useRef<boolean>(false);
-  const didInitDateRangeRef = useRef<boolean>(false);
 
   // Add a function to filter available events to only custom events (non-pageviews)
   const customEventsList = useMemo(() => {
@@ -449,39 +441,6 @@ const EventFilter = forwardRef(({
     didInitPageviewsRef.current = true;
   }, [filters, setFilters]);
 
-  // Add useEffect to apply default date range (last 7 days) on mount
-  useEffect(() => {
-    if (didInitDateRangeRef.current) return;
-
-    if (filters.length > 0 && !filters.some(f => f.column === 'created_at')) {
-      const last7daysSQL = {
-        fromSQL: "TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)",
-        toSQL: "CURRENT_TIMESTAMP()"
-      };
-
-      const timer = setTimeout(() => {
-        setFilters([
-          ...filters,
-          {
-            column: 'created_at',
-            operator: '>=',
-            value: last7daysSQL.fromSQL,
-            dateRangeType: 'dynamic'
-          },
-          {
-            column: 'created_at',
-            operator: '<=',
-            value: last7daysSQL.toSQL,
-            dateRangeType: 'dynamic'
-          }
-        ]);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-
-    didInitDateRangeRef.current = true;
-  }, [filters, setFilters]);
-
   // Create a Set to track unique parameters
   const uniqueParameters = useMemo(() => {
     const seen = new Set();
@@ -495,9 +454,6 @@ const EventFilter = forwardRef(({
     });
   }, [parameters]);
 
-  // Create a reference to the DateRangePicker component
-  const dateRangePickerRef = useRef<{ clearDateRange: () => void }>(null);
-
   // Update resetFilters function to accept silent parameter
   const resetFilters = (silent = false) => {
     // Ensure filters are completely cleared
@@ -505,15 +461,12 @@ const EventFilter = forwardRef(({
 
     // Reset UI state but keep 'pageviews' suggestion active
     setSelectedEventTypes(['pageviews']);
-    setSelectedDateRange('');
     setCustomEvents([]);
     setSelectedPaths([]);
     // Keep the pageViewsMode in 'all' state
     setPageViewsMode('all');
     setCustomEventsMode('none');
-    setCustomPeriodInputs({});
     setStagingFilter(null);
-    setInteractiveMode(false);
 
     // Force immediate UI update for filter count by using a setTimeout with 0ms
     setTimeout(() => {
@@ -523,9 +476,6 @@ const EventFilter = forwardRef(({
         setFilters([...pageviewsFilter.filters]);
       }
     }, 0);
-
-    // Clear date picker state through ref
-    dateRangePickerRef.current?.clearDateRange();
 
     // Only show alert if not silent
     if (!silent) {
@@ -546,9 +496,6 @@ const EventFilter = forwardRef(({
       }, 4000);
     }
   };
-
-  // Add state for interactive mode at the top with other state declarations
-  const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 
   // Add handlers for alert close
   const handleAlertClose = () => {
@@ -666,19 +613,6 @@ const EventFilter = forwardRef(({
             addFilterDirectly={addFilterDirectly}
           />
 
-          {/* Date Range Picker - Now AFTER event selection */}
-          <DateRangeSelector
-            ref={dateRangePickerRef}
-            filters={filters}
-            setFilters={setFilters}
-            maxDaysAvailable={maxDaysAvailable}
-            selectedDateRange={selectedDateRange}
-            setSelectedDateRange={setSelectedDateRange}
-            customPeriodInputs={customPeriodInputs}
-            setCustomPeriodInputs={setCustomPeriodInputs}
-            interactiveMode={interactiveMode}
-            setInteractiveMode={setInteractiveMode}
-          />
         </div>
       </div>
     </section>
@@ -686,4 +620,3 @@ const EventFilter = forwardRef(({
 });
 
 export default EventFilter;
-

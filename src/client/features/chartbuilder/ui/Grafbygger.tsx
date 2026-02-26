@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import WebsitePicker from '../../analysis/ui/WebsitePicker.tsx';
 import QueryPreview from './results/QueryPreview.tsx';
 import EventFilter from './grafbygger/EventFilter.tsx';
@@ -12,6 +13,8 @@ import { getMetricColumns } from '../utils/metricColumns.ts';
 import { useChartConfig } from '../hooks/useChartConfig.ts';
 
 const ChartsPage = () => {
+  const [interactiveDateFilterEnabled, setInteractiveDateFilterEnabled] = useState<boolean>(true);
+
   const {
     config,
     filters,
@@ -111,7 +114,6 @@ const ChartsPage = () => {
                   parameters={parameters}
                   setFilters={setFilters}
                   availableEvents={availableEvents}
-                  maxDaysAvailable={maxDaysAvailable}
                   onEnableCustomEvents={(withParams = false) => {
                     setRequestLoadEvents(true);
                     if (withParams) {
@@ -149,6 +151,8 @@ const ChartsPage = () => {
                   setLimit={setLimit}
                   metrics={config.metrics}
                   filters={filters}
+                  setFilters={setFilters}
+                  maxDaysAvailable={maxDaysAvailable}
                   onEnableCustomEvents={() => {
                     if (chartFiltersRef.current) {
                       chartFiltersRef.current.enableCustomEvents();
@@ -158,6 +162,8 @@ const ChartsPage = () => {
                   }}
                   hideHeader={true}
                   isEventsLoading={isEventsLoading}
+                  interactiveMode={interactiveDateFilterEnabled}
+                  setInteractiveMode={setInteractiveDateFilterEnabled}
                 />
               </section>
             </>
@@ -206,4 +212,3 @@ const ChartsPage = () => {
 };
 
 export default ChartsPage;
-
