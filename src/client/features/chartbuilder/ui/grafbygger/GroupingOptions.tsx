@@ -1,5 +1,5 @@
 import { Button, Heading, Select, Label, TextField, Switch, HelpText, Tabs, Search, Accordion, Pagination } from '@navikt/ds-react';
-import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone } from 'lucide-react';
+import { MoveUp, MoveDown, Calendar, Link2, Activity, Smartphone, Globe, Monitor, Cpu, MapPin } from 'lucide-react';
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import type {
   Parameter,
@@ -430,7 +430,7 @@ const GroupingOptions = forwardRef(({
                     size="small"
                     onClick={() => handleAddGroupField('browser')}
                     disabled={activeGroupings.includes('browser')}
-                    icon={<Smartphone size={16} />}
+                    icon={<Globe size={16} />}
                   >
                     Nettleser
                   </Button>
@@ -439,9 +439,36 @@ const GroupingOptions = forwardRef(({
                     size="small"
                     onClick={() => handleAddGroupField('os')}
                     disabled={activeGroupings.includes('os')}
-                    icon={<Smartphone size={16} />}
+                    icon={<Cpu size={16} />}
                   >
                     OS
+                  </Button>
+                  <Button
+                    variant={activeGroupings.includes('language') ? "secondary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('language')}
+                    disabled={activeGroupings.includes('language')}
+                    icon={<Globe size={16} />}
+                  >
+                    Språk
+                  </Button>
+                  <Button
+                    variant={activeGroupings.includes('country') ? "secondary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('country')}
+                    disabled={activeGroupings.includes('country')}
+                    icon={<MapPin size={16} />}
+                  >
+                    Land
+                  </Button>
+                  <Button
+                    variant={activeGroupings.includes('screen') ? "secondary" : "secondary"}
+                    size="small"
+                    onClick={() => handleAddGroupField('screen')}
+                    disabled={activeGroupings.includes('screen')}
+                    icon={<Monitor size={16} />}
+                  >
+                    Skjermstørrelse
                   </Button>
                 </div>
               </Tabs.Panel>
