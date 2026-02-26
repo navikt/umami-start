@@ -85,7 +85,26 @@ const ChartsPage = () => {
 
           {config.website && dateRangeReady && (
             <>
-              {/* Step 2: Metrics */}
+              {/* Step 2: Event Filter Selection */}
+              <section className="mt-4">
+                <EventFilter
+                  ref={chartFiltersRef}
+                  filters={filters}
+                  parameters={parameters}
+                  setFilters={setFilters}
+                  availableEvents={availableEvents}
+                  onEnableCustomEvents={(withParams = false) => {
+                    setRequestLoadEvents(true);
+                    if (withParams) {
+                      setRequestIncludeParams(true);
+                    }
+                  }}
+                  hideHeader={true}
+                  isEventsLoading={isEventsLoading}
+                />
+              </section>
+
+              {/* Step 3: Metrics */}
               <section className="mt-4">
                 <MetricSelector
                   ref={summarizeRef}
@@ -102,25 +121,6 @@ const ChartsPage = () => {
                   filters={filters}
                   hideHeader={true}
                   availableEvents={availableEvents}
-                  isEventsLoading={isEventsLoading}
-                />
-              </section>
-
-              {/* Step 3: Event Filter Selection */}
-              <section className="mt-4">
-                <EventFilter
-                  ref={chartFiltersRef}
-                  filters={filters}
-                  parameters={parameters}
-                  setFilters={setFilters}
-                  availableEvents={availableEvents}
-                  onEnableCustomEvents={(withParams = false) => {
-                    setRequestLoadEvents(true);
-                    if (withParams) {
-                      setRequestIncludeParams(true);
-                    }
-                  }}
-                  hideHeader={true}
                   isEventsLoading={isEventsLoading}
                 />
               </section>

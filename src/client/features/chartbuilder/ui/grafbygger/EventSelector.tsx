@@ -177,7 +177,7 @@ const EventSelector = ({
   return (
     <div className='mb-4'>
       <Heading level="3" size="xsmall" spacing className="mt-6">
-        Hva vil du inkludere?
+        Velg hendelse
       </Heading>
 
       <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-inner">
