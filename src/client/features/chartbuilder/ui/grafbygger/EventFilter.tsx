@@ -203,11 +203,6 @@ const EventFilter = forwardRef(({
       setSelectedEventTypes([]);
     }
 
-    // If removing date filter, clear date range selection
-    if (filterToRemove.column === 'created_at') {
-      setSelectedDateRange('');
-    }
-
     setFilters(filters.filter((_, i) => i !== index));
   };
 
