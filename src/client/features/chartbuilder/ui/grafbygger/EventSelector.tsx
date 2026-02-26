@@ -610,17 +610,14 @@ const EventSelector = ({
                     <optgroup key={groupKey} label={group.label}>
                       {group.columns
                         .filter((col) => col.value !== 'created_at')
-                        .map((col) => (
-                          <span key={col.value}>
-                            {/* keyed fragment substitute */}
-                            <option value={col.value}>
-                              {col.label}
-                            </option>
-                            {col.value === 'event_name' && (
-                              <option value="_custom_param_">Hendelsesdetaljer</option>
-                            )}
-                          </span>
-                        ))}
+                        .flatMap((col) => [
+                          <option key={col.value} value={col.value}>
+                            {col.label}
+                          </option>,
+                          ...(col.value === 'event_name'
+                            ? [<option key={`${col.value}_custom_param_`} value="_custom_param_">Hendelsesdetaljer</option>]
+                            : [])
+                        ])}
                     </optgroup>
                   ))}
                 </Select>
