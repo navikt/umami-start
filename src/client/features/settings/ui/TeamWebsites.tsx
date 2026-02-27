@@ -105,7 +105,7 @@ export function TeamWebsites() {
                 )}
             </div>
             {environmentLink && (
-                <BodyShort className="mb-6">
+                <BodyShort className="my-8">
                     {environmentLink.text}
                     <Link href={environmentLink.href}>{environmentLink.label}</Link>.
                 </BodyShort>
