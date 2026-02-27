@@ -114,7 +114,12 @@ const MetricSelector = forwardRef(({
     setAlertInfo(prev => ({ ...prev, show: false }));
   };
 
-  const addConfiguredMetric = (metricType: string, column?: string, alias?: string) => {
+  const addConfiguredMetric = (
+    metricType: string,
+    column?: string,
+    alias?: string,
+    showInMinutes?: boolean
+  ) => {
     const newIndex = metrics.length;
 
     setActiveCalculations([...activeCalculations, `${metricType}_${column || ''}`]);
@@ -125,16 +130,47 @@ const MetricSelector = forwardRef(({
       const updates: Partial<Metric> = {};
       if (column) updates.column = column;
       if (alias) updates.alias = alias;
+      if (showInMinutes !== undefined) updates.showInMinutes = showInMinutes;
       updateMetric(newIndex, updates);
     }, 0);
   };
 
-  const isMetricAdded = (functionType: string, column?: string, checkMinutes?: boolean): boolean => {
-    return metrics.some(metric =>
+  const findMetricIndex = (
+    functionType: string,
+    column?: string,
+    alias?: string,
+    checkMinutes?: boolean
+  ): number => {
+    return metrics.findIndex(metric =>
       metric.function === functionType &&
       metric.column === column &&
+      (alias === undefined || metric.alias === alias) &&
       (checkMinutes === undefined || metric.showInMinutes === checkMinutes)
     );
+  };
+
+  const isMetricAdded = (
+    functionType: string,
+    column?: string,
+    alias?: string,
+    checkMinutes?: boolean
+  ): boolean => {
+    return findMetricIndex(functionType, column, alias, checkMinutes) >= 0;
+  };
+
+  const toggleConfiguredMetric = (
+    functionType: string,
+    column?: string,
+    alias?: string,
+    checkMinutes?: boolean
+  ) => {
+    const existingMetricIndex = findMetricIndex(functionType, column, alias, checkMinutes);
+    if (existingMetricIndex >= 0) {
+      removeMetric(existingMetricIndex);
+      return;
+    }
+
+    addConfiguredMetric(functionType, column, alias, checkMinutes);
   };
 
   useEffect(() => {
@@ -293,38 +329,34 @@ const MetricSelector = forwardRef(({
                   <Tabs.Panel value="antall" className="pt-4">
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="secondary"
+                        variant={isMetricAdded('distinct', 'session_id', 'Unike_besokende') ? "primary" : "secondary"}
                         size="small"
-                        onClick={() => addConfiguredMetric('distinct', 'session_id', 'Unike_besokende')}
+                        onClick={() => toggleConfiguredMetric('distinct', 'session_id', 'Unike_besokende')}
                         icon={<Users size={16} />}
-                        disabled={isMetricAdded('distinct', 'session_id')}
                       >
                         Antall unike besøkende
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant={isMetricAdded('distinct', 'visit_id', 'Okter_besok') ? "primary" : "secondary"}
                         size="small"
-                        onClick={() => addConfiguredMetric('distinct', 'visit_id', 'Okter_besok')}
+                        onClick={() => toggleConfiguredMetric('distinct', 'visit_id', 'Okter_besok')}
                         icon={<Users size={16} />}
-                        disabled={isMetricAdded('distinct', 'visit_id')}
                       >
                         Økter / besøk
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant={isMetricAdded('count', undefined, 'Antall_sidevisninger') ? "primary" : "secondary"}
                         size="small"
-                        onClick={() => addConfiguredMetric('count', undefined, 'Antall_sidevisninger')}
+                        onClick={() => toggleConfiguredMetric('count', undefined, 'Antall_sidevisninger')}
                         icon={<BarChart2 size={16} />}
-                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall_sidevisninger')}
                       >
                         Antall sidevisninger
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant={isMetricAdded('count', undefined, 'Antall_hendelser') ? "primary" : "secondary"}
                         size="small"
-                        onClick={() => addConfiguredMetric('count', undefined, 'Antall_hendelser')}
+                        onClick={() => toggleConfiguredMetric('count', undefined, 'Antall_hendelser')}
                         icon={<BarChart2 size={16} />}
-                        disabled={metrics.some(m => m.function === 'count' && m.alias === 'Antall_hendelser')}
                       >
                         Antall hendelser
                       </Button>
@@ -337,11 +369,10 @@ const MetricSelector = forwardRef(({
                         <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Andel av alle besøkende på hele nettsiden</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            variant="secondary"
+                            variant={isMetricAdded('andel', 'session_id', 'Andel_av_totale_besokende') ? "primary" : "secondary"}
                             size="small"
-                            onClick={() => addConfiguredMetric('andel', 'session_id', 'Andel_av_totale_besokende')}
+                            onClick={() => toggleConfiguredMetric('andel', 'session_id', 'Andel_av_totale_besokende')}
                             icon={<PieChart size={16} />}
-                            disabled={isMetricAdded('andel', 'session_id')}
                           >
                             Andel av totale besøkende
                           </Button>
@@ -352,11 +383,10 @@ const MetricSelector = forwardRef(({
                         <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Andel av besøkende på en side</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            variant="secondary"
+                            variant={isMetricAdded('percentage', 'session_id', 'Andel_av_besokende_pa_side') ? "primary" : "secondary"}
                             size="small"
-                            onClick={() => addConfiguredMetric('percentage', 'session_id', 'Andel_av_besokende_pa_side')}
+                            onClick={() => toggleConfiguredMetric('percentage', 'session_id', 'Andel_av_besokende_pa_side')}
                             icon={<PieChart size={16} />}
-                            disabled={isMetricAdded('percentage', 'session_id')}
                           >
                             Andel av besøkende på side
                           </Button>
@@ -367,11 +397,10 @@ const MetricSelector = forwardRef(({
                         <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Andel av hendelser på en side</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            variant="secondary"
+                            variant={isMetricAdded('percentage', 'event_id', 'Andel_av_hendelser_pa_side') ? "primary" : "secondary"}
                             size="small"
-                            onClick={() => addConfiguredMetric('percentage', 'event_id', 'Andel_av_hendelser_pa_side')}
+                            onClick={() => toggleConfiguredMetric('percentage', 'event_id', 'Andel_av_hendelser_pa_side')}
                             icon={<PieChart size={16} />}
-                            disabled={isMetricAdded('percentage', 'event_id')}
                           >
                             Andel av hendelser på side
                           </Button>
@@ -382,11 +411,10 @@ const MetricSelector = forwardRef(({
                         <h4 className="text-sm font-medium mb-2 text-[var(--ax-text-subtle)]">Fluktrate - andel besøkende som kun ser én side før de forlater nettstedet</h4>
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            variant="secondary"
+                            variant={isMetricAdded('bounce_rate', 'visit_id', 'Fluktrate') ? "primary" : "secondary"}
                             size="small"
-                            onClick={() => addConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
+                            onClick={() => toggleConfiguredMetric('bounce_rate', 'visit_id', 'Fluktrate')}
                             icon={<LogOut size={16} />}
-                            disabled={isMetricAdded('bounce_rate', 'visit_id')}
                           >
                             Fluktrate
                           </Button>
@@ -398,30 +426,18 @@ const MetricSelector = forwardRef(({
                   <Tabs.Panel value="gjennomsnitt" className="pt-4">
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="secondary"
+                        variant={isMetricAdded('average', 'visit_duration', 'Gjennomsnittlig_besokstid_minutter', true) ? "primary" : "secondary"}
                         size="small"
-                        onClick={() => {
-                          const newIndex = metrics.length;
-                          addMetric('average');
-                          setTimeout(() => {
-                            updateMetric(newIndex, {
-                              column: 'visit_duration',
-                              alias: 'Gjennomsnittlig_besokstid_minutter',
-                              showInMinutes: true
-                            });
-                          }, 0);
-                        }}
+                        onClick={() => toggleConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_minutter', true)}
                         icon={<Clock size={16} />}
-                        disabled={isMetricAdded('average', 'visit_duration', true)}
                       >
                         Besøksvarighet i minutter
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant={isMetricAdded('average', 'visit_duration', 'Gjennomsnittlig_besokstid_sekunder', false) ? "primary" : "secondary"}
                         size="small"
-                        onClick={() => addConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_sekunder')}
+                        onClick={() => toggleConfiguredMetric('average', 'visit_duration', 'Gjennomsnittlig_besokstid_sekunder', false)}
                         icon={<Clock size={16} />}
-                        disabled={isMetricAdded('average', 'visit_duration', false)}
                       >
                         Besøksvarighet i sekunder
                       </Button>

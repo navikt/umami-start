@@ -243,6 +243,14 @@ const GroupingOptions = forwardRef(({
     addGroupByField(field);
   };
 
+  const handleToggleGroupField = (field: string) => {
+    if (activeGroupings.includes(field)) {
+      removeGroupByField(field);
+      return;
+    }
+    handleAddGroupField(field);
+  };
+
   const resetOptions = (silent = false) => {
     const fieldsCopy = [...groupByFields];
     fieldsCopy.forEach(field => {
@@ -381,91 +389,81 @@ const GroupingOptions = forwardRef(({
               <Tabs.Panel value="basic" className="pt-4">
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    variant={activeGroupings.includes('created_at') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('created_at') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('created_at')}
-                    disabled={activeGroupings.includes('created_at')}
+                    onClick={() => handleToggleGroupField('created_at')}
                     icon={<Calendar size={16} />}
                   >
                     Dato
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('url_path') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('url_path') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('url_path')}
-                    disabled={activeGroupings.includes('url_path')}
+                    onClick={() => handleToggleGroupField('url_path')}
                     icon={<Link2 size={16} />}
                   >
                     URL-sti
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('referrer_domain') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('referrer_domain') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('referrer_domain')}
-                    disabled={activeGroupings.includes('referrer_domain')}
+                    onClick={() => handleToggleGroupField('referrer_domain')}
                     icon={<Link2 size={16} />}
                   >
                     Henvisningsdomene
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('event_name') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('event_name') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('event_name')}
-                    disabled={activeGroupings.includes('event_name')}
+                    onClick={() => handleToggleGroupField('event_name')}
                     icon={<Activity size={16} />}
                   >
                     Hendelsesnavn
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('device') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('device') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('device')}
-                    disabled={activeGroupings.includes('device')}
+                    onClick={() => handleToggleGroupField('device')}
                     icon={<Smartphone size={16} />}
                   >
                     Enhet
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('browser') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('browser') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('browser')}
-                    disabled={activeGroupings.includes('browser')}
+                    onClick={() => handleToggleGroupField('browser')}
                     icon={<Globe size={16} />}
                   >
                     Nettleser
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('os') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('os') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('os')}
-                    disabled={activeGroupings.includes('os')}
+                    onClick={() => handleToggleGroupField('os')}
                     icon={<Cpu size={16} />}
                   >
                     OS
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('language') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('language') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('language')}
-                    disabled={activeGroupings.includes('language')}
+                    onClick={() => handleToggleGroupField('language')}
                     icon={<Globe size={16} />}
                   >
                     Språk
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('country') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('country') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('country')}
-                    disabled={activeGroupings.includes('country')}
+                    onClick={() => handleToggleGroupField('country')}
                     icon={<MapPin size={16} />}
                   >
                     Land
                   </Button>
                   <Button
-                    variant={activeGroupings.includes('screen') ? "secondary" : "secondary"}
+                    variant={activeGroupings.includes('screen') ? "primary" : "secondary"}
                     size="small"
-                    onClick={() => handleAddGroupField('screen')}
-                    disabled={activeGroupings.includes('screen')}
+                    onClick={() => handleToggleGroupField('screen')}
                     icon={<Monitor size={16} />}
                   >
                     Skjermstørrelse
@@ -538,10 +536,9 @@ const GroupingOptions = forwardRef(({
                                       return (
                                         <Button
                                           key={param.key}
-                                          variant={isActive ? "secondary" : "secondary"}
+                                          variant={isActive ? "primary" : "secondary"}
                                           size="small"
-                                          onClick={() => handleAddGroupField(columnValue)}
-                                          disabled={isActive}
+                                          onClick={() => handleToggleGroupField(columnValue)}
                                         >
                                           {baseName}
                                         </Button>
