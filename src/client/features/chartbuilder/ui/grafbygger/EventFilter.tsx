@@ -59,7 +59,7 @@ const EventFilter = forwardRef(({
   // Add a new state for the event operator (near other state variables)
   const [eventNameOperator, setEventNameOperator] = useState<string>('IN');
   // Add these new state variables
-  const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific' | 'interactive'>('all');
+  const [pageViewsMode, setPageViewsMode] = useState<'all' | 'specific' | 'interactive'>('interactive');
   const [customEventsMode, setCustomEventsMode] = useState<'none' | 'all' | 'specific' | 'interactive'>('none');
 
   // Add alert state
@@ -272,7 +272,7 @@ const EventFilter = forwardRef(({
       if (eventType === 'pageviews') {
         // Reset pageview-specific selections when unchecking pageviews
         setSelectedPaths([]);
-        setPageViewsMode('all');
+        setPageViewsMode('interactive');
       } else if (eventType === 'custom_events') {
         // Reset custom events selections when unchecking custom events
         setCustomEvents([]);
@@ -364,7 +364,7 @@ const EventFilter = forwardRef(({
   };
 
   // Update function to handle URL path selection
-  const handlePathsChange = (paths: string[], operator: string = urlPathOperator) => {
+  const handlePathsChange = (paths: string[], operator: string = urlPathOperator, isInteractive = false) => {
     setSelectedPaths(paths);
     setUrlPathOperator(operator);
 
@@ -383,7 +383,9 @@ const EventFilter = forwardRef(({
             column: 'url_path',
             operator: 'IN',
             value: paths[0],
-            multipleValues: paths
+            multipleValues: paths,
+            interactive: false,
+            metabaseParam: false
           }
         ]);
       }
@@ -394,7 +396,9 @@ const EventFilter = forwardRef(({
           {
             column: 'url_path',
             operator: operator,
-            value: paths[0]
+            value: paths[0],
+            interactive: isInteractive,
+            metabaseParam: isInteractive
           }
         ]);
       }
@@ -419,18 +423,45 @@ const EventFilter = forwardRef(({
     }
   }, [filters]);
 
+  // Keep URL placeholder filter in sync for "Sidevisninger -> Mottaker velger selv"
+  // so Vis resultater can show URL input immediately on first load.
+  useEffect(() => {
+    const pageviewsSelected = selectedEventTypes.includes('pageviews');
+    const hasUrlPathFilter = filters.some(f => f.column === 'url_path');
+
+    if (pageviewsSelected && pageViewsMode === 'interactive' && !hasUrlPathFilter) {
+      setFilters([
+        ...filters,
+        { column: 'url_path', operator: '=', value: '{{url_sti}}', interactive: true, metabaseParam: true }
+      ]);
+    }
+  }, [selectedEventTypes, pageViewsMode, filters, setFilters]);
+
   // Add useEffect to apply initial pageviews filter
   useEffect(() => {
     if (didInitPageviewsRef.current) return;
 
-    if (filters.length === 0) {
-      const pageviewsFilter = FILTER_SUGGESTIONS.find(s => s.id === 'pageviews');
-      if (pageviewsFilter) {
-        const timer = setTimeout(() => {
-          setFilters([...pageviewsFilter.filters]);
-        }, 0);
-        return () => clearTimeout(timer);
-      }
+    const hasUrlPathFilter = filters.some(f => f.column === 'url_path');
+    const hasEventTypeFilter = filters.some(f => f.column === 'event_type');
+    const hasPageviewsEnabled = !hasEventTypeFilter || filters.some(
+      f => f.column === 'event_type' && (
+        f.value === '1' || f.multipleValues?.includes('1')
+      )
+    );
+
+    // Ensure "Sidevisninger -> Mottaker velger selv" default on first load.
+    // Do not override if url_path is already present (e.g. from URL/shared config).
+    if (!hasUrlPathFilter && hasPageviewsEnabled) {
+      didInitPageviewsRef.current = true;
+      const timer = setTimeout(() => {
+        const nextFilters = [...filters];
+        if (!hasEventTypeFilter) {
+          nextFilters.push({ column: 'event_type', operator: '=', value: '1' });
+        }
+        nextFilters.push({ column: 'url_path', operator: '=', value: '{{url_sti}}', interactive: true, metabaseParam: true });
+        setFilters(nextFilters);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     didInitPageviewsRef.current = true;
@@ -458,18 +489,18 @@ const EventFilter = forwardRef(({
     setSelectedEventTypes(['pageviews']);
     setCustomEvents([]);
     setSelectedPaths([]);
-    // Keep the pageViewsMode in 'all' state
-    setPageViewsMode('all');
+    // Keep the pageViewsMode in 'interactive' state
+    setPageViewsMode('interactive');
     setCustomEventsMode('none');
     setStagingFilter(null);
 
     // Force immediate UI update for filter count by using a setTimeout with 0ms
     setTimeout(() => {
-      // Apply initial pageviews filter
-      const pageviewsFilter = FILTER_SUGGESTIONS.find(s => s.id === 'pageviews');
-      if (pageviewsFilter) {
-        setFilters([...pageviewsFilter.filters]);
-      }
+      // Apply initial pageviews + interactive url_path filter
+      setFilters([
+        { column: 'event_type', operator: '=', value: '1' },
+        { column: 'url_path', operator: '=', value: '{{url_sti}}', interactive: true, metabaseParam: true }
+      ]);
     }, 0);
 
     // Only show alert if not silent

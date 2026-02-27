@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Heading, Link, Button, Alert, Modal, TextField, Select, UNSAFE_Combobox } from '@navikt/ds-react';
 import { Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import type { ILineChartProps, IVerticalBarChartProps } from '@fluentui/react-charting';
@@ -6,6 +6,7 @@ import { subDays, format, isEqual, startOfWeek, startOfMonth } from 'date-fns';
 import AlertWithCloseButton from '../grafbygger/AlertWithCloseButton.tsx';
 import ResultsPanel from './ResultsPanel.tsx';
 import { translateValue } from '../../../../shared/lib/translations.ts';
+import { formatPathLabel, parseFormattedPath } from '../../../analysis/utils/urlPathFilter.ts';
 import { createDashboard, createProject, fetchCategories, fetchDashboards, fetchProjects, saveChartToBackend } from '../../api/chartStorageApi.ts';
 import type { DashboardDto, GraphCategoryDto, ProjectDto } from '../../api/chartStorageApi.ts';
 
@@ -182,7 +183,8 @@ const QueryPreview = ({
     to: initialDateRange.to,
   });
   const [datePreset, setDatePreset] = useState<DatePreset>(DEFAULT_DATE_PRESET);
-  const [urlPath, setUrlPath] = useState<string>('');
+  const [urlPath, setUrlPath] = useState<string>('/');
+  const [urlComboInputValue, setUrlComboInputValue] = useState<string>('');
   const [eventName, setEventName] = useState<string>('');
   const isDevEnvironment =
     typeof window !== 'undefined' &&
@@ -198,7 +200,7 @@ const QueryPreview = ({
     eventName: string;
   }>({
     dateRange: { from: initialDateRange.from, to: initialDateRange.to },
-    urlPath: '',
+    urlPath: '/',
     eventName: ''
   });
 
@@ -227,6 +229,24 @@ const QueryPreview = ({
   const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
   const [showMetabaseInstructions, setShowMetabaseInstructions] = useState(false);
 
+  const availablePaths = useMemo(() => {
+    const paths = new Set<string>();
+    availableEvents.forEach((event) => {
+      if (event && event.startsWith('/')) {
+        paths.add(event);
+      }
+    });
+    return Array.from(paths).sort((a, b) => a.localeCompare(b, 'nb-NO'));
+  }, [availableEvents]);
+
+  const urlPathOptions = useMemo(() => {
+    const uniquePaths = Array.from(new Set<string>(['/', ...availablePaths]));
+    return uniquePaths.map((path) => {
+      const formatted = formatPathLabel(path);
+      return { label: formatted, value: formatted };
+    });
+  }, [availablePaths]);
+
   // Check if parameters have changed
   const hasChanges = () => {
     const dateChanged = !isEqual(dateRange.from || 0, executedParams.dateRange.from || 0) ||
@@ -241,7 +261,14 @@ const QueryPreview = ({
   useEffect(() => {
     if (!sql) {
       setHasMetabaseDateFilter(false);
-      setHasUrlPathFilter(false);
+      const hasUrlPathInteractiveFilter = filters.some(f =>
+        (f.column || '').toLowerCase() === 'url_path' &&
+        (
+          (f.interactive === true && f.metabaseParam === true) ||
+          (typeof (f as { value?: unknown }).value === 'string' && /\{\{\s*url_sti\s*\}\}/i.test((f as { value?: string }).value || ''))
+        )
+      );
+      setHasUrlPathFilter(hasUrlPathInteractiveFilter);
       setHasEventNameFilter(false);
       return;
     }
@@ -249,15 +276,26 @@ const QueryPreview = ({
     const datePattern = /\[\[\s*AND\s*\{\{created_at\}\}\s*\]\]/i;
     setHasMetabaseDateFilter(datePattern.test(sql));
 
-    // Pattern: [[ {{url_sti}} --]] '/'
-    // Matches [[ {{url_sti}} --]] followed by optional whitespace and '/'
-    const urlPathPattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/i;
-    setHasUrlPathFilter(urlPathPattern.test(sql));
+    // URL path can be either optional Metabase block or direct placeholder.
+    const urlPathOptionalPattern = /\[\[\s*\{\{\s*url_sti\s*\}\}\s*--\s*\]\]\s*'\/'/i;
+    const urlPathDirectPattern = /\{\{\s*url_sti\s*\}\}/i;
+    const hasUrlPathInteractiveFilter = filters.some(f =>
+      (f.column || '').toLowerCase() === 'url_path' &&
+      (
+        (f.interactive === true && f.metabaseParam === true) ||
+        (typeof (f as { value?: unknown }).value === 'string' && /\{\{\s*url_sti\s*\}\}/i.test((f as { value?: string }).value || ''))
+      )
+    );
+    setHasUrlPathFilter(
+      urlPathOptionalPattern.test(sql) ||
+      urlPathDirectPattern.test(sql) ||
+      hasUrlPathInteractiveFilter
+    );
 
     // Pattern: {{event_name}} or {{hendelse}}
     const eventNamePattern = /\{\{\s*(event_name|hendelse)\s*\}\}/i;
     setHasEventNameFilter(eventNamePattern.test(sql));
-  }, [sql]);
+  }, [sql, filters]);
 
   // Generate processed SQL with optional placeholder preservation for Metabase
   const getProcessedSql = (options?: { preserveMetabasePlaceholders?: boolean }) => {
@@ -266,7 +304,6 @@ const QueryPreview = ({
       filters.some(f => columns.includes((f.column || '').toLowerCase()) && f.interactive === true && f.metabaseParam === true);
 
     const interactiveDateFilter = interactiveFilter(['created_at']);
-    const interactiveUrlFilter = interactiveFilter(['url_path', 'url', 'url_sti']);
     const interactiveEventFilter = interactiveFilter(['event_name', 'event']);
 
     let processedSql = sql;
@@ -284,15 +321,19 @@ const QueryPreview = ({
     if (hasUrlPathFilter) {
       // When preserving for Metabase, always keep the placeholder so the recipient can choose the path
       if (!preserveMetabasePlaceholders) {
-        const pattern = /\[\[\s*\{\{url_sti\}\}\s*--\s*\]\]\s*'\/'/gi;
+        const optionalPattern = /\[\[\s*\{\{\s*url_sti\s*\}\}\s*--\s*\]\]\s*'\/'/gi;
+        const directPattern = /\{\{\s*url_sti\s*\}\}/gi;
         const trimmedPath = (urlPath || '').trim();
         const hasExplicitPath = trimmedPath.length > 0 && trimmedPath !== '/';
 
         if (hasExplicitPath) {
-          processedSql = processedSql.replace(pattern, `'${trimmedPath.replace(/'/g, "''")}'`);
-        } else if (!interactiveUrlFilter) {
-          // Only fall back to '/' when not using Metabase parameter mode
-          processedSql = processedSql.replace(pattern, `'/'`);
+          const safePath = `'${trimmedPath.replace(/'/g, "''")}'`;
+          processedSql = processedSql.replace(optionalPattern, safePath);
+          processedSql = processedSql.replace(directPattern, safePath);
+        } else {
+          // Default to front page when URL field is empty or set to '/'
+          processedSql = processedSql.replace(optionalPattern, `'/'`);
+          processedSql = processedSql.replace(directPattern, `'/'`);
         }
       }
     }
@@ -1086,11 +1127,12 @@ const QueryPreview = ({
                       const resetDateRange = getDateRangeFromPreset(DEFAULT_DATE_PRESET);
                       setDatePreset(DEFAULT_DATE_PRESET);
                       setDateRange({ from: resetDateRange.from, to: resetDateRange.to });
-                      setUrlPath('');
+                      setUrlPath('/');
+                      setUrlComboInputValue('');
                       setEventName('');
                       setExecutedParams({
                         dateRange: { from: resetDateRange.from, to: resetDateRange.to },
-                        urlPath: '',
+                        urlPath: '/',
                         eventName: ''
                       });
                       setResult(null); // Clear results
@@ -1156,12 +1198,32 @@ const QueryPreview = ({
                     {/* URL Path Filter */}
                     {hasUrlPathFilter && (
                       <div className="w-64">
-                        <TextField
-                          label="URL"
+                        <UNSAFE_Combobox
+                          label="URL-sti"
                           size="small"
-                          value={urlPath}
-                          onChange={(e) => setUrlPath(e.target.value)}
-                          description="F.eks. / for forsiden"
+                          options={urlPathOptions}
+                          selectedOptions={urlPath ? [formatPathLabel(urlPath)] : []}
+                          onToggleSelected={(option: string, isSelected: boolean) => {
+                            if (option) {
+                              setUrlPath(isSelected ? parseFormattedPath(option) : '');
+                              setUrlComboInputValue('');
+                            }
+                          }}
+                          value={urlComboInputValue}
+                          onChange={(value) => setUrlComboInputValue(value || '')}
+                          onBlur={() => {
+                            const trimmed = urlComboInputValue.trim();
+                            if (!trimmed) return;
+                            let parsed = parseFormattedPath(trimmed);
+                            if (!parsed.startsWith('/')) {
+                              parsed = `/${parsed}`;
+                            }
+                            setUrlPath(parsed || '');
+                            setUrlComboInputValue('');
+                          }}
+                          isMultiSelect={true}
+                          allowNewValues
+                          clearButton
                         />
                       </div>
                     )}

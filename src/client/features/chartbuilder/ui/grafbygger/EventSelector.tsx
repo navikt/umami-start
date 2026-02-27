@@ -218,9 +218,9 @@ const EventSelector = ({
                       }
                     }}
                   >
+                    <Radio value="interactive">Mottaker velger selv</Radio>
                     <Radio value="all">Alle (hele nettstedet)</Radio>
                     <Radio value="specific">Utvalgte sider</Radio>
-                    <Radio value="interactive">Mottaker velger selv</Radio>
                   </RadioGroup>
 
                   <div className="mt-4">
@@ -305,22 +305,6 @@ const EventSelector = ({
                             Når tom vises alle sidevisninger
                           </div>
                         )}
-                      </div>
-                    )}
-                    {pageViewsMode === 'interactive' && (
-                      <div className="bg-(--ax-bg-default) p-4 rounded border">
-                        <div className="flex items-center gap-3">
-                          <div className="shrink-0">
-                            <span className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-green-600">
-                                <path d="M13.3 4.3L6 11.6L2.7 8.3C2.3 7.9 1.7 7.9 1.3 8.3C0.9 8.7 0.9 9.3 1.3 9.7L5.3 13.7C5.5 13.9 5.7 14 6 14C6.3 14 6.5 13.9 6.7 13.7L14.7 5.7C15.1 5.3 15.1 4.7 14.7 4.3C14.3 3.9 13.7 3.9 13.3 4.3Z" fill="currentColor" />
-                              </svg>
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-(--ax-text-default)">URL-sti kan velges som et filtervalg</p>
-                          </div>
-                        </div>
                       </div>
                     )}
                   </div>
