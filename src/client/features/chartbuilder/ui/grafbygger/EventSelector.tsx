@@ -183,7 +183,7 @@ const EventSelector = ({
       <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-inner">
         <Tabs defaultValue="sidestier" size="small">
           <Tabs.List>
-            <Tabs.Tab value="sidestier" label="Sidevisning" />
+            <Tabs.Tab value="sidestier" label="Sidevisninger" />
             <Tabs.Tab value="hendelser" label="Egne hendelser" />
             <Tabs.Tab value="flere_valg" label="Filtre" />
             <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
