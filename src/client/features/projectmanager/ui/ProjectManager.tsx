@@ -19,6 +19,7 @@ type FileTableRow = {
     id: string;
     type: 'dashboard' | 'category' | 'chart';
     name: string;
+    indentLevel?: 0 | 1 | 2;
     dashboardId: number;
     dashboardName: string;
     categoryName?: string;
@@ -184,6 +185,7 @@ const ProjectManager = () => {
                 id: `dashboard-${dashboard.id}`,
                 type: 'dashboard',
                 name: dashboard.name,
+                indentLevel: 0,
                 dashboardId: dashboard.id,
                 dashboardName: dashboard.name,
             };
@@ -196,6 +198,7 @@ const ProjectManager = () => {
                     id: `chart-${chart.id}`,
                     type: 'chart' as const,
                     name: chart.name,
+                    indentLevel: 1 as const,
                     dashboardId: dashboard.id,
                     dashboardName: dashboard.name,
                     categoryId: chart.categoryId,
@@ -210,6 +213,7 @@ const ProjectManager = () => {
                     id: `category-${dashboard.id}-${category.id}`,
                     type: 'category',
                     name: category.name,
+                    indentLevel: 1,
                     categoryName: category.name,
                     dashboardId: dashboard.id,
                     dashboardName: dashboard.name,
@@ -220,6 +224,7 @@ const ProjectManager = () => {
                     id: `chart-${chart.id}`,
                     type: 'chart' as const,
                     name: chart.name,
+                    indentLevel: 2 as const,
                     dashboardId: dashboard.id,
                     dashboardName: dashboard.name,
                     categoryId: chart.categoryId,
@@ -1064,15 +1069,14 @@ const ProjectManager = () => {
                             </Table.Header>
                             <Table.Body>
                                 {fileRows.map((row) => {
-                                    const isChartRow = row.type === 'chart';
-                                    const isCategoryRow = row.type === 'category';
+                                    const paddingClass = row.indentLevel === 2 ? 'pl-12' : row.indentLevel === 1 ? 'pl-6' : '';
                                     const overviewHref = `/oversikt?projectId=${selectedProject.project.id}&dashboardId=${row.dashboardId}${row.categoryId ? `&categoryId=${row.categoryId}` : ''}`;
                                     const isEmptyDashboardRow = row.type === 'dashboard' && (dashboardChartCountById.get(row.dashboardId) ?? 0) === 0;
                                     return (
                                         <Fragment key={row.id}>
                                             <Table.Row>
                                                 <Table.HeaderCell scope="row">
-                                                    <span className={`inline-flex items-center gap-2 min-w-0 ${isChartRow ? 'pl-12' : isCategoryRow ? 'pl-6' : ''}`}>
+                                                    <span className={`inline-flex items-center gap-2 min-w-0 ${paddingClass}`}>
                                                         <span className="text-[var(--ax-text-subtle)]">
                                                             {row.type === 'dashboard' ? (
                                                                 <SquareGridIcon aria-hidden fontSize="1rem" />
