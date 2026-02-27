@@ -250,15 +250,20 @@ export const generateSQLCore = (
   const hasInteractiveFilters = filters.some(f => f.interactive === true && f.metabaseParam === true);
 
   let websiteAlias, sessionAlias, tablePrefix;
+  let websiteRef, sessionRef;
 
   if (hasInteractiveFilters) {
     websiteAlias = fullWebsiteTable;
     sessionAlias = fullSessionTable;
     tablePrefix = `${fullWebsiteTable}.`;
+    websiteRef = fullWebsiteTable;
+    sessionRef = fullSessionTable;
   } else {
     websiteAlias = 'e';
     sessionAlias = 's';
     tablePrefix = 'e.';
+    websiteRef = 'e';
+    sessionRef = 's';
   }
 
   // Force usage of aliases to avoid TS errors
@@ -307,7 +312,7 @@ export const generateSQLCore = (
 
     sql += 'base_query AS (\n';
     sql += '  SELECT\n';
-    sql += '    e.*,\n';
+    sql += `    ${websiteRef}.*,\n`;
     sql += '    vc.events_count AS visit_counts\n';
 
     if (needsVisitDuration) {
@@ -315,7 +320,7 @@ export const generateSQLCore = (
     }
 
     if (requiredTables.session && requiredSessionColumns.length > 0) {
-      sql += '    ,' + requiredSessionColumns.map(col => `s.${col}`).join(',\n    ') + '\n';
+      sql += '    ,' + requiredSessionColumns.map(col => `${sessionRef}.${col}`).join(',\n    ') + '\n';
     }
 
     if (hasInteractiveFilters) {
@@ -373,11 +378,11 @@ export const generateSQLCore = (
 
     sql += 'base_query AS (\n';
     sql += '  SELECT\n';
-    sql += '    e.*,\n';
+    sql += `    ${websiteRef}.*,\n`;
     sql += '    vm.duration_seconds as visit_duration\n';
 
     if (requiredTables.session && requiredSessionColumns.length > 0) {
-      sql += '    ,' + requiredSessionColumns.map(col => `s.${col}`).join(',\n    ') + '\n';
+      sql += '    ,' + requiredSessionColumns.map(col => `${sessionRef}.${col}`).join(',\n    ') + '\n';
     }
 
     if (hasInteractiveFilters) {
@@ -775,4 +780,3 @@ export const generateSQLCore = (
 
   return sql;
 };
-

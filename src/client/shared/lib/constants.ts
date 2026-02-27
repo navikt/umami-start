@@ -37,7 +37,7 @@ export const FILTER_COLUMNS = {
       { label: 'Skjermstørrelse', value: 'screen' },
       { label: 'Språk', value: 'language' },
       { label: 'Land', value: 'country' },
-//    { label: 'Besøksvarighet', value: 'visit_duration' }
+      { label: 'Besøksvarighet', value: 'visit_duration' }
     ]
   }
 };
