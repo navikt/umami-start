@@ -1291,21 +1291,21 @@ const QueryPreview = ({
             <div className="space-y-3 mb-4">
               <div className="flex flex-wrap gap-2">
                 <Button size="small" variant="primary" onClick={openSaveModal}>
-                  Lagre graf
+                  Legg til i dashboard
                 </Button>
                 <Button
                   size="small"
                   variant="secondary"
                   onClick={() => setShowMetabaseInstructions((prev) => !prev)}
                 >
-                  Overfør graf til Metabase
+                  Overfør til Metabase
                 </Button>
               </div>
 
               {saveSuccess && savedLocation && (
                 <Alert variant="success" size="small">
                   <Link href={savedDashboardUrl}>
-                    Grafen er lagret i "{savedLocation.dashboardName}". Åpne i Oversikt.
+                    Grafen er lagt til i "{savedLocation.dashboardName}". Åpne i Oversikt.
                   </Link>
                 </Alert>
               )}
@@ -1456,13 +1456,13 @@ const QueryPreview = ({
       <Modal
         open={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        header={{ heading: 'Lagre graf' }}
+        header={{ heading: 'Legg til i dashboard' }}
       >
         <Modal.Body>
           <div className="space-y-4">
             <UNSAFE_Combobox
-              label="Prosjekt"
-              description="Skriv for å legge til nytt prosjekt"
+              label="Team"
+              description="Skriv for å legge til nytt team"
               options={projectOptions}
               selectedOptions={selectedProjectLabel ? [selectedProjectLabel] : []}
               onToggleSelected={(option: string, isSelected: boolean) => {
@@ -1511,7 +1511,7 @@ const QueryPreview = ({
               size="small"
             />
             <Select
-              label="Graftype"
+              label="Visning"
               value={graphType}
               onChange={(e) => setGraphType(e.target.value)}
               size="small"
@@ -1531,7 +1531,7 @@ const QueryPreview = ({
         </Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={handleSaveChart} loading={savingChart}>
-            Lagre
+            Legg til
           </Button>
           <Button variant="secondary" onClick={() => setShowSaveModal(false)} disabled={savingChart}>
             Avbryt
@@ -1548,7 +1548,7 @@ const QueryPreview = ({
         <Modal.Body>
           {savedLocation && (
             <p>
-              Grafen er lagret i "{savedLocation.dashboardName}". Hva vil du gjøre nå?
+              Grafen er lagt til i "{savedLocation.dashboardName}". Hva vil du gjøre nå?
             </p>
           )}
         </Modal.Body>

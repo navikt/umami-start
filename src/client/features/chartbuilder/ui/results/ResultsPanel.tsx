@@ -1159,11 +1159,6 @@ const ResultsPanel = ({
               </div>
             )}
 
-            {/* SQL Code Display */}
-            {showSqlCode && sql && (
-              <SqlViewer sql={sql} showEditButton={showEditButton} />
-            )}
-
             {/* Share Button
             {sql && result && result.data && result.data.length > 0 && (
               <div className="mt-3 flex justify-end">
@@ -1186,6 +1181,11 @@ const ResultsPanel = ({
           <Alert variant="info" className="mt-3">
             Spørringen returnerte ingen resultater.
           </Alert>
+        )}
+
+        {/* SQL Code Display */}
+        {showSqlCode && sql && result && (
+          <SqlViewer sql={sql} showEditButton={showEditButton} />
         )}
       </div>
 
