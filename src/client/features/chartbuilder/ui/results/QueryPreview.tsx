@@ -57,6 +57,7 @@ interface QueryPreviewProps {
   availableEvents?: string[];
   isEventsLoading?: boolean;
   websiteId?: string;
+  showDownloadReadMore?: boolean;
 }
 
 type DatePreset = 'today' | 'yesterday' | 'this_week' | 'last_7_days' | 'last_week' | 'last_28_days' | 'current_month' | 'last_month';
@@ -153,7 +154,8 @@ const QueryPreview = ({
   onResetAll,
   availableEvents = [],
   isEventsLoading = false,
-  websiteId
+  websiteId,
+  showDownloadReadMore = true
 }: QueryPreviewProps) => {
   const initialDateRange = getDateRangeFromPreset(DEFAULT_DATE_PRESET);
   const [copied, setCopied] = useState(false);
@@ -1219,6 +1221,7 @@ const QueryPreview = ({
                 showEditButton={true}
                 showCost={true}
                 websiteId={websiteId}
+                showDownloadReadMore={showDownloadReadMore}
               />
             </div>
 

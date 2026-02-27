@@ -30,6 +30,7 @@ interface ResultsPanelProps {
   hiddenTabs?: string[];
   containerStyle?: 'green' | 'white' | 'none';
   showCost?: boolean;
+  showDownloadReadMore?: boolean;
   // Optional props for AnalysisActionModal
   websiteId?: string;
   period?: string;
@@ -54,6 +55,7 @@ const ResultsPanel = ({
   hiddenTabs: propHiddenTabs = [],
   containerStyle = 'green',
   showCost = false,
+  showDownloadReadMore = true,
   websiteId,
   period,
 }: ResultsPanelProps) => {
@@ -1078,82 +1080,84 @@ const ResultsPanel = ({
             </Tabs>
 
             {/* Download Options */}
-            <div className="pt-2">
-              <ReadMore header="Last ned resultater">
-                <div className="space-y-4 mt-2">
-                  {/* Download Section */}
-                  <div>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <Button
-                        onClick={downloadCSV}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        CSV
-                      </Button>
+            {showDownloadReadMore && (
+              <div className="pt-2">
+                <ReadMore header="Last ned resultater">
+                  <div className="space-y-4 mt-2">
+                    {/* Download Section */}
+                    <div>
+                      <div className="flex gap-2 flex-wrap items-center">
+                        <Button
+                          onClick={downloadCSV}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          CSV
+                        </Button>
 
-                      <Button
-                        onClick={downloadExcel}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        Excel
-                      </Button>
+                        <Button
+                          onClick={downloadExcel}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          Excel
+                        </Button>
 
-                      <Button
-                        onClick={downloadJSON}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        JSON
-                      </Button>
+                        <Button
+                          onClick={downloadJSON}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          JSON
+                        </Button>
 
-                      <Button
-                        onClick={downloadTOON}
-                        variant="secondary"
-                        size="small"
-                        icon={<Download size={16} />}
-                      >
-                        TOON
-                      </Button>
+                        <Button
+                          onClick={downloadTOON}
+                          variant="secondary"
+                          size="small"
+                          icon={<Download size={16} />}
+                        >
+                          TOON
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Copy Section */}
+                    <div>
+                      <p className="text-sm font-medium text-[var(--ax-text-subtle)] mb-2">Eller kopier dem:</p>
+                      <div className="flex gap-2 flex-wrap items-center">
+                        <CopyButton
+                          copyText={getCSVContent()}
+                          text="CSV"
+                          activeText="CSV kopiert!"
+                          size="small"
+                          variant="action"
+                        />
+
+                        <CopyButton
+                          copyText={getJSONContent()}
+                          text="JSON"
+                          activeText="JSON kopiert!"
+                          size="small"
+                          variant="action"
+                        />
+
+                        <CopyButton
+                          copyText={getTOONContent()}
+                          text="TOON"
+                          activeText="TOON kopiert!"
+                          size="small"
+                          variant="action"
+                        />
+                      </div>
                     </div>
                   </div>
-
-                  {/* Copy Section */}
-                  <div>
-                    <p className="text-sm font-medium text-[var(--ax-text-subtle)] mb-2">Eller kopier dem:</p>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <CopyButton
-                        copyText={getCSVContent()}
-                        text="CSV"
-                        activeText="CSV kopiert!"
-                        size="small"
-                        variant="action"
-                      />
-
-                      <CopyButton
-                        copyText={getJSONContent()}
-                        text="JSON"
-                        activeText="JSON kopiert!"
-                        size="small"
-                        variant="action"
-                      />
-
-                      <CopyButton
-                        copyText={getTOONContent()}
-                        text="TOON"
-                        activeText="TOON kopiert!"
-                        size="small"
-                        variant="action"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </ReadMore>
-            </div>
+                </ReadMore>
+              </div>
+            )}
 
             {/* SQL Code Display */}
             {showSqlCode && sql && (

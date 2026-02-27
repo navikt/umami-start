@@ -205,6 +205,7 @@ const ChartsPage = () => {
           availableEvents={availableEvents}
           isEventsLoading={isEventsLoading}
           websiteId={config.website?.id}
+          showDownloadReadMore={false}
         />
       </div>
     </ChartLayout >

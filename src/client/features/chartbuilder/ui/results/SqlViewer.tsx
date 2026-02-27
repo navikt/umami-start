@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, CopyButton, ReadMore, Tooltip, Heading, Link } from '@navikt/ds-react';
+import { Button, CopyButton, ReadMore, Heading, Link } from '@navikt/ds-react';
 import { Copy, ExternalLink } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
@@ -10,7 +10,6 @@ interface SqlViewerProps {
 }
 
 const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: SqlViewerProps) => {
-  const [copiedDashboard, setCopiedDashboard] = useState(false);
   const [copiedMetabase, setCopiedMetabase] = useState(false);
   const isDevEnvironment =
     typeof window !== 'undefined' &&
@@ -20,18 +19,6 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
     : 'https://metabase.ansatt.nav.no/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImxpYi90eXBlIjoibWJxbC9xdWVyeSIsImRhdGFiYXNlIjoxNTQ4LCJzdGFnZXMiOlt7ImxpYi90eXBlIjoibWJxbC5zdGFnZS9uYXRpdmUiLCJuYXRpdmUiOiIiLCJ0ZW1wbGF0ZS10YWdzIjp7fX1dfSwiZGlzcGxheSI6InRhYmxlIiwidmlzdWFsaXphdGlvbl9zZXR0aW5ncyI6e30sInR5cGUiOiJxdWVzdGlvbiJ9';
 
   if (!sql) return null;
-
-  const handleCopyToDashboard = () => {
-    let dashboardSql = sql;
-    // Replace website_id with template variable
-    dashboardSql = dashboardSql.replace(/website_id\s*=\s*'([a-f0-9\-]+)'/gi, "website_id = '{{website_id}}'");
-    // Escape backticks for TS template literal
-    dashboardSql = dashboardSql.replace(/`/g, '\\`');
-
-    void navigator.clipboard.writeText(dashboardSql);
-    setCopiedDashboard(true);
-    setTimeout(() => setCopiedDashboard(false), 3000);
-  };
 
   const handleCopyToMetabase = () => {
     void navigator.clipboard.writeText(sql);
@@ -43,18 +30,6 @@ const SqlViewer = ({ sql, showEditButton = false, withoutReadMore = false }: Sql
     <div className="space-y-2">
       <div className="flex justify-end gap-2 items-center">
         <CopyButton copyText={sql} text="Kopier" activeText="Kopiert!" size="small" />
-        <Tooltip content="Kopier med {{website_id}} variabel for dashboards.ts">
-          <Button
-            size="xsmall"
-            variant="tertiary"
-            type="button"
-            onClick={handleCopyToDashboard}
-            icon={<Copy size={14} />}
-            aria-label="Kopier til dashboard"
-          >
-            {copiedDashboard ? 'Kopiert!' : 'Dashboard'}
-          </Button>
-        </Tooltip>
         {showEditButton && (() => {
           const encodedSql = encodeURIComponent(sql);
           const urlLength = `/sql?sql=${encodedSql}`.length;
