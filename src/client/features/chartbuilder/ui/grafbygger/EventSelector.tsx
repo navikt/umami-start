@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label, Skeleton } from '@navikt/ds-react';
+import { Heading, RadioGroup, Radio, Select, UNSAFE_Combobox, Tabs, Button, Label, Skeleton, Switch, ReadMore } from '@navikt/ds-react';
 import type { Filter, Parameter } from '../../../../shared/types/chart.ts';
 import AlertWithCloseButton from './AlertWithCloseButton.tsx';
 
@@ -183,8 +183,8 @@ const EventSelector = ({
       <div className="mt-3 bg-(--ax-bg-default) p-4 rounded-md border shadow-inner">
         <Tabs defaultValue="sidestier" size="small">
           <Tabs.List>
-            <Tabs.Tab value="sidestier" label="Sidevisninger" />
-            <Tabs.Tab value="hendelser" label="Hendelser" />
+            <Tabs.Tab value="sidestier" label="Ofte brukt" />
+            <Tabs.Tab value="hendelser" label="Egne hendelser" />
             <Tabs.Tab value="flere_valg" label="Filtre" />
             <Tabs.Tab value="active_filters" label={`Aktive filtre (${activeFilterCount})`} />
           </Tabs.List>
@@ -192,36 +192,41 @@ const EventSelector = ({
           <Tabs.Panel value="sidestier" className="pt-6">
             <div className="space-y-4">
 
-              {/*<Switch
+              <Switch
                 checked={selectedEventTypes.includes('pageviews')}
                 onChange={(e) => handleEventTypeChange('pageviews', e.target.checked)}
+                description="Standard: Mottaker velger side selv"
               >
-                Inkluder sidevisninger i grafen
-              </Switch>*/}
+                Sidevisninger
+              </Switch>
 
               {selectedEventTypes.includes('pageviews') && (
                 <div className="pl-0 mt-4">
-                  <RadioGroup
-                    legend="Hvilke sider?"
-                    value={pageViewsMode}
-                    onChange={(val) => {
-                      const newMode = val as 'all' | 'specific' | 'interactive';
-                      setPageViewsMode(newMode);
+                  <ReadMore header="Tving alle sider / utvalgte sider" size="small">
+                    <div className="pt-2">
+                      <RadioGroup
+                        legend="Valg for sidevisninger"
+                        value={pageViewsMode}
+                        onChange={(val) => {
+                          const newMode = val as 'all' | 'specific' | 'interactive';
+                          setPageViewsMode(newMode);
 
-                      // Clear existing paths
-                      handlePathsChange([], 'IN');
+                          // Clear existing paths
+                          handlePathsChange([], 'IN');
 
-                      // Add interactive filter if selected - use Metabase parameter syntax directly
-                      if (newMode === 'interactive') {
-                        // Use Metabase parameter syntax: {{url_sti}}
-                        handlePathsChange(['{{url_sti}}'], '=', true);
-                      }
-                    }}
-                  >
-                    <Radio value="interactive">Mottaker velger selv</Radio>
-                    <Radio value="all">Alle (hele nettstedet)</Radio>
-                    <Radio value="specific">Utvalgte sider</Radio>
-                  </RadioGroup>
+                          // Add interactive filter if selected - use Metabase parameter syntax directly
+                          if (newMode === 'interactive') {
+                            // Use Metabase parameter syntax: {{url_sti}}
+                            handlePathsChange(['{{url_sti}}'], '=', true);
+                          }
+                        }}
+                      >
+                        <Radio value="interactive">Mottaker velger selv</Radio>
+                        <Radio value="all">Alle (hele nettstedet)</Radio>
+                        <Radio value="specific">Utvalgte sider</Radio>
+                      </RadioGroup>
+                    </div>
+                  </ReadMore>
 
                   <div className="mt-4">
                     {pageViewsMode === 'specific' && (
@@ -860,7 +865,7 @@ const EventSelector = ({
                           {/* Add interactive toggle button */}
                           {filter.interactive ? (
                             <div className="mb-1">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--ax-bg-accent-soft)] text-[var(--ax-text-accent)]">
                                 Mottaker velger selv
                               </span>
                             </div>
@@ -906,7 +911,7 @@ const EventSelector = ({
 
                         {/* Show parameter name for interactive filters */}
                         {filter.interactive ? (
-                          <div className="bg-blue-50 p-2 rounded text-sm">
+                          <div className="bg-[var(--ax-bg-accent-soft)] p-2 rounded text-sm text-[var(--ax-text-default)]">
                             Parameter: <strong>{filter.value?.toString().replace('{{', '').replace('}}', '')}</strong>
                           </div>
                         ) : (
