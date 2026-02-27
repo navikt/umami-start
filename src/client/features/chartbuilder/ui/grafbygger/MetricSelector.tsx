@@ -285,8 +285,9 @@ const MetricSelector = forwardRef(({
                   <Tabs.List>
                     <Tabs.Tab value="antall" label="Antall" />
                     <Tabs.Tab value="andel" label="Andel" />
-                    <Tabs.Tab value="gjennomsnitt" label="Gjennomsnitt" />
-                    <Tabs.Tab value="avansert" label="Flere målingsvalg" />
+                    <Tabs.Tab value="gjennomsnitt" label="Tid" />
+                    <Tabs.Tab value="avansert" label="Flere valg" />
+                    <Tabs.Tab value="aktive_valg" label={`Aktive valg (${metrics.length})`} />
                   </Tabs.List>
 
                   <Tabs.Panel value="antall" className="pt-4">
@@ -459,17 +460,25 @@ const MetricSelector = forwardRef(({
                       </Select>
                     </div>
                   </Tabs.Panel>
+
+                  <Tabs.Panel value="aktive_valg" className="pt-4">
+                    {metrics.length === 0 && (
+                      <p className="text-sm text-[var(--ax-text-subtle)]">
+                        Ingen aktive valg. Velg et målingsvalg, så dukker dem opp her.
+                      </p>
+                    )}
+                  </Tabs.Panel>
                 </Tabs>
               </div>
             </div>
 
-            {metrics.length > 0 && (
+            {activeMetricCategory === 'aktive_valg' && metrics.length > 0 && (
               <Heading level="3" size="xsmall" spacing className="mt-6">
-                Valgte målinger
+                Aktive valg
               </Heading>
             )}
 
-            {metrics.map((metric, index) => (
+            {activeMetricCategory === 'aktive_valg' && metrics.map((metric, index) => (
               <div key={index} className={`flex ${shouldShowDetailedView(metric, index) ? 'flex-col' : 'items-center justify-between'} bg-[var(--ax-bg-default)] px-4 py-3 rounded-md border`}>
                 <div className="flex items-center justify-between w-full">
                   <div className="flex flex-col">
