@@ -616,11 +616,11 @@ const GroupingOptions = forwardRef(({
           </div>
 
           {groupByFields.length > 0 && (
-            <div className="space-y-2">
-              <Label as="p" size="small" className="mt-6">
+            <div className="pt-3 space-y-2">
+              <Label as="p" size="small">
                 Valgte grupperinger (sorter med pilene):
               </Label>
-              <div className="flex flex-col gap-2">
+              <div className="mt-2 flex flex-col gap-2">
                 {groupByFields.map((field, index) => {
                   const column = Object.values(COLUMN_GROUPS)
                     .flatMap(group => group.columns)
