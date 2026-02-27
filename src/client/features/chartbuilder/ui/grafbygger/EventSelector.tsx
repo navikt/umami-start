@@ -356,8 +356,8 @@ const EventSelector = ({
                 }}
               >
                 <Radio value="none">Ingen hendelser</Radio>
-                <Radio value="all">Alle hendelser</Radio>
                 <Radio value="specific">Utvalgte hendelser / hendelsesdetaljer</Radio>
+                <Radio value="all">Alle hendelser</Radio>
                 <Radio value="interactive">Mottaker velger selv</Radio>
               </RadioGroup>
               <div className="mt-4">
