@@ -70,7 +70,12 @@ export function SuggestingValueEditor({
   className,
   hideLabel = false,
 }: SuggestingValueEditorProps) {
-  const { values, scannedDays, failed, load } = useColumnValueSuggestions(websiteId, column, suggestionKey, eventName)
+  const { values, scannedDays, failed, loading, load } = useColumnValueSuggestions(
+    websiteId,
+    column,
+    suggestionKey,
+    eventName,
+  )
 
   // Fetch fires on mount-with-field-picked (the parent mounts this editor
   // when the user picks the field), not on combobox focus. Skip entirely
@@ -130,6 +135,7 @@ export function SuggestingValueEditor({
         onBlur={handleBlur}
         isMultiSelect={multi}
         allowNewValues
+        isLoading={loading}
         disabled={disabled}
         placeholder={placeholder}
       />
