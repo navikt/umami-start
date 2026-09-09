@@ -39,6 +39,9 @@ const defaultCtx = (overrides: Partial<CohortResolutionContext> = {}): CohortRes
 
 const pretty = (sql: string) => formatSql(sql, { language: 'bigquery' })
 
+/** A chart-window lower bound, as generateSQLCore extracts from the created_at filters. */
+const CHART_WINDOW = 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)'
+
 describe('resolveCohortToSegmentDefinition', () => {
   it('returns empty filters and null performed when the cohort has no criteria yet', () => {
     const result = resolveCohortToSegmentDefinition(cohort(null), 0, defaultCtx())
@@ -71,12 +74,49 @@ describe('resolveCohortToSegmentDefinition', () => {
 
   it("correlates on session_id (this codebase's visitor-identity column) against the `b` row alias", () => {
     const result = resolveCohortToSegmentDefinition(
-      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'iOS' }] })),
+      cohort(
+        group({ children: [{ nodeType: 'CONDITION', field: 'event_name', conditionType: 'EQUALS', value: 'klikk' }] }),
+      ),
       0,
       defaultCtx(),
     )
     const sql = pretty(result.filters[0].rawExpression ?? '')
     expect(sql).toContain('session_id = b.session_id')
+  })
+
+  it('resolves a session-only condition as a non-correlated IN semi-join on the session table (cheap path)', () => {
+    const result = resolveCohortToSegmentDefinition(
+      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'Windows' }] })),
+      0,
+      defaultCtx({ dateLowerBound: CHART_WINDOW }),
+    )
+    const sql = pretty(result.filters[0].rawExpression ?? '')
+    expect(sql).toContain('b.session_id IN')
+    expect(sql).toContain("os = 'Windows'")
+    // The whole point: no per-row correlated EXISTS over the events table.
+    expect(sql).not.toContain('EXISTS')
+    expect(sql).not.toContain('FROM events')
+  })
+
+  it('scopes the session semi-join to the chart date window, not a fixed wide window', () => {
+    const result = resolveCohortToSegmentDefinition(
+      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'Windows' }] })),
+      0,
+      defaultCtx({ dateLowerBound: CHART_WINDOW }),
+    )
+    const expr = result.filters[0].rawExpression ?? ''
+    expect(expr).toContain(`s.created_at >= ${CHART_WINDOW}`)
+    expect(expr).not.toContain('INTERVAL 400 DAY')
+  })
+
+  it('falls back to the wide 400-day window when no chart date bound is provided (interactive mode)', () => {
+    const result = resolveCohortToSegmentDefinition(
+      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'Windows' }] })),
+      0,
+      defaultCtx(),
+    )
+    const expr = result.filters[0].rawExpression ?? ''
+    expect(expr).toContain('INTERVAL 400 DAY')
   })
 
   it('adds a bounded created_at fallback when the cohort has no time criteria (partition-enforced tables)', () => {
@@ -85,10 +125,10 @@ describe('resolveCohortToSegmentDefinition', () => {
         group({ children: [{ nodeType: 'CONDITION', field: 'event_name', conditionType: 'EQUALS', value: 'klikk' }] }),
       ),
       0,
-      defaultCtx(),
+      defaultCtx({ dateLowerBound: CHART_WINDOW }),
     )
     const expr = result.filters[0].rawExpression ?? ''
-    expect(expr).toContain('.created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 400 DAY)')
+    expect(expr).toContain(`.created_at >= ${CHART_WINDOW}`)
   })
 
   it('does NOT add the fallback when the cohort already filters on created_at', () => {
@@ -114,17 +154,24 @@ describe('resolveCohortToSegmentDefinition', () => {
   })
 
   it('bounds the session join on created_at (public_session is partition-enforced)', () => {
+    // A session column *combined with* an event column still needs the
+    // correlated EXISTS (the session condition must hold on the same event
+    // row) — that path LEFT JOINs the session table with a partition bound.
     const result = resolveCohortToSegmentDefinition(
-      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'iOS' }] })),
+      cohort(
+        group({
+          children: [
+            { nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'iOS' },
+            { nodeType: 'CONDITION', field: 'url_path', conditionType: 'EQUALS', value: '/' },
+          ],
+        }),
+      ),
       0,
-      defaultCtx(),
+      defaultCtx({ dateLowerBound: CHART_WINDOW }),
     )
     const expr = result.filters[0].rawExpression ?? ''
-    // Session table is joined (aliased) with a partition bound on its created_at.
     expect(expr).toContain('LEFT JOIN session')
-    expect(expr).toMatch(
-      /JOIN session \w+ ON [^\n]*\.created_at >= TIMESTAMP_SUB\(CURRENT_TIMESTAMP\(\), INTERVAL 400 DAY\)/,
-    )
+    expect(expr).toMatch(/JOIN session \w+ ON [^\n]*\.created_at >= /)
   })
 
   it("scopes generated subqueries to the cohort's website via extraConditionFn", () => {
@@ -133,12 +180,15 @@ describe('resolveCohortToSegmentDefinition', () => {
       0,
       defaultCtx({ websiteId: 'my-website-id' }),
     )
+    // Website scoping reaches the session table (semi-join extraJoinConditionFn).
     expect(result.filters[0].rawExpression).toContain("website_id = 'my-website-id'")
   })
 
   it("uses ctx.eventsTable as the correlated subquery's FROM table", () => {
+    // An event-level condition (url_path) needs the real events table — unlike
+    // session-static fields, which now resolve off the session table directly.
     const result = resolveCohortToSegmentDefinition(
-      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'os', conditionType: 'EQUALS', value: 'iOS' }] })),
+      cohort(group({ children: [{ nodeType: 'CONDITION', field: 'url_path', conditionType: 'EQUALS', value: '/' }] })),
       0,
       defaultCtx({ eventsTable: '`project.dataset.event`' }),
     )

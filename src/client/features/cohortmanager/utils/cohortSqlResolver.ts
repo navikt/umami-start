@@ -313,6 +313,52 @@ function formatJoinClauses(joinClauses: string[]): string {
   return joinClauses.length > 0 ? `\n  ${joinClauses.join('\n  ')}` : ''
 }
 
+/**
+ * When every condition in an AND group is a plain field predicate (no
+ * paramKey), none of them is on created_at, and they ALL resolve to the same
+ * single joined table (e.g. umami_views.session for os/browser/device/…), the
+ * group can be answered directly from that table alone. Session-level columns
+ * are constant for the lifetime of a session, so "this visitor's session has
+ * os = X" is identical to "there EXISTS an event row for this visitor whose
+ * joined session has os = X" — but the direct form is a non-correlated
+ * semi-join (IN) instead of a per-row correlated EXISTS over events+session.
+ *
+ * That matters for cost: the correlated form forces BigQuery to re-probe the
+ * (GROUP BY-aggregated) session view once per outer event row; the IN form
+ * computes the small filtered session-id set once, then hash-semi-joins.
+ * Returns undefined when the conditions aren't all on one shared joined table
+ * (mixed event+session, param keys, created_at), and the caller falls back to
+ * the correlated EXISTS.
+ */
+function trySessionOnlySemiJoin(
+  conditions: CohortConditionNode[],
+  ctx: ResolveContext,
+  outerAlias: string,
+  outerVisitorCol: string,
+): string | undefined {
+  if (!ctx.resolveFieldTable) return undefined
+  if (conditions.length === 0) return undefined
+  // Only plain field conditions on a single shared joined table — any
+  // paramKey or created_at condition needs the real event row (EXISTS path).
+  if (conditions.some((c) => c.paramKey != null || c.field == null || c.field === 'created_at')) return undefined
+
+  const joined = conditions.map((c) => ctx.resolveFieldTable!(c.field as string))
+  if (joined.some((j) => j === undefined)) return undefined
+  const tables = new Set((joined as JoinedTable[]).map((j) => j.table))
+  if (tables.size !== 1) return undefined
+
+  const joinedTable = (joined as JoinedTable[])[0]
+  const alias = 's'
+  const fragments = conditions.map((c) => conditionToSqlFragment(c, alias))
+  const extra = joinedTable.extraJoinConditionFn?.(alias)
+  const where = [...(extra ? [extra] : []), ...fragments].join('\n    AND ')
+  return (
+    `${outerAlias}.${outerVisitorCol} IN (\n` +
+    `  SELECT ${alias}.${joinedTable.joinColumn} FROM ${joinedTable.table} ${alias}\n` +
+    `  WHERE ${where}\n)`
+  )
+}
+
 /** Merges direct CONDITION children into a single correlated EXISTS subquery (row-level AND). */
 function buildConditionsExists(
   conditions: CohortConditionNode[],
@@ -320,6 +366,12 @@ function buildConditionsExists(
   outerAlias: string,
   outerVisitorCol: string,
 ): string {
+  // Cheap path first: a group made purely of session-static field conditions
+  // needs no correlated event scan at all — resolve it straight off the
+  // (already partition+website bounded) session table as a semi-join.
+  const semiJoin = trySessionOnlySemiJoin(conditions, ctx, outerAlias, outerVisitorCol)
+  if (semiJoin) return semiJoin
+
   const rowAlias = nextRowAlias()
   const correlation = `${rowAlias}.${ctx.visitorIdColumn} = ${outerAlias}.${outerVisitorCol}`
   const extra = ctx.extraConditionFn?.(rowAlias)

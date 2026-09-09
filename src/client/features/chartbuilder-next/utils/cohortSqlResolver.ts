@@ -28,7 +28,21 @@ export interface CohortResolutionContext {
   websiteId: string
   /** All cohorts potentially referenced (selected + transitively COHORT_REF'd), keyed by id string. */
   cohortLookup: Map<string, CohortDetailDto>
+  /**
+   * The chart's own created_at lower bound (a raw BigQuery TIMESTAMP
+   * expression, e.g. `TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)`).
+   * Cohort subqueries reuse it as their partition filter instead of
+   * defaulting to a wide fixed window — the user always picks a time range,
+   * and scoping cohort lookups to that same range is both cheaper (partition
+   * pruning actually bites) and more correct (a 7-day chart shouldn't match
+   * sessions/events older than the window). Falls back to a wide window when
+   * absent (interactive Metabase mode, where bounds live outside the SQL).
+   */
+  dateLowerBound?: string
 }
+
+/** Retention-wide fallback used only when no chart date bound is available (interactive Metabase mode). */
+const WIDE_FALLBACK_WINDOW = 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 400 DAY)'
 
 const EMPTY_ROOT: CohortGroupNode = { nodeType: 'GROUP', combinator: 'AND', negated: false, children: [] }
 
@@ -54,9 +68,10 @@ export function resolveCohortToSegmentDefinition(
     extraConditionFn: (alias) => `${alias}.website_id = '${escapeSqlLiteral(ctx.websiteId)}'`,
     // umami_views.event is partition-filter-enforced — a cohort with no
     // Tidspunkt/SEQUENCE criteria would otherwise emit an unbounded EXISTS
-    // and BigQuery would reject the whole chart query. 400 days covers the
-    // full retention window of the underlying dataset.
-    eventsPartitionFallbackFn: (alias) => `${alias}.created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 400 DAY)`,
+    // and BigQuery would reject the whole chart query. Scope it to the chart's
+    // own date window when we have one; only fall back to the retention-wide
+    // 400-day window when bounds live outside the SQL (interactive Metabase).
+    eventsPartitionFallbackFn: (alias) => `${alias}.created_at >= ${ctx.dateLowerBound ?? WIDE_FALLBACK_WINDOW}`,
     resolveFieldTable: (field) =>
       (SESSION_COLUMNS as readonly string[]).includes(field)
         ? {
@@ -72,10 +87,11 @@ export function resolveCohortToSegmentDefinition(
             // view (not aggregated), so an equality filter on it here lets
             // BigQuery push the restriction down before the join+aggregation
             // instead of after. The created_at bound is required for the
-            // same reason — public_session enforces partition filters.
+            // same reason — public_session enforces partition filters. Use the
+            // chart's own window so this is as tight as the query allows.
             extraJoinConditionFn: (joinAlias) =>
               `${joinAlias}.website_id = '${escapeSqlLiteral(ctx.websiteId)}'` +
-              ` AND ${joinAlias}.created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 400 DAY)`,
+              ` AND ${joinAlias}.created_at >= ${ctx.dateLowerBound ?? WIDE_FALLBACK_WINDOW}`,
           }
         : undefined,
     // Custom event parameters (e.g. a form field's `tekst`/`valg`/`data`) live in

@@ -373,6 +373,17 @@ export const generateSQLCore = (
     (f) => f.interactive === true && f.metabaseParam === true && f.column === 'created_at',
   )
   const segmentDefinitions = config.segments || []
+  // The chart's own created_at lower bound drives the cohort subqueries'
+  // partition filter (tight window = real pruning); interactive Metabase
+  // {{created_at}} params have no literal bound to reuse, so they fall back
+  // to the resolver's retention-wide default.
+  const cohortDateLowerBound = filters.find(
+    (f) =>
+      (f.column === 'created_at' || (f.column === 'custom_column' && f.customColumn?.includes('created_at'))) &&
+      f.operator === '>=' &&
+      f.value &&
+      !(f.interactive === true && f.metabaseParam === true),
+  )?.value
   const effectiveSegmentDefinitions: SegmentDefinition[] =
     config.cohortIds && config.cohortIds.length > 0 && resolvedCohorts && resolvedCohorts.length > 0
       ? resolvedCohorts.map((c, i) =>
@@ -381,6 +392,7 @@ export const generateSQLCore = (
             sessionTable: fullSessionTable,
             websiteId,
             cohortLookup: cohortLookup ?? new Map(resolvedCohorts.map((rc) => [String(rc.id), rc])),
+            dateLowerBound: cohortDateLowerBound,
           }),
         )
       : segmentDefinitions

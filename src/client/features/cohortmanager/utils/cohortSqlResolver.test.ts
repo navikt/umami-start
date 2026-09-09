@@ -353,13 +353,15 @@ describe('OR of two multi-condition event groups', () => {
 
 describe('OR of bare sibling conditions directly under one group (regression: reported bug)', () => {
   it('gives each bare condition its own EXISTS instead of silently AND-ing them together', () => {
-    // (url_path = '/' OR browser = 'Chrome' OR (os = 'Windows' AND device = 'mobile'))
+    // (url_path = '/' OR url_query = 'x' OR (event_name = 'a' AND tag = 'b'))
+    // — event-table fields only, so no session semi-join rewrites apply and
+    // each bare condition gets its own independent EXISTS under the OR.
     const root = group({
       combinator: 'OR',
       children: [
         condition('url_path', '/'),
-        condition('browser', 'Chrome'),
-        group({ children: [condition('os', 'Windows'), condition('device', 'mobile')] }),
+        condition('url_query', 'x'),
+        group({ children: [condition('event_name', 'a'), condition('tag', 'b')] }),
       ],
     })
 
@@ -383,7 +385,7 @@ describe('OR of bare sibling conditions directly under one group (regression: re
             events x
           WHERE
             x.visitor_id = b.visitor_id
-            AND x.browser = 'Chrome'
+            AND x.url_query = 'x'
         )
         OR EXISTS (
           SELECT
@@ -392,8 +394,8 @@ describe('OR of bare sibling conditions directly under one group (regression: re
             events y
           WHERE
             y.visitor_id = b.visitor_id
-            AND y.os = 'Windows'
-            AND y.device = 'mobile'
+            AND y.event_name = 'a'
+            AND y.tag = 'b'
         )
       )"
     `)
@@ -410,8 +412,10 @@ describe('conditions on a field that lives on a joined table (e.g. session-level
       ...overrides,
     })
 
-  it('LEFT JOINs the resolved table once and references the field via the joined alias', () => {
-    const root = group({ children: [condition('browser', 'Chrome'), condition('os', 'Windows')] })
+  it('LEFT JOINs the resolved table once and references the field via the joined alias (mixed event+session group)', () => {
+    // url_path is an event column, forcing the correlated EXISTS path — the
+    // session field then rides the LEFT JOIN inside that subquery.
+    const root = group({ children: [condition('browser', 'Chrome'), condition('url_path', '/')] })
 
     const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
 
@@ -425,7 +429,7 @@ describe('conditions on a field that lives on a joined table (e.g. session-level
         WHERE
           e.visitor_id = b.visitor_id
           AND ej0.browser = 'Chrome'
-          AND ej0.os = 'Windows'
+          AND e.url_path = '/'
       )"
     `)
   })
@@ -439,7 +443,10 @@ describe('conditions on a field that lives on a joined table (e.g. session-level
   })
 
   it('joins once even when multiple conditions in the same subquery need the same joined table', () => {
-    const root = group({ children: [condition('browser', 'Chrome'), condition('country', 'Sverige')] })
+    // event column forces the EXISTS path; both session fields share one join.
+    const root = group({
+      children: [condition('browser', 'Chrome'), condition('country', 'Sverige'), condition('url_path', '/')],
+    })
 
     const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
 
@@ -463,22 +470,102 @@ describe('conditions on a field that lives on a joined table (e.g. session-level
   })
 
   it('appends extraJoinConditionFn onto the JOIN...ON clause (e.g. a website_id predicate to help push filtering into an aggregated view, or a partition filter on a raw table)', () => {
-    const root = group({ children: [condition('browser', 'Chrome')] })
+    const root = group({ children: [condition('browser', 'Chrome'), condition('url_path', '/')] })
 
     const sql = pretty(
       resolveNodeToSql(
         root,
         ctxWithSessionJoin({
-          resolveFieldTable: () => ({
-            table: 'session',
-            joinColumn: 'session_id',
-            extraJoinConditionFn: (joinAlias) => `${joinAlias}.website_id = 'abc-123'`,
-          }),
+          resolveFieldTable: (field) =>
+            ['browser', 'os', 'device', 'country'].includes(field)
+              ? {
+                  table: 'session',
+                  joinColumn: 'session_id',
+                  extraJoinConditionFn: (joinAlias) => `${joinAlias}.website_id = 'abc-123'`,
+                }
+              : undefined,
         }),
       ),
     )
 
     expect(sql).toContain("AND ej0.website_id = 'abc-123'")
+  })
+})
+
+describe('session-only condition groups resolve as a non-correlated IN semi-join (cheap path)', () => {
+  const ctxWithSessionJoin = (overrides: Partial<ResolveContext> = {}) =>
+    defaultCtx({
+      resolveFieldTable: (field) =>
+        ['browser', 'os', 'device', 'country'].includes(field)
+          ? {
+              table: 'session',
+              joinColumn: 'session_id',
+              extraJoinConditionFn: (joinAlias) => `${joinAlias}.website_id = 'w1'`,
+            }
+          : undefined,
+      ...overrides,
+    })
+
+  it('a single session-column condition becomes IN (SELECT … FROM session), no EXISTS, no events scan', () => {
+    const root = group({ children: [condition('os', 'Windows')] })
+
+    const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
+
+    expect(sql).toContain('b.visitor_id IN')
+    expect(sql).toContain('session s')
+    expect(sql).toContain("os = 'Windows'")
+    expect(sql).not.toContain('EXISTS')
+    expect(sql).not.toContain('events')
+  })
+
+  it('AND of multiple session columns stays one semi-join over the session table', () => {
+    const root = group({ children: [condition('browser', 'Chrome'), condition('os', 'Windows')] })
+
+    const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
+
+    expect(sql).toContain('b.visitor_id IN')
+    expect(sql).toContain("browser = 'Chrome'")
+    expect(sql).toContain("os = 'Windows'")
+    expect(sql).not.toContain('EXISTS')
+  })
+
+  it('carries the joined table extraJoinConditionFn (website/partition bound) into the semi-join WHERE', () => {
+    const root = group({ children: [condition('os', 'Windows')] })
+
+    const sql = resolveNodeToSql(root, ctxWithSessionJoin())
+
+    expect(sql).toContain("s.website_id = 'w1'")
+  })
+
+  it('mixing a session column with an event column falls back to the correlated EXISTS', () => {
+    const root = group({ children: [condition('os', 'Windows'), condition('url_path', '/')] })
+
+    const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
+
+    expect(sql).toContain('EXISTS')
+    expect(sql).toContain('events e')
+    expect(sql).not.toContain(' IN (')
+  })
+
+  it('a created_at condition falls back to the correlated EXISTS (time is per-event, not session-static)', () => {
+    const root = group({
+      children: [condition('os', 'Windows'), condition('created_at', '2024-01-01T00:00:00', 'GREATER_THAN_OR_EQUAL')],
+    })
+
+    const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
+
+    expect(sql).toContain('EXISTS')
+  })
+
+  it('OR of session conditions keeps per-condition EXISTS semantics (not merged into one semi-join)', () => {
+    const root = group({ combinator: 'OR', children: [condition('os', 'Windows'), condition('browser', 'Chrome')] })
+
+    const sql = pretty(resolveNodeToSql(root, ctxWithSessionJoin()))
+
+    // Each OR branch resolves independently — a bare session column still
+    // semi-joins, the branches are just OR-ed together.
+    expect(sql).toContain('OR')
+    expect((sql.match(/IN \(/g) ?? []).length).toBe(2)
   })
 })
 
